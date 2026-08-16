@@ -3,9 +3,8 @@ name: Task verification
 on:
   pull_request:
     branches: [main]
-
-permissions:
-  contents: write
+  push:
+    branches: [main]
 
 jobs:
   verify:
@@ -13,27 +12,14 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      - name: Checkout PR branch
+      - name: Checkout
         uses: actions/checkout@v6
-        with:
-          ref: ${{ github.head_ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: 24
-          package-manager-cache: false
-
-      - name: Bootstrap dependency lockfile
-        run: |
-          if [ ! -f package-lock.json ]; then
-            npm install --package-lock-only --ignore-scripts
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json
-            git commit -m "Add dependency lockfile"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
+          cache: npm
 
       - name: Install dependencies from lockfile
         run: npm ci
@@ -59,7 +45,6 @@ jobs:
         with:
           name: task-2-verification
           path: |
-            package-lock.json
             test-results/
             playwright-report/
           if-no-files-found: warn
