@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 import { AppNavigation } from "./app-navigation";
+import styles from "./app-shell.module.css";
 import { Brand } from "./brand";
 
 type AppShellProps = {
@@ -11,6 +12,18 @@ type AppShellProps = {
 export function AppShell({ children }: AppShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const drawerId = useId();
+
+  useEffect(() => {
+    const mobileViewport = window.matchMedia("(max-width: 900px)");
+    const handleViewportChange = (event: MediaQueryListEvent) => {
+      if (!event.matches) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    mobileViewport.addEventListener("change", handleViewportChange);
+    return () => mobileViewport.removeEventListener("change", handleViewportChange);
+  }, []);
 
   useEffect(() => {
     if (!isMenuOpen) {
@@ -34,7 +47,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="app-frame">
-      <aside className="sidebar desktop-sidebar">
+      <aside className={`sidebar desktop-sidebar ${styles.scrollableSidebar}`}>
         <div className="sidebar-header">
           <Brand />
         </div>
