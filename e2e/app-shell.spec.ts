@@ -33,18 +33,29 @@ test("desktop shell is Arabic RTL and navigation works", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test("mobile drawer opens, navigates, and closes", async ({ page }) => {
+test("mobile drawer opens, reaches its RTL position, navigates, and closes", async ({ page }) => {
   const errors = captureBrowserErrors(page);
-  await page.setViewportSize({ width: 390, height: 844 });
+  const viewportWidth = 390;
+  await page.setViewportSize({ width: viewportWidth, height: 844 });
   await page.goto("/");
 
   await expect(page.locator(".desktop-sidebar")).toBeHidden();
   await expect(page.locator(".mobile-topbar")).toBeVisible();
 
   const menuButton = page.getByRole("button", { name: "فتح القائمة" });
+  const drawer = page.locator(".mobile-drawer");
   await menuButton.click();
   await expect(menuButton).toHaveAttribute("aria-expanded", "true");
-  await expect(page.locator(".mobile-drawer")).toBeVisible();
+  await expect(drawer).toBeVisible();
+
+  await page.waitForTimeout(300);
+  const drawerBox = await drawer.boundingBox();
+  if (!drawerBox) {
+    throw new Error("Mobile drawer has no rendered bounding box");
+  }
+  expect(drawerBox.width).toBeGreaterThan(330);
+  expect(Math.abs(drawerBox.x + drawerBox.width - viewportWidth)).toBeLessThan(1);
+
   await page.screenshot({ path: "test-results/screenshots/home-mobile-drawer.png", fullPage: true });
 
   await page.getByRole("link", { name: "العملاء و LTV" }).click();
