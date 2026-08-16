@@ -1,0 +1,4 @@
+.scrollableSidebar {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
