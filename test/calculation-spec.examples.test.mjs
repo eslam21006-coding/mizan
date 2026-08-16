@@ -156,11 +156,16 @@ test('Example F: funnel economics', () => {
 });
 
 test('Example G: benchmark boundaries are strict', () => {
-  assert.equal(0.65 > 0.65, false);
-  assert.equal(0.6501 > 0.65, true);
-  assert.equal(0.20 > 0.20, false);
-  assert.equal(0.2001 > 0.20, true);
-  assert.equal(0.65 < 0.65 && 0.30 > 0.20, false);
+  const isHealthyShowRate = (rate) => rate > 0.65;
+  const isHealthyCloseRate = (rate) => rate > 0.20;
+  const hasAttendanceBottleneck = (showRate, closeRate) =>
+    showRate < 0.65 && isHealthyCloseRate(closeRate);
+
+  assert.equal(isHealthyShowRate(0.65), false);
+  assert.equal(isHealthyShowRate(0.6501), true);
+  assert.equal(isHealthyCloseRate(0.20), false);
+  assert.equal(isHealthyCloseRate(0.2001), true);
+  assert.equal(hasAttendanceBottleneck(0.65, 0.30), false);
 });
 
 test('Example H: liquidation above 100% and negative remaining ad cost are valid', () => {
