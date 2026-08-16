@@ -17,7 +17,7 @@ export default function HomePage() {
             على فهم الربحية والتكلفة وقيمة العميل.
           </p>
         </div>
-        <div className="metric-preview" aria-label="معاينة المؤشرات">
+        <section className="metric-preview" aria-label="معاينة المؤشرات">
           <div className="preview-metric">
             <span>هامش صافي الربح</span>
             <strong>—</strong>
@@ -30,7 +30,7 @@ export default function HomePage() {
             <span>Observed LTV</span>
             <strong>—</strong>
           </div>
-        </div>
+        </section>
       </section>
 
       <div className="shell-grid">
