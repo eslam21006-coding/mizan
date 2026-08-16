@@ -33,6 +33,27 @@ test("desktop shell is Arabic RTL and navigation works", async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
+test("desktop sidebar remains usable in a short viewport", async ({ page }) => {
+  const errors = captureBrowserErrors(page);
+  await page.setViewportSize({ width: 1200, height: 420 });
+  await page.goto("/");
+
+  const sidebar = page.locator(".desktop-sidebar");
+  await expect(sidebar).toBeVisible();
+  await expect(sidebar).toHaveCSS("overflow-y", "auto");
+
+  const dimensions = await sidebar.evaluate((element) => ({
+    clientHeight: element.clientHeight,
+    scrollHeight: element.scrollHeight,
+  }));
+  expect(dimensions.scrollHeight).toBeGreaterThan(dimensions.clientHeight);
+
+  const settingsLink = page.getByRole("link", { name: "الإعدادات" });
+  await settingsLink.scrollIntoViewIfNeeded();
+  await expect(settingsLink).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("mobile drawer opens, reaches its RTL position, navigates, and closes", async ({ page }) => {
   const errors = captureBrowserErrors(page);
   const viewportWidth = 390;
@@ -63,5 +84,23 @@ test("mobile drawer opens, reaches its RTL position, navigates, and closes", asy
   await expect(page.getByRole("heading", { name: "العملاء و LTV", level: 1 })).toBeVisible();
   await expect(page.locator(".mobile-drawer-layer")).not.toHaveClass(/mobile-drawer-layer-open/);
   await page.screenshot({ path: "test-results/screenshots/customers-mobile.png", fullPage: true });
+  expect(errors).toEqual([]);
+});
+
+test("open mobile drawer releases the body lock when resizing to desktop", async ({ page }) => {
+  const errors = captureBrowserErrors(page);
+  await page.setViewportSize({ width: 390, height: 700 });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "فتح القائمة" }).click();
+  await expect(page.locator("body")).toHaveClass(/mobile-menu-open/);
+
+  await page.setViewportSize({ width: 1000, height: 500 });
+  await expect(page.locator(".desktop-sidebar")).toBeVisible();
+  await expect(page.locator("body")).not.toHaveClass(/mobile-menu-open/);
+  await expect(page.locator(".mobile-drawer-layer")).not.toHaveClass(/mobile-drawer-layer-open/);
+  await expect
+    .poll(() => page.locator("body").evaluate((element) => getComputedStyle(element).overflow))
+    .not.toBe("hidden");
   expect(errors).toEqual([]);
 });
