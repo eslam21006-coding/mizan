@@ -33,6 +33,9 @@ jobs:
       - name: Production build
         run: npm run build
 
+      - name: Verify build did not mutate tracked files
+        run: git diff --exit-code
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
