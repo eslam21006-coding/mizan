@@ -483,7 +483,7 @@ Negative values are allowed and indicate Front-End Contribution Profit exceeded 
 - Transaction Date
 - Amount Collected
 
-### 13.3 Optional fields
+### 13.3 Optional source fields
 
 - Transaction ID
 - Customer Name
@@ -492,6 +492,16 @@ Negative values are allowed and indicate Front-End Contribution Profit exceeded 
 - Status
 - Currency
 - Refund / Transaction Type
+- Stable Source Row ID, when the source exposes one
+
+The three required file columns remain Customer Email, Transaction Date, and Amount Collected. However, every import must also define enough **mapping metadata** to normalize both transaction outcome and transaction type before any row is accepted:
+
+- `normalized_outcome`: at minimum `successful` or `unsuccessful`;
+- `normalized_transaction_type`: `collection` or `refund`.
+
+These normalized values may come from mapped source columns or from an explicit import-level default when the source/export is known to contain only one outcome/type (for example, a successful-charges-only export or a refunds-only export). A mixed or ambiguous file without enough information to classify a row must not be guessed; the ambiguous row is rejected from calculation until mapping is resolved.
+
+Accepted refunds are normalized to positive refund magnitudes before financial calculations, regardless of whether the source represents refunds with negative amounts, positive amounts, or a separate transaction-type field.
 
 ### 13.4 Email normalization
 
@@ -499,12 +509,17 @@ Negative values are allowed and indicate Front-End Contribution Profit exceeded 
 
 The normalized email is used for customer identity grouping in V1.
 
-### 13.5 Successful positive transaction
+### 13.5 Normalized transaction outcome and type
+
+Every accepted row must have an unambiguous normalized outcome and transaction type from section 13.3.
 
 A transaction can establish acquisition only when it is:
 
-- successful/settled according to the mapped source status, and
-- a positive collection transaction, not a refund.
+- normalized as `successful`, and
+- normalized as a `collection`, and
+- has a positive collected amount after source normalization.
+
+Unsuccessful, failed, cancelled, pending, or otherwise non-successful rows do not contribute to cash metrics or establish acquisition. Refund rows reduce revenue and never establish acquisition.
 
 ### 13.6 Acquisition date
 
@@ -518,15 +533,23 @@ Duplicate detection is business-scoped.
 
 If a Transaction ID exists:
 
-`duplicate key = business + source + transaction_id`
+`definitive duplicate key = business + source + transaction_id`
 
-If no Transaction ID exists:
+A repeated definitive key is a duplicate and must not be inserted again.
 
-`duplicate signature = business + normalized_email + canonical transaction date/time + normalized amount + source`
+If no Transaction ID exists but the source exposes another stable row identifier:
 
-A duplicate must not be silently inserted a second time.
+`definitive duplicate key = business + source + stable_source_row_id`
 
-The import workflow must surface duplicate status to the user.
+If neither stable identifier exists, use a conservative **candidate duplicate signature**:
+
+`candidate signature = business + normalized_email + canonical transaction date/time + normalized amount + source + normalized_transaction_type`
+
+A matching candidate signature is not proof that two rows are the same transaction. Legitimate customers can make repeated same-value purchases, including on the same day or timestamp granularity. Therefore Mizan must not silently discard a matching candidate and must not silently insert it as a second transaction. The import workflow must surface the collision for explicit resolution (for example, confirm duplicate versus keep as distinct) before the row affects calculations.
+
+Collection and refund rows are never treated as the same fallback candidate solely because email/date/amount/source match; normalized transaction type is part of the candidate signature.
+
+The import workflow must surface duplicate/candidate-duplicate status to the user and preserve an auditable resolution.
 
 ### 13.8 Currency rule in V1
 
@@ -540,11 +563,15 @@ A business has one base currency.
 
 ## 14. Cohorts and Observed LTV
 
-### 14.1 Monthly acquisition cohort
+### 14.1 Reporting timezone and monthly acquisition cohort
 
-A customer belongs to the calendar month containing their acquisition date.
+Each business must have one canonical **reporting timezone** in V1. All timestamped transactions are converted to that business reporting timezone before determining reporting date, acquisition date, month, cohort, or period membership. The original source timestamp/offset must be preserved for auditability when available.
 
-Example: first successful positive transaction on 2026-01-17 -> January 2026 cohort.
+For source values that contain a calendar date but no time/offset, interpret the date as a date in the business reporting timezone and do not shift it across calendar days by assuming UTC.
+
+A customer belongs to the calendar month containing their acquisition date **in the business reporting timezone**.
+
+Example: first successful collection dated 2026-01-17 in the business reporting timezone -> January 2026 cohort.
 
 ### 14.2 Original cohort size
 
@@ -722,8 +749,9 @@ Examples:
 - non-integer counts
 - `new_customers > total_paying_customers`
 - mismatched imported currency in V1
+- ambiguous transaction outcome/type mapping
 - missing attribution presented as ROAS
-- duplicate transaction import
+- unresolved definitive or candidate duplicate transaction import
 - duplicated ad spend between funnel rollups and business manual totals
 
 A data-quality warning must not be converted into a deterministic business conclusion.
@@ -1003,7 +1031,7 @@ Task 1 is complete only when all of the following are true:
 7. Ultimate CAC is explicitly labeled a custom Mizan metric.
 8. Funnel formulas and only the approved benchmarks are defined.
 9. Self-liquidating funnel formulas allow >100% liquidation and negative remaining ad cost.
-10. Transaction identity, acquisition date, duplicate, and currency rules are explicit.
+10. Transaction outcome/type normalization, identity, acquisition date, duplicate handling, reporting timezone, and currency rules are explicit.
 11. Observed LTV and cohort maturity rules are explicit.
 12. Lifetime Contribution Profit inclusions/exclusions are explicit.
 13. Rolling/YTD/custom aggregation does not average ratios or silently fake uniqueness/precision.
