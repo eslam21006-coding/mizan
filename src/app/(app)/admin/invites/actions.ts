@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireFreshAdmin } from "@/lib/auth/context";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { getMizanSiteUrl } from "@/lib/supabase/config";
+import { getMizanSiteUrl } from "@/lib/supabase/server-config";
 
 function normalizeEmail(value: FormDataEntryValue | null) {
   const email = String(value ?? "").trim().toLowerCase();
