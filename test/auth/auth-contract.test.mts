@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { getRoleFromAppMetadata, getRoleFromClaims } from "../../src/lib/auth/role.ts";
 import { safeLocalPath } from "../../src/lib/auth/redirect.ts";
+import { parseMizanSiteUrl } from "../../src/lib/auth/site-url.ts";
 
 test("role parser accepts only approved app_metadata roles", () => {
   assert.equal(getRoleFromAppMetadata({ role: "admin" }), "admin");
@@ -23,5 +24,17 @@ test("safeLocalPath preserves local routes and rejects external redirect forms",
   assert.equal(safeLocalPath("https://evil.example"), "/");
   assert.equal(safeLocalPath("//evil.example/path"), "/");
   assert.equal(safeLocalPath("/\\evil.example"), "/");
+  assert.equal(safeLocalPath("/\n/evil.example"), "/");
+  assert.equal(safeLocalPath("/\r/evil.example"), "/");
+  assert.equal(safeLocalPath("/\t/evil.example"), "/");
+  assert.equal(safeLocalPath("/%0A/evil.example"), "/");
   assert.equal(safeLocalPath(null, "/login"), "/login");
+});
+
+test("Mizan site URL requires HTTPS except HTTP on loopback development hosts", () => {
+  assert.equal(parseMizanSiteUrl("https://mizan.example").origin, "https://mizan.example");
+  assert.equal(parseMizanSiteUrl("http://localhost:3000").origin, "http://localhost:3000");
+  assert.equal(parseMizanSiteUrl("http://127.0.0.1:3000").origin, "http://127.0.0.1:3000");
+  assert.throws(() => parseMizanSiteUrl("http://mizan.example"));
+  assert.throws(() => parseMizanSiteUrl("ftp://localhost"));
 });
