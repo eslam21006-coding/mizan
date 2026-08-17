@@ -13,7 +13,9 @@ const secretKey = required("SUPABASE_SECRET_KEY");
 const siteUrl = new URL(required("MIZAN_SITE_URL"));
 const email = required("MIZAN_ADMIN_EMAIL").toLowerCase();
 
-if (siteUrl.protocol !== "https:" && siteUrl.hostname !== "localhost" && siteUrl.hostname !== "127.0.0.1") {
+const isLocalHost = siteUrl.hostname === "localhost" || siteUrl.hostname === "127.0.0.1";
+const allowsHttp = siteUrl.protocol === "http:" && isLocalHost;
+if (siteUrl.protocol !== "https:" && !allowsHttp) {
   throw new Error("MIZAN_SITE_URL must use HTTPS outside local development.");
 }
 
@@ -21,12 +23,24 @@ const admin = createClient(supabaseUrl, secretKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const { data: listed, error: listError } = await admin.auth.admin.listUsers({ page: 1, perPage: 1000 });
-if (listError) {
-  throw listError;
+const perPage = 1000;
+let page = 1;
+let user;
+
+while (!user) {
+  const { data: listed, error: listError } = await admin.auth.admin.listUsers({ page, perPage });
+  if (listError) {
+    throw listError;
+  }
+
+  user = listed.users.find((candidate) => candidate.email?.toLowerCase() === email);
+  if (user || listed.users.length < perPage) {
+    break;
+  }
+
+  page += 1;
 }
 
-let user = listed.users.find((candidate) => candidate.email?.toLowerCase() === email);
 let createdByScript = false;
 
 if (!user) {
@@ -49,10 +63,18 @@ const { error: roleError } = await admin.auth.admin.updateUserById(user.id, {
 
 if (roleError) {
   if (createdByScript) {
-    await admin.auth.admin.deleteUser(user.id);
+    const { error: cleanupError } = await admin.auth.admin.deleteUser(user.id);
+    if (cleanupError) {
+      throw new AggregateError(
+        [roleError, cleanupError],
+        "Failed to assign the Admin role and clean up the newly invited account.",
+      );
+    }
   }
   throw roleError;
 }
 
-console.log(`Mizan Admin role assigned to ${email}.`);
-console.log(createdByScript ? "An invitation was created for this Admin." : "The existing Auth user was promoted.");
+console.log("Mizan Admin role assigned.");
+console.log(
+  createdByScript ? "An invitation was created for this Admin." : "The existing Auth user was promoted.",
+);
