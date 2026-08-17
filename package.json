@@ -15,7 +15,7 @@
     "typecheck": "next typegen && tsc --noEmit",
     "test": "npm run test:spec && npm run test:auth",
     "test:spec": "node --test test/calculation-spec.examples.test.mjs",
-    "test:auth": "node --experimental-strip-types --test test/auth/*.test.mts",
+    "test:auth": "node --experimental-strip-types --test test/auth/*.test.mts test/auth/*.test.mjs",
     "test:e2e": "playwright test",
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs"
   },
