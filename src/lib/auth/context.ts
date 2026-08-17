@@ -1,3 +1,5 @@
+import "server-only";
+
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getRoleFromAppMetadata, getRoleFromClaims, type MizanRole } from "./role";
