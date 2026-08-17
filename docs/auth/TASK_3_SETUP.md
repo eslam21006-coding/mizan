@@ -33,13 +33,13 @@ Before Task 3 can be approved:
 <h2>You've been invited to Mizan</h2>
 <p>Use the link below to activate your account.</p>
 <p>
-  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/set-password">
+  <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite">
     Activate Mizan account
   </a>
 </p>
 ```
 
-The default `ConfirmationURL` flow is not used because SSR needs the token hash at the server endpoint in order to establish the cookie-backed session before password setup.
+The default `ConfirmationURL` flow is not used because SSR needs the token hash at the server endpoint in order to establish the cookie-backed session before password setup. Every successfully verified invitation is routed to `/set-password` before application access.
 
 ## Initial Admin
 
@@ -49,7 +49,7 @@ After the hosted project and environment variables are configured, run:
 npm run bootstrap:admin
 ```
 
-The script either invites `MIZAN_ADMIN_EMAIL` or promotes an existing Auth user, then writes `app_metadata.role = "admin"` through the trusted Admin API.
+The script scans all Supabase Auth user pages before deciding whether an invitation is required. It then either invites `MIZAN_ADMIN_EMAIL` or promotes the existing Auth user and writes `app_metadata.role = "admin"` through the trusted Admin API. The configured email is not printed to command output.
 
 ## Mentee invitation flow
 
@@ -57,8 +57,8 @@ The script either invites `MIZAN_ADMIN_EMAIL` or promotes an existing Auth user,
 2. The server action freshly verifies that the caller is still an Admin.
 3. The trusted Supabase Admin API sends the invitation.
 4. The new Auth user is stamped with `app_metadata.role = "mentee"`.
-5. If role assignment fails, the just-created user is deleted rather than leaving an unclassified account.
-6. The invitation exchanges its token at `/auth/confirm` and redirects to `/set-password`.
+5. If role assignment fails, Mizan attempts to delete the just-created user. A cleanup failure is surfaced distinctly because the Auth account may still exist without a recognized Mizan role.
+6. The invitation exchanges its token at `/auth/confirm` and always redirects to `/set-password`.
 7. The invited user chooses a password and enters Mizan.
 
 ## Task boundary
