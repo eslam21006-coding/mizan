@@ -1,0 +1,38 @@
+name: Task 3 lockfile bootstrap
+
+on:
+  push:
+    branches: [agent/task-3-authentication-roles]
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout Task 3 branch
+        uses: actions/checkout@v6
+        with:
+          ref: agent/task-3-authentication-roles
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Regenerate dependency lockfile
+        run: npm install --package-lock-only --ignore-scripts
+
+      - name: Commit lockfile if changed
+        run: |
+          if git diff --quiet -- package-lock.json; then
+            echo "Lockfile already current."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package-lock.json
+          git commit -m "Update dependency lockfile for Task 3"
+          git push origin HEAD:agent/task-3-authentication-roles
