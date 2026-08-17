@@ -1,4 +1,5 @@
 export async function findAuthUserByEmail(adminAuth, email, perPage = 1000) {
+  const normalizedEmail = email.trim().toLowerCase();
   let page = 1;
 
   while (true) {
@@ -7,7 +8,9 @@ export async function findAuthUserByEmail(adminAuth, email, perPage = 1000) {
       throw error;
     }
 
-    const user = data.users.find((candidate) => candidate.email?.toLowerCase() === email);
+    const user = data.users.find(
+      (candidate) => candidate.email?.trim().toLowerCase() === normalizedEmail,
+    );
     if (user) {
       return user;
     }
