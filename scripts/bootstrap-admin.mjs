@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { findAuthUserByEmail } from "./lib/find-auth-user.mjs";
 
 function required(name) {
   const value = process.env[name]?.trim();
@@ -23,24 +24,7 @@ const admin = createClient(supabaseUrl, secretKey, {
   auth: { autoRefreshToken: false, persistSession: false },
 });
 
-const perPage = 1000;
-let page = 1;
-let user;
-
-while (!user) {
-  const { data: listed, error: listError } = await admin.auth.admin.listUsers({ page, perPage });
-  if (listError) {
-    throw listError;
-  }
-
-  user = listed.users.find((candidate) => candidate.email?.toLowerCase() === email);
-  if (user || listed.users.length < perPage) {
-    break;
-  }
-
-  page += 1;
-}
-
+let user = await findAuthUserByEmail(admin.auth.admin, email);
 let createdByScript = false;
 
 if (!user) {
