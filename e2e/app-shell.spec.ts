@@ -102,7 +102,7 @@ test("mobile drawer traps focus, makes the background inert, and restores focus"
 
   await expect(closeButton).toBeFocused();
   await expect(page.locator(".mobile-drawer")).toHaveAttribute("aria-modal", "true");
-  expect(await appMain.evaluate((element) => element.inert)).toBe(true);
+  expect(await appMain.evaluate((element) => (element as HTMLElement).inert)).toBe(true);
 
   await page.keyboard.press("Shift+Tab");
   await expect(page.getByRole("link", { name: "الإعدادات" })).toBeFocused();
@@ -111,7 +111,7 @@ test("mobile drawer traps focus, makes the background inert, and restores focus"
 
   await closeButton.click();
   await expect(menuButton).toBeFocused();
-  expect(await appMain.evaluate((element) => element.inert)).toBe(false);
+  expect(await appMain.evaluate((element) => (element as HTMLElement).inert)).toBe(false);
   expect(errors).toEqual([]);
 });
 
