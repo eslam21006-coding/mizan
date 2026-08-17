@@ -63,7 +63,7 @@ test("mobile drawer opens, reaches its RTL position, navigates, and closes", asy
   await expect(page.locator(".desktop-sidebar")).toBeHidden();
   await expect(page.locator(".mobile-topbar")).toBeVisible();
 
-  const menuButton = page.getByRole("button", { name: "فتح القائمة" });
+  const menuButton = page.locator(".menu-button");
   const drawer = page.locator(".mobile-drawer");
   await menuButton.click();
   await expect(menuButton).toHaveAttribute("aria-expanded", "true");
@@ -87,12 +87,40 @@ test("mobile drawer opens, reaches its RTL position, navigates, and closes", asy
   expect(errors).toEqual([]);
 });
 
+test("mobile drawer traps focus, makes the background inert, and restores focus", async ({ page }) => {
+  const errors = captureBrowserErrors(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+
+  const menuButton = page.locator(".menu-button");
+  const closeButton = page.locator(".mobile-drawer .close-button");
+  const appMain = page.locator(".app-main");
+
+  await menuButton.focus();
+  await expect(menuButton).toBeFocused();
+  await menuButton.click();
+
+  await expect(closeButton).toBeFocused();
+  await expect(page.locator(".mobile-drawer")).toHaveAttribute("aria-modal", "true");
+  expect(await appMain.evaluate((element) => element.inert)).toBe(true);
+
+  await page.keyboard.press("Shift+Tab");
+  await expect(page.getByRole("link", { name: "الإعدادات" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(closeButton).toBeFocused();
+
+  await closeButton.click();
+  await expect(menuButton).toBeFocused();
+  expect(await appMain.evaluate((element) => element.inert)).toBe(false);
+  expect(errors).toEqual([]);
+});
+
 test("open mobile drawer releases the body lock when resizing to desktop", async ({ page }) => {
   const errors = captureBrowserErrors(page);
   await page.setViewportSize({ width: 390, height: 700 });
   await page.goto("/");
 
-  await page.getByRole("button", { name: "فتح القائمة" }).click();
+  await page.locator(".menu-button").click();
   await expect(page.locator("body")).toHaveClass(/mobile-menu-open/);
 
   await page.setViewportSize({ width: 1000, height: 500 });
