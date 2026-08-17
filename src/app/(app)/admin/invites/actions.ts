@@ -39,9 +39,9 @@ export async function inviteMentee(formData: FormData) {
   });
 
   if (roleError) {
-    await admin.auth.admin.deleteUser(data.user.id);
-    redirect("/admin/invites?status=role-failed");
+    const { error: cleanupError } = await admin.auth.admin.deleteUser(data.user.id);
+    redirect(`/admin/invites?status=${cleanupError ? "cleanup-failed" : "role-failed"}`);
   }
 
-  redirect(`/admin/invites?status=sent&email=${encodeURIComponent(email)}`);
+  redirect("/admin/invites?status=sent");
 }
