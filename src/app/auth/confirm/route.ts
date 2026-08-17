@@ -1,12 +1,10 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { getRoleFromAppMetadata } from "@/lib/auth/role";
-import { safeLocalPath } from "@/lib/auth/redirect";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
   const tokenHash = request.nextUrl.searchParams.get("token_hash");
   const type = request.nextUrl.searchParams.get("type");
-  const next = safeLocalPath(request.nextUrl.searchParams.get("next"), "/set-password");
 
   if (!tokenHash || type !== "invite") {
     return NextResponse.redirect(new URL("/login?error=invalid-invite", request.url));
@@ -28,5 +26,5 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL("/access-denied", request.url));
   }
 
-  return NextResponse.redirect(new URL(next, request.url));
+  return NextResponse.redirect(new URL("/set-password", request.url));
 }
