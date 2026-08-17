@@ -34,6 +34,21 @@ test("Admin lookup scans later Auth pages before deciding to invite", async () =
   ]);
 });
 
+test("Admin lookup normalizes mixed-case and surrounding whitespace", async () => {
+  const adminAuth = {
+    async listUsers() {
+      return {
+        data: { users: [{ id: "admin-id", email: " admin@example.test " }] },
+        error: null,
+      };
+    },
+  };
+
+  const user = await findAuthUserByEmail(adminAuth, " Admin@Example.Test ");
+
+  assert.equal(user?.id, "admin-id");
+});
+
 test("Admin lookup stops when the final page is shorter than the page size", async () => {
   let calls = 0;
   const adminAuth = {
