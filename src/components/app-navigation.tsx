@@ -2,19 +2,21 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { menteeNavigation } from "@/lib/navigation";
+import type { MizanRole } from "@/lib/auth/role";
+import { getNavigation } from "@/lib/navigation";
 import { NavIcon } from "./nav-icon";
 
 type AppNavigationProps = {
+  role: MizanRole;
   onNavigate?: () => void;
 };
 
-export function AppNavigation({ onNavigate }: AppNavigationProps) {
+export function AppNavigation({ role, onNavigate }: AppNavigationProps) {
   const pathname = usePathname();
 
   return (
     <nav className="app-navigation" aria-label="التنقل الرئيسي">
-      {menteeNavigation.map((item) => {
+      {getNavigation(role).map((item) => {
         const isActive =
           item.href === "/"
             ? pathname === "/"
