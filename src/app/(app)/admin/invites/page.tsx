@@ -4,13 +4,15 @@ import { inviteMentee } from "./actions";
 import styles from "./invites.module.css";
 
 type InvitePageProps = {
-  searchParams: Promise<{ status?: string; email?: string }>;
+  searchParams: Promise<{ status?: string }>;
 };
 
 const errorMessages: Record<string, string> = {
   "invalid-email": "أدخل بريدًا إلكترونيًا صالحًا.",
   "invite-failed": "تعذر إرسال الدعوة. قد يكون الحساب موجودًا بالفعل أو حدث خطأ في خدمة الدعوات.",
   "role-failed": "تم إلغاء الحساب لأن تعيين صلاحية Mentee لم يكتمل. حاول مرة أخرى.",
+  "cleanup-failed":
+    "فشل تعيين صلاحية Mentee وتعذر حذف الحساب الذي تم إنشاؤه. راجع Supabase Auth قبل إعادة المحاولة.",
 };
 
 export default async function AdminInvitesPage({ searchParams }: InvitePageProps) {
@@ -29,9 +31,7 @@ export default async function AdminInvitesPage({ searchParams }: InvitePageProps
         <p className={styles.help}>
           الدعوة تنشئ الحساب بصلاحية Mentee من جهة السيرفر، ثم يختار المتدرب كلمة المرور من رابط الدعوة.
         </p>
-        {params.status === "sent" && (
-          <div className={styles.notice}>تم إرسال الدعوة إلى {params.email ?? "البريد المحدد"}.</div>
-        )}
+        {params.status === "sent" && <div className={styles.notice}>تم إرسال الدعوة بنجاح.</div>}
         {errorMessage && <div className={styles.error}>{errorMessage}</div>}
         <form action={inviteMentee} className={styles.form}>
           <input
