@@ -13,6 +13,7 @@ function captureBrowserErrors(page: import("@playwright/test").Page) {
 
 test("unauthenticated protected routes redirect to Arabic RTL login", async ({ page }) => {
   const errors = captureBrowserErrors(page);
+  await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/monthly");
 
   await expect(page).toHaveURL(/\/login\?next=%2Fmonthly$/);
