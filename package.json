@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": ">=20.9.0"
+    "node": ">=22.0.0"
   },
   "scripts": {
     "dev": "next dev",
@@ -12,9 +12,14 @@
     "check": "npm run lint && npm run typecheck",
     "lint": "biome lint .",
     "typecheck": "next typegen && tsc --noEmit",
-    "test:e2e": "playwright test"
+    "test": "npm run test:spec",
+    "test:spec": "node --test test/calculation-spec.examples.test.mjs",
+    "test:e2e": "playwright test",
+    "bootstrap:admin": "node scripts/bootstrap-admin.mjs"
   },
   "dependencies": {
+    "@supabase/ssr": "0.12.4",
+    "@supabase/supabase-js": "2.111.0",
     "next": "16.3.1",
     "react": "19.2.8",
     "react-dom": "19.2.8"
