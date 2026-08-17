@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { AppNavigation } from "./app-navigation";
 import styles from "./app-shell.module.css";
 import { Brand } from "./brand";
@@ -9,9 +9,21 @@ type AppShellProps = {
   children: React.ReactNode;
 };
 
+const focusableSelector = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
+
 export function AppShell({ children }: AppShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const drawerId = useId();
+  const drawerRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const appMainRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const mobileViewport = window.matchMedia("(max-width: 900px)");
@@ -30,18 +42,66 @@ export function AppShell({ children }: AppShellProps) {
       return;
     }
 
-    const handleEscape = (event: KeyboardEvent) => {
+    const drawer = drawerRef.current;
+    const appMain = appMainRef.current;
+    if (!drawer) {
+      return;
+    }
+
+    const getFocusableElements = () =>
+      Array.from(drawer.querySelectorAll<HTMLElement>(focusableSelector)).filter(
+        (element) => !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true",
+      );
+
+    const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setIsMenuOpen(false);
+        return;
+      }
+
+      if (event.key !== "Tab") {
+        return;
+      }
+
+      const focusableElements = getFocusableElements();
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        drawer.focus();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+      const activeElement = document.activeElement;
+      const focusIsOutsideDrawer = !activeElement || !drawer.contains(activeElement);
+
+      if (event.shiftKey && (activeElement === firstElement || focusIsOutsideDrawer)) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && (activeElement === lastElement || focusIsOutsideDrawer)) {
+        event.preventDefault();
+        firstElement.focus();
       }
     };
 
     document.body.classList.add("mobile-menu-open");
-    document.addEventListener("keydown", handleEscape);
+    if (appMain) {
+      appMain.inert = true;
+    }
+    document.addEventListener("keydown", handleKeyDown);
+
+    getFocusableElements()[0]?.focus();
 
     return () => {
       document.body.classList.remove("mobile-menu-open");
-      document.removeEventListener("keydown", handleEscape);
+      if (appMain) {
+        appMain.inert = false;
+      }
+      document.removeEventListener("keydown", handleKeyDown);
+
+      if (window.matchMedia("(max-width: 900px)").matches) {
+        menuButtonRef.current?.focus();
+      }
     };
   }, [isMenuOpen]);
 
@@ -63,10 +123,11 @@ export function AppShell({ children }: AppShellProps) {
         </div>
       </aside>
 
-      <div className="app-main">
+      <div className="app-main" ref={appMainRef}>
         <header className="mobile-topbar">
           <Brand compact />
           <button
+            ref={menuButtonRef}
             type="button"
             className="menu-button"
             aria-label="فتح القائمة"
@@ -90,14 +151,18 @@ export function AppShell({ children }: AppShellProps) {
           type="button"
           className="drawer-backdrop"
           aria-label="إغلاق القائمة"
-          tabIndex={isMenuOpen ? 0 : -1}
+          tabIndex={-1}
           onClick={() => setIsMenuOpen(false)}
         />
         <aside
+          ref={drawerRef}
           id={drawerId}
           className="mobile-drawer"
+          role="dialog"
+          aria-modal={isMenuOpen ? "true" : undefined}
           aria-label="التنقل الرئيسي للموبايل"
           aria-hidden={!isMenuOpen}
+          tabIndex={-1}
         >
           <div className="drawer-header">
             <Brand />
