@@ -1,3 +1,5 @@
+import type { MizanRole } from "@/lib/auth/role";
+
 export type NavigationIcon =
   | "home"
   | "calendar"
@@ -24,3 +26,11 @@ export const menteeNavigation: NavigationItem[] = [
   { label: "التحليلات", href: "/analytics", icon: "analytics" },
   { label: "الإعدادات", href: "/settings", icon: "settings" },
 ];
+
+const adminNavigation: NavigationItem[] = [
+  { label: "دعوة المتدربين", href: "/admin/invites", icon: "customers" },
+];
+
+export function getNavigation(role: MizanRole) {
+  return role === "admin" ? [...menteeNavigation, ...adminNavigation] : menteeNavigation;
+}
