@@ -12,6 +12,7 @@ type LoginPageProps = {
 const errorMessages: Record<string, string> = {
   invalid: "تعذر تسجيل الدخول. تأكد من البريد الإلكتروني وكلمة المرور.",
   "not-invited": "هذا الحساب غير مصرح له بالدخول إلى ميزان.",
+  "invalid-invite": "رابط الدعوة غير صالح أو انتهت صلاحيته. اطلب دعوة جديدة من المسؤول.",
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
@@ -51,7 +52,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           دخول
         </button>
       </form>
-      <p className={styles.secondary}>لا يوجد تسجيل حساب عام. إذا لم تصلك دعوة، تواصل مع مسؤول البرنامج.</p>
+      <p className={styles.secondary}>
+        لا يوجد تسجيل حساب عام. إذا لم تصلك دعوة، تواصل مع مسؤول البرنامج.
+      </p>
     </AuthCard>
   );
 }
