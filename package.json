@@ -16,7 +16,7 @@
     "test": "npm run test:spec && npm run test:auth && npm run test:rls",
     "test:spec": "node --test test/calculation-spec.examples.test.mjs",
     "test:auth": "node --experimental-strip-types --test test/auth/*.test.mts test/auth/*.test.mjs",
-    "test:rls": "node --test test/rls/*.test.mjs",
+    "test:rls": "node --test test/rls/*.test.mjs && node test/rls/run-attack-matrix.mjs",
     "test:e2e": "playwright test",
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs"
   },
