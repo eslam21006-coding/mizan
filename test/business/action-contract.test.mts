@@ -73,6 +73,18 @@ test("implicit Enter submission advances inside handleSubmit before the final re
   assert.match(handleSubmit, /goForward\(\)/);
 });
 
+test("next-step clicks cannot become a submit after React renders the review step", () => {
+  const handlerStart = wizard.indexOf("function handleForwardClick(event: MouseEvent<HTMLButtonElement>)");
+  const handlerEnd = wizard.indexOf("\n\n  function goBack", handlerStart);
+  assert.notEqual(handlerStart, -1, "handleForwardClick implementation was not found");
+  assert.notEqual(handlerEnd, -1, "handleForwardClick boundary was not found");
+  const handleForwardClick = wizard.slice(handlerStart, handlerEnd);
+
+  assert.match(handleForwardClick, /event\.preventDefault\(\)/);
+  assert.match(handleForwardClick, /goForward\(\)/);
+  assert.match(wizard, /type="button" onClick=\{handleForwardClick\}/);
+});
+
 test("Task 5 wizard does not pull Task 6, 7, or funnel data entry forward", () => {
   assert.doesNotMatch(wizard, /name=["']revenue_stream/);
   assert.doesNotMatch(wizard, /name=["']expense/);
