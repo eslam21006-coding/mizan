@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, type MouseEvent, useEffect, useMemo, useState } from "react";
 import {
   CURRENCY_OPTIONS,
   TIMEZONE_OPTIONS,
@@ -58,6 +58,11 @@ export function BusinessOnboardingWizard({
     if (step < steps.length - 1) {
       setStep((current) => current + 1);
     }
+  }
+
+  function handleForwardClick(event: MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    goForward();
   }
 
   function goBack() {
@@ -208,7 +213,7 @@ export function BusinessOnboardingWizard({
             </button>
           )}
           {step < steps.length - 1 ? (
-            <button className={styles.primaryButton} type="button" onClick={goForward}>
+            <button className={styles.primaryButton} type="button" onClick={handleForwardClick}>
               التالي
             </button>
           ) : (
