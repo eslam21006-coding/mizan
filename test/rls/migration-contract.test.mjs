@@ -46,6 +46,10 @@ test("Owner memberships are synchronized only through the business owner field",
   );
   assert.match(
     migration,
+    /tg_op = 'UPDATE' and old\.owner_user_id is not distinct from new\.owner_user_id[\s\S]*?return new;/,
+  );
+  assert.match(
+    migration,
     /revoke all on function private\.sync_business_owner_membership\(\) from authenticated;/,
   );
 });
