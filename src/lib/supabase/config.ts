@@ -9,3 +9,11 @@ export const supabasePublicConfig = {
 export const hasSupabasePublicConfig = Boolean(
   supabasePublicConfig.url && supabasePublicConfig.publishableKey,
 );
+
+export function getSupabasePublicConfig() {
+  if (!hasSupabasePublicConfig) {
+    throw new Error("Supabase public configuration is missing.");
+  }
+
+  return supabasePublicConfig;
+}

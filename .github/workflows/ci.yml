@@ -13,6 +13,11 @@ jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+      SUPABASE_SECRET_KEY: sb_secret_ci_placeholder
+      MIZAN_SITE_URL: http://127.0.0.1:3000
 
     steps:
       - name: Checkout
@@ -35,6 +40,9 @@ jobs:
       - name: Static checks
         run: npm run check
 
+      - name: Unit and calculation specification tests
+        run: npm test
+
       - name: Production build
         run: npm run build
 
@@ -51,7 +59,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v6
         with:
-          name: task-2-verification
+          name: task-3-verification
           path: |
             test-results/
             playwright-report/

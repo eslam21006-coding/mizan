@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import type { MizanRole } from "@/lib/auth/role";
 import { AppNavigation } from "./app-navigation";
 import styles from "./app-shell.module.css";
 import { Brand } from "./brand";
 
 type AppShellProps = {
   children: React.ReactNode;
+  role: MizanRole;
+  email: string | null;
 };
 
 const focusableSelector = [
@@ -18,7 +21,23 @@ const focusableSelector = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(",");
 
-export function AppShell({ children }: AppShellProps) {
+function AccountPanel({ role, email }: { role: MizanRole; email: string | null }) {
+  return (
+    <div className={styles.accountPanel}>
+      <div className={styles.accountCopy}>
+        <strong>{role === "admin" ? "Admin" : "Mentee"}</strong>
+        <small title={email ?? undefined}>{email ?? "حساب ميزان"}</small>
+      </div>
+      <form action="/auth/signout" method="post">
+        <button className={styles.signOutButton} type="submit">
+          تسجيل الخروج
+        </button>
+      </form>
+    </div>
+  );
+}
+
+export function AppShell({ children, role, email }: AppShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const drawerId = useId();
   const drawerRef = useRef<HTMLElement>(null);
@@ -50,7 +69,8 @@ export function AppShell({ children }: AppShellProps) {
 
     const getFocusableElements = () =>
       Array.from(drawer.querySelectorAll<HTMLElement>(focusableSelector)).filter(
-        (element) => !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true",
+        (element) =>
+          !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true",
       );
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -111,15 +131,9 @@ export function AppShell({ children }: AppShellProps) {
         <div className="sidebar-header">
           <Brand />
         </div>
-        <AppNavigation />
+        <AppNavigation role={role} />
         <div className="sidebar-footer">
-          <div className="foundation-note">
-            <span className="foundation-dot" />
-            <div>
-              <strong>نسخة تأسيسية</strong>
-              <small>هيكل التطبيق فقط</small>
-            </div>
-          </div>
+          <AccountPanel role={role} email={email} />
         </div>
       </aside>
 
@@ -145,7 +159,9 @@ export function AppShell({ children }: AppShellProps) {
       </div>
 
       <div
-        className={isMenuOpen ? "mobile-drawer-layer mobile-drawer-layer-open" : "mobile-drawer-layer"}
+        className={
+          isMenuOpen ? "mobile-drawer-layer mobile-drawer-layer-open" : "mobile-drawer-layer"
+        }
       >
         <button
           type="button"
@@ -175,7 +191,10 @@ export function AppShell({ children }: AppShellProps) {
               ×
             </button>
           </div>
-          <AppNavigation onNavigate={() => setIsMenuOpen(false)} />
+          <AppNavigation role={role} onNavigate={() => setIsMenuOpen(false)} />
+          <div className={styles.mobileAccountPanel}>
+            <AccountPanel role={role} email={email} />
+          </div>
         </aside>
       </div>
     </div>
