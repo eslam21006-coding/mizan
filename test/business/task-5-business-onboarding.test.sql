@@ -16,18 +16,35 @@ begin
   ) then
     raise exception 'timezone constraint is not validated';
   end if;
+
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'businesses_owner_creation_request_unique'
+      and conrelid = 'public.businesses'::regclass
+  ) then
+    raise exception 'business creation idempotency constraint is missing';
+  end if;
 end $$;
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"55555555-5555-4555-8555-555555555555","role":"authenticated","app_metadata":{"role":"mentee"}}';
 
-insert into public.businesses (id, name, base_currency, timezone, owner_user_id)
+insert into public.businesses (
+  id,
+  name,
+  base_currency,
+  timezone,
+  owner_user_id,
+  creation_request_id
+)
 values (
   'b5555555-5555-4555-8555-555555555555',
   'Task 5 Business',
   'EGP',
   'Africa/Cairo',
-  '55555555-5555-4555-8555-555555555555'
+  '55555555-5555-4555-8555-555555555555',
+  '77777777-7777-4777-8777-777777777777'
 );
 
 do $$
@@ -39,6 +56,7 @@ begin
       and base_currency = 'EGP'
       and timezone = 'Africa/Cairo'
       and owner_user_id = '55555555-5555-4555-8555-555555555555'
+      and creation_request_id = '77777777-7777-4777-8777-777777777777'
   ) <> 1 then
     raise exception 'business onboarding fields were not persisted';
   end if;
@@ -54,12 +72,44 @@ begin
   end if;
 
   begin
-    insert into public.businesses (name, base_currency, timezone, owner_user_id)
+    insert into public.businesses (
+      id,
+      name,
+      base_currency,
+      timezone,
+      owner_user_id,
+      creation_request_id
+    )
+    values (
+      'b7777777-7777-4777-8777-777777777777',
+      'Duplicate Delivery',
+      'EGP',
+      'Africa/Cairo',
+      '55555555-5555-4555-8555-555555555555',
+      '77777777-7777-4777-8777-777777777777'
+    );
+    raise exception 'duplicate creation request created a second business';
+  exception
+    when unique_violation then null;
+  end;
+
+  if (
+    select count(*)
+    from public.businesses
+    where owner_user_id = '55555555-5555-4555-8555-555555555555'
+      and creation_request_id = '77777777-7777-4777-8777-777777777777'
+  ) <> 1 then
+    raise exception 'creation request idempotency did not preserve exactly one business';
+  end if;
+
+  begin
+    insert into public.businesses (name, base_currency, timezone, owner_user_id, creation_request_id)
     values (
       'Spoofed Owner',
       'EGP',
       'Africa/Cairo',
-      '66666666-6666-4666-8666-666666666666'
+      '66666666-6666-4666-8666-666666666666',
+      '88888888-8888-4888-8888-888888888888'
     );
     raise exception 'mentee created a business for another owner';
   exception
@@ -67,12 +117,13 @@ begin
   end;
 
   begin
-    insert into public.businesses (name, base_currency, timezone, owner_user_id)
+    insert into public.businesses (name, base_currency, timezone, owner_user_id, creation_request_id)
     values (
       'Malformed Timezone',
       'EGP',
       'not a timezone',
-      '55555555-5555-4555-8555-555555555555'
+      '55555555-5555-4555-8555-555555555555',
+      '99999999-9999-4999-8999-999999999999'
     );
     raise exception 'malformed timezone bypassed database constraint';
   exception

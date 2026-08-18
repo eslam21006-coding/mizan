@@ -45,6 +45,17 @@ The database limits the value to 64 characters and rejects malformed timezone-sh
 
 Timezone is setup metadata only in Task 5. Monthly period behavior is implemented later.
 
+## Idempotent business creation
+
+Live browser verification exposed that the same final onboarding submission can be delivered more than once. Business creation therefore has a database-backed idempotency key rather than relying only on UI button state.
+
+- The server-rendered onboarding page generates a UUID `creation_request_id` for the form.
+- `businesses` stores that internal request ID.
+- `(owner_user_id, creation_request_id)` is unique.
+- A replay of the same creation request cannot create a second business.
+- If the duplicate request loses the unique-key race, the server verifies the already-created business belongs to the same authenticated owner and treats the operation as successful.
+- The final submit button is also disabled after submission for immediate UX feedback, but database uniqueness is the correctness boundary.
+
 ## UX
 
 The Arabic RTL onboarding flow is four short screens:
@@ -65,8 +76,9 @@ Task 5 is complete only when:
 1. the migrations add and separately validate `businesses.timezone` without weakening Task 4 RLS;
 2. server-side validation accepts only the approved currencies and a database-compatible real timezone;
 3. the create action derives `owner_user_id` from the authenticated session rather than form input;
-4. database-backed tests prove a Mentee cannot create a business owned by another user;
-5. the owner membership is still created automatically by the Task 4 trigger;
-6. the Arabic RTL wizard works on desktop and mobile without console/runtime errors;
-7. the business appears after successful creation;
-8. CI, CodeRabbit, and live Supabase/browser verification are green before merge.
+4. duplicate delivery of one onboarding request results in exactly one business;
+5. database-backed tests prove a Mentee cannot create a business owned by another user;
+6. the owner membership is still created automatically by the Task 4 trigger;
+7. the Arabic RTL wizard works on desktop and mobile without console/runtime errors;
+8. the business appears exactly once after successful creation;
+9. CI, CodeRabbit, and live Supabase/browser verification are green before merge.

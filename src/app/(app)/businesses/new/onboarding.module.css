@@ -247,7 +247,7 @@ fieldset.stepPanel {
   border: 1px solid var(--brand);
 }
 
-.primaryButton:hover {
+.primaryButton:hover:not(:disabled) {
   background: var(--brand-strong);
 }
 
@@ -257,8 +257,14 @@ fieldset.stepPanel {
   border: 1px solid var(--border-strong);
 }
 
-.secondaryButton:hover {
+.secondaryButton:hover:not(:disabled) {
   background: var(--surface-soft);
+}
+
+.primaryButton:disabled,
+.secondaryButton:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .error {

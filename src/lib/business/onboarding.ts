@@ -29,6 +29,7 @@ export const TIMEZONE_OPTIONS: ReadonlyArray<{ value: string; label: string }> =
 ];
 
 const DATABASE_TIMEZONE_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_+.-]*(\/[A-Za-z0-9_+.-]+)+$/;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function normalizeBusinessName(value: unknown) {
   const normalized = String(value ?? "")
@@ -62,4 +63,9 @@ export function normalizeTimeZone(value: unknown) {
   } catch {
     return null;
   }
+}
+
+export function parseCreationRequestId(value: unknown) {
+  const candidate = String(value ?? "").trim();
+  return UUID_PATTERN.test(candidate) ? candidate.toLowerCase() : null;
 }

@@ -53,4 +53,8 @@ test("RLS execution plan invokes every Task 4 and Task 5 SQL file through fail-f
     ]);
     assert.deepEqual(execution.args.slice(-2), ["--file", execution.sqlFile]);
   }
+
+  assert.ok(
+    sqlFiles.includes("supabase/migrations/20260818105500_task_5_business_creation_idempotency.sql"),
+  );
 });

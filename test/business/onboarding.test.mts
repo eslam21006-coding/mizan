@@ -4,6 +4,7 @@ import {
   normalizeBusinessName,
   normalizeTimeZone,
   parseBaseCurrency,
+  parseCreationRequestId,
   SUPPORTED_CURRENCIES,
 } from "../../src/lib/business/onboarding.ts";
 
@@ -29,4 +30,13 @@ test("timezone validation accepts named zones but rejects offsets and invented v
   assert.equal(normalizeTimeZone("+01:00"), null);
   assert.equal(normalizeTimeZone("Not/ARealTimezone"), null);
   assert.equal(normalizeTimeZone("x".repeat(65)), null);
+});
+
+test("creation request IDs accept UUIDs only", () => {
+  assert.equal(
+    parseCreationRequestId(" 77777777-7777-4777-8777-777777777777 "),
+    "77777777-7777-4777-8777-777777777777",
+  );
+  assert.equal(parseCreationRequestId("not-a-uuid"), null);
+  assert.equal(parseCreationRequestId(""), null);
 });

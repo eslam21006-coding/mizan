@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { PageHeading } from "@/components/page-heading";
 import { BusinessOnboardingWizard } from "./business-onboarding-wizard";
 
@@ -23,7 +24,10 @@ export default async function BusinessOnboardingPage({
         title="أضف بزنس جديد"
         description="نبدأ فقط بالمعلومات الأساسية التي تحدد هوية البزنس وكيفية قراءة الفترات المالية. الإيرادات والمصروفات والفانلز لها خطوات مستقلة لاحقًا."
       />
-      <BusinessOnboardingWizard serverError={serverError} />
+      <BusinessOnboardingWizard
+        creationRequestId={randomUUID()}
+        serverError={serverError}
+      />
     </div>
   );
 }

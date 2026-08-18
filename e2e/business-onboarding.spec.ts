@@ -25,7 +25,7 @@ async function login(page: import("@playwright/test").Page) {
 test.describe("Task 5 business onboarding", () => {
   test.skip(!liveEmail || !livePassword, "Requires live Mizan Supabase test credentials");
 
-  test("creates a business through the Arabic RTL wizard on desktop and remains responsive", async ({
+  test("creates exactly one business through the Arabic RTL wizard and remains responsive", async ({
     page,
   }) => {
     const errors = captureBrowserErrors(page);
@@ -56,7 +56,10 @@ test.describe("Task 5 business onboarding", () => {
     await page.getByRole("button", { name: "إنشاء البزنس" }).click();
     await expect(page).toHaveURL(/\/businesses\?status=created$/);
     await expect(page.getByRole("status")).toContainText("تم إنشاء البزنس");
-    await expect(page.getByRole("heading", { name: businessName, level: 2 })).toBeVisible();
+
+    const createdBusinessHeadings = page.getByRole("heading", { name: businessName, level: 2 });
+    await expect(createdBusinessHeadings).toHaveCount(1);
+    await expect(createdBusinessHeadings).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/businesses/new");

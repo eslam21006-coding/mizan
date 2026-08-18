@@ -10,17 +10,22 @@ import { createBusiness } from "./actions";
 import styles from "./onboarding.module.css";
 
 type BusinessOnboardingWizardProps = {
+  creationRequestId: string;
   serverError?: string | null;
 };
 
 const steps = ["اسم البزنس", "العملة", "المنطقة الزمنية", "مراجعة"] as const;
 
-export function BusinessOnboardingWizard({ serverError }: BusinessOnboardingWizardProps) {
+export function BusinessOnboardingWizard({
+  creationRequestId,
+  serverError,
+}: BusinessOnboardingWizardProps) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState<SupportedCurrency | "">("");
   const [timezone, setTimezone] = useState("Africa/Cairo");
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -64,7 +69,10 @@ export function BusinessOnboardingWizard({ serverError }: BusinessOnboardingWiza
     if (step < steps.length - 1) {
       event.preventDefault();
       goForward();
+      return;
     }
+
+    setIsSubmitting(true);
   }
 
   const currencyLabel = CURRENCY_OPTIONS.find((option) => option.code === currency)?.label;
@@ -101,6 +109,7 @@ export function BusinessOnboardingWizard({ serverError }: BusinessOnboardingWiza
       )}
 
       <form action={createBusiness} className={styles.form} onSubmit={handleSubmit}>
+        <input type="hidden" name="creation_request_id" value={creationRequestId} />
         <input type="hidden" name="name" value={name} />
         <input type="hidden" name="base_currency" value={currency} />
         <input type="hidden" name="timezone" value={timezone} />
@@ -194,7 +203,7 @@ export function BusinessOnboardingWizard({ serverError }: BusinessOnboardingWiza
 
         <div className={styles.actions}>
           {step > 0 && (
-            <button className={styles.secondaryButton} type="button" onClick={goBack}>
+            <button className={styles.secondaryButton} type="button" onClick={goBack} disabled={isSubmitting}>
               السابق
             </button>
           )}
@@ -203,8 +212,8 @@ export function BusinessOnboardingWizard({ serverError }: BusinessOnboardingWiza
               التالي
             </button>
           ) : (
-            <button className={styles.primaryButton} type="submit">
-              إنشاء البزنس
+            <button className={styles.primaryButton} type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "جارٍ الإنشاء…" : "إنشاء البزنس"}
             </button>
           )}
         </div>
