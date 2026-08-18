@@ -83,4 +83,4 @@ GitHub Actions starts a disposable PostgreSQL 17 service named `mizan_test`. `np
 2. applies the actual Task 4 migration;
 3. executes the full SQL attack matrix through `psql` with `ON_ERROR_STOP=1` so any unexpected permission or RLS behavior fails CI.
 
-The bootstrap intentionally resets schemas, so the runner refuses to execute unless `RLS_TEST_DATABASE_URL` points to a loopback host and the database name ends in `_test`. It never uses hosted Supabase credentials or a generic production database URL.
+The bootstrap intentionally resets schemas, so the runner refuses to execute unless `RLS_TEST_DATABASE_URL` uses the literal loopback address `127.0.0.1` and the database name ends in `_test`. It never accepts resolver-dependent `localhost`, hosted Supabase credentials, or a generic production database URL.
