@@ -74,6 +74,8 @@ set local role authenticated;
 set local request.jwt.claims = '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","role":"authenticated","app_metadata":{"role":"mentee"}}';
 
 do $$
+declare
+  changed_count integer;
 begin
   if not (select private.is_admin()) then
     raise exception 'fresh admin lookup failed';
@@ -84,6 +86,24 @@ begin
   if (select count(*) from public.business_memberships) <> 2 then
     raise exception 'admin cannot see all memberships';
   end if;
+
+  delete from public.business_memberships
+  where business_id = 'b2222222-2222-4222-8222-222222222222'
+    and membership_role = 'owner';
+  get diagnostics changed_count = row_count;
+  if changed_count <> 0 then
+    raise exception 'admin directly deleted synchronized owner membership';
+  end if;
+
+  begin
+    update public.business_memberships
+    set membership_role = 'member'
+    where business_id = 'b2222222-2222-4222-8222-222222222222'
+      and membership_role = 'owner';
+    raise exception 'admin directly demoted synchronized owner membership';
+  exception
+    when insufficient_privilege then null;
+  end;
 end $$;
 
 insert into public.business_memberships (business_id, user_id, membership_role)
@@ -118,5 +138,33 @@ begin
 end $$;
 
 reset role;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","role":"authenticated","app_metadata":{"role":"admin"}}';
+
+update public.businesses
+set owner_user_id = '11111111-1111-4111-8111-111111111111'
+where id = 'b2222222-2222-4222-8222-222222222222';
+
+do $$
+begin
+  if (
+    select count(*)
+    from public.business_memberships
+    where business_id = 'b2222222-2222-4222-8222-222222222222'
+      and membership_role = 'owner'
+      and user_id = '11111111-1111-4111-8111-111111111111'
+  ) <> 1 then
+    raise exception 'admin ownership transfer did not synchronize owner membership';
+  end if;
+
+  if exists (
+    select 1 from public.business_memberships
+    where business_id = 'b2222222-2222-4222-8222-222222222222'
+      and user_id = '22222222-2222-4222-8222-222222222222'
+      and membership_role = 'owner'
+  ) then
+    raise exception 'old owner membership survived ownership transfer';
+  end if;
+end $$;
 
 rollback;
