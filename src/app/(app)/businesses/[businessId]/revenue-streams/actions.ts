@@ -45,24 +45,8 @@ export async function createRevenueStream(formData: FormData) {
     creation_request_id: creationRequestId,
   });
 
-  if (!error) {
+  if (!error || error.code === "23505") {
     return redirectToRevenueStreams(businessId, "created");
-  }
-
-  if (error.code === "23505") {
-    const { data: existingStream, error: lookupError } = await supabase
-      .from("revenue_streams")
-      .select("id,name,stream_type")
-      .eq("business_id", businessId)
-      .eq("creation_request_id", creationRequestId)
-      .maybeSingle();
-
-    const isSameRequestPayload =
-      existingStream?.name === name && existingStream.stream_type === streamType;
-
-    if (!lookupError && existingStream && isSameRequestPayload) {
-      return redirectToRevenueStreams(businessId, "created");
-    }
   }
 
   redirect(revenueStreamsPath(businessId, "create-failed"));

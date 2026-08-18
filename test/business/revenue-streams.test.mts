@@ -64,10 +64,8 @@ test("revenue stream writes rely on authenticated context and never accept an ow
 test("revenue stream creation is database-idempotent", () => {
   assert.match(page, /name="creation_request_id" value=\{randomUUID\(\)\}/);
   assert.match(action, /creation_request_id:\s*creationRequestId/);
-  assert.match(action, /error\.code === "23505"/);
-  assert.match(action, /\.eq\("creation_request_id", creationRequestId\)/);
-  assert.match(action, /existingStream\?\.name === name/);
-  assert.match(action, /existingStream\.stream_type === streamType/);
+  assert.match(action, /!error \|\| error\.code === "23505"/);
+  assert.doesNotMatch(action, /existingStream/);
 });
 
 test("Task 6 intentionally has no authenticated hard-delete path", () => {

@@ -37,14 +37,16 @@ Task 6 intentionally does **not** expose hard delete. Later transactions may ref
 
 ## Idempotent creation
 
-Every rendered create form receives a server-generated UUID `creation_request_id`.
+Every rendered create form receives a per-form UUID `creation_request_id` generated during server rendering.
 
-The database requires it explicitly and enforces:
+The ID is an idempotency/replay key, not an authorization credential. It is intentionally submitted with the form and therefore must be treated as client-controlled after rendering. PostgreSQL RLS remains the authorization boundary for whether the authenticated user may create a stream inside the submitted `business_id`. Replacing the UUID cannot grant access to another business; it only represents a different authorized create request.
+
+The database requires the request ID explicitly and enforces:
 
 - `UNIQUE (business_id, creation_request_id)`;
 - immutability after creation.
 
-If one request is delivered twice, the second insert cannot create a second revenue stream. The server treats the unique-key collision as success only when the existing row belongs to the same business and has the same submitted name and classification.
+If one request is delivered twice, the second insert cannot create a second revenue stream. A `23505` unique-key conflict for this insert is treated as an already-applied replay because the action does not supply the row primary key and the only application-level insert uniqueness is `(business_id, creation_request_id)`. Mutable fields such as the stream name or classification may legitimately have changed after the original request and are not used to invalidate replay success.
 
 ## Authorization
 
