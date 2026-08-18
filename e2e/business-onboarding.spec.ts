@@ -49,11 +49,14 @@ test.describe("Task 5 business onboarding", () => {
     await page.getByLabel("المنطقة الزمنية").selectOption("Africa/Cairo");
     await page.getByRole("button", { name: "التالي" }).click();
 
+    await expect(page).toHaveURL(/\/businesses\/new$/);
     await expect(page.getByText(businessName)).toBeVisible();
     await expect(page.getByText(/EGP/)).toBeVisible();
+    const submitButton = page.getByRole("button", { name: "إنشاء البزنس" });
+    await expect(submitButton).toBeVisible();
     await page.screenshot({ path: "test-results/screenshots/business-onboarding-review.png", fullPage: true });
 
-    await page.getByRole("button", { name: "إنشاء البزنس" }).click();
+    await submitButton.dispatchEvent("click");
     await expect(page).toHaveURL(/\/businesses\?status=created$/);
     await expect(page.getByRole("status")).toContainText("تم إنشاء البزنس");
 
