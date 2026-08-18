@@ -23,6 +23,16 @@ export function NavIcon({ name }: NavIconProps) {
     );
   }
 
+  if (name === "business") {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" {...common}>
+        <rect x="3.5" y="7" width="17" height="13" rx="2.2" />
+        <path d="M8.2 7V5.2c0-.9.7-1.7 1.7-1.7h4.2c.9 0 1.7.7 1.7 1.7V7" />
+        <path d="M3.5 12.2c3.5 1.4 13.5 1.4 17 0M10.2 12v2h3.6v-2" />
+      </svg>
+    );
+  }
+
   if (name === "calendar") {
     return (
       <svg viewBox="0 0 24 24" aria-hidden="true" {...common}>

@@ -22,7 +22,9 @@ const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
 const sqlFiles = [
   "test/rls/supabase-auth-test-shim.sql",
   "supabase/migrations/20260818061945_task_4_business_ownership_rls.sql",
+  "supabase/migrations/20260818095500_task_5_business_onboarding.sql",
   "test/rls/task-4-business-ownership.test.sql",
+  "test/business/task-5-business-onboarding.test.sql",
 ];
 
 for (const sqlFile of sqlFiles) {
@@ -45,4 +47,4 @@ for (const sqlFile of sqlFiles) {
   }
 }
 
-console.log("Task 4 database-backed RLS attack matrix passed.");
+console.log("Task 4-5 database-backed security and onboarding matrices passed.");

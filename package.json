@@ -13,9 +13,10 @@
     "check": "npm run lint && npm run typecheck",
     "lint": "biome lint .",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "npm run test:spec && npm run test:auth && npm run test:rls",
+    "test": "npm run test:spec && npm run test:auth && npm run test:business && npm run test:rls",
     "test:spec": "node --test test/calculation-spec.examples.test.mjs",
     "test:auth": "node --experimental-strip-types --test test/auth/*.test.mts test/auth/*.test.mjs",
+    "test:business": "node --experimental-strip-types --test test/business/*.test.mts",
     "test:rls": "node --test test/rls/*.test.mjs && node test/rls/run-attack-matrix.mjs",
     "test:e2e": "playwright test",
     "bootstrap:admin": "node scripts/bootstrap-admin.mjs"
