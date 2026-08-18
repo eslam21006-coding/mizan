@@ -9,8 +9,14 @@ values
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"11111111-1111-4111-8111-111111111111","role":"authenticated","app_metadata":{"role":"mentee"}}';
 
-insert into public.businesses (id, name, base_currency, owner_user_id)
-values ('b1111111-1111-4111-8111-111111111111', 'Business One', 'EGP', '11111111-1111-4111-8111-111111111111');
+insert into public.businesses (id, name, base_currency, owner_user_id, creation_request_id)
+values (
+  'b1111111-1111-4111-8111-111111111111',
+  'Business One',
+  'EGP',
+  '11111111-1111-4111-8111-111111111111',
+  '31111111-1111-4111-8111-111111111111'
+);
 
 do $$
 begin
@@ -41,8 +47,14 @@ reset role;
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"22222222-2222-4222-8222-222222222222","role":"authenticated","app_metadata":{"role":"mentee"}}';
 
-insert into public.businesses (id, name, base_currency, owner_user_id)
-values ('b2222222-2222-4222-8222-222222222222', 'Business Two', 'SAR', '22222222-2222-4222-8222-222222222222');
+insert into public.businesses (id, name, base_currency, owner_user_id, creation_request_id)
+values (
+  'b2222222-2222-4222-8222-222222222222',
+  'Business Two',
+  'SAR',
+  '22222222-2222-4222-8222-222222222222',
+  '32222222-2222-4222-8222-222222222222'
+);
 
 reset role;
 set local role authenticated;

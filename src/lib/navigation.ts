@@ -2,6 +2,7 @@ import type { MizanRole } from "@/lib/auth/role";
 
 export type NavigationIcon =
   | "home"
+  | "business"
   | "calendar"
   | "customers"
   | "funnel"
@@ -18,6 +19,7 @@ export type NavigationItem = {
 
 export const menteeNavigation: NavigationItem[] = [
   { label: "الرئيسية", href: "/", icon: "home" },
+  { label: "البزنس", href: "/businesses", icon: "business" },
   { label: "الأرقام الشهرية", href: "/monthly", icon: "calendar" },
   { label: "العملاء و LTV", href: "/customers", icon: "customers" },
   { label: "الفانلز", href: "/funnels", icon: "funnel" },
