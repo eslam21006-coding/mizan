@@ -32,7 +32,7 @@ test("RLS execution plan fails closed for unsafe database URLs", () => {
   );
 });
 
-test("RLS execution plan invokes every Task 4 and Task 5 SQL file through fail-fast psql", () => {
+test("RLS execution plan invokes every SQL file through fail-fast psql in staged migration order", () => {
   const databaseUrl = "postgresql://postgres:postgres@127.0.0.1:5432/mizan_test";
   const plan = buildExecutionPlan(databaseUrl);
 
@@ -54,7 +54,26 @@ test("RLS execution plan invokes every Task 4 and Task 5 SQL file through fail-f
     assert.deepEqual(execution.args.slice(-2), ["--file", execution.sqlFile]);
   }
 
-  assert.ok(
-    sqlFiles.includes("supabase/migrations/20260818105500_task_5_business_creation_idempotency.sql"),
+  const fixtureIndex = sqlFiles.indexOf("test/business/task-5-preexisting-business.fixture.sql");
+  const addColumnIndex = sqlFiles.indexOf(
+    "supabase/migrations/20260818105500_task_5_business_creation_idempotency.sql",
   );
+  const backfillIndex = sqlFiles.indexOf(
+    "supabase/migrations/20260818105502_task_5_backfill_creation_request_ids.sql",
+  );
+  const concurrentIndex = sqlFiles.indexOf(
+    "supabase/migrations/20260818105505_task_5_creation_request_unique_index.sql",
+  );
+  const attachIndex = sqlFiles.indexOf(
+    "supabase/migrations/20260818105506_task_5_attach_creation_request_unique_constraint.sql",
+  );
+  const backfillVerificationIndex = sqlFiles.indexOf(
+    "test/business/task-5-idempotency-backfill.test.sql",
+  );
+
+  assert.ok(fixtureIndex < addColumnIndex);
+  assert.ok(addColumnIndex < backfillIndex);
+  assert.ok(backfillIndex < concurrentIndex);
+  assert.ok(concurrentIndex < attachIndex);
+  assert.ok(attachIndex < backfillVerificationIndex);
 });

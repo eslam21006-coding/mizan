@@ -22,10 +22,11 @@ test("business creation derives ownership from authenticated context", () => {
   assert.doesNotMatch(wizard, /name=["']user_id["']/);
 });
 
-test("business creation uses a server-generated idempotency request ID", () => {
+test("business creation requires a server-generated idempotency request ID", () => {
   assert.match(page, /creationRequestId=\{randomUUID\(\)\}/);
   assert.match(wizard, /name="creation_request_id" value=\{creationRequestId\}/);
   assert.match(action, /creation_request_id:\s*creationRequestId/);
+  assert.match(action, /if \(!name \|\| !baseCurrency \|\| !timezone \|\| !creationRequestId\)/);
   assert.match(action, /error\.code === "23505"/);
   assert.match(action, /\.eq\("creation_request_id", creationRequestId\)/);
 });
@@ -37,7 +38,7 @@ test("duplicate request recovery verifies the original request payload before su
   assert.match(action, /existingBusiness\.timezone === timezone/);
 });
 
-test("Task 5 database migrations and attack matrix are passed to psql execution", () => {
+test("Task 5 staged migrations and attack matrices are passed to psql execution", () => {
   const plan = buildExecutionPlan("postgresql://postgres:postgres@127.0.0.1:5432/mizan_test");
   const executedFiles = plan.map((execution) => {
     assert.equal(execution.command, "psql");
@@ -46,15 +47,17 @@ test("Task 5 database migrations and attack matrix are passed to psql execution"
     return execution.args[fileFlagIndex + 1];
   });
 
-  assert.deepEqual(
-    executedFiles.filter((file) => file.includes("task_5") || file.includes("task-5")),
-    [
-      "supabase/migrations/20260818095500_task_5_business_onboarding.sql",
-      "supabase/migrations/20260818095501_task_5_validate_timezone_constraint.sql",
-      "supabase/migrations/20260818105500_task_5_business_creation_idempotency.sql",
-      "test/business/task-5-business-onboarding.test.sql",
-    ],
+  const task5Files = executedFiles.filter(
+    (file) => file.includes("task_5") || file.includes("task-5"),
   );
+
+  assert.ok(task5Files.includes("supabase/migrations/20260818095500_task_5_business_onboarding.sql"));
+  assert.ok(task5Files.includes("supabase/migrations/20260818095501_task_5_validate_timezone_constraint.sql"));
+  assert.ok(task5Files.includes("supabase/migrations/20260818105500_task_5_business_creation_idempotency.sql"));
+  assert.ok(task5Files.includes("supabase/migrations/20260818105505_task_5_creation_request_unique_index.sql"));
+  assert.ok(task5Files.includes("supabase/migrations/20260818105507_task_5_creation_request_immutability.sql"));
+  assert.ok(task5Files.includes("test/business/task-5-idempotency-backfill.test.sql"));
+  assert.ok(task5Files.includes("test/business/task-5-business-onboarding.test.sql"));
 });
 
 test("implicit Enter submission advances inside handleSubmit before the final review step", () => {

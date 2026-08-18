@@ -22,6 +22,7 @@ begin
     from pg_constraint
     where conname = 'businesses_owner_creation_request_unique'
       and conrelid = 'public.businesses'::regclass
+      and contype = 'u'
   ) then
     raise exception 'business creation idempotency constraint is missing';
   end if;
@@ -29,6 +30,22 @@ end $$;
 
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"55555555-5555-4555-8555-555555555555","role":"authenticated","app_metadata":{"role":"mentee"}}';
+
+do $$
+begin
+  begin
+    insert into public.businesses (name, base_currency, timezone, owner_user_id)
+    values (
+      'Missing Request ID',
+      'EGP',
+      'Africa/Cairo',
+      '55555555-5555-4555-8555-555555555555'
+    );
+    raise exception 'business creation without an explicit request id succeeded';
+  exception
+    when not_null_violation then null;
+  end;
+end $$;
 
 insert into public.businesses (
   id,
