@@ -68,7 +68,15 @@ export default async function BusinessesPage({ searchParams }: BusinessesPagePro
                   <dd>{getTimezoneLabel(business.timezone)}</dd>
                 </div>
               </dl>
-              <p className={styles.nextStep}>الخطوة التالية في الخطة: إضافة مصادر الإيراد.</p>
+              <div className={styles.nextStep}>
+                <p>الخطوة التالية: عرّف مصادر الإيراد Front-End وBackend لهذا البزنس.</p>
+                <Link
+                  className={styles.manageLink}
+                  href={`/businesses/${business.id}/revenue-streams`}
+                >
+                  إدارة مصادر الإيراد
+                </Link>
+              </div>
             </article>
           ))}
         </section>
