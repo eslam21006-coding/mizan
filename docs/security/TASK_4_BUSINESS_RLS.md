@@ -20,6 +20,7 @@ Task 4 establishes the database authorization boundary for Mizan businesses. It 
 - `membership_role`: `owner` or `member`.
 - Exactly one `owner` membership is allowed per business.
 - The owner membership is synchronized automatically from `businesses.owner_user_id`.
+- Direct authenticated membership writes are limited to Admin-created/deleted `member` rows. The synchronized `owner` row cannot be directly updated, deleted, demoted, or replaced through membership-table RLS.
 
 ## Authorization rules
 
@@ -27,7 +28,7 @@ Task 4 establishes the database authorization boundary for Mizan businesses. It 
 
 Admin authorization is checked against the current `auth.users.raw_app_meta_data.role` value through `private.is_admin()`. It does not trust `user_metadata`, and it does not rely on a potentially stale JWT Admin claim.
 
-An Admin can read and manage all businesses and memberships.
+An Admin can read and manage all businesses. An Admin can add/remove read-only `member` assignments. Ownership changes must be made through `businesses.owner_user_id`; the database trigger then atomically replaces the synchronized owner membership.
 
 ### Mentee owner
 
@@ -41,8 +42,8 @@ A Mentee may:
 A Mentee may not:
 
 - transfer ownership to another user;
-- create an owner membership in someone else’s business;
-- update or delete membership rows directly;
+- write membership rows directly;
+- update or delete membership rows;
 - read another user’s membership rows.
 
 ### Read-only member
@@ -51,9 +52,9 @@ An Admin may explicitly add another user as a `member`. That membership grants r
 
 ## RLS boundary
 
-RLS is enabled on every Task 4 table in the exposed `public` schema. `anon` receives no table privileges. `authenticated` receives table privileges that are then constrained by RLS policies.
+RLS is enabled on every Task 4 table in the exposed `public` schema. `anon` receives no table privileges. `authenticated` receives only the table privileges required for its policy-controlled operations.
 
-Privileged helper functions live in the non-exposed `private` schema, use a fixed empty `search_path`, and expose only the minimum execution privilege required by RLS.
+Privileged helper/trigger functions live in the non-exposed `private` schema, use a fixed empty `search_path`, and expose only the minimum execution privilege required. The owner-membership synchronization trigger uses `SECURITY DEFINER` specifically so users cannot acquire equivalent direct membership-table privileges.
 
 ## Verification
 
@@ -61,11 +62,14 @@ Privileged helper functions live in the non-exposed `private` schema, use a fixe
 
 1. owner membership is created automatically;
 2. Mentee A cannot read Mentee B’s business;
-3. Mentee A cannot update Mentee B’s business;
-4. Mentee A cannot self-add to Mentee B’s business;
-5. Mentee A cannot transfer their business to another owner;
-6. Admin sees all businesses and memberships;
-7. a stale JWT claiming `admin` does not grant Admin rights when the current Auth record says `mentee`;
-8. an explicit `member` assignment grants read-only access only.
+3. Mentee A cannot see Mentee B’s membership;
+4. Mentee A cannot update Mentee B’s business;
+5. Mentee A cannot self-add to Mentee B’s business;
+6. Mentee A cannot transfer their business to another owner;
+7. Admin sees all businesses and memberships;
+8. Admin cannot directly delete/demote the synchronized owner membership;
+9. a stale JWT claiming `admin` does not grant Admin rights when the current Auth record says `mentee`;
+10. an explicit `member` assignment grants read-only access only;
+11. an Admin ownership transfer through `businesses.owner_user_id` atomically synchronizes the owner membership.
 
 The test is designed to run inside a transaction and roll back all fixture data.
