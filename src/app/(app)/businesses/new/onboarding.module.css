@@ -57,7 +57,7 @@
   border-radius: 11px;
 }
 
-.stepper li > span {
+.stepNumber {
   width: 24px;
   height: 24px;
   flex: 0 0 24px;
@@ -87,7 +87,7 @@
   background: var(--brand-soft);
 }
 
-.stepper .doneStep > span {
+.doneStep .stepNumber {
   color: #fff;
   background: var(--brand);
 }
@@ -183,13 +183,11 @@ fieldset.stepPanel {
   border-color: var(--brand);
 }
 
-.currencyButton strong,
-.currencySelected strong {
+.currencyCode {
   font-size: 15px;
 }
 
-.currencyButton span,
-.currencySelected span {
+.currencyLabel {
   color: var(--text-soft);
   font-size: 11px;
 }
