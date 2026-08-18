@@ -10,11 +10,11 @@ if (!databaseUrl) {
 
 const parsedDatabaseUrl = new URL(databaseUrl);
 const databaseName = decodeURIComponent(parsedDatabaseUrl.pathname.replace(/^\//, ""));
-const loopbackHosts = new Set(["localhost", "127.0.0.1", "::1"]);
+const loopbackHosts = new Set(["127.0.0.1"]);
 
 if (!loopbackHosts.has(parsedDatabaseUrl.hostname) || !databaseName.endsWith("_test")) {
   throw new Error(
-    "Refusing to run destructive RLS setup unless RLS_TEST_DATABASE_URL uses a loopback host and a database name ending in _test.",
+    "Refusing to run destructive RLS setup unless RLS_TEST_DATABASE_URL uses the literal loopback address 127.0.0.1 and a database name ending in _test.",
   );
 }
 
