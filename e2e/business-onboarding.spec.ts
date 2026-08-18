@@ -2,6 +2,8 @@ import { expect, test } from "@playwright/test";
 
 const liveEmail = process.env.MIZAN_E2E_EMAIL?.trim() ?? "";
 const livePassword = process.env.MIZAN_E2E_PASSWORD ?? "";
+const liveInviteTokenHash = process.env.MIZAN_E2E_INVITE_TOKEN_HASH?.trim() ?? "";
+const hasLiveAuth = Boolean(liveInviteTokenHash || (liveEmail && livePassword));
 
 function captureBrowserErrors(page: import("@playwright/test").Page) {
   const errors: string[] = [];
@@ -15,6 +17,14 @@ function captureBrowserErrors(page: import("@playwright/test").Page) {
 }
 
 async function login(page: import("@playwright/test").Page) {
+  if (liveInviteTokenHash) {
+    await page.goto(`/auth/confirm?token_hash=${encodeURIComponent(liveInviteTokenHash)}&type=invite`);
+    await expect(page).toHaveURL(/\/set-password$/);
+    await page.goto("/");
+    await expect(page).toHaveURL(/\/$/);
+    return;
+  }
+
   await page.goto("/login");
   await page.getByLabel("البريد الإلكتروني").fill(liveEmail);
   await page.getByLabel("كلمة المرور").fill(livePassword);
@@ -23,7 +33,7 @@ async function login(page: import("@playwright/test").Page) {
 }
 
 test.describe("Task 5 business onboarding", () => {
-  test.skip(!liveEmail || !livePassword, "Requires live Mizan Supabase test credentials");
+  test.skip(!hasLiveAuth, "Requires live Mizan Supabase credentials or a one-use invite token");
 
   test("creates exactly one business through the Arabic RTL wizard and remains responsive", async ({
     page,
