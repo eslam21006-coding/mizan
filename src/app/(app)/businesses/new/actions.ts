@@ -11,7 +11,7 @@ import {
 } from "@/lib/business/onboarding";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-function redirectToCreatedBusinessList() {
+function redirectToCreatedBusinessList(): never {
   revalidatePath("/");
   revalidatePath("/businesses");
   redirect("/businesses?status=created");
@@ -38,7 +38,7 @@ export async function createBusiness(formData: FormData) {
   });
 
   if (!error) {
-    redirectToCreatedBusinessList();
+    return redirectToCreatedBusinessList();
   }
 
   if (error.code === "23505") {
@@ -50,7 +50,7 @@ export async function createBusiness(formData: FormData) {
       .maybeSingle();
 
     if (!lookupError && existingBusiness) {
-      redirectToCreatedBusinessList();
+      return redirectToCreatedBusinessList();
     }
   }
 
