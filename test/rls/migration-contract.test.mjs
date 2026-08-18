@@ -8,11 +8,13 @@ const migrationUrl = new URL(
 );
 const migration = await readFile(migrationUrl, "utf8");
 
-test("Task 4 migration enables RLS and never grants table access to anon", () => {
+test("Task 4 migration enables RLS and resets exposed table privileges", () => {
   assert.match(migration, /alter table public\.businesses enable row level security;/);
   assert.match(migration, /alter table public\.business_memberships enable row level security;/);
   assert.match(migration, /revoke all on public\.businesses from anon;/);
   assert.match(migration, /revoke all on public\.business_memberships from anon;/);
+  assert.match(migration, /revoke all on public\.businesses from authenticated;/);
+  assert.match(migration, /revoke all on public\.business_memberships from authenticated;/);
   assert.doesNotMatch(migration, /grant\s+.+\s+on public\.(?:businesses|business_memberships) to anon;/i);
 });
 
