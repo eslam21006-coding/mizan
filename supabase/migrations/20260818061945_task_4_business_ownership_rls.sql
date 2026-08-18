@@ -62,29 +62,9 @@ revoke all on public.businesses from anon;
 revoke all on public.business_memberships from anon;
 
 grant select, insert, update, delete on public.businesses to authenticated;
-grant select, insert, update, delete on public.business_memberships to authenticated;
+grant select, insert, delete on public.business_memberships to authenticated;
 grant all on public.businesses to service_role;
 grant all on public.business_memberships to service_role;
-
-create or replace function private.user_owns_business(target_business_id uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = ''
-as $$
-  select exists (
-    select 1
-    from public.businesses as business
-    where business.id = target_business_id
-      and business.owner_user_id = (select auth.uid())
-  );
-$$;
-
-revoke all on function private.user_owns_business(uuid) from public;
-revoke all on function private.user_owns_business(uuid) from anon;
-revoke all on function private.user_owns_business(uuid) from authenticated;
-grant execute on function private.user_owns_business(uuid) to authenticated;
 
 create policy businesses_select
 on public.businesses for select
@@ -135,33 +115,26 @@ using (
   or user_id = (select auth.uid())
 );
 
-create policy business_memberships_insert
+create policy business_memberships_insert_member
 on public.business_memberships for insert
 to authenticated
 with check (
   (select private.is_admin())
-  or (
-    user_id = (select auth.uid())
-    and membership_role = 'owner'
-    and (select private.user_owns_business(business_id))
-  )
+  and membership_role = 'member'
 );
 
-create policy business_memberships_update
-on public.business_memberships for update
-to authenticated
-using ((select private.is_admin()))
-with check ((select private.is_admin()));
-
-create policy business_memberships_delete
+create policy business_memberships_delete_member
 on public.business_memberships for delete
 to authenticated
-using ((select private.is_admin()));
+using (
+  (select private.is_admin())
+  and membership_role = 'member'
+);
 
 create or replace function private.sync_business_owner_membership()
 returns trigger
 language plpgsql
-security invoker
+security definer
 set search_path = ''
 as $$
 begin
@@ -182,6 +155,8 @@ end;
 $$;
 
 revoke all on function private.sync_business_owner_membership() from public;
+revoke all on function private.sync_business_owner_membership() from anon;
+revoke all on function private.sync_business_owner_membership() from authenticated;
 
 create trigger sync_business_owner_membership
   after insert or update of owner_user_id on public.businesses
