@@ -23,15 +23,32 @@ test("Admin authorization comes from fresh server-controlled app metadata", () =
   assert.match(migration, /security definer\nset search_path = ''/);
 });
 
-test("Mentees cannot directly manage memberships or transfer ownership", () => {
+test("Owner memberships are synchronized only through the business owner field", () => {
   assert.match(
     migration,
-    /create policy business_memberships_update[\s\S]*?using \(\(select private\.is_admin\(\)\)\)/,
+    /grant select, insert, delete on public\.business_memberships to authenticated;/,
+  );
+  assert.doesNotMatch(migration, /grant[^;]*update[^;]*public\.business_memberships to authenticated;/i);
+  assert.doesNotMatch(migration, /create policy business_memberships_update/);
+  assert.match(
+    migration,
+    /create policy business_memberships_insert_member[\s\S]*?private\.is_admin\(\)[\s\S]*?membership_role = 'member'/,
   );
   assert.match(
     migration,
-    /create policy business_memberships_delete[\s\S]*?using \(\(select private\.is_admin\(\)\)\)/,
+    /create policy business_memberships_delete_member[\s\S]*?private\.is_admin\(\)[\s\S]*?membership_role = 'member'/,
   );
+  assert.match(
+    migration,
+    /function private\.sync_business_owner_membership\(\)[\s\S]*?security definer[\s\S]*?set search_path = ''/,
+  );
+  assert.match(
+    migration,
+    /revoke all on function private\.sync_business_owner_membership\(\) from authenticated;/,
+  );
+});
+
+test("Mentee business updates cannot transfer ownership", () => {
   assert.match(
     migration,
     /create policy businesses_update[\s\S]*?owner_user_id = \(select auth\.uid\(\)\)[\s\S]*?with check[\s\S]*?owner_user_id = \(select auth\.uid\(\)\)/,
