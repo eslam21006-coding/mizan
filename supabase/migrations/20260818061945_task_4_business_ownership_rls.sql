@@ -60,6 +60,8 @@ alter table public.business_memberships enable row level security;
 
 revoke all on public.businesses from anon;
 revoke all on public.business_memberships from anon;
+revoke all on public.businesses from authenticated;
+revoke all on public.business_memberships from authenticated;
 
 grant select, insert, update, delete on public.businesses to authenticated;
 grant select, insert, delete on public.business_memberships to authenticated;
