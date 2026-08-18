@@ -260,7 +260,7 @@
   accent-color: var(--brand);
 }
 
-.activeToggle span {
+.editForm .activeToggle > span {
   line-height: 1.5;
 }
 
