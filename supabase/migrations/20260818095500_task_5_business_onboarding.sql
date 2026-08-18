@@ -9,4 +9,4 @@ alter table public.businesses
       timezone = 'UTC'
       or timezone ~ '^[A-Za-z][A-Za-z0-9_+.-]*(/[A-Za-z0-9_+.-]+)+$'
     )
-  );
+  ) not valid;

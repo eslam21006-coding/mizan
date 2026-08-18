@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
   CURRENCY_OPTIONS,
   TIMEZONE_OPTIONS,
@@ -60,6 +60,13 @@ export function BusinessOnboardingWizard({ serverError }: BusinessOnboardingWiza
     setStep((current) => Math.max(0, current - 1));
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (step < steps.length - 1) {
+      event.preventDefault();
+      goForward();
+    }
+  }
+
   const currencyLabel = CURRENCY_OPTIONS.find((option) => option.code === currency)?.label;
 
   return (
@@ -93,7 +100,7 @@ export function BusinessOnboardingWizard({ serverError }: BusinessOnboardingWiza
         </div>
       )}
 
-      <form action={createBusiness} className={styles.form}>
+      <form action={createBusiness} className={styles.form} onSubmit={handleSubmit}>
         <input type="hidden" name="name" value={name} />
         <input type="hidden" name="base_currency" value={currency} />
         <input type="hidden" name="timezone" value={timezone} />

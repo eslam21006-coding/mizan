@@ -23,9 +23,10 @@ test("base currency parsing rejects unsupported values", () => {
   assert.equal(parseBaseCurrency(null), null);
 });
 
-test("timezone validation accepts real IANA zones and rejects invented values", () => {
+test("timezone validation accepts named zones but rejects offsets and invented values", () => {
   assert.equal(normalizeTimeZone(" Africa/Cairo "), "Africa/Cairo");
   assert.equal(normalizeTimeZone("UTC"), "UTC");
+  assert.equal(normalizeTimeZone("+01:00"), null);
   assert.equal(normalizeTimeZone("Not/ARealTimezone"), null);
   assert.equal(normalizeTimeZone("x".repeat(65)), null);
 });

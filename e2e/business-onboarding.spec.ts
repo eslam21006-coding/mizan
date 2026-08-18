@@ -40,7 +40,8 @@ test.describe("Task 5 business onboarding", () => {
     await expect(page.getByRole("heading", { name: "أضف بزنس جديد", level: 1 })).toBeVisible();
 
     await page.getByLabel("اسم البزنس").fill(businessName);
-    await page.getByRole("button", { name: "التالي" }).click();
+    await page.getByLabel("اسم البزنس").press("Enter");
+    await expect(page.getByRole("button", { name: /EGP/ })).toBeVisible();
 
     await page.getByRole("button", { name: /EGP/ }).click();
     await page.getByRole("button", { name: "التالي" }).click();

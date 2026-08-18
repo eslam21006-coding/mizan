@@ -23,6 +23,7 @@ const sqlFiles = [
   "test/rls/supabase-auth-test-shim.sql",
   "supabase/migrations/20260818061945_task_4_business_ownership_rls.sql",
   "supabase/migrations/20260818095500_task_5_business_onboarding.sql",
+  "supabase/migrations/20260818095501_task_5_validate_timezone_constraint.sql",
   "test/rls/task-4-business-ownership.test.sql",
   "test/business/task-5-business-onboarding.test.sql",
 ];

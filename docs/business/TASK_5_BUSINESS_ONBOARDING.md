@@ -39,7 +39,9 @@ One base currency is stored per business. V1 does not perform silent FX conversi
 
 ## Timezone
 
-`businesses.timezone` stores an IANA timezone name and defaults to `Africa/Cairo` for backward-compatible inserts. The application validates submitted values using the runtime timezone database. The database also rejects malformed timezone-shaped strings and limits the value to 64 characters.
+`businesses.timezone` stores a named timezone compatible with the database constraint and defaults to `Africa/Cairo` for backward-compatible inserts. The application first rejects unsupported identifier shapes such as fixed offsets (`+01:00`), then verifies the remaining value with the runtime timezone database.
+
+The database limits the value to 64 characters and rejects malformed timezone-shaped strings. The check constraint is added `NOT VALID` so introducing it does not scan existing rows while holding the stronger DDL lock; the immediately following migration validates the constraint separately. Database-backed tests assert the final constraint is validated.
 
 Timezone is setup metadata only in Task 5. Monthly period behavior is implemented later.
 
@@ -52,14 +54,16 @@ The Arabic RTL onboarding flow is four short screens:
 3. timezone;
 4. review and create.
 
+Pressing Enter before the review step advances through the wizard rather than submitting incomplete hidden values to the server. Only the final review step submits the business creation action.
+
 The business index lists every business visible through Task 4 RLS and provides the entry point to create another business. The home screen links directly to business setup.
 
 ## Verification
 
 Task 5 is complete only when:
 
-1. the migration adds `businesses.timezone` without weakening Task 4 RLS;
-2. server-side validation accepts only the approved currencies and a real timezone;
+1. the migrations add and separately validate `businesses.timezone` without weakening Task 4 RLS;
+2. server-side validation accepts only the approved currencies and a database-compatible real timezone;
 3. the create action derives `owner_user_id` from the authenticated session rather than form input;
 4. database-backed tests prove a Mentee cannot create a business owned by another user;
 5. the owner membership is still created automatically by the Task 4 trigger;

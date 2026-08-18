@@ -24,6 +24,7 @@ test("RLS runner fails closed and executes Task 4 plus Task 5 database tests", (
   assert.match(runner, /ON_ERROR_STOP=1/);
   assert.match(runner, /20260818061945_task_4_business_ownership_rls\.sql/);
   assert.match(runner, /20260818095500_task_5_business_onboarding\.sql/);
+  assert.match(runner, /20260818095501_task_5_validate_timezone_constraint\.sql/);
   assert.match(runner, /task-4-business-ownership\.test\.sql/);
   assert.match(runner, /task-5-business-onboarding\.test\.sql/);
 });

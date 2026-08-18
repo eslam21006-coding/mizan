@@ -5,6 +5,19 @@ values
   ('55555555-5555-4555-8555-555555555555', 'task5-owner@example.test', '{"role":"mentee"}'::jsonb, now(), now()),
   ('66666666-6666-4666-8666-666666666666', 'task5-other@example.test', '{"role":"mentee"}'::jsonb, now(), now());
 
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'businesses_timezone_shape_check'
+      and conrelid = 'public.businesses'::regclass
+      and convalidated
+  ) then
+    raise exception 'timezone constraint is not validated';
+  end if;
+end $$;
+
 set local role authenticated;
 set local request.jwt.claims = '{"sub":"55555555-5555-4555-8555-555555555555","role":"authenticated","app_metadata":{"role":"mentee"}}';
 

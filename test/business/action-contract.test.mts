@@ -18,9 +18,17 @@ test("business creation derives ownership from authenticated context", () => {
   assert.doesNotMatch(wizard, /name=["']user_id["']/);
 });
 
-test("Task 5 database migration and attack matrix run in CI", () => {
+test("Task 5 database migrations and attack matrix run in CI", () => {
   assert.match(runner, /20260818095500_task_5_business_onboarding\.sql/);
+  assert.match(runner, /20260818095501_task_5_validate_timezone_constraint\.sql/);
   assert.match(runner, /task-5-business-onboarding\.test\.sql/);
+});
+
+test("implicit Enter submission advances the wizard before the final review step", () => {
+  assert.match(wizard, /onSubmit=\{handleSubmit\}/);
+  assert.match(wizard, /if \(step < steps\.length - 1\)/);
+  assert.match(wizard, /event\.preventDefault\(\)/);
+  assert.match(wizard, /goForward\(\)/);
 });
 
 test("Task 5 wizard does not pull Task 6, 7, or funnel data entry forward", () => {

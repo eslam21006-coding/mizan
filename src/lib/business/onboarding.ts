@@ -28,6 +28,8 @@ export const TIMEZONE_OPTIONS: ReadonlyArray<{ value: string; label: string }> =
   { value: "UTC", label: "UTC" },
 ];
 
+const DATABASE_TIMEZONE_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9_+.-]*(\/[A-Za-z0-9_+.-]+)+$/;
+
 export function normalizeBusinessName(value: unknown) {
   const normalized = String(value ?? "")
     .trim()
@@ -47,6 +49,10 @@ export function parseBaseCurrency(value: unknown): SupportedCurrency | null {
 export function normalizeTimeZone(value: unknown) {
   const timezone = String(value ?? "").trim();
   if (timezone.length < 1 || timezone.length > 64) {
+    return null;
+  }
+
+  if (timezone !== "UTC" && !DATABASE_TIMEZONE_NAME_PATTERN.test(timezone)) {
     return null;
   }
 
