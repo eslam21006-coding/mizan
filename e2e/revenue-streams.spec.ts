@@ -63,7 +63,9 @@ test.describe("Task 6 revenue stream management", () => {
     await page.getByRole("button", { name: "إضافة مصدر الإيراد" }).click();
 
     await expect(page.getByRole("status")).toContainText("تمت إضافة مصدر الإيراد");
-    const streamCard = page.locator("article").filter({ hasText: streamName });
+    const streamCard = page
+      .locator("article")
+      .filter({ has: page.getByDisplayValue(streamName, { exact: true }) });
     await expect(streamCard).toHaveCount(1);
     await expect(streamCard).toContainText("Front-End / أمامي");
 
@@ -73,7 +75,9 @@ test.describe("Task 6 revenue stream management", () => {
     await streamCard.getByRole("button", { name: "حفظ التعديلات" }).click();
 
     await expect(page.getByRole("status")).toContainText("تم حفظ تعديلات مصدر الإيراد");
-    const updatedCard = page.locator("article").filter({ hasText: updatedName });
+    const updatedCard = page
+      .locator("article")
+      .filter({ has: page.getByDisplayValue(updatedName, { exact: true }) });
     await expect(updatedCard).toHaveCount(1);
     await expect(updatedCard).toContainText("Backend / خلفي");
     await expect(updatedCard).toContainText("غير نشط");
