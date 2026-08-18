@@ -5,6 +5,10 @@ const livePassword = process.env.MIZAN_E2E_PASSWORD ?? "";
 const liveInviteTokenHash = process.env.MIZAN_E2E_INVITE_TOKEN_HASH?.trim() ?? "";
 const hasLiveAuth = Boolean(liveInviteTokenHash || (liveEmail && livePassword));
 
+function revenueStreamCard(page: import("@playwright/test").Page, name: string) {
+  return page.locator(`article:has(input[name="name"][value=${JSON.stringify(name)}])`);
+}
+
 async function login(page: import("@playwright/test").Page) {
   if (liveInviteTokenHash) {
     await page.goto(
@@ -63,9 +67,7 @@ test.describe("Task 6 revenue stream management", () => {
     await page.getByRole("button", { name: "إضافة مصدر الإيراد" }).click();
 
     await expect(page.getByRole("status")).toContainText("تمت إضافة مصدر الإيراد");
-    const streamCard = page
-      .locator("article")
-      .filter({ has: page.getByDisplayValue(streamName, { exact: true }) });
+    const streamCard = revenueStreamCard(page, streamName);
     await expect(streamCard).toHaveCount(1);
     await expect(streamCard).toContainText("Front-End / أمامي");
 
@@ -75,9 +77,7 @@ test.describe("Task 6 revenue stream management", () => {
     await streamCard.getByRole("button", { name: "حفظ التعديلات" }).click();
 
     await expect(page.getByRole("status")).toContainText("تم حفظ تعديلات مصدر الإيراد");
-    const updatedCard = page
-      .locator("article")
-      .filter({ has: page.getByDisplayValue(updatedName, { exact: true }) });
+    const updatedCard = revenueStreamCard(page, updatedName);
     await expect(updatedCard).toHaveCount(1);
     await expect(updatedCard).toContainText("Backend / خلفي");
     await expect(updatedCard).toContainText("غير نشط");
