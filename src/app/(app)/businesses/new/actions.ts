@@ -44,12 +44,17 @@ export async function createBusiness(formData: FormData) {
   if (error.code === "23505") {
     const { data: existingBusiness, error: lookupError } = await supabase
       .from("businesses")
-      .select("id")
+      .select("id,name,base_currency,timezone")
       .eq("owner_user_id", auth.userId)
       .eq("creation_request_id", creationRequestId)
       .maybeSingle();
 
-    if (!lookupError && existingBusiness) {
+    const isSameRequestPayload =
+      existingBusiness?.name === name &&
+      existingBusiness.base_currency === baseCurrency &&
+      existingBusiness.timezone === timezone;
+
+    if (!lookupError && existingBusiness && isSameRequestPayload) {
       return redirectToCreatedBusinessList();
     }
   }

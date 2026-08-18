@@ -30,6 +30,13 @@ test("business creation uses a server-generated idempotency request ID", () => {
   assert.match(action, /\.eq\("creation_request_id", creationRequestId\)/);
 });
 
+test("duplicate request recovery verifies the original request payload before succeeding", () => {
+  assert.match(action, /\.select\("id,name,base_currency,timezone"\)/);
+  assert.match(action, /existingBusiness\?\.name === name/);
+  assert.match(action, /existingBusiness\.base_currency === baseCurrency/);
+  assert.match(action, /existingBusiness\.timezone === timezone/);
+});
+
 test("Task 5 database migrations and attack matrix are passed to psql execution", () => {
   const plan = buildExecutionPlan("postgresql://postgres:postgres@127.0.0.1:5432/mizan_test");
   const executedFiles = plan.map((execution) => {

@@ -52,9 +52,10 @@ Live browser verification exposed that the same final onboarding submission can 
 - The server-rendered onboarding page generates a UUID `creation_request_id` for the form.
 - `businesses` stores that internal request ID.
 - `(owner_user_id, creation_request_id)` is unique.
+- `creation_request_id` is immutable after insert, preventing a client from changing the key and replaying an old request to create a duplicate.
 - A replay of the same creation request cannot create a second business.
-- If the duplicate request loses the unique-key race, the server verifies the already-created business belongs to the same authenticated owner and treats the operation as successful.
-- The final submit button is also disabled after submission for immediate UX feedback, but database uniqueness is the correctness boundary.
+- If the duplicate request loses the unique-key race, the server verifies the already-created business belongs to the same authenticated owner **and** has the same name, currency, and timezone before treating the replay as successful.
+- The final submit button is also disabled after submission for immediate UX feedback, but database uniqueness and immutability are the correctness boundary.
 
 ## UX
 
@@ -77,8 +78,10 @@ Task 5 is complete only when:
 2. server-side validation accepts only the approved currencies and a database-compatible real timezone;
 3. the create action derives `owner_user_id` from the authenticated session rather than form input;
 4. duplicate delivery of one onboarding request results in exactly one business;
-5. database-backed tests prove a Mentee cannot create a business owned by another user;
-6. the owner membership is still created automatically by the Task 4 trigger;
-7. the Arabic RTL wizard works on desktop and mobile without console/runtime errors;
-8. the business appears exactly once after successful creation;
-9. CI, CodeRabbit, and live Supabase/browser verification are green before merge.
+5. the creation request ID cannot be mutated after creation;
+6. duplicate-recovery success requires the same owner and same submitted business payload;
+7. database-backed tests prove a Mentee cannot create a business owned by another user;
+8. the owner membership is still created automatically by the Task 4 trigger;
+9. the Arabic RTL wizard works on desktop and mobile without console/runtime errors;
+10. the business appears exactly once after successful creation;
+11. CI, CodeRabbit, and live Supabase/browser verification are green before merge.

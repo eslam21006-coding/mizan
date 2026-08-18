@@ -103,6 +103,23 @@ begin
   end if;
 
   begin
+    update public.businesses
+    set creation_request_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+    where id = 'b5555555-5555-4555-8555-555555555555';
+    raise exception 'owner changed immutable creation request id';
+  exception
+    when insufficient_privilege then null;
+  end;
+
+  if (
+    select creation_request_id
+    from public.businesses
+    where id = 'b5555555-5555-4555-8555-555555555555'
+  ) <> '77777777-7777-4777-8777-777777777777'::uuid then
+    raise exception 'creation request id changed despite immutability trigger';
+  end if;
+
+  begin
     insert into public.businesses (name, base_currency, timezone, owner_user_id, creation_request_id)
     values (
       'Spoofed Owner',
