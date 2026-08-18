@@ -30,3 +30,7 @@ export function safeLocalPath(value: string | null | undefined, fallback = "/") 
 
   return value;
 }
+
+export function shouldRedirectAuthenticatedPublicPath(pathname: string) {
+  return pathname === "/login";
+}

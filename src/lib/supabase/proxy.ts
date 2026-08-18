@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { shouldRedirectAuthenticatedPublicPath } from "@/lib/auth/redirect";
 import { getRoleFromClaims } from "@/lib/auth/role";
 import { getSupabasePublicConfig } from "./config";
 
@@ -81,7 +82,7 @@ export async function updateSupabaseSession(request: NextRequest) {
     return redirectWithSession(request, supabaseResponse, "/access-denied");
   }
 
-  if (pathname === "/login" || pathname === "/access-denied") {
+  if (shouldRedirectAuthenticatedPublicPath(pathname)) {
     return redirectWithSession(request, supabaseResponse, "/");
   }
 

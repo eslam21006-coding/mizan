@@ -1,7 +1,10 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { getRoleFromAppMetadata, getRoleFromClaims } from "../../src/lib/auth/role.ts";
-import { safeLocalPath } from "../../src/lib/auth/redirect.ts";
+import {
+  safeLocalPath,
+  shouldRedirectAuthenticatedPublicPath,
+} from "../../src/lib/auth/redirect.ts";
 import { parseMizanSiteUrl } from "../../src/lib/auth/site-url.ts";
 
 test("role parser accepts only approved app_metadata roles", () => {
@@ -29,6 +32,12 @@ test("safeLocalPath preserves local routes and rejects external redirect forms",
   assert.equal(safeLocalPath("/\t/evil.example"), "/");
   assert.equal(safeLocalPath("/%0A/evil.example"), "/");
   assert.equal(safeLocalPath(null, "/login"), "/login");
+});
+
+test("authenticated valid-role users leave login but can view access denied", () => {
+  assert.equal(shouldRedirectAuthenticatedPublicPath("/login"), true);
+  assert.equal(shouldRedirectAuthenticatedPublicPath("/access-denied"), false);
+  assert.equal(shouldRedirectAuthenticatedPublicPath("/auth/confirm"), false);
 });
 
 test("Mizan site URL requires HTTPS except HTTP on loopback development hosts", () => {
