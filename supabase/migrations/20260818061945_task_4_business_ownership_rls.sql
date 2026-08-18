@@ -140,7 +140,11 @@ security definer
 set search_path = ''
 as $$
 begin
-  if tg_op = 'UPDATE' and old.owner_user_id is distinct from new.owner_user_id then
+  if tg_op = 'UPDATE' and old.owner_user_id is not distinct from new.owner_user_id then
+    return new;
+  end if;
+
+  if tg_op = 'UPDATE' then
     delete from public.business_memberships
     where business_id = new.id
       and user_id = old.owner_user_id
