@@ -15,7 +15,8 @@ test("npm test executes the database-backed RLS attack matrix", () => {
 });
 
 test("RLS runner fails closed and executes the real migration plus attack SQL", () => {
-  assert.match(runner, /loopbackHosts/);
+  assert.match(runner, /new Set\(\["127\.0\.0\.1"\]\)/);
+  assert.doesNotMatch(runner, /"localhost"/);
   assert.match(runner, /databaseName\.endsWith\("_test"\)/);
   assert.match(runner, /ON_ERROR_STOP=1/);
   assert.match(runner, /20260818061945_task_4_business_ownership_rls\.sql/);
