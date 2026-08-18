@@ -81,7 +81,7 @@ export function BusinessOnboardingWizard({ serverError }: BusinessOnboardingWiza
             className={index === step ? styles.activeStep : index < step ? styles.doneStep : undefined}
             aria-current={index === step ? "step" : undefined}
           >
-            <span>{index + 1}</span>
+            <span className={styles.stepNumber}>{index + 1}</span>
             <small>{label}</small>
           </li>
         ))}
@@ -110,7 +110,6 @@ export function BusinessOnboardingWizard({ serverError }: BusinessOnboardingWiza
               value={name}
               onChange={(event) => setName(event.target.value)}
               maxLength={120}
-              autoFocus
               autoComplete="organization"
               placeholder="مثال: أكاديمية رسالتك"
             />
@@ -132,8 +131,8 @@ export function BusinessOnboardingWizard({ serverError }: BusinessOnboardingWiza
                   aria-pressed={currency === option.code}
                   onClick={() => setCurrency(option.code)}
                 >
-                  <strong>{option.code}</strong>
-                  <span>{option.label}</span>
+                  <strong className={styles.currencyCode}>{option.code}</strong>
+                  <span className={styles.currencyLabel}>{option.label}</span>
                 </button>
               ))}
             </div>
