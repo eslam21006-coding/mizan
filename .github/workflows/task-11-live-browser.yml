@@ -1,9 +1,9 @@
 name: Task 11 live browser verification
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/task-11-main-business-dashboard
+      - main
 
 permissions:
   contents: read
