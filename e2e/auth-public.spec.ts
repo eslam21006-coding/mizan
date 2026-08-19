@@ -46,7 +46,7 @@ test("implicit auth callback fails closed with Arabic RTL guidance", async ({ pa
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
   await expect(page.getByRole("heading", { name: "تعذر تفعيل الرابط", level: 1 })).toBeVisible();
   await expect(
-    page.getByText("لم نتمكن من إنشاء جلسة آمنة من هذا الرابط. اطلب رابطًا جديدًا ثم حاول مرة أخرى", {
+    page.getByText("لم نتمكن من إنشاء جلسة آمنة من هذا الرابط. اطلب رابطًا جديدًا ثم حاول مرة أخرى.", {
       exact: true,
     }),
   ).toBeVisible();
