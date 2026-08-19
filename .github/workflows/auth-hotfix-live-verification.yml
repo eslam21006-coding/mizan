@@ -1,0 +1,118 @@
+name: Auth hotfix live verification
+
+on:
+  push:
+    branches:
+      - agent/auth-invite-password-hotfix
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live-auth-callback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      PREVIEW_URL: https://mizan-git-agent-auth-invit-4dda24-eslam21006-gmailcoms-projects.vercel.app
+      VERIFIER_URL: https://zpfacvowigsscrnyceqh.supabase.co/functions/v1/mizan-auth-hotfix-live-verifier-6b17c9
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install chromium
+
+      - name: Wait for exact branch preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in {1..30}; do
+            if curl --fail --silent --show-error --location --max-time 10 "$PREVIEW_URL/auth/callback?next=%2Fset-password" >/dev/null; then
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Preview did not become reachable in time." >&2
+          exit 1
+
+      - name: Create disposable hosted session
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --max-time 20 "$VERIFIER_URL")"
+          access_token="$(jq -r '.access_token // empty' <<<"$response")"
+          refresh_token="$(jq -r '.refresh_token // empty' <<<"$response")"
+          user_id="$(jq -r '.user_id // empty' <<<"$response")"
+          if [[ -z "$access_token" || -z "$refresh_token" || -z "$user_id" ]]; then
+            echo "Verifier did not return a complete disposable session." >&2
+            exit 1
+          fi
+          echo "::add-mask::$access_token"
+          echo "::add-mask::$refresh_token"
+          echo "LIVE_ACCESS_TOKEN=$access_token" >> "$GITHUB_ENV"
+          echo "LIVE_REFRESH_TOKEN=$refresh_token" >> "$GITHUB_ENV"
+
+      - name: Verify successful callback and password setup in Arabic RTL
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from '@playwright/test';
+
+          const browser = await chromium.launch({ headless: true });
+          const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+          const browserErrors = [];
+          page.on('console', (message) => {
+            if (message.type() === 'error') browserErrors.push(`console: ${message.text()}`);
+          });
+          page.on('pageerror', (error) => browserErrors.push(`pageerror: ${error.message}`));
+
+          try {
+            const fragment = new URLSearchParams({
+              access_token: process.env.LIVE_ACCESS_TOKEN,
+              refresh_token: process.env.LIVE_REFRESH_TOKEN,
+              type: 'recovery',
+            });
+            await page.goto(
+              `${process.env.PREVIEW_URL}/auth/callback?next=%2Fset-password#${fragment.toString()}`,
+              { waitUntil: 'domcontentloaded' },
+            );
+            await page.waitForURL(/\/set-password$/, { timeout: 30_000 });
+
+            if ((await page.locator('html').getAttribute('lang')) !== 'ar') {
+              throw new Error('Set-password page is not Arabic.');
+            }
+            if ((await page.locator('html').getAttribute('dir')) !== 'rtl') {
+              throw new Error('Set-password page is not RTL.');
+            }
+            await page.getByRole('heading', { name: 'اختر كلمة المرور', level: 1 }).waitFor();
+
+            const newPassword = `Verified-${Date.now()}-Aa1!`;
+            await page.getByLabel('كلمة المرور الجديدة').fill(newPassword);
+            await page.getByLabel('تأكيد كلمة المرور').fill(newPassword);
+            await page.getByRole('button', { name: 'تفعيل الحساب' }).click();
+            await page.waitForURL((url) => url.pathname === '/', { timeout: 30_000 });
+
+            const overflow = await page.evaluate(
+              () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+            );
+            if (overflow) throw new Error('Mobile page has horizontal overflow.');
+            if (browserErrors.length) throw new Error(browserErrors.join('\n'));
+          } finally {
+            await browser.close();
+          }
+          NODE
+
+      - name: Delete disposable hosted user
+        if: always()
+        shell: bash
+        run: |
+          curl --fail --silent --show-error --max-time 20 "$VERIFIER_URL?cleanup=1" >/dev/null
