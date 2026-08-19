@@ -58,10 +58,10 @@ test.describe("Task 8 monthly data entry", () => {
 
     await page.getByLabel("اسم مصدر الإيراد").fill(frontEndName);
     await page.getByLabel("التصنيف").first().selectOption("front_end");
-    await page.getByRole("button", { name: "إضافة المصدر" }).click();
+    await page.getByRole("button", { name: "إضافة مصدر الإيراد" }).click();
     await page.getByLabel("اسم مصدر الإيراد").fill(backendName);
     await page.getByLabel("التصنيف").first().selectOption("backend");
-    await page.getByRole("button", { name: "إضافة المصدر" }).click();
+    await page.getByRole("button", { name: "إضافة مصدر الإيراد" }).click();
     await page.getByRole("link", { name: "العودة للبزنسات" }).click();
 
     businessCard = page.locator("article").filter({ hasText: businessName });
