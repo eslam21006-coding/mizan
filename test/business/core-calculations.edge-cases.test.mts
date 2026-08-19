@@ -79,7 +79,7 @@ test("exact decimal arithmetic never introduces binary floating-point drift", ()
   assert.equal(availableValue(result.netCashCollected), "0.205");
   assert.equal(availableValue(result.expensesByCategory.financial), "0.0205");
   assert.equal(availableValue(result.realNetProfit), "0.1845");
-  assert.deepEqual(availableValue(result.realNetProfitMargin), ratio("369", "410"));
+  assert.deepEqual(availableValue(result.realNetProfitMargin), ratio("9", "10"));
 });
 
 test("12-decimal percentage rates remain exact beyond normal currency display precision", () => {
