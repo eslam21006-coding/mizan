@@ -29,11 +29,11 @@ test("Task 8 setup-item links protect monthly history without blocking whole-bus
   );
   assert.match(
     deferralMigration,
-    /monthly_revenue_entries_stream_business_fk[\s\S]*deferrable initially deferred/i,
+    /monthly_revenue_entries_stream_business_fk[^;]*deferrable initially deferred/i,
   );
   assert.match(
     deferralMigration,
-    /monthly_expense_entries_expense_business_fk[\s\S]*deferrable initially deferred/i,
+    /monthly_expense_entries_expense_business_fk[^;]*deferrable initially deferred/i,
   );
 });
 
