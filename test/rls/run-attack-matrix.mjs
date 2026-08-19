@@ -27,6 +27,8 @@ export const sqlFiles = Object.freeze([
   "supabase/migrations/20260819062811_task_7_preserve_trimmed_expense_name_length.sql",
   "test/business/task-7-expense-name-compatibility.test.sql",
   "test/business/task-7-expense-structure.test.sql",
+  "supabase/migrations/20260819070000_task_8_monthly_data_entry.sql",
+  "test/business/task-8-monthly-data-entry.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -84,7 +86,7 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     }
   }
 
-  console.log("Task 4-7 database-backed security and onboarding matrices passed.");
+  console.log("Task 4-8 database-backed security and business matrices passed.");
   return 0;
 }
 
