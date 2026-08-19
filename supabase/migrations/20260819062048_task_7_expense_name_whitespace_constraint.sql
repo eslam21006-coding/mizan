@@ -3,6 +3,6 @@ alter table public.expense_items
 
 alter table public.expense_items
   add constraint expense_items_name_check check (
-    char_length(name) between 1 and 120
+    char_length(btrim(name)) between 1 and 120
     and name ~ '[^[:space:]]'
   );

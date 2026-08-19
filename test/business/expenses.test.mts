@@ -98,9 +98,9 @@ test("read-only business members do not receive expense mutation controls", () =
   assert.match(page, /\{canManageExpenses && \(\s*<form action=\{updateExpenseItem\}/);
 });
 
-test("database rejects expense names made only of whitespace", () => {
+test("database rejects expense names made only of whitespace without changing trimmed length semantics", () => {
   assert.ok(nameConstraintMigration.includes("name ~ '[^[:space:]]'"));
-  assert.match(nameConstraintMigration, /char_length\(name\) between 1 and 120/i);
+  assert.match(nameConstraintMigration, /char_length\(btrim\(name\)\) between 1 and 120/i);
 });
 
 test("Task 7 create delivery is database-idempotent", () => {
