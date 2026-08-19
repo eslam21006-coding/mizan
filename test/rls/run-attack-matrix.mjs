@@ -21,6 +21,12 @@ export const sqlFiles = Object.freeze([
   "test/business/task-5-business-onboarding.test.sql",
   "supabase/migrations/20260818153600_task_6_revenue_stream_management.sql",
   "test/business/task-6-revenue-stream-management.test.sql",
+  "supabase/migrations/20260819060840_task_7_expense_structure.sql",
+  "test/business/task-7-pre-whitespace-constraint.fixture.sql",
+  "supabase/migrations/20260819062048_task_7_expense_name_whitespace_constraint.sql",
+  "supabase/migrations/20260819062811_task_7_preserve_trimmed_expense_name_length.sql",
+  "test/business/task-7-expense-name-compatibility.test.sql",
+  "test/business/task-7-expense-structure.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -78,7 +84,7 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     }
   }
 
-  console.log("Task 4-6 database-backed security and onboarding matrices passed.");
+  console.log("Task 4-7 database-backed security and onboarding matrices passed.");
   return 0;
 }
 
