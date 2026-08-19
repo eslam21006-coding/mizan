@@ -6,7 +6,7 @@ import {
   type CalculationExpenseBehavior,
   type CalculationExpenseCategory,
   type CoreCalculationInput,
-} from "./calculations.ts";
+} from "./calculations";
 
 type MonthlyPeriodSnapshot = {
   new_customers?: unknown;
