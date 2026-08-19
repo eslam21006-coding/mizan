@@ -69,13 +69,18 @@ export default async function BusinessesPage({ searchParams }: BusinessesPagePro
                 </div>
               </dl>
               <div className={styles.nextStep}>
-                <p>الخطوة التالية: عرّف مصادر الإيراد Front-End وBackend لهذا البزنس.</p>
-                <Link
-                  className={styles.manageLink}
-                  href={`/businesses/${business.id}/revenue-streams`}
-                >
-                  إدارة مصادر الإيراد
-                </Link>
+                <p>كمّل إعداد مصادر الإيراد وهيكل المصروفات قبل إدخال الأرقام الشهرية.</p>
+                <div className={styles.manageLinks}>
+                  <Link
+                    className={styles.manageLink}
+                    href={`/businesses/${business.id}/revenue-streams`}
+                  >
+                    إدارة مصادر الإيراد
+                  </Link>
+                  <Link className={styles.manageLink} href={`/businesses/${business.id}/expenses`}>
+                    إدارة المصروفات
+                  </Link>
+                </div>
               </div>
             </article>
           ))}

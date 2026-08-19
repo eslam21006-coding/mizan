@@ -140,6 +140,14 @@
   margin: 0;
 }
 
+.manageLinks {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 7px;
+}
+
 .manageLink {
   flex: 0 0 auto;
   display: inline-flex;
@@ -237,6 +245,10 @@
     align-items: flex-start;
     flex-direction: column;
     gap: 6px;
+  }
+
+  .manageLinks {
+    justify-content: flex-start;
   }
 
   .metaList dd {
