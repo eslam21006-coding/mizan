@@ -36,6 +36,8 @@ Unavailable ratio reasons include:
 
 No metric returns `NaN`, `Infinity`, or a fabricated zero for an invalid denominator.
 
+When a canonical denominator rule already determines the result, that metric-specific denominator reason takes precedence. For example, Media CAC with zero New Customers returns `NO_NEW_CUSTOMERS` even if canonical ad spend is also unavailable, matching the locked Task 1 rule.
+
 ## Revenue
 
 For every revenue stream:
@@ -120,7 +122,7 @@ Task 7 expense items currently have category, behavior, name, and active state, 
 
 Therefore Task 9 deliberately does **not** infer Total Ad Spend from an expense name such as `Ad Spend`, `Facebook Ads`, or any localized/custom label.
 
-Media CAC and MER accept only an explicitly supplied canonical business-level ad-spend value. If no canonical ad-spend input is supplied, they return `INPUT_UNAVAILABLE`.
+Media CAC and MER accept only an explicitly supplied canonical business-level ad-spend value. When their denominator is otherwise valid and no canonical ad-spend input is supplied, they return `INPUT_UNAVAILABLE`. Media CAC still returns `NO_NEW_CUSTOMERS` whenever New Customers is explicitly zero, because that denominator rule is authoritative regardless of whether spend is known.
 
 This prevents name-based guessing and future double-counting when funnel reconciliation is introduced.
 
