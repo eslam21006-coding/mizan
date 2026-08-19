@@ -85,14 +85,19 @@ export function shiftMonthKey(monthKey: string, offset: number) {
 }
 
 export function currentMonthKeyForTimeZone(timeZone: string, now = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-  }).formatToParts(now);
-  const year = parts.find((part) => part.type === "year")?.value;
-  const month = parts.find((part) => part.type === "month")?.value;
-  return year && month ? `${year}-${month}` : now.toISOString().slice(0, 7);
+  try {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone,
+      year: "numeric",
+      month: "2-digit",
+    }).formatToParts(now);
+    const year = parts.find((part) => part.type === "year")?.value;
+    const month = parts.find((part) => part.type === "month")?.value;
+    return year && month ? `${year}-${month}` : now.toISOString().slice(0, 7);
+  } catch (error) {
+    if (error instanceof RangeError) return now.toISOString().slice(0, 7);
+    throw error;
+  }
 }
 
 function shiftStoredDecimalRight(value: string, places: number) {
