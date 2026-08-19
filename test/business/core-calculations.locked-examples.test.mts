@@ -117,6 +117,8 @@ test("locked Example A: full business month matches every core expected output",
   assert.equal(availableValue(result.grossCashCollected), "100000");
   assert.equal(availableValue(result.refunds), "5000");
   assert.equal(availableValue(result.netCashCollected), "95000");
+  assert.equal(availableValue(result.newCustomers), 50);
+  assert.equal(availableValue(result.totalPayingCustomers), 80);
   assert.equal(availableValue(result.returningCustomers), 30);
 
   assert.equal(availableValue(result.expensesByCategory.acquisition), "34500");
