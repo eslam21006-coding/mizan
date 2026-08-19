@@ -57,6 +57,14 @@ test("Task 8 page fails closed for mutations when any monthly data dependency fa
   assert.match(page, /\{!dataLoadError &&[\s\S]*canManage \? \(/);
 });
 
+test("Task 8 requires an explicit Per Customer count basis instead of inferring one", () => {
+  assert.match(page, /defaultValue=\{row\.basis\}/);
+  assert.match(page, /<option value="" disabled>/);
+  assert.match(page, /اختر أساس عدد العملاء/);
+  assert.match(page, /aria-label=\{`أساس عدد العملاء — \$\{row\.name\}`\}[\s\S]*required/);
+  assert.match(page, /basis: String\(entry\?\.customer_count_basis \?\? ""\)/);
+});
+
 test("Task 8 page preserves historical snapshot semantics when setup metadata changes", () => {
   assert.match(page, /entry\?\.stream_name_snapshot \?\? stream\.name/);
   assert.match(page, /entry\?\.stream_type_snapshot \?\? stream\.stream_type/);
