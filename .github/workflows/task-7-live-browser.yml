@@ -1,0 +1,67 @@
+name: Task 7 hosted browser verification
+
+on:
+  push:
+    branches: [verify/task-7-live-browser]
+  pull_request:
+    branches: [agent/task-7-expense-structure]
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live-browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://zpfacvowigsscrnyceqh.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ZlJYC-raGXAQpneYfhJbEQ_N15Mkj15
+      MIZAN_SITE_URL: http://127.0.0.1:3000
+      MIZAN_E2E_EMAIL: task7-browser-752dc26085cf@example.test
+      MIZAN_E2E_PASSWORD: T7!ox9Sk_ktl6O-0OvNic3_UKMaSCJQW-iQaA1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify disposable test login
+        shell: bash
+        run: |
+          response="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+            --request POST \
+            --header "apikey: $NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" \
+            --header 'content-type: application/json' \
+            --data "{\"email\":\"$MIZAN_E2E_EMAIL\",\"password\":\"$MIZAN_E2E_PASSWORD\"}" \
+            "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/token?grant_type=password")"
+          node -e 'const body=JSON.parse(process.argv[1]); if (!body.access_token) process.exit(1)' "$response"
+
+      - name: Production build
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Task 7 authenticated RTL browser verification
+        run: npx playwright test e2e/expenses.spec.ts --project=chromium
+
+      - name: Upload browser artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: task-7-live-browser-verification
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: warn
+          retention-days: 7
