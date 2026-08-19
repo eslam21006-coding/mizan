@@ -6,7 +6,6 @@ import { requireAuthContext } from "@/lib/auth/context";
 import { EXPENSE_CATEGORY_OPTIONS, EXPENSE_COST_BEHAVIOR_OPTIONS } from "@/lib/business/expenses";
 import {
   currentMonthKeyForTimeZone,
-  defaultCustomerCountBasis,
   parseMonthKey,
   shiftMonthKey,
   storedExpenseValueForDisplay,
@@ -90,7 +89,9 @@ function behaviorLabel(value: string) {
 }
 
 function basisLabel(value: string) {
-  return value === "new_customers" ? "العملاء الجدد" : "إجمالي العملاء الدافعين";
+  if (value === "new_customers") return "العملاء الجدد";
+  if (value === "total_paying_customers") return "إجمالي العملاء الدافعين";
+  return "غير محدد";
 }
 
 function InputField({
@@ -345,7 +346,11 @@ function MonthlySections({
                               name={`expense_basis_${row.id}`}
                               defaultValue={row.basis}
                               aria-label={`أساس عدد العملاء — ${row.name}`}
+                              required
                             >
+                              <option value="" disabled>
+                                اختر أساس عدد العملاء
+                              </option>
                               <option value="new_customers">العملاء الجدد</option>
                               <option value="total_paying_customers">إجمالي العملاء الدافعين</option>
                             </select>
@@ -482,7 +487,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
           entry?.input_value as string | number | null | undefined,
           behavior,
         ),
-        basis: String(entry?.customer_count_basis ?? defaultCustomerCountBasis(category)),
+        basis: String(entry?.customer_count_basis ?? ""),
       };
     });
 
