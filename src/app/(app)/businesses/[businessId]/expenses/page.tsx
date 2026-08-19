@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
+import { requireAuthContext } from "@/lib/auth/context";
 import {
   EXPENSE_CATEGORY_OPTIONS,
   EXPENSE_COST_BEHAVIOR_OPTIONS,
@@ -47,12 +48,13 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
     notFound();
   }
 
+  const auth = await requireAuthContext();
   const supabase = await createSupabaseServerClient();
   const [{ data: business, error: businessError }, { data: expenses, error: expensesError }] =
     await Promise.all([
       supabase
         .from("businesses")
-        .select("id,name,base_currency")
+        .select("id,name,base_currency,owner_user_id")
         .eq("id", businessId)
         .maybeSingle(),
       supabase
@@ -66,6 +68,7 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
     notFound();
   }
 
+  const canManageExpenses = auth.role === "admin" || business.owner_user_id === auth.userId;
   const query = await searchParams;
   const statusMessage = query.status ? STATUS_MESSAGES[query.status] : null;
   const isErrorStatus = query.status?.endsWith("failed") || query.status === "invalid";
@@ -85,6 +88,12 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
       {statusMessage && (
         <div className={isErrorStatus ? styles.errorStatus : styles.successStatus} role="status">
           {statusMessage}
+        </div>
+      )}
+
+      {!canManageExpenses && (
+        <div className={styles.successStatus}>
+          صلاحيتك في هذا البزنس للعرض فقط. يمكنك مراجعة هيكل المصروفات بدون إضافة أو تعديل البنود.
         </div>
       )}
 
@@ -115,65 +124,67 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
         </div>
       </section>
 
-      <section className={styles.panel}>
-        <div className={styles.panelHeading}>
-          <div>
-            <span className={styles.kicker}>إضافة بند</span>
-            <h2>مصروف جديد</h2>
+      {canManageExpenses && (
+        <section className={styles.panel}>
+          <div className={styles.panelHeading}>
+            <div>
+              <span className={styles.kicker}>إضافة بند</span>
+              <h2>مصروف جديد</h2>
+            </div>
+            <span className={styles.currency}>{business.base_currency}</span>
           </div>
-          <span className={styles.currency}>{business.base_currency}</span>
-        </div>
 
-        <form action={createExpenseItem} className={styles.createForm}>
-          <input type="hidden" name="business_id" value={businessId} />
-          <input type="hidden" name="creation_request_id" value={randomUUID()} />
+          <form action={createExpenseItem} className={styles.createForm}>
+            <input type="hidden" name="business_id" value={businessId} />
+            <input type="hidden" name="creation_request_id" value={randomUUID()} />
 
-          <label>
-            <span>اسم المصروف</span>
-            <input
-              type="text"
-              name="name"
-              maxLength={120}
-              required
-              placeholder="مثال: إعلانات Meta"
-              autoComplete="off"
-            />
-          </label>
+            <label>
+              <span>اسم المصروف</span>
+              <input
+                type="text"
+                name="name"
+                maxLength={120}
+                required
+                placeholder="مثال: إعلانات Meta"
+                autoComplete="off"
+              />
+            </label>
 
-          <label>
-            <span>التصنيف</span>
-            <select name="category" defaultValue="acquisition">
-              {EXPENSE_CATEGORY_OPTIONS.map((option) => (
-                <option value={option.value} key={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label>
+              <span>التصنيف</span>
+              <select name="category" defaultValue="acquisition">
+                {EXPENSE_CATEGORY_OPTIONS.map((option) => (
+                  <option value={option.value} key={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <label>
-            <span>طريقة التكلفة</span>
-            <select name="cost_behavior" defaultValue="fixed_monthly">
-              {EXPENSE_COST_BEHAVIOR_OPTIONS.map((option) => (
-                <option value={option.value} key={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+            <label>
+              <span>طريقة التكلفة</span>
+              <select name="cost_behavior" defaultValue="fixed_monthly">
+                {EXPENSE_COST_BEHAVIOR_OPTIONS.map((option) => (
+                  <option value={option.value} key={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
 
-          <button type="submit">إضافة المصروف</button>
-        </form>
-        <p className={styles.formNote}>
-          لن تدخل المبلغ أو النسبة هنا. الأرقام الفعلية لكل شهر ستدخل في خطوة البيانات الشهرية.
-        </p>
-      </section>
+            <button type="submit">إضافة المصروف</button>
+          </form>
+          <p className={styles.formNote}>
+            لن تدخل المبلغ أو النسبة هنا. الأرقام الفعلية لكل شهر ستدخل في خطوة البيانات الشهرية.
+          </p>
+        </section>
+      )}
 
       <section className={styles.panel}>
         <div className={styles.panelHeading}>
           <div>
             <span className={styles.kicker}>المصروفات الحالية</span>
-            <h2>إدارة هيكل المصروفات</h2>
+            <h2>{canManageExpenses ? "إدارة هيكل المصروفات" : "عرض هيكل المصروفات"}</h2>
           </div>
           <span className={styles.count}>{expenses?.length ?? 0}</span>
         </div>
@@ -185,6 +196,7 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
             {expenses.map((expense) => (
               <article className={styles.expenseCard} key={expense.id}>
                 <div className={styles.expenseTopline}>
+                  <strong>{expense.name}</strong>
                   <div>
                     <span className={expense.is_active ? styles.activeBadge : styles.inactiveBadge}>
                       {expense.is_active ? "نشط" : "غير نشط"}
@@ -197,51 +209,53 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
                   </div>
                 </div>
 
-                <form action={updateExpenseItem} className={styles.editForm}>
-                  <input type="hidden" name="business_id" value={businessId} />
-                  <input type="hidden" name="expense_id" value={expense.id} />
+                {canManageExpenses && (
+                  <form action={updateExpenseItem} className={styles.editForm}>
+                    <input type="hidden" name="business_id" value={businessId} />
+                    <input type="hidden" name="expense_id" value={expense.id} />
 
-                  <label>
-                    <span>الاسم</span>
-                    <input
-                      type="text"
-                      name="name"
-                      maxLength={120}
-                      required
-                      defaultValue={expense.name}
-                      autoComplete="off"
-                    />
-                  </label>
+                    <label>
+                      <span>الاسم</span>
+                      <input
+                        type="text"
+                        name="name"
+                        maxLength={120}
+                        required
+                        defaultValue={expense.name}
+                        autoComplete="off"
+                      />
+                    </label>
 
-                  <label>
-                    <span>التصنيف</span>
-                    <select name="category" defaultValue={expense.category}>
-                      {EXPENSE_CATEGORY_OPTIONS.map((option) => (
-                        <option value={option.value} key={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    <label>
+                      <span>التصنيف</span>
+                      <select name="category" defaultValue={expense.category}>
+                        {EXPENSE_CATEGORY_OPTIONS.map((option) => (
+                          <option value={option.value} key={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
 
-                  <label>
-                    <span>طريقة التكلفة</span>
-                    <select name="cost_behavior" defaultValue={expense.cost_behavior}>
-                      {EXPENSE_COST_BEHAVIOR_OPTIONS.map((option) => (
-                        <option value={option.value} key={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                    <label>
+                      <span>طريقة التكلفة</span>
+                      <select name="cost_behavior" defaultValue={expense.cost_behavior}>
+                        {EXPENSE_COST_BEHAVIOR_OPTIONS.map((option) => (
+                          <option value={option.value} key={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
 
-                  <label className={styles.activeToggle}>
-                    <input type="checkbox" name="is_active" defaultChecked={expense.is_active} />
-                    <span>المصروف نشط ويظهر في الإدخالات الجديدة</span>
-                  </label>
+                    <label className={styles.activeToggle}>
+                      <input type="checkbox" name="is_active" defaultChecked={expense.is_active} />
+                      <span>المصروف نشط ويظهر في الإدخالات الجديدة</span>
+                    </label>
 
-                  <button type="submit">حفظ التعديلات</button>
-                </form>
+                    <button type="submit">حفظ التعديلات</button>
+                  </form>
+                )}
               </article>
             ))}
           </div>

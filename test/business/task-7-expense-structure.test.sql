@@ -107,6 +107,21 @@ begin
       business_id, name, category, cost_behavior, creation_request_id
     ) values (
       'a7171717-1717-4717-8717-171717171717',
+      E'\t\n  ',
+      'overhead',
+      'fixed_monthly',
+      'b1717171-1717-4717-8717-171717171717'
+    );
+    raise exception 'whitespace-only expense name succeeded';
+  exception when check_violation then
+    null;
+  end;
+
+  begin
+    insert into public.expense_items (
+      business_id, name, category, cost_behavior, creation_request_id
+    ) values (
+      'a7171717-1717-4717-8717-171717171717',
       'Duplicate Delivery',
       'acquisition',
       'fixed_monthly',

@@ -23,6 +23,13 @@ const migration = await readFile(
   new URL("../../supabase/migrations/20260819060840_task_7_expense_structure.sql", import.meta.url),
   "utf8",
 );
+const nameConstraintMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20260819062048_task_7_expense_name_whitespace_constraint.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 test("Task 7 supports exactly the four Mizan expense categories", () => {
   assert.deepEqual([...EXPENSE_CATEGORIES], [
@@ -80,6 +87,22 @@ test("expense writes rely on authenticated context and business RLS boundary", (
   assert.match(action, /\.eq\("business_id", businessId\)/);
 });
 
+test("read-only business members do not receive expense mutation controls", () => {
+  assert.match(page, /const auth = await requireAuthContext\(\)/);
+  assert.match(page, /\.select\("id,name,base_currency,owner_user_id"\)/);
+  assert.match(
+    page,
+    /const canManageExpenses = auth\.role === "admin" \|\| business\.owner_user_id === auth\.userId/,
+  );
+  assert.match(page, /\{canManageExpenses && \(\s*<section className=\{styles\.panel\}>/);
+  assert.match(page, /\{canManageExpenses && \(\s*<form action=\{updateExpenseItem\}/);
+});
+
+test("database rejects expense names made only of whitespace", () => {
+  assert.ok(nameConstraintMigration.includes("name ~ '[^[:space:]]'"));
+  assert.match(nameConstraintMigration, /char_length\(name\) between 1 and 120/i);
+});
+
 test("Task 7 create delivery is database-idempotent", () => {
   assert.match(page, /name="creation_request_id" value=\{randomUUID\(\)\}/);
   assert.match(action, /creation_request_id:\s*creationRequestId/);
@@ -100,7 +123,7 @@ test("Task 7 intentionally has no authenticated hard-delete path", () => {
   assert.doesNotMatch(migration, /create policy expense_items_delete/i);
 });
 
-test("Task 7 migration and attack matrix execute in database-backed CI", () => {
+test("Task 7 migrations and attack matrix execute in database-backed CI", () => {
   const plan = buildExecutionPlan("postgresql://postgres:postgres@127.0.0.1:5432/mizan_test");
   const executedFiles = plan.map((execution) => {
     const fileFlagIndex = execution.args.indexOf("--file");
@@ -110,6 +133,11 @@ test("Task 7 migration and attack matrix execute in database-backed CI", () => {
 
   assert.ok(
     executedFiles.includes("supabase/migrations/20260819060840_task_7_expense_structure.sql"),
+  );
+  assert.ok(
+    executedFiles.includes(
+      "supabase/migrations/20260819062048_task_7_expense_name_whitespace_constraint.sql",
+    ),
   );
   assert.ok(executedFiles.includes("test/business/task-7-expense-structure.test.sql"));
 });
