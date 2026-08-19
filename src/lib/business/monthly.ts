@@ -119,10 +119,6 @@ export function storedExpenseValueForDisplay(
   return behavior === "percentage_revenue" ? shiftDecimalRight(text, 2) : text;
 }
 
-export function defaultCustomerCountBasis(category: string): CustomerCountBasis {
-  return category === "acquisition" ? "new_customers" : "total_paying_customers";
-}
-
 export function normalizeAdjustmentNote(value: unknown) {
   const normalized = String(value ?? "").trim();
   return normalized.length <= 500 ? normalized : null;
