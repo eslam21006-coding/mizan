@@ -1,11 +1,8 @@
-import {
-  CALCULATION_EXPENSE_BEHAVIORS,
-  CALCULATION_EXPENSE_CATEGORIES,
-  CalculationInputError,
-  type CalculationCustomerCountBasis,
-  type CalculationExpenseBehavior,
-  type CalculationExpenseCategory,
-  type CoreCalculationInput,
+import type {
+  CalculationCustomerCountBasis,
+  CalculationExpenseBehavior,
+  CalculationExpenseCategory,
+  CoreCalculationInput,
 } from "./calculations";
 
 type MonthlyPeriodSnapshot = {
@@ -49,33 +46,14 @@ function nullableCount(value: unknown) {
   return Number.isNaN(parsed) ? Number.NaN : parsed;
 }
 
-function requiredSnapshotText(value: unknown, fieldName: string) {
-  const text = String(value ?? "").trim();
-  if (!text) throw new CalculationInputError(`${fieldName} is required for dashboard calculations.`);
-  return text;
-}
-
-function expenseCategory(value: unknown): CalculationExpenseCategory {
-  const candidate = String(value ?? "") as CalculationExpenseCategory;
-  if (!CALCULATION_EXPENSE_CATEGORIES.includes(candidate)) {
-    throw new CalculationInputError(`Unsupported dashboard expense category: ${String(value ?? "")}`);
-  }
-  return candidate;
-}
-
-function expenseBehavior(value: unknown): CalculationExpenseBehavior {
-  const candidate = String(value ?? "") as CalculationExpenseBehavior;
-  if (!CALCULATION_EXPENSE_BEHAVIORS.includes(candidate)) {
-    throw new CalculationInputError(`Unsupported dashboard expense behavior: ${String(value ?? "")}`);
-  }
-  return candidate;
+function snapshotText(value: unknown) {
+  return String(value ?? "").trim();
 }
 
 function customerCountBasis(value: unknown): CalculationCustomerCountBasis | null {
-  if (value === null || value === undefined || value === "") return null;
-  const candidate = String(value);
-  if (candidate === "new_customers" || candidate === "total_paying_customers") return candidate;
-  throw new CalculationInputError(`Unsupported dashboard customer count basis: ${candidate}`);
+  return value === null || value === undefined || value === ""
+    ? null
+    : (String(value) as CalculationCustomerCountBasis);
 }
 
 export function buildDashboardCalculationInput({
@@ -85,17 +63,17 @@ export function buildDashboardCalculationInput({
 }: DashboardCalculationSource): CoreCalculationInput {
   return {
     revenueStreams: revenueEntries.map((entry) => ({
-      id: requiredSnapshotText(entry.revenue_stream_id, "revenue_stream_id"),
-      name: requiredSnapshotText(entry.stream_name_snapshot, "stream_name_snapshot"),
-      streamType: requiredSnapshotText(entry.stream_type_snapshot, "stream_type_snapshot"),
+      id: snapshotText(entry.revenue_stream_id),
+      name: snapshotText(entry.stream_name_snapshot),
+      streamType: snapshotText(entry.stream_type_snapshot),
       grossCashCollected: nullableDecimalString(entry.gross_cash_collected),
       refunds: nullableDecimalString(entry.refunds),
     })),
     expenses: expenseEntries.map((entry) => ({
-      id: requiredSnapshotText(entry.expense_item_id, "expense_item_id"),
-      name: requiredSnapshotText(entry.expense_name_snapshot, "expense_name_snapshot"),
-      category: expenseCategory(entry.category_snapshot),
-      behavior: expenseBehavior(entry.cost_behavior_snapshot),
+      id: snapshotText(entry.expense_item_id),
+      name: snapshotText(entry.expense_name_snapshot),
+      category: snapshotText(entry.category_snapshot) as CalculationExpenseCategory,
+      behavior: snapshotText(entry.cost_behavior_snapshot) as CalculationExpenseBehavior,
       inputValue: nullableDecimalString(entry.input_value),
       customerCountBasis: customerCountBasis(entry.customer_count_basis),
     })),
