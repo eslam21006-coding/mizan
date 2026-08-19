@@ -52,7 +52,7 @@ export default async function BusinessesPage({ searchParams }: BusinessesPagePro
           {businesses.map((business) => (
             <article className={styles.businessCard} key={business.id}>
               <div className={styles.cardTopline}>
-                <span className={styles.status}>جاهز للإعداد</span>
+                <span className={styles.status}>جاهز للمتابعة</span>
                 <span className={styles.currencyCode}>{business.base_currency}</span>
               </div>
               <h2>{business.name}</h2>
@@ -69,8 +69,11 @@ export default async function BusinessesPage({ searchParams }: BusinessesPagePro
                 </div>
               </dl>
               <div className={styles.nextStep}>
-                <p>جهّز مصادر الإيراد والمصروفات، ثم أدخل الأرقام الفعلية لكل شهر.</p>
+                <p>افتح الداشبورد أو عدّل هيكل البزنس وأرقامه الشهرية.</p>
                 <div className={styles.manageLinks}>
+                  <Link className={styles.manageLink} href={`/?business=${business.id}`}>
+                    فتح الداشبورد
+                  </Link>
                   <Link
                     className={styles.manageLink}
                     href={`/businesses/${business.id}/revenue-streams`}
