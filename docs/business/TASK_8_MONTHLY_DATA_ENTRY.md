@@ -35,6 +35,8 @@ The monthly period also supports:
 - unallocated Refunds;
 - an optional adjustment note.
 
+The unallocated Gross Cash Collected and unallocated Refunds fields follow the same zero-versus-missing rule as stream amounts: leaving a field blank stores `null`, while entering `0` stores an explicit zero. Task 9 must not interpret a missing value as an entered zero.
+
 These fields are for actual cash/refunds that the user cannot reliably assign to a configured revenue stream. They are not a second copy of a stream amount and they do not perform a calculation in Task 8.
 
 Refunds remain contra-revenue. They must never also be entered as an expense.
