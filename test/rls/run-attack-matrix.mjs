@@ -27,6 +27,16 @@ export const sqlFiles = Object.freeze([
   "supabase/migrations/20260819062811_task_7_preserve_trimmed_expense_name_length.sql",
   "test/business/task-7-expense-name-compatibility.test.sql",
   "test/business/task-7-expense-structure.test.sql",
+  "supabase/migrations/20260819070000_task_8_monthly_data_entry.sql",
+  "supabase/migrations/20260819071000_task_8_harden_monthly_rpc_boundary.sql",
+  "supabase/migrations/20260819072000_task_8_preserve_percentage_rate_precision.sql",
+  "test/business/task-8-percentage-precision.test.sql",
+  "supabase/migrations/20260819073000_task_8_protect_historical_setup_links.sql",
+  "supabase/migrations/20260819074000_task_8_defer_history_link_checks.sql",
+  "supabase/migrations/20260819083834_task_8_preserve_missing_unallocated_and_basis_validation.sql",
+  "test/business/task-8-missing-value-validation.test.sql",
+  "test/business/task-8-history-delete-protection.test.sql",
+  "test/business/task-8-monthly-data-entry.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -84,7 +94,7 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     }
   }
 
-  console.log("Task 4-7 database-backed security and onboarding matrices passed.");
+  console.log("Task 4-8 database-backed security and business matrices passed.");
   return 0;
 }
 

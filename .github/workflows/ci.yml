@@ -49,10 +49,21 @@ jobs:
       - name: Install dependencies from lockfile
         run: npm ci
 
-      - name: Install PostgreSQL client
+      - name: Configure PostgreSQL client from service image
+        shell: bash
         run: |
-          sudo apt-get update
-          sudo apt-get install --yes --no-install-recommends postgresql-client
+          mkdir -p "$RUNNER_TEMP/mizan-bin"
+          cat > "$RUNNER_TEMP/mizan-bin/psql" <<'EOF'
+          #!/usr/bin/env bash
+          set -euo pipefail
+          exec docker run --rm --network host \
+            -e "PGCONNECT_TIMEOUT=${PGCONNECT_TIMEOUT:-}" \
+            -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
+            -w "$GITHUB_WORKSPACE" \
+            postgres:17-alpine psql "$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/mizan-bin/psql"
+          echo "$RUNNER_TEMP/mizan-bin" >> "$GITHUB_PATH"
 
       - name: Audit production dependencies
         run: npm audit --omit=dev --audit-level=high
@@ -70,7 +81,10 @@ jobs:
         run: git diff --exit-code
 
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        shell: bash
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list /etc/apt/sources.list.d/google-chrome.sources
+          npx playwright install --with-deps chromium
 
       - name: Browser verification
         run: npm run test:e2e
