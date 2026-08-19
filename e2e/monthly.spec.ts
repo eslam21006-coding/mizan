@@ -124,7 +124,8 @@ test.describe("Task 8 monthly data entry", () => {
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByRole("heading", { name: "الإدخال الشهري", level: 1 })).toBeVisible();
 
-    await page.getByLabel("الشهر").fill("2026-01");
+    const monthInput = page.locator('input[type="month"][name="month"]');
+    await monthInput.fill("2026-01");
     await page.getByRole("button", { name: "فتح الشهر" }).click();
     await expect(page).toHaveURL(/month=2026-01/);
     await page.getByLabel(`الإيراد المحصل — ${frontEndName}`).fill("10000");
@@ -169,7 +170,7 @@ test.describe("Task 8 monthly data entry", () => {
     await expect(page.getByLabel(`${certificateName} — التكلفة لكل عميل`)).toHaveValue("20");
     await expect(page.getByLabel(`${processorName} — النسبة %`)).toHaveValue("3.5");
 
-    await page.getByLabel("الشهر").fill("2026-01");
+    await monthInput.fill("2026-01");
     await page.getByRole("button", { name: "فتح الشهر" }).click();
     await expect(page).toHaveURL(/month=2026-01/);
     await expect(page.getByLabel(`الإيراد المحصل — ${frontEndName}`)).toHaveValue("10000");
