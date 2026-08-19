@@ -133,27 +133,29 @@ test("dashboard adapter preserves missing values instead of coercing them to zer
   });
 });
 
-test("dashboard adapter fails closed on corrupted historical expense snapshots", () => {
+test("corrupted historical expense snapshots fail closed in the canonical calculation engine", () => {
   assert.throws(
     () =>
-      buildDashboardCalculationInput({
-        period: {
-          new_customers: 1,
-          total_paying_customers: 1,
-          unallocated_gross_cash_collected: "0",
-          unallocated_refunds: "0",
-        },
-        revenueEntries: [],
-        expenseEntries: [
-          {
-            expense_item_id: "bad",
-            expense_name_snapshot: "Bad snapshot",
-            category_snapshot: "marketing",
-            cost_behavior_snapshot: "fixed_monthly",
-            input_value: "100",
+      calculateCoreFinancials(
+        buildDashboardCalculationInput({
+          period: {
+            new_customers: 1,
+            total_paying_customers: 1,
+            unallocated_gross_cash_collected: "0",
+            unallocated_refunds: "0",
           },
-        ],
-      }),
+          revenueEntries: [],
+          expenseEntries: [
+            {
+              expense_item_id: "bad",
+              expense_name_snapshot: "Bad snapshot",
+              category_snapshot: "marketing",
+              cost_behavior_snapshot: "fixed_monthly",
+              input_value: "100",
+            },
+          ],
+        }),
+      ),
     CalculationInputError,
   );
 });
