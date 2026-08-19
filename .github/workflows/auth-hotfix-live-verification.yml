@@ -82,9 +82,23 @@ jobs:
             if (!response.ok) throw new Error(`Could not record ${stage} milestone.`);
           }
 
+          async function recordFailure(failure, page) {
+            try {
+              const current = new URL(page.url());
+              const url = new URL(process.env.VERIFIER_URL);
+              url.searchParams.set('failure', failure);
+              url.searchParams.set('path', `${current.pathname}${current.search}`);
+              url.searchParams.set('user_id', process.env.LIVE_USER_ID);
+              await fetch(url);
+            } catch {
+              // The primary browser failure is more important than verifier telemetry.
+            }
+          }
+
           const browser = await chromium.launch({ headless: true });
           const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
           const browserErrors = [];
+          let phase = 'callback-navigation';
           page.on('console', (message) => {
             if (message.type() === 'error') browserErrors.push(`console: ${message.text()}`);
           });
@@ -100,8 +114,10 @@ jobs:
               `${process.env.PREVIEW_URL}/auth/callback?next=%2Fset-password#${fragment.toString()}`,
               { waitUntil: 'domcontentloaded' },
             );
-            await page.waitForURL(/\/set-password$/, { timeout: 30_000 });
+            phase = 'set-password-navigation';
+            await page.waitForURL((url) => url.pathname === '/set-password', { timeout: 30_000 });
 
+            phase = 'set-password-ui';
             if ((await page.locator('html').getAttribute('lang')) !== 'ar') {
               throw new Error('Set-password page is not Arabic.');
             }
@@ -109,8 +125,13 @@ jobs:
               throw new Error('Set-password page is not RTL.');
             }
             await page.getByRole('heading', { name: 'اختر كلمة المرور', level: 1 }).waitFor();
+            const setPasswordOverflow = await page.evaluate(
+              () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+            );
+            if (setPasswordOverflow) throw new Error('Set-password page has horizontal overflow.');
             await recordStage('set-password');
 
+            phase = 'password-submit';
             const newPassword = `Verified-${Date.now()}-Aa1!`;
             await page.getByLabel('كلمة المرور الجديدة').fill(newPassword);
             await page.getByLabel('تأكيد كلمة المرور').fill(newPassword);
@@ -118,12 +139,16 @@ jobs:
             await page.waitForURL((url) => url.pathname === '/', { timeout: 30_000 });
             await recordStage('dashboard');
 
-            const overflow = await page.evaluate(
+            phase = 'dashboard-validation';
+            const dashboardOverflow = await page.evaluate(
               () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
             );
-            if (overflow) throw new Error('Mobile page has horizontal overflow.');
+            if (dashboardOverflow) throw new Error('Dashboard has horizontal overflow.');
             if (browserErrors.length) throw new Error(browserErrors.join('\n'));
             await recordStage('success');
+          } catch (error) {
+            await recordFailure(phase, page);
+            throw error;
           } finally {
             await browser.close();
           }
