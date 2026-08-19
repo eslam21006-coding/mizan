@@ -138,10 +138,18 @@ test.describe("Task 11 main business dashboard", () => {
     await expect(page.getByRole("heading", { name: "لوحة البزنس", level: 1 })).toBeVisible();
     await expect(page.getByText(businessName, { exact: false }).first()).toBeVisible();
 
-    const marginCard = page.locator("article").filter({ hasText: "هامش صافي الربح الحقيقي" });
-    const profitCard = page.locator("article").filter({ hasText: "صافي الربح الحقيقي" });
-    const ultimateCacCard = page.locator("article").filter({ hasText: "Ultimate CAC" });
-    const netCashCard = page.locator("article").filter({ hasText: "صافي الكاش المحصل" });
+    const marginCard = page
+      .locator("article")
+      .filter({ has: page.getByText("هامش صافي الربح الحقيقي", { exact: true }) });
+    const profitCard = page
+      .locator("article")
+      .filter({ has: page.getByText("صافي الربح الحقيقي", { exact: true }) });
+    const ultimateCacCard = page
+      .locator("article")
+      .filter({ has: page.getByText("Ultimate CAC", { exact: true }) });
+    const netCashCard = page
+      .locator("article")
+      .filter({ has: page.getByText("صافي الكاش المحصل", { exact: true }) });
 
     await expect(marginCard).toContainText("٧٢٫١%");
     await expect(profitCard).toContainText("٩٬٧٢٧٫٥ EGP");
