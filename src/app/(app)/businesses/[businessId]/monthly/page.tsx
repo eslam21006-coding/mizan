@@ -215,7 +215,7 @@ function MonthlySections({
             editable={editable}
             name="unallocated_gross"
             label="إيراد محصل غير موزع على مصدر"
-            value={asInputValue(period?.unallocated_gross_cash_collected ?? "0")}
+            value={asInputValue(period?.unallocated_gross_cash_collected)}
             suffix={currency}
           />
           {editable ? (
@@ -268,7 +268,7 @@ function MonthlySections({
             editable={editable}
             name="unallocated_refunds"
             label="مرتجعات غير موزعة على مصدر"
-            value={asInputValue(period?.unallocated_refunds ?? "0")}
+            value={asInputValue(period?.unallocated_refunds)}
             suffix={currency}
           />
         </div>
