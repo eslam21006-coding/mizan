@@ -13,10 +13,10 @@ const hardeningMigration = await readFile(
 
 test("public monthly RPCs are invoker wrappers while privileged workers live outside the exposed schema", () => {
   assert.match(hardeningMigration, /set schema private/i);
-  assert.match(hardeningMigration, /create function public\.save_monthly_actuals[\s\S]*security invoker/i);
+  assert.match(hardeningMigration, /create function public\.save_monthly_actuals[^;]*security invoker/i);
   assert.match(
     hardeningMigration,
-    /create function public\.copy_previous_month_expenses[\s\S]*security invoker/i,
+    /create function public\.copy_previous_month_expenses[^;]*security invoker/i,
   );
   assert.match(hardeningMigration, /select private\.save_monthly_actuals/i);
   assert.match(hardeningMigration, /from private\.copy_previous_month_expenses/i);
@@ -25,11 +25,11 @@ test("public monthly RPCs are invoker wrappers while privileged workers live out
 test("monthly composite foreign keys have dedicated covering indexes", () => {
   assert.match(
     hardeningMigration,
-    /monthly_revenue_entries_business_stream_idx[\s\S]*\(business_id, revenue_stream_id\)/i,
+    /monthly_revenue_entries_business_stream_idx[^;]*\(business_id, revenue_stream_id\)/i,
   );
   assert.match(
     hardeningMigration,
-    /monthly_expense_entries_business_expense_idx[\s\S]*\(business_id, expense_item_id\)/i,
+    /monthly_expense_entries_business_expense_idx[^;]*\(business_id, expense_item_id\)/i,
   );
 });
 
