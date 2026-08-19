@@ -22,9 +22,10 @@ export async function inviteMentee(formData: FormData) {
   }
 
   const admin = createSupabaseAdminClient();
-  const redirectTo = new URL("/set-password", getMizanSiteUrl()).toString();
+  const inviteCallback = new URL("/auth/callback", getMizanSiteUrl());
+  inviteCallback.searchParams.set("next", "/set-password");
   const { data, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo,
+    redirectTo: inviteCallback.toString(),
   });
 
   if (inviteError || !data.user) {
