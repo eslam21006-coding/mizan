@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: auth-hotfix-live-verification
+  cancel-in-progress: false
+
 jobs:
   verify-live-auth-callback:
     runs-on: ubuntu-latest
@@ -18,6 +22,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -31,7 +37,7 @@ jobs:
       - name: Install Chromium
         run: npx playwright install chromium
 
-      - name: Wait for exact branch preview
+      - name: Wait for branch preview
         shell: bash
         run: |
           set -euo pipefail
@@ -68,6 +74,14 @@ jobs:
           node --input-type=module <<'NODE'
           import { chromium } from '@playwright/test';
 
+          async function recordStage(stage) {
+            const url = new URL(process.env.VERIFIER_URL);
+            url.searchParams.set('stage', stage);
+            url.searchParams.set('user_id', process.env.LIVE_USER_ID);
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Could not record ${stage} milestone.`);
+          }
+
           const browser = await chromium.launch({ headless: true });
           const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
           const browserErrors = [];
@@ -95,28 +109,25 @@ jobs:
               throw new Error('Set-password page is not RTL.');
             }
             await page.getByRole('heading', { name: 'اختر كلمة المرور', level: 1 }).waitFor();
+            await recordStage('set-password');
 
             const newPassword = `Verified-${Date.now()}-Aa1!`;
             await page.getByLabel('كلمة المرور الجديدة').fill(newPassword);
             await page.getByLabel('تأكيد كلمة المرور').fill(newPassword);
             await page.getByRole('button', { name: 'تفعيل الحساب' }).click();
             await page.waitForURL((url) => url.pathname === '/', { timeout: 30_000 });
+            await recordStage('dashboard');
 
             const overflow = await page.evaluate(
               () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
             );
             if (overflow) throw new Error('Mobile page has horizontal overflow.');
             if (browserErrors.length) throw new Error(browserErrors.join('\n'));
+            await recordStage('success');
           } finally {
             await browser.close();
           }
           NODE
-
-      - name: Record hosted browser success proof
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl --fail --silent --show-error --max-time 20 "$VERIFIER_URL?success=$LIVE_USER_ID" >/dev/null
 
       - name: Delete disposable hosted user
         if: always()
