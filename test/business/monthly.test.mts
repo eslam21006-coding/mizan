@@ -3,7 +3,6 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   currentMonthKeyForTimeZone,
-  defaultCustomerCountBasis,
   normalizeAdjustmentNote,
   normalizeLocalizedDigits,
   parseCustomerCountBasis,
@@ -60,12 +59,11 @@ test("percentage storage is rendered back as a human percent without floating-po
   assert.equal(storedExpenseValueForDisplay(null, "percentage_revenue"), "");
 });
 
-test("per-customer basis is explicit and visible defaults remain deterministic", () => {
+test("per-customer basis accepts only the two explicit stored choices", () => {
   assert.equal(parseCustomerCountBasis("new_customers"), "new_customers");
   assert.equal(parseCustomerCountBasis("total_paying_customers"), "total_paying_customers");
   assert.equal(parseCustomerCountBasis("customers"), null);
-  assert.equal(defaultCustomerCountBasis("acquisition"), "new_customers");
-  assert.equal(defaultCustomerCountBasis("fulfillment"), "total_paying_customers");
+  assert.equal(parseCustomerCountBasis(""), null);
 });
 
 test("adjustment note normalization enforces the database limit", () => {
