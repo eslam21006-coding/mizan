@@ -537,7 +537,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
         )}
       </section>
 
-      <form className={styles.monthPicker}>
+      <form key={`month-picker-${selectedMonth.monthKey}`} className={styles.monthPicker}>
         <label>
           <span>الشهر</span>
           <input type="month" name="month" defaultValue={selectedMonth.monthKey} aria-label="الشهر" />
@@ -578,7 +578,11 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
 
       {!dataLoadError &&
         (canManage ? (
-          <form action={saveMonthlyActuals} className={styles.monthForm}>
+          <form
+            key={`monthly-form-${selectedMonth.monthKey}`}
+            action={saveMonthlyActuals}
+            className={styles.monthForm}
+          >
             <input type="hidden" name="business_id" value={businessId} />
             <input type="hidden" name="month" value={selectedMonth.monthKey} />
             <MonthlySections
@@ -597,7 +601,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
             </div>
           </form>
         ) : (
-          <div className={styles.monthForm}>
+          <div key={`monthly-read-${selectedMonth.monthKey}`} className={styles.monthForm}>
             <MonthlySections
               editable={false}
               currency={business.base_currency}
