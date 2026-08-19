@@ -64,17 +64,19 @@ begin
   begin
     delete from public.revenue_streams
     where id = '8d181818-1818-4818-8818-181818181811';
+    set constraints monthly_revenue_entries_stream_business_fk immediate;
     raise exception 'historical revenue stream hard-delete unexpectedly succeeded';
   exception when foreign_key_violation then
-    null;
+    set constraints monthly_revenue_entries_stream_business_fk deferred;
   end;
 
   begin
     delete from public.expense_items
     where id = '8d181818-1818-4818-8818-181818181831';
+    set constraints monthly_expense_entries_expense_business_fk immediate;
     raise exception 'historical expense item hard-delete unexpectedly succeeded';
   exception when foreign_key_violation then
-    null;
+    set constraints monthly_expense_entries_expense_business_fk deferred;
   end;
 
   delete from public.businesses
@@ -87,5 +89,7 @@ begin
     raise exception 'business deletion did not cascade monthly history';
   end if;
 end $$;
+
+set constraints all immediate;
 
 rollback;
