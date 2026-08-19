@@ -1,0 +1,100 @@
+name: Task 11 live browser verification
+
+on:
+  push:
+    branches:
+      - agent/task-11-main-business-dashboard
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live-dashboard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://zpfacvowigsscrnyceqh.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ZlJYC-raGXAQpneYfhJbEQ_N15Mkj15
+      MIZAN_SITE_URL: http://127.0.0.1:3000
+      MIZAN_REQUIRE_AUTH_E2E: "true"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create disposable hosted auth account
+        shell: bash
+        run: |
+          set -euo pipefail
+          email="mizan-task11-${GITHUB_RUN_ID}@example.com"
+          password="$(openssl rand -hex 24)"
+          printf 'MIZAN_E2E_EMAIL=%s\n' "$email" >> "$GITHUB_ENV"
+          printf 'MIZAN_E2E_PASSWORD=%s\n' "$password" >> "$GITHUB_ENV"
+
+          status="$(curl --silent --show-error --output "$RUNNER_TEMP/signup.json" --write-out '%{http_code}' \
+            --request POST \
+            --header "apikey: $NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" \
+            --header "Authorization: Bearer $NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" \
+            --header 'Content-Type: application/json' \
+            --data "{\"email\":\"$email\",\"password\":\"$password\"}" \
+            "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/signup")"
+
+          if [[ "$status" != "200" && "$status" != "201" ]]; then
+            echo "Hosted signup failed with HTTP $status"
+            node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/signup.json","utf8")); console.error(x.msg ?? x.message ?? x.error ?? "Unknown signup error")'
+            exit 1
+          fi
+
+          echo "Disposable hosted auth account created for run $GITHUB_RUN_ID."
+
+      - name: Wait for role activation and verify password login
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 36); do
+            status="$(curl --silent --show-error --output "$RUNNER_TEMP/token.json" --write-out '%{http_code}' \
+              --request POST \
+              --header "apikey: $NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" \
+              --header "Authorization: Bearer $NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY" \
+              --header 'Content-Type: application/json' \
+              --data "{\"email\":\"$MIZAN_E2E_EMAIL\",\"password\":\"$MIZAN_E2E_PASSWORD\"}" \
+              "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/token?grant_type=password")"
+            if [[ "$status" == "200" ]]; then
+              echo "Hosted auth account is active."
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Hosted auth account was not activated for password login."
+          node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/token.json","utf8")); console.error(x.msg ?? x.message ?? x.error ?? "Unknown login error")'
+          exit 1
+
+      - name: Build against hosted Supabase
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run authenticated Arabic RTL dashboard verification
+        run: npx playwright test e2e/dashboard.spec.ts
+
+      - name: Upload verification artifacts
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: task-11-live-browser-${{ github.run_id }}
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: warn
+          retention-days: 7
