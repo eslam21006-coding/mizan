@@ -63,6 +63,16 @@ const EXPENSE_SECTIONS = [
   },
 ] as const;
 
+const STATUS_MESSAGES: Record<string, string> = {
+  saved: "تم حفظ بيانات الشهر.",
+  "invalid-month": "صيغة الشهر غير صحيحة.",
+  "invalid-input": "راجع القيم المدخلة. استخدم أرقامًا موجبة أو اترك القيمة فارغة إذا كانت غير متاحة.",
+  "invalid-customers": "عدد العملاء الجدد لا يمكن أن يتجاوز إجمالي العملاء الدافعين.",
+  "save-failed": "تعذر حفظ الشهر. لم يتم حفظ تعديل جزئي.",
+  "copy-failed": "تعذر نسخ مصروفات الشهر السابق.",
+  "no-previous": "لا توجد بيانات للشهر السابق لنسخها.",
+};
+
 function asInputValue(value: unknown) {
   return value === null || value === undefined ? "" : String(value);
 }
@@ -83,24 +93,28 @@ function basisLabel(value: string) {
   return value === "new_customers" ? "العملاء الجدد" : "إجمالي العملاء الدافعين";
 }
 
-function MoneyField({
+function InputField({
   editable,
   name,
   label,
   value,
   suffix,
+  integer = false,
 }: {
   editable: boolean;
   name: string;
   label: string;
   value: string;
   suffix?: string;
+  integer?: boolean;
 }) {
   if (!editable) {
     return (
       <div className={styles.readField}>
         <span>{label}</span>
-        <strong dir="ltr">{value === "" ? "غير متاح" : `${value}${suffix ? ` ${suffix}` : ""}`}</strong>
+        <strong dir="ltr">
+          {value === "" ? "غير متاح" : `${value}${suffix ? ` ${suffix}` : ""}`}
+        </strong>
       </div>
     );
   }
@@ -111,7 +125,7 @@ function MoneyField({
       <div className={styles.inputShell}>
         <input
           type="text"
-          inputMode="decimal"
+          inputMode={integer ? "numeric" : "decimal"}
           autoComplete="off"
           name={name}
           defaultValue={value}
@@ -181,7 +195,7 @@ function MonthlySections({
                     {!row.active && <span className={styles.inactiveBadge}>غير نشط حاليًا</span>}
                   </div>
                 </div>
-                <MoneyField
+                <InputField
                   editable={editable}
                   name={`gross_${row.id}`}
                   label={`الإيراد المحصل — ${row.name}`}
@@ -196,7 +210,7 @@ function MonthlySections({
         )}
 
         <div className={styles.manualBox}>
-          <MoneyField
+          <InputField
             editable={editable}
             name="unallocated_gross"
             label="إيراد محصل غير موزع على مصدر"
@@ -235,7 +249,7 @@ function MonthlySections({
                   <strong>{row.name}</strong>
                   <span>{streamTypeLabel(row.streamType)}</span>
                 </div>
-                <MoneyField
+                <InputField
                   editable={editable}
                   name={`refund_${row.id}`}
                   label={`المرتجعات — ${row.name}`}
@@ -249,7 +263,7 @@ function MonthlySections({
           <p className={styles.emptyText}>لا توجد مصادر إيراد نشطة لهذا الشهر.</p>
         )}
         <div className={styles.manualBox}>
-          <MoneyField
+          <InputField
             editable={editable}
             name="unallocated_refunds"
             label="مرتجعات غير موزعة على مصدر"
@@ -265,20 +279,24 @@ function MonthlySections({
         description="اترك الحقل فارغًا إذا لم تكن تعرف الرقم. الصفر يعني أنك متأكد أن العدد صفر."
       >
         <div className={styles.twoColumn}>
-          <MoneyField
+          <InputField
             editable={editable}
+            integer
             name="new_customers"
             label="عملاء جدد"
             value={asInputValue(period?.new_customers)}
           />
-          <MoneyField
+          <InputField
             editable={editable}
+            integer
             name="total_paying_customers"
             label="إجمالي العملاء الدافعين"
             value={asInputValue(period?.total_paying_customers)}
           />
         </div>
-        <p className={styles.helpText}>العملاء الجدد لا يمكن أن يكونوا أكثر من إجمالي العملاء الدافعين في نفس الشهر.</p>
+        <p className={styles.helpText}>
+          العملاء الجدد لا يمكن أن يكونوا أكثر من إجمالي العملاء الدافعين في نفس الشهر.
+        </p>
       </Section>
 
       {EXPENSE_SECTIONS.map((section, index) => {
@@ -312,7 +330,7 @@ function MonthlySections({
                           {!row.active && <span className={styles.inactiveBadge}>غير نشط حاليًا</span>}
                         </div>
                       </div>
-                      <MoneyField
+                      <InputField
                         editable={editable}
                         name={`expense_value_${row.id}`}
                         label={valueLabel}
@@ -352,16 +370,6 @@ function MonthlySections({
   );
 }
 
-const STATUS_MESSAGES: Record<string, string> = {
-  saved: "تم حفظ بيانات الشهر.",
-  "invalid-month": "صيغة الشهر غير صحيحة.",
-  "invalid-input": "راجع القيم المدخلة. استخدم أرقامًا موجبة أو اترك القيمة فارغة إذا كانت غير متاحة.",
-  "invalid-customers": "عدد العملاء الجدد لا يمكن أن يتجاوز إجمالي العملاء الدافعين.",
-  "save-failed": "تعذر حفظ الشهر. لم يتم حفظ تعديل جزئي.",
-  "copy-failed": "تعذر نسخ مصروفات الشهر السابق.",
-  "no-previous": "لا توجد بيانات للشهر السابق لنسخها.",
-};
-
 export default async function MonthlyPage({ params, searchParams }: MonthlyPageProps) {
   const { businessId: rawBusinessId } = await params;
   const businessId = parseResourceId(rawBusinessId);
@@ -382,33 +390,33 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
     parseMonthKey(query.month) ?? parseMonthKey(currentMonthKeyForTimeZone(business.timezone));
   if (!selectedMonth) notFound();
 
-  const [{ data: period, error: periodError }, { data: streams }, { data: expenses }] =
-    await Promise.all([
-      supabase
-        .from("monthly_periods")
-        .select(
-          "id,new_customers,total_paying_customers,unallocated_gross_cash_collected,unallocated_refunds,adjustment_note",
-        )
-        .eq("business_id", businessId)
-        .eq("month_start", selectedMonth.monthStart)
-        .maybeSingle(),
-      supabase
-        .from("revenue_streams")
-        .select("id,name,stream_type,is_active,created_at")
-        .eq("business_id", businessId)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("expense_items")
-        .select("id,name,category,cost_behavior,is_active,created_at")
-        .eq("business_id", businessId)
-        .order("created_at", { ascending: true }),
-    ]);
+  const [periodResult, streamsResult, expensesResult] = await Promise.all([
+    supabase
+      .from("monthly_periods")
+      .select(
+        "id,new_customers,total_paying_customers,unallocated_gross_cash_collected,unallocated_refunds,adjustment_note",
+      )
+      .eq("business_id", businessId)
+      .eq("month_start", selectedMonth.monthStart)
+      .maybeSingle(),
+    supabase
+      .from("revenue_streams")
+      .select("id,name,stream_type,is_active,created_at")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("expense_items")
+      .select("id,name,category,cost_behavior,is_active,created_at")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: true }),
+  ]);
 
+  const period = periodResult.data;
   let revenueEntries: Array<Record<string, unknown>> = [];
   let expenseEntries: Array<Record<string, unknown>> = [];
   let entryLoadError = false;
 
-  if (period?.id) {
+  if (period?.id && !periodResult.error) {
     const [revenueResult, expenseResult] = await Promise.all([
       supabase
         .from("monthly_revenue_entries")
@@ -431,6 +439,12 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
     entryLoadError = Boolean(revenueResult.error || expenseResult.error);
   }
 
+  const dataLoadError = Boolean(
+    periodResult.error || streamsResult.error || expensesResult.error || entryLoadError,
+  );
+  const streams = streamsResult.data ?? [];
+  const expenses = expensesResult.data ?? [];
+
   const revenueEntryById = new Map(
     revenueEntries.map((entry) => [String(entry.revenue_stream_id), entry]),
   );
@@ -438,7 +452,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
     expenseEntries.map((entry) => [String(entry.expense_item_id), entry]),
   );
 
-  const revenueRows: RevenueInputRow[] = (streams ?? [])
+  const revenueRows: RevenueInputRow[] = streams
     .filter((stream) => stream.is_active || revenueEntryById.has(stream.id))
     .map((stream) => {
       const entry = revenueEntryById.get(stream.id);
@@ -452,7 +466,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
       };
     });
 
-  const expenseRows: ExpenseInputRow[] = (expenses ?? [])
+  const expenseRows: ExpenseInputRow[] = expenses
     .filter((expense) => expense.is_active || expenseEntryById.has(expense.id))
     .map((expense) => {
       const entry = expenseEntryById.get(expense.id);
@@ -468,13 +482,12 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
           entry?.input_value as string | number | null | undefined,
           behavior,
         ),
-        basis: String(
-          entry?.customer_count_basis ?? defaultCustomerCountBasis(category),
-        ),
+        basis: String(entry?.customer_count_basis ?? defaultCustomerCountBasis(category)),
       };
     });
 
   const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
+  const canEditMonth = canManage && !dataLoadError;
   const previousMonth = shiftMonthKey(selectedMonth.monthKey, -1);
   const nextMonth = shiftMonthKey(selectedMonth.monthKey, 1);
   const monthLabel = new Intl.DateTimeFormat("ar-EG", {
@@ -533,19 +546,19 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
         </div>
       )}
 
-      {(periodError || entryLoadError) && (
+      {dataLoadError && (
         <div className={styles.errorStatus} role="alert">
-          تعذر تحميل جزء من بيانات الشهر. لم يتم تغيير أي بيانات.
+          تعذر تحميل بيانات الشهر كاملة. تم إيقاف التعديل والنسخ حتى لا يتم حفظ بيانات ناقصة.
         </div>
       )}
 
-      {!canManage && (
+      {!canManage && !dataLoadError && (
         <div className={styles.readOnlyNotice}>
           صلاحيتك في هذا البزنس للعرض فقط. يمكنك مراجعة الأرقام الشهرية بدون تعديلها.
         </div>
       )}
 
-      {canManage && (
+      {canEditMonth && (
         <div className={styles.actionStrip}>
           <form action={copyPreviousMonthExpenses}>
             <input type="hidden" name="business_id" value={businessId} />
@@ -558,36 +571,37 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
         </div>
       )}
 
-      {canManage ? (
-        <form action={saveMonthlyActuals} className={styles.monthForm}>
-          <input type="hidden" name="business_id" value={businessId} />
-          <input type="hidden" name="month" value={selectedMonth.monthKey} />
-          <MonthlySections
-            editable
-            currency={business.base_currency}
-            revenueRows={revenueRows}
-            expenseRows={expenseRows}
-            period={period}
-          />
-          <div className={styles.saveBar}>
-            <div>
-              <strong>حفظ بيانات {monthLabel}</strong>
-              <p>يتم حفظ الشهر كعملية واحدة. أي خطأ يمنع الحفظ الجزئي.</p>
+      {!dataLoadError &&
+        (canManage ? (
+          <form action={saveMonthlyActuals} className={styles.monthForm}>
+            <input type="hidden" name="business_id" value={businessId} />
+            <input type="hidden" name="month" value={selectedMonth.monthKey} />
+            <MonthlySections
+              editable
+              currency={business.base_currency}
+              revenueRows={revenueRows}
+              expenseRows={expenseRows}
+              period={period}
+            />
+            <div className={styles.saveBar}>
+              <div>
+                <strong>حفظ بيانات {monthLabel}</strong>
+                <p>يتم حفظ الشهر كعملية واحدة. أي خطأ يمنع الحفظ الجزئي.</p>
+              </div>
+              <button type="submit">حفظ الشهر</button>
             </div>
-            <button type="submit">حفظ الشهر</button>
+          </form>
+        ) : (
+          <div className={styles.monthForm}>
+            <MonthlySections
+              editable={false}
+              currency={business.base_currency}
+              revenueRows={revenueRows}
+              expenseRows={expenseRows}
+              period={period}
+            />
           </div>
-        </form>
-      ) : (
-        <div className={styles.monthForm}>
-          <MonthlySections
-            editable={false}
-            currency={business.base_currency}
-            revenueRows={revenueRows}
-            expenseRows={expenseRows}
-            period={period}
-          />
-        </div>
-      )}
+        ))}
 
       <div className={styles.setupLinks}>
         <span>تحتاج بندًا غير موجود؟</span>
