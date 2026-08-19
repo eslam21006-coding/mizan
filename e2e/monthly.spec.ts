@@ -24,9 +24,7 @@ async function login(page: import("@playwright/test").Page) {
 }
 
 async function waitForSetupRow(page: import("@playwright/test").Page, name: string) {
-  await expect(
-    page.locator("article").filter({ has: page.getByDisplayValue(name) }),
-  ).toBeVisible();
+  await expect(page.locator(`article input[name="name"][value="${name}"]`)).toBeVisible();
 }
 
 test.describe("Task 8 monthly data entry", () => {
