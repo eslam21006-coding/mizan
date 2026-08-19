@@ -31,7 +31,7 @@ test("Task 8 page exposes the seven raw-input sections without calculated Task 9
     "المصاريف التشغيلية العامة",
     "المصاريف المالية",
   ]) {
-    assert.ok(page.includes(`title=\"${title}\"`));
+    assert.ok(page.includes(`title="${title}"`));
   }
 
   assert.doesNotMatch(page, /Real Net Profit/i);
