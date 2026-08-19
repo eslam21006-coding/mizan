@@ -22,18 +22,20 @@ test("Task 8 server actions validate input before calling the transactional mont
 });
 
 test("Task 8 page exposes the seven raw-input sections without calculated Task 9 KPIs", () => {
+  for (const title of ["الإيراد", "المرتجعات", "العملاء"]) {
+    assert.ok(page.includes(`title="${title}"`));
+  }
+
   for (const title of [
-    "الإيراد",
-    "المرتجعات",
-    "العملاء",
     "الاكتساب",
     "التنفيذ وخدمة العملاء",
     "المصاريف التشغيلية العامة",
     "المصاريف المالية",
   ]) {
-    assert.ok(page.includes(`title="${title}"`));
+    assert.ok(page.includes(`title: "${title}"`));
   }
 
+  assert.match(page, /EXPENSE_SECTIONS\.map/);
   assert.doesNotMatch(page, /Real Net Profit/i);
   assert.doesNotMatch(page, /Ultimate CAC/i);
   assert.doesNotMatch(page, /Contribution Profit/i);
