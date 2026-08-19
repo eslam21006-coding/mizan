@@ -57,6 +57,7 @@ jobs:
           #!/usr/bin/env bash
           set -euo pipefail
           exec docker run --rm --network host \
+            -e "PGCONNECT_TIMEOUT=${PGCONNECT_TIMEOUT:-}" \
             -v "$GITHUB_WORKSPACE:$GITHUB_WORKSPACE" \
             -w "$GITHUB_WORKSPACE" \
             postgres:17-alpine psql "$@"
