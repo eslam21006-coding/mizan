@@ -19,6 +19,8 @@ export const sqlFiles = Object.freeze([
   "test/business/task-5-idempotency-backfill.test.sql",
   "test/rls/task-4-business-ownership.test.sql",
   "test/business/task-5-business-onboarding.test.sql",
+  "supabase/migrations/20260818153600_task_6_revenue_stream_management.sql",
+  "test/business/task-6-revenue-stream-management.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -76,7 +78,7 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     }
   }
 
-  console.log("Task 4-5 database-backed security and onboarding matrices passed.");
+  console.log("Task 4-6 database-backed security and onboarding matrices passed.");
   return 0;
 }
 
