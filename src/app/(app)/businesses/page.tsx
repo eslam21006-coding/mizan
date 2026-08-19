@@ -69,7 +69,7 @@ export default async function BusinessesPage({ searchParams }: BusinessesPagePro
                 </div>
               </dl>
               <div className={styles.nextStep}>
-                <p>كمّل إعداد مصادر الإيراد وهيكل المصروفات قبل إدخال الأرقام الشهرية.</p>
+                <p>جهّز مصادر الإيراد والمصروفات، ثم أدخل الأرقام الفعلية لكل شهر.</p>
                 <div className={styles.manageLinks}>
                   <Link
                     className={styles.manageLink}
@@ -79,6 +79,9 @@ export default async function BusinessesPage({ searchParams }: BusinessesPagePro
                   </Link>
                   <Link className={styles.manageLink} href={`/businesses/${business.id}/expenses`}>
                     إدارة المصروفات
+                  </Link>
+                  <Link className={styles.manageLink} href={`/businesses/${business.id}/monthly`}>
+                    الإدخال الشهري
                   </Link>
                 </div>
               </div>
