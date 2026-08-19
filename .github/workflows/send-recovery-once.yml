@@ -1,0 +1,26 @@
+name: Send one-time Mizan recovery email
+
+on:
+  push:
+    branches:
+      - ops/send-recovery-eslam-20260819
+
+permissions:
+  contents: read
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request password recovery email
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --request POST \
+            --url 'https://zpfacvowigsscrnyceqh.supabase.co/auth/v1/recover?redirect_to=https%3A%2F%2Fmizan-git-agent-auth-invit-4dda24-eslam21006-gmailcoms-projects.vercel.app%2Fauth%2Fcallback' \
+            --header 'Content-Type: application/json' \
+            --header 'apikey: sb_publishable_ZlJYC-raGXAQpneYfhJbEQ_N15Mkj15' \
+            --header 'Authorization: Bearer sb_publishable_ZlJYC-raGXAQpneYfhJbEQ_N15Mkj15' \
+            --data '{"email":"eslam@adscope.net"}'
+          echo 'Recovery request accepted by Supabase Auth.'
