@@ -122,7 +122,7 @@ Task 7 expense items currently have category, behavior, name, and active state, 
 
 Therefore Task 9 deliberately does **not** infer Total Ad Spend from an expense name such as `Ad Spend`, `Facebook Ads`, or any localized/custom label.
 
-Media CAC and MER accept only an explicitly supplied canonical business-level ad-spend value. When their denominator is otherwise valid and no canonical ad-spend input is supplied, they return `INPUT_UNAVAILABLE`. Media CAC still returns `NO_NEW_CUSTOMERS` whenever New Customers is explicitly zero, because that denominator rule is authoritative regardless of whether spend is known.
+Media CAC and MER accept only an explicitly supplied canonical business-level ad-spend value. When `canonicalAdSpend` is not supplied, Media CAC and MER return `INPUT_UNAVAILABLE`, except that Media CAC returns `NO_NEW_CUSTOMERS` when `newCustomers` is explicitly zero. That denominator rule is authoritative regardless of whether spend is known.
 
 This prevents name-based guessing and future double-counting when funnel reconciliation is introduced.
 
