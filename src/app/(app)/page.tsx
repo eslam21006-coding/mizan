@@ -438,6 +438,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
       <section className={styles.controls} aria-label="اختيار البزنس والفترة">
         <form className={styles.controlForm}>
+          <input type="hidden" name="month" value={selectedMonth.monthKey} />
           <label>
             <span>البزنس</span>
             <select name="business" defaultValue={selectedBusiness.id} aria-label="البزنس">
