@@ -21,6 +21,17 @@ export function normalizeLocalizedDigits(value: string) {
     .join("");
 }
 
+function normalizeDecimalText(raw: string, maximumFractionDigits: number) {
+  if (raw.includes(",")) return null;
+  const pattern = new RegExp(`^\\d{1,16}(?:\\.\\d{1,${maximumFractionDigits}})?$`);
+  if (!pattern.test(raw)) return null;
+
+  const [integerPart, fractionalPart] = raw.split(".");
+  const normalizedInteger = integerPart.replace(/^0+(?=\d)/, "");
+  const normalizedFraction = fractionalPart?.replace(/0+$/, "") ?? "";
+  return normalizedFraction ? `${normalizedInteger}.${normalizedFraction}` : normalizedInteger;
+}
+
 export function parseOptionalDecimalInput(value: unknown): ParsedInput<string | null> {
   const raw = normalizeLocalizedDigits(String(value ?? ""))
     .trim()
@@ -28,17 +39,8 @@ export function parseOptionalDecimalInput(value: unknown): ParsedInput<string | 
     .replaceAll("٫", ".");
 
   if (raw.length === 0) return { ok: true, value: null };
-  if (raw.includes(",")) return { ok: false, value: null };
-  if (!/^\d{1,16}(?:\.\d{1,8})?$/.test(raw)) return { ok: false, value: null };
-
-  const [integerPart, fractionalPart] = raw.split(".");
-  const normalizedInteger = integerPart.replace(/^0+(?=\d)/, "");
-  const normalizedFraction = fractionalPart?.replace(/0+$/, "") ?? "";
-
-  return {
-    ok: true,
-    value: normalizedFraction ? `${normalizedInteger}.${normalizedFraction}` : normalizedInteger,
-  };
+  const normalized = normalizeDecimalText(raw, 8);
+  return normalized === null ? { ok: false, value: null } : { ok: true, value: normalized };
 }
 
 export function parseOptionalCountInput(value: unknown): ParsedInput<number | null> {
@@ -93,11 +95,11 @@ export function currentMonthKeyForTimeZone(timeZone: string, now = new Date()) {
   return year && month ? `${year}-${month}` : now.toISOString().slice(0, 7);
 }
 
-function shiftDecimalRight(value: string, places: number) {
-  const parsed = parseOptionalDecimalInput(value);
-  if (!parsed.ok || parsed.value === null) return "";
+function shiftStoredDecimalRight(value: string, places: number) {
+  const parsed = normalizeDecimalText(value.trim(), 12);
+  if (parsed === null) return "";
 
-  const [whole, fraction = ""] = parsed.value.split(".");
+  const [whole, fraction = ""] = parsed.split(".");
   const digits = `${whole}${fraction}`;
   const currentScale = fraction.length;
   const targetScale = currentScale - places;
@@ -116,7 +118,7 @@ export function storedExpenseValueForDisplay(
 ) {
   if (value === null || value === undefined || value === "") return "";
   const text = String(value);
-  return behavior === "percentage_revenue" ? shiftDecimalRight(text, 2) : text;
+  return behavior === "percentage_revenue" ? shiftStoredDecimalRight(text, 2) : text;
 }
 
 export function normalizeAdjustmentNote(value: unknown) {
