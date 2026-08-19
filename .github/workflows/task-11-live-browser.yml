@@ -48,7 +48,7 @@ jobs:
 
           if [[ "$status" != "200" ]]; then
             echo "Hosted verification bootstrap failed with HTTP $status"
-            node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/bootstrap.json","utf8")); console.error(x.error ?? "Unknown bootstrap error")'
+            node -e 'const fs=require("fs"); const x=JSON.parse(fs.readFileSync(process.env.RUNNER_TEMP+"/bootstrap.json","utf8")); console.error(`${x.error ?? "Unknown bootstrap error"}${x.detail ? `: ${x.detail}` : ""}`)'
             exit 1
           fi
 
