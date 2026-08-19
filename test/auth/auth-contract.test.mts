@@ -5,6 +5,7 @@ import {
   safeLocalPath,
   shouldRedirectAuthenticatedPublicPath,
 } from "../../src/lib/auth/redirect.ts";
+import { parseAuthSessionFragment } from "../../src/lib/auth/session-fragment.ts";
 import { parseMizanSiteUrl } from "../../src/lib/auth/site-url.ts";
 
 test("role parser accepts only approved app_metadata roles", () => {
@@ -38,6 +39,25 @@ test("authenticated valid-role users leave login but can view access denied", ()
   assert.equal(shouldRedirectAuthenticatedPublicPath("/login"), true);
   assert.equal(shouldRedirectAuthenticatedPublicPath("/access-denied"), false);
   assert.equal(shouldRedirectAuthenticatedPublicPath("/auth/confirm"), false);
+  assert.equal(shouldRedirectAuthenticatedPublicPath("/auth/callback"), false);
+});
+
+test("implicit Supabase auth fragments accept only invite and recovery sessions", () => {
+  assert.deepEqual(
+    parseAuthSessionFragment("#access_token=access-1&refresh_token=refresh-1&type=invite"),
+    { accessToken: "access-1", refreshToken: "refresh-1", type: "invite" },
+  );
+  assert.deepEqual(
+    parseAuthSessionFragment("access_token=access-2&refresh_token=refresh-2&type=recovery"),
+    { accessToken: "access-2", refreshToken: "refresh-2", type: "recovery" },
+  );
+  assert.equal(parseAuthSessionFragment("#refresh_token=refresh-1&type=invite"), null);
+  assert.equal(parseAuthSessionFragment("#access_token=access-1&type=invite"), null);
+  assert.equal(
+    parseAuthSessionFragment("#access_token=access-1&refresh_token=refresh-1&type=signup"),
+    null,
+  );
+  assert.equal(parseAuthSessionFragment("#error=access_denied&error_code=otp_expired"), null);
 });
 
 test("Mizan site URL requires HTTPS except HTTP on loopback development hosts", () => {
