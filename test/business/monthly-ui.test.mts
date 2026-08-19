@@ -73,3 +73,9 @@ test("Task 8 page preserves historical snapshot semantics when setup metadata ch
   assert.match(page, /entry\?\.category_snapshot \?\? expense\.category/);
   assert.match(page, /entry\?\.cost_behavior_snapshot \?\? expense\.cost_behavior/);
 });
+
+test("Task 8 month navigation remounts uncontrolled forms so values cannot leak across months", () => {
+  assert.match(page, /key=\{`month-picker-\$\{selectedMonth\.monthKey\}`\}/);
+  assert.match(page, /key=\{`monthly-form-\$\{selectedMonth\.monthKey\}`\}/);
+  assert.match(page, /key=\{`monthly-read-\$\{selectedMonth\.monthKey\}`\}/);
+});
