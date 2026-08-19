@@ -17,13 +17,18 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 12
     env:
-      PREVIEW_URL: https://mizan-git-agent-auth-invit-4dda24-eslam21006-gmailcoms-projects.vercel.app
+      APP_URL: http://127.0.0.1:3000
       VERIFIER_URL: https://zpfacvowigsscrnyceqh.supabase.co/functions/v1/mizan-auth-hotfix-live-verifier-6b17c9
+      NEXT_PUBLIC_SUPABASE_URL: https://zpfacvowigsscrnyceqh.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ZlJYC-raGXAQpneYfhJbEQ_N15Mkj15
+      SUPABASE_SECRET_KEY: sb_secret_ci_placeholder
+      MIZAN_SITE_URL: http://127.0.0.1:3000
     steps:
-      - name: Checkout
+      - name: Checkout exact branch commit
         uses: actions/checkout@v4
         with:
           persist-credentials: false
+          ref: ${{ github.sha }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -34,21 +39,26 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Chromium
-        run: npx playwright install chromium
+      - name: Build exact hotfix commit
+        run: npm run build
 
-      - name: Wait for branch preview
+      - name: Start exact hotfix commit
         shell: bash
         run: |
           set -euo pipefail
+          npx next start --hostname 127.0.0.1 --port 3000 > /tmp/mizan-auth-hotfix.log 2>&1 &
+          echo $! > /tmp/mizan-auth-hotfix.pid
           for attempt in {1..30}; do
-            if curl --fail --silent --show-error --location --max-time 10 "$PREVIEW_URL/auth/callback?next=%2Fset-password" >/dev/null; then
+            if curl --fail --silent --show-error --max-time 5 "$APP_URL/auth/callback?next=%2Fset-password" >/dev/null; then
               exit 0
             fi
-            sleep 5
+            sleep 2
           done
-          echo "Preview did not become reachable in time." >&2
+          cat /tmp/mizan-auth-hotfix.log >&2
           exit 1
+
+      - name: Install Chromium
+        run: npx playwright install chromium
 
       - name: Create disposable hosted session
         shell: bash
@@ -68,37 +78,29 @@ jobs:
           echo "LIVE_REFRESH_TOKEN=$refresh_token" >> "$GITHUB_ENV"
           echo "LIVE_USER_ID=$user_id" >> "$GITHUB_ENV"
 
-      - name: Verify successful callback and password setup in Arabic RTL
+      - name: Verify callback, password setup, RTL, and dashboard
         shell: bash
         run: |
           node --input-type=module <<'NODE'
           import { chromium } from '@playwright/test';
 
-          async function recordStage(stage) {
+          async function record(stage, path = '') {
             const url = new URL(process.env.VERIFIER_URL);
-            url.searchParams.set('stage', stage);
             url.searchParams.set('user_id', process.env.LIVE_USER_ID);
-            const response = await fetch(url);
-            if (!response.ok) throw new Error(`Could not record ${stage} milestone.`);
-          }
-
-          async function recordFailure(failure, page) {
-            try {
-              const current = new URL(page.url());
-              const url = new URL(process.env.VERIFIER_URL);
-              url.searchParams.set('failure', failure);
-              url.searchParams.set('path', `${current.pathname}${current.search}`);
-              url.searchParams.set('user_id', process.env.LIVE_USER_ID);
-              await fetch(url);
-            } catch {
-              // The primary browser failure is more important than verifier telemetry.
+            if (stage.startsWith('failure:')) {
+              url.searchParams.set('failure', stage.slice('failure:'.length));
+              url.searchParams.set('path', path);
+            } else {
+              url.searchParams.set('stage', stage);
             }
+            const response = await fetch(url);
+            if (!response.ok) throw new Error(`Verifier rejected ${stage}.`);
           }
 
           const browser = await chromium.launch({ headless: true });
           const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
           const browserErrors = [];
-          let phase = 'callback-navigation';
+          let phase = 'callback';
           page.on('console', (message) => {
             if (message.type() === 'error') browserErrors.push(`console: ${message.text()}`);
           });
@@ -111,25 +113,20 @@ jobs:
               type: 'recovery',
             });
             await page.goto(
-              `${process.env.PREVIEW_URL}/auth/callback?next=%2Fset-password#${fragment.toString()}`,
+              `${process.env.APP_URL}/auth/callback?next=%2Fset-password#${fragment.toString()}`,
               { waitUntil: 'domcontentloaded' },
             );
+
             phase = 'set-password-navigation';
             await page.waitForURL((url) => url.pathname === '/set-password', { timeout: 30_000 });
-
-            phase = 'set-password-ui';
-            if ((await page.locator('html').getAttribute('lang')) !== 'ar') {
-              throw new Error('Set-password page is not Arabic.');
-            }
-            if ((await page.locator('html').getAttribute('dir')) !== 'rtl') {
-              throw new Error('Set-password page is not RTL.');
-            }
+            if ((await page.locator('html').getAttribute('lang')) !== 'ar') throw new Error('Not Arabic.');
+            if ((await page.locator('html').getAttribute('dir')) !== 'rtl') throw new Error('Not RTL.');
             await page.getByRole('heading', { name: 'اختر كلمة المرور', level: 1 }).waitFor();
-            const setPasswordOverflow = await page.evaluate(
+            const setupOverflow = await page.evaluate(
               () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
             );
-            if (setPasswordOverflow) throw new Error('Set-password page has horizontal overflow.');
-            await recordStage('set-password');
+            if (setupOverflow) throw new Error('Set-password page has horizontal overflow.');
+            await record('set-password');
 
             phase = 'password-submit';
             const newPassword = `Verified-${Date.now()}-Aa1!`;
@@ -137,7 +134,7 @@ jobs:
             await page.getByLabel('تأكيد كلمة المرور').fill(newPassword);
             await page.getByRole('button', { name: 'تفعيل الحساب' }).click();
             await page.waitForURL((url) => url.pathname === '/', { timeout: 30_000 });
-            await recordStage('dashboard');
+            await record('dashboard');
 
             phase = 'dashboard-validation';
             const dashboardOverflow = await page.evaluate(
@@ -145,17 +142,29 @@ jobs:
             );
             if (dashboardOverflow) throw new Error('Dashboard has horizontal overflow.');
             if (browserErrors.length) throw new Error(browserErrors.join('\n'));
-            await recordStage('success');
+            await record('success');
           } catch (error) {
-            await recordFailure(phase, page);
+            const current = new URL(page.url());
+            await record(`failure:${phase}`, `${current.pathname}${current.search}`);
             throw error;
           } finally {
             await browser.close();
           }
           NODE
 
+      - name: Show app log on failure
+        if: failure()
+        run: cat /tmp/mizan-auth-hotfix.log || true
+
       - name: Delete disposable hosted user
         if: always()
         shell: bash
+        run: curl --fail --silent --show-error --max-time 20 "$VERIFIER_URL?cleanup=1" >/dev/null
+
+      - name: Stop local app
+        if: always()
+        shell: bash
         run: |
-          curl --fail --silent --show-error --max-time 20 "$VERIFIER_URL?cleanup=1" >/dev/null
+          if [[ -f /tmp/mizan-auth-hotfix.pid ]]; then
+            kill "$(cat /tmp/mizan-auth-hotfix.pid)" 2>/dev/null || true
+          fi
