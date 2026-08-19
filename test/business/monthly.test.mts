@@ -52,6 +52,11 @@ test("current month respects business timezone around month boundaries", () => {
   assert.equal(currentMonthKeyForTimeZone("America/New_York", instant), "2026-08");
 });
 
+test("invalid stored timezone cannot crash monthly entry and falls back to UTC month", () => {
+  const instant = new Date("2026-08-31T22:30:00.000Z");
+  assert.equal(currentMonthKeyForTimeZone("Invalid/Zone", instant), "2026-08");
+});
+
 test("percentage storage is rendered back as a human percent without floating-point arithmetic", () => {
   assert.equal(storedExpenseValueForDisplay("0.10", "percentage_revenue"), "10");
   assert.equal(storedExpenseValueForDisplay("1.5", "percentage_revenue"), "150");
@@ -96,9 +101,12 @@ test("Task 8 deliberately stores raw inputs without Task 9 calculated KPI column
 });
 
 test("Task 8 migration and database attack matrix are executed in CI", () => {
-  const files = buildExecutionPlan("postgresql://postgres:postgres@127.0.0.1:5432/mizan_test")
-    .map((execution) => execution.sqlFile);
-  const migrationIndex = files.indexOf("supabase/migrations/20260819070000_task_8_monthly_data_entry.sql");
+  const files = buildExecutionPlan("postgresql://postgres:postgres@127.0.0.1:5432/mizan_test").map(
+    (execution) => execution.sqlFile,
+  );
+  const migrationIndex = files.indexOf(
+    "supabase/migrations/20260819070000_task_8_monthly_data_entry.sql",
+  );
   const testIndex = files.indexOf("test/business/task-8-monthly-data-entry.test.sql");
   assert.ok(migrationIndex >= 0);
   assert.ok(testIndex > migrationIndex);
