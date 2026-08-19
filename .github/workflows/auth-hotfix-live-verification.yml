@@ -60,6 +60,7 @@ jobs:
           echo "::add-mask::$refresh_token"
           echo "LIVE_ACCESS_TOKEN=$access_token" >> "$GITHUB_ENV"
           echo "LIVE_REFRESH_TOKEN=$refresh_token" >> "$GITHUB_ENV"
+          echo "LIVE_USER_ID=$user_id" >> "$GITHUB_ENV"
 
       - name: Verify successful callback and password setup in Arabic RTL
         shell: bash
@@ -110,6 +111,12 @@ jobs:
             await browser.close();
           }
           NODE
+
+      - name: Record hosted browser success proof
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --max-time 20 "$VERIFIER_URL?success=$LIVE_USER_ID" >/dev/null
 
       - name: Delete disposable hosted user
         if: always()
