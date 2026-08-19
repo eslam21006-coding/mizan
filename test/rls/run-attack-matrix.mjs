@@ -31,6 +31,8 @@ export const sqlFiles = Object.freeze([
   "supabase/migrations/20260819071000_task_8_harden_monthly_rpc_boundary.sql",
   "supabase/migrations/20260819072000_task_8_preserve_percentage_rate_precision.sql",
   "test/business/task-8-percentage-precision.test.sql",
+  "supabase/migrations/20260819073000_task_8_protect_historical_setup_links.sql",
+  "test/business/task-8-history-delete-protection.test.sql",
   "test/business/task-8-monthly-data-entry.test.sql",
 ]);
 
