@@ -43,8 +43,18 @@ test("Task 8 page exposes the seven raw-input sections without calculated Task 9
 
 test("Task 8 page uses server-derived Admin-or-owner management access and keeps members read-only", () => {
   assert.match(page, /const canManage = auth\.role === "admin" \|\| business\.owner_user_id === auth\.userId/);
-  assert.match(page, /!canManage &&/);
+  assert.match(page, /!canManage && !dataLoadError/);
   assert.match(page, /canManage \? \(/);
+});
+
+test("Task 8 page fails closed for mutations when any monthly data dependency fails to load", () => {
+  assert.match(
+    page,
+    /const dataLoadError = Boolean\([\s\S]*periodResult\.error[\s\S]*streamsResult\.error[\s\S]*expensesResult\.error[\s\S]*entryLoadError/,
+  );
+  assert.match(page, /const canEditMonth = canManage && !dataLoadError/);
+  assert.match(page, /\{canEditMonth && \(/);
+  assert.match(page, /\{!dataLoadError &&[\s\S]*canManage \? \(/);
 });
 
 test("Task 8 page preserves historical snapshot semantics when setup metadata changes", () => {
