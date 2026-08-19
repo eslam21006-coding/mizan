@@ -37,6 +37,21 @@ test("invalid invite link returns to login without creating a session", async ({
   expect(errors).toEqual([]);
 });
 
+test("implicit auth callback fails closed with Arabic RTL guidance", async ({ page }) => {
+  const errors = captureBrowserErrors(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/auth/callback?next=%2Fset-password");
+
+  await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+  await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+  await expect(page.getByRole("heading", { name: "تعذر تفعيل الرابط", level: 1 })).toBeVisible();
+  await expect(page.getByRole("alert")).toContainText("لم نتمكن من إنشاء جلسة آمنة");
+  await expect(page.getByRole("link", { name: "العودة إلى تسجيل الدخول" })).toBeVisible();
+
+  await page.screenshot({ path: "test-results/screenshots/auth-callback-mobile.png", fullPage: true });
+  expect(errors).toEqual([]);
+});
+
 test("access denied screen is available without exposing application data", async ({ page }) => {
   const errors = captureBrowserErrors(page);
   await page.goto("/access-denied");
