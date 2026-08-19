@@ -23,6 +23,8 @@ export const sqlFiles = Object.freeze([
   "test/business/task-6-revenue-stream-management.test.sql",
   "supabase/migrations/20260819060840_task_7_expense_structure.sql",
   "supabase/migrations/20260819062048_task_7_expense_name_whitespace_constraint.sql",
+  "supabase/migrations/20260819062811_task_7_preserve_trimmed_expense_name_length.sql",
+  "test/business/task-7-expense-name-compatibility.test.sql",
   "test/business/task-7-expense-structure.test.sql",
 ]);
 
