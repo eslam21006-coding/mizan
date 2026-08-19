@@ -23,10 +23,18 @@ async function login(page: import("@playwright/test").Page) {
   await expect(page).toHaveURL(/\/$/);
 }
 
+async function waitForSetupRow(page: import("@playwright/test").Page, name: string) {
+  await expect(
+    page.locator("article").filter({ has: page.getByDisplayValue(name) }),
+  ).toBeVisible();
+}
+
 test.describe("Task 8 monthly data entry", () => {
   test.skip(!hasLiveAuth, "Requires live Mizan Supabase credentials or a one-use invite token");
 
   test("saves, edits, copies and revisits three Arabic RTL months", async ({ page }) => {
+    test.setTimeout(120_000);
+
     const browserErrors: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") browserErrors.push(`console: ${message.text()}`);
@@ -52,45 +60,63 @@ test.describe("Task 8 monthly data entry", () => {
     await page.getByLabel("المنطقة الزمنية").selectOption("Africa/Cairo");
     await page.getByRole("button", { name: "التالي" }).click();
     await page.getByRole("button", { name: "إنشاء البزنس" }).click();
+    await expect(page).toHaveURL(/\/businesses\?status=created$/);
 
     let businessCard = page.locator("article").filter({ hasText: businessName });
+    await expect(businessCard).toBeVisible();
     await businessCard.getByRole("link", { name: "إدارة مصادر الإيراد" }).click();
+    await expect(page).toHaveURL(/\/revenue-streams$/);
 
     await page.getByLabel("اسم مصدر الإيراد").fill(frontEndName);
     await page.getByLabel("التصنيف").first().selectOption("front_end");
     await page.getByRole("button", { name: "إضافة مصدر الإيراد" }).click();
+    await waitForSetupRow(page, frontEndName);
+
     await page.getByLabel("اسم مصدر الإيراد").fill(backendName);
     await page.getByLabel("التصنيف").first().selectOption("backend");
     await page.getByRole("button", { name: "إضافة مصدر الإيراد" }).click();
+    await waitForSetupRow(page, backendName);
+
     await page.getByRole("link", { name: "العودة للبزنسات" }).click();
+    await expect(page).toHaveURL(/\/businesses$/);
 
     businessCard = page.locator("article").filter({ hasText: businessName });
+    await expect(businessCard).toBeVisible();
     await businessCard.getByRole("link", { name: "إدارة المصروفات" }).click();
+    await expect(page).toHaveURL(/\/expenses$/);
 
     await page.getByLabel("اسم المصروف").fill(adSpendName);
     await page.getByLabel("التصنيف").first().selectOption("acquisition");
     await page.getByLabel("طريقة التكلفة").first().selectOption("fixed_monthly");
     await page.getByRole("button", { name: "إضافة المصروف" }).click();
+    await waitForSetupRow(page, adSpendName);
 
     await page.getByLabel("اسم المصروف").fill(certificateName);
     await page.getByLabel("التصنيف").first().selectOption("fulfillment");
     await page.getByLabel("طريقة التكلفة").first().selectOption("per_customer");
     await page.getByRole("button", { name: "إضافة المصروف" }).click();
+    await waitForSetupRow(page, certificateName);
 
     await page.getByLabel("اسم المصروف").fill(processorName);
     await page.getByLabel("التصنيف").first().selectOption("financial");
     await page.getByLabel("طريقة التكلفة").first().selectOption("percentage_revenue");
     await page.getByRole("button", { name: "إضافة المصروف" }).click();
+    await waitForSetupRow(page, processorName);
+
     await page.getByRole("link", { name: "العودة للبزنسات" }).click();
+    await expect(page).toHaveURL(/\/businesses$/);
 
     businessCard = page.locator("article").filter({ hasText: businessName });
+    await expect(businessCard).toBeVisible();
     await businessCard.getByRole("link", { name: "الإدخال الشهري" }).click();
+    await expect(page).toHaveURL(/\/monthly\?month=\d{4}-\d{2}$/);
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByRole("heading", { name: "الإدخال الشهري", level: 1 })).toBeVisible();
 
     await page.getByLabel("الشهر").fill("2026-01");
     await page.getByRole("button", { name: "فتح الشهر" }).click();
+    await expect(page).toHaveURL(/month=2026-01/);
     await page.getByLabel(`الإيراد المحصل — ${frontEndName}`).fill("10000");
     await page.getByLabel(`المرتجعات — ${frontEndName}`).fill("500");
     await page.getByLabel(`الإيراد المحصل — ${backendName}`).fill("4000");
@@ -106,6 +132,7 @@ test.describe("Task 8 monthly data entry", () => {
     await expect(page.getByRole("status")).toContainText("تم حفظ بيانات الشهر");
 
     await page.getByRole("link", { name: "الشهر التالي" }).click();
+    await expect(page).toHaveURL(/month=2026-02/);
     await page.getByRole("button", { name: "نسخ مصروفات الشهر السابق" }).click();
     await expect(page.getByRole("status")).toContainText("تم نسخ 3 بند مصروف");
     await expect(page.getByLabel(`${adSpendName} — القيمة الشهرية`)).toHaveValue("2000");
@@ -116,20 +143,25 @@ test.describe("Task 8 monthly data entry", () => {
     await page.getByLabel("عملاء جدد").fill("0");
     await page.getByLabel("إجمالي العملاء الدافعين").fill("0");
     await page.getByRole("button", { name: "حفظ الشهر" }).click();
+    await expect(page.getByRole("status")).toContainText("تم حفظ بيانات الشهر");
 
     await page.getByRole("link", { name: "الشهر التالي" }).click();
+    await expect(page).toHaveURL(/month=2026-03/);
     await page.getByLabel(`${adSpendName} — القيمة الشهرية`).fill("3000");
     await page
       .getByLabel(`أساس عدد العملاء — ${certificateName}`)
       .selectOption("total_paying_customers");
     await page.getByRole("button", { name: "حفظ الشهر" }).click();
+    await expect(page.getByRole("status")).toContainText("تم حفظ بيانات الشهر");
     await page.getByRole("button", { name: "نسخ مصروفات الشهر السابق" }).click();
+    await expect(page.getByRole("status")).toContainText("تم نسخ 2 بند مصروف");
     await expect(page.getByLabel(`${adSpendName} — القيمة الشهرية`)).toHaveValue("3000");
     await expect(page.getByLabel(`${certificateName} — التكلفة لكل عميل`)).toHaveValue("20");
     await expect(page.getByLabel(`${processorName} — النسبة %`)).toHaveValue("3.5");
 
     await page.getByLabel("الشهر").fill("2026-01");
     await page.getByRole("button", { name: "فتح الشهر" }).click();
+    await expect(page).toHaveURL(/month=2026-01/);
     await expect(page.getByLabel(`الإيراد المحصل — ${frontEndName}`)).toHaveValue("10000");
     await expect(page.getByLabel(`${processorName} — النسبة %`)).toHaveValue("3.5");
 
