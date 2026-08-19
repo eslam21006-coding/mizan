@@ -4,6 +4,7 @@ const liveEmail = process.env.MIZAN_E2E_EMAIL?.trim() ?? "";
 const livePassword = process.env.MIZAN_E2E_PASSWORD ?? "";
 const liveInviteTokenHash = process.env.MIZAN_E2E_INVITE_TOKEN_HASH?.trim() ?? "";
 const hasLiveAuth = Boolean(liveInviteTokenHash || (liveEmail && livePassword));
+const requireLiveAuth = process.env.MIZAN_REQUIRE_AUTH_E2E === "true";
 
 async function login(page: import("@playwright/test").Page) {
   if (liveInviteTokenHash) {
@@ -28,7 +29,18 @@ async function waitForSetupRow(page: import("@playwright/test").Page, name: stri
 }
 
 test.describe("Task 8 monthly data entry", () => {
-  test.skip(!hasLiveAuth, "Requires live Mizan Supabase credentials or a one-use invite token");
+  test.beforeAll(() => {
+    if (requireLiveAuth && !hasLiveAuth) {
+      throw new Error(
+        "Authenticated Task 8 E2E is required, but neither an invite token nor email/password credentials were provided.",
+      );
+    }
+  });
+
+  test.skip(
+    !hasLiveAuth && !requireLiveAuth,
+    "Requires live Mizan Supabase credentials or a one-use invite token",
+  );
 
   test("saves, edits, copies and revisits three Arabic RTL months", async ({ page }) => {
     test.setTimeout(120_000);
