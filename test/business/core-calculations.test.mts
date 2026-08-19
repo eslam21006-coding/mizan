@@ -215,6 +215,18 @@ test("does not infer ad spend from an expense item's name", () => {
   assert.deepEqual(result.roas, { available: false, reason: "INPUT_UNAVAILABLE" });
 });
 
+test("Media CAC keeps the locked zero-new-customer denominator reason even when ad spend is missing", () => {
+  const result = calculateCoreFinancials(
+    knownBusiness({
+      canonicalAdSpend: undefined,
+      newCustomers: 0,
+      totalPayingCustomers: 0,
+    }),
+  );
+
+  assert.deepEqual(result.mediaCac, { available: false, reason: "NO_NEW_CUSTOMERS" });
+});
+
 test("per-customer expenses require the explicit stored customer-count basis", () => {
   assert.throws(
     () =>
