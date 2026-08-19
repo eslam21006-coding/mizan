@@ -107,7 +107,7 @@ test.describe("Task 8 monthly data entry", () => {
     businessCard = page.locator("article").filter({ hasText: businessName });
     await expect(businessCard).toBeVisible();
     await businessCard.getByRole("link", { name: "الإدخال الشهري" }).click();
-    await expect(page).toHaveURL(/\/monthly\?month=\d{4}-\d{2}$/);
+    await expect(page).toHaveURL(/\/monthly$/);
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByRole("heading", { name: "الإدخال الشهري", level: 1 })).toBeVisible();
