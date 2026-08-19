@@ -119,6 +119,9 @@ test.describe("Task 8 monthly data entry", () => {
 
     await page.getByRole("link", { name: "الشهر التالي" }).click();
     await page.getByLabel(`${adSpendName} — القيمة الشهرية`).fill("3000");
+    await page
+      .getByLabel(`أساس عدد العملاء — ${certificateName}`)
+      .selectOption("total_paying_customers");
     await page.getByRole("button", { name: "حفظ الشهر" }).click();
     await page.getByRole("button", { name: "نسخ مصروفات الشهر السابق" }).click();
     await expect(page.getByLabel(`${adSpendName} — القيمة الشهرية`)).toHaveValue("3000");
