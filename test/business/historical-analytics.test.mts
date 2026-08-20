@@ -67,7 +67,15 @@ test("resolves Rolling 3 Months, YTD, and full-month custom ranges", () => {
   });
 });
 
-test("fails closed for reversed custom ranges and unsupported Rolling 3 boundary", () => {
+test("fails closed for malformed or reversed custom ranges and unsupported Rolling 3 boundary", () => {
+  assert.deepEqual(resolveHistoricalPeriod("custom", "2026-04", "invalid", "2026-04"), {
+    ok: false,
+    reason: "INVALID_CUSTOM_RANGE",
+  });
+  assert.deepEqual(resolveHistoricalPeriod("custom", "2026-04", "2026-04", "invalid"), {
+    ok: false,
+    reason: "INVALID_CUSTOM_RANGE",
+  });
   assert.deepEqual(resolveHistoricalPeriod("custom", "2026-04", "2026-05", "2026-04"), {
     ok: false,
     reason: "INVALID_CUSTOM_RANGE",
