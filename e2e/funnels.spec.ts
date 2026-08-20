@@ -61,6 +61,7 @@ test.describe("Task 14 funnel management", () => {
     await expect(overviewBusinessCard).toContainText("فانلز اختيارية");
     await overviewBusinessCard.getByRole("link", { name: "إدارة الفانلز" }).click();
 
+    await expect(page).toHaveURL(/\/businesses\/[0-9a-f-]+\/funnels$/);
     await expect(page.getByRole("heading", { name: "الفانلز", level: 1 })).toBeVisible();
     await expect(page.getByText("اختيارية بالكامل")).toBeVisible();
 
