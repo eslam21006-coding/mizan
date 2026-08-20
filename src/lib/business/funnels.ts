@@ -25,9 +25,11 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export function normalizeFunnelName(value: unknown) {
-  const normalized = String(value ?? "")
-    .trim()
-    .replace(/\s+/g, " ");
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const normalized = value.trim().replace(/\s+/g, " ");
   const length = [...normalized].length;
 
   return length >= 1 && length <= 120 ? normalized : null;
