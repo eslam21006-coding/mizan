@@ -48,6 +48,16 @@ language plpgsql
 set search_path = ''
 as $$
 begin
+  if old.id is distinct from new.id then
+    raise exception 'funnel id is immutable'
+      using errcode = '42501';
+  end if;
+
+  if old.created_at is distinct from new.created_at then
+    raise exception 'funnel created_at is immutable'
+      using errcode = '42501';
+  end if;
+
   if old.creation_request_id is distinct from new.creation_request_id then
     raise exception 'funnel creation request id is immutable'
       using errcode = '42501';
