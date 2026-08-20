@@ -3,7 +3,9 @@ import { PageHeading } from "@/components/page-heading";
 import { resolvePreviousComparisonMonth } from "@/lib/business/comparison-period";
 import { loadDashboardMonth } from "@/lib/business/dashboard-month";
 import { loadDashboardRange } from "@/lib/business/dashboard-range";
+import { formatArabicRemainingMonths } from "@/lib/business/historical-copy";
 import {
+  MAX_CUSTOM_RANGE_MONTHS,
   parseHistoricalPeriodMode,
   resolveHistoricalPeriod,
 } from "@/lib/business/historical-period";
@@ -47,7 +49,8 @@ function rangeLabel(startMonthKey: string, endMonthKey: string) {
 function missingMonthsText(monthKeys: readonly string[]) {
   const visible = monthKeys.slice(0, 6).map((monthKey) => monthLabel(`${monthKey}-01`));
   const remaining = monthKeys.length - visible.length;
-  return remaining > 0 ? `${visible.join("، ")}، و${remaining} أشهر أخرى` : visible.join("، ");
+  if (remaining === 0) return visible.join("، ");
+  return `${visible.join("، ")}، ${formatArabicRemainingMonths(remaining)}`;
 }
 
 export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps) {
@@ -279,11 +282,23 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
           </label>
           <label>
             <span>بداية الفترة المخصصة</span>
-            <input dir="ltr" type="month" name="start" defaultValue={customStart} aria-label="بداية الفترة المخصصة" />
+            <input
+              dir="ltr"
+              type="month"
+              name="start"
+              defaultValue={customStart}
+              aria-label="بداية الفترة المخصصة"
+            />
           </label>
           <label>
             <span>نهاية الفترة المخصصة</span>
-            <input dir="ltr" type="month" name="end" defaultValue={customEnd} aria-label="نهاية الفترة المخصصة" />
+            <input
+              dir="ltr"
+              type="month"
+              name="end"
+              defaultValue={customEnd}
+              aria-label="نهاية الفترة المخصصة"
+            />
           </label>
           <button type="submit">عرض الفترة</button>
         </form>
@@ -299,7 +314,9 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
           <p>
             {historicalResolution.reason === "UNSUPPORTED_BOUNDARY"
               ? "الفترة المطلوبة تمتد قبل يناير 2000، لذلك لن يتم إنشاء أشهر غير مدعومة."
-              : "تأكد أن بداية الفترة المخصصة ونهايتها صالحتان وأن البداية لا تأتي بعد النهاية."}
+              : historicalResolution.reason === "CUSTOM_RANGE_TOO_LONG"
+                ? `الفترة المخصصة يمكن أن تشمل حتى ${new Intl.NumberFormat("ar-EG").format(MAX_CUSTOM_RANGE_MONTHS)} شهرًا فقط في هذه النسخة.`
+                : "تأكد أن بداية الفترة المخصصة ونهايتها صالحتان وأن البداية لا تأتي بعد النهاية."}
           </p>
         </section>
       )}
