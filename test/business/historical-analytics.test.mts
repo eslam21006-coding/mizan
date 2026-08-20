@@ -1,8 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { calculateCoreFinancials } from "../../src/lib/business/calculations.ts";
+import { formatArabicRemainingMonths } from "../../src/lib/business/historical-copy.ts";
 import { aggregateHistoricalMonths } from "../../src/lib/business/historical-aggregation.ts";
-import { resolveHistoricalPeriod } from "../../src/lib/business/historical-period.ts";
+import {
+  MAX_CUSTOM_RANGE_MONTHS,
+  resolveHistoricalPeriod,
+} from "../../src/lib/business/historical-period.ts";
 
 function month({
   gross,
@@ -72,6 +76,28 @@ test("fails closed for reversed custom ranges and unsupported Rolling 3 boundary
     ok: false,
     reason: "UNSUPPORTED_BOUNDARY",
   });
+});
+
+test("bounds custom ranges before historical snapshot loading", () => {
+  const maximumRange = resolveHistoricalPeriod("custom", "2026-12", "2024-01", "2026-12");
+  assert.equal(maximumRange.ok, true);
+  if (maximumRange.ok) {
+    assert.equal(maximumRange.monthKeys.length, MAX_CUSTOM_RANGE_MONTHS);
+  }
+
+  assert.deepEqual(resolveHistoricalPeriod("custom", "2027-01", "2024-01", "2027-01"), {
+    ok: false,
+    reason: "CUSTOM_RANGE_TOO_LONG",
+  });
+});
+
+test("formats missing-month summaries with Arabic digits and noun forms", () => {
+  assert.equal(formatArabicRemainingMonths(0), "");
+  assert.equal(formatArabicRemainingMonths(1), "وشهر آخر");
+  assert.equal(formatArabicRemainingMonths(2), "وشهران آخران");
+  assert.equal(formatArabicRemainingMonths(3), "و٣ أشهر أخرى");
+  assert.equal(formatArabicRemainingMonths(10), "و١٠ أشهر أخرى");
+  assert.equal(formatArabicRemainingMonths(11), "و١١ شهرًا آخر");
 });
 
 test("sums monthly additive results and recomputes margins from combined totals", () => {
