@@ -77,7 +77,7 @@ async function saveMonth(
   await expect(page.getByRole("status")).toContainText("تم حفظ بيانات الشهر");
 }
 
-test.describe("Task 11 dashboard and Task 12 month comparison", () => {
+test.describe("Task 11 dashboard, Task 12 comparison, and Task 13 historical analytics", () => {
   test.beforeAll(() => {
     if (requireLiveAuth && !hasLiveAuth) {
       throw new Error(
@@ -91,10 +91,10 @@ test.describe("Task 11 dashboard and Task 12 month comparison", () => {
     "Requires live Mizan Supabase credentials or a one-use invite token",
   );
 
-  test("renders monthly economics and exact previous-month comparison in Arabic RTL", async ({
+  test("renders monthly, comparison, Rolling 3, YTD, and custom analytics in Arabic RTL", async ({
     page,
   }) => {
-    test.setTimeout(150_000);
+    test.setTimeout(180_000);
 
     const browserErrors: string[] = [];
     page.on("console", (message) => {
@@ -172,8 +172,33 @@ test.describe("Task 11 dashboard and Task 12 month comparison", () => {
       processor: processorName,
     };
 
-    await saveMonth(
-      page,
+    for (const fixture of [
+      {
+        month: "2026-01",
+        frontGross: "5000",
+        frontRefunds: "0",
+        backendGross: "0",
+        backendRefunds: "0",
+        newCustomers: "5",
+        payingCustomers: "5",
+        acquisition: "1000",
+        fulfillmentPerCustomer: "20",
+        overhead: "500",
+        processorPercent: "2",
+      },
+      {
+        month: "2026-02",
+        frontGross: "6000",
+        frontRefunds: "0",
+        backendGross: "1000",
+        backendRefunds: "0",
+        newCustomers: "7",
+        payingCustomers: "8",
+        acquisition: "1200",
+        fulfillmentPerCustomer: "20",
+        overhead: "600",
+        processorPercent: "2",
+      },
       {
         month: "2026-03",
         frontGross: "8000",
@@ -187,11 +212,6 @@ test.describe("Task 11 dashboard and Task 12 month comparison", () => {
         overhead: "1000",
         processorPercent: "3",
       },
-      names,
-    );
-
-    await saveMonth(
-      page,
       {
         month: "2026-04",
         frontGross: "10000",
@@ -205,8 +225,9 @@ test.describe("Task 11 dashboard and Task 12 month comparison", () => {
         overhead: "1000",
         processorPercent: "3.5",
       },
-      names,
-    );
+    ] satisfies MonthlyFixture[]) {
+      await saveMonth(page, fixture, names);
+    }
 
     await page.goto(`/?business=${encodeURIComponent(businessId)}&month=2026-04`);
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
@@ -231,10 +252,8 @@ test.describe("Task 11 dashboard and Task 12 month comparison", () => {
     await expect(ultimateCacCard).toContainText("٣٧٧٫٢٥ EGP");
     await expect(netCashCard).toContainText("١٣٬٥٠٠ EGP");
 
-    await page.goto(
-      `/analytics?business=${encodeURIComponent(businessId)}&month=2026-04`,
-    );
-    await expect(page.getByRole("heading", { name: "المقارنة الشهرية", level: 1 })).toBeVisible();
+    await page.goto(`/analytics?business=${encodeURIComponent(businessId)}&month=2026-04`);
+    await expect(page.getByRole("heading", { name: "التحليلات المالية", level: 1 })).toBeVisible();
     await expect(
       page.getByRole("heading", {
         name: "أبريل ٢٠٢٦ مقابل مارس ٢٠٢٦",
@@ -242,40 +261,68 @@ test.describe("Task 11 dashboard and Task 12 month comparison", () => {
       }),
     ).toBeVisible();
 
-    const comparisonProfit = page
+    const comparisonSection = page.locator('section[aria-label="مقارنة الشهر بالشهر السابق"]');
+    const comparisonProfit = comparisonSection
       .locator("article")
       .filter({ has: page.getByText("صافي الربح الحقيقي", { exact: true }) });
     await expect(comparisonProfit).toContainText("٩٬٧٢٧٫٥ EGP");
     await expect(comparisonProfit).toContainText("٦٬٥٠٠ EGP");
     await expect(comparisonProfit).toContainText("↑ ٣٬٢٢٧٫٥ EGP (٤٩٫٧%)");
 
-    const comparisonNetCash = page
+    const comparisonNetCash = comparisonSection
       .locator("article")
       .filter({ has: page.getByText("صافي الكاش المحصل", { exact: true }) });
     await expect(comparisonNetCash).toContainText("١٣٬٥٠٠ EGP");
     await expect(comparisonNetCash).toContainText("١٠٬٠٠٠ EGP");
     await expect(comparisonNetCash).toContainText("↑ ٣٬٥٠٠ EGP (٣٥%)");
 
-    const comparisonUltimateCac = page
+    const comparisonUltimateCac = comparisonSection
       .locator("article")
       .filter({ has: page.getByText("Ultimate CAC", { exact: true }) });
     await expect(comparisonUltimateCac).toContainText("٣٧٧٫٢٥ EGP");
     await expect(comparisonUltimateCac).toContainText("٣٥٠ EGP");
     await expect(comparisonUltimateCac).toContainText("↑ ٢٧٫٢٥ EGP (٧٫٨%)");
 
-    const comparisonMargin = page
+    const comparisonMargin = comparisonSection
       .locator("article")
       .filter({ has: page.getByText("هامش صافي الربح الحقيقي", { exact: true }) });
     await expect(comparisonMargin).toContainText("٧٢٫١%");
     await expect(comparisonMargin).toContainText("٦٥%");
     await expect(comparisonMargin).toContainText("↑ ٧٫١ نقطة مئوية");
 
+    const rollingSummary = page.locator('section[aria-label="ملخص التحليل التاريخي"]');
+    await expect(rollingSummary.getByRole("heading", { name: /فبراير ٢٠٢٦.*أبريل ٢٠٢٦/ })).toBeVisible();
+    await expect(rollingSummary).toContainText("٣٠٬٥٠٠ EGP");
+    await expect(rollingSummary).toContainText("٢١٬١٢٧٫٥ EGP");
+    await expect(rollingSummary).toContainText("٦٩٫٣%");
+    await expect(rollingSummary).toContainText("٩٬٣٧٢٫٥ EGP");
+    await expect(rollingSummary).toContainText("٢٧");
+    await expect(rollingSummary).toContainText("٣٣");
+    await expect(rollingSummary).toContainText("ليست عددًا فريدًا للعملاء عبر الفترة");
+
+    await page.goto(
+      `/analytics?business=${encodeURIComponent(businessId)}&month=2026-04&period=ytd`,
+    );
+    const ytdSummary = page.locator('section[aria-label="ملخص التحليل التاريخي"]');
+    await expect(ytdSummary.getByRole("heading", { name: /يناير ٢٠٢٦.*أبريل ٢٠٢٦/ })).toBeVisible();
+    await expect(ytdSummary).toContainText("٣٥٬٥٠٠ EGP");
+    await expect(ytdSummary).toContainText("٢٤٬٤٢٧٫٥ EGP");
+    await expect(ytdSummary).toContainText("٦٨٫٨%");
+
+    await page.goto(
+      `/analytics?business=${encodeURIComponent(businessId)}&month=2026-04&period=custom&start=2026-03&end=2026-04`,
+    );
+    const customSummary = page.locator('section[aria-label="ملخص التحليل التاريخي"]');
+    await expect(customSummary.getByRole("heading", { name: /مارس ٢٠٢٦.*أبريل ٢٠٢٦/ })).toBeVisible();
+    await expect(customSummary).toContainText("٢٣٬٥٠٠ EGP");
+    await expect(customSummary).toContainText("١٦٬٢٢٧٫٥ EGP");
+    await expect(customSummary).toContainText("٦٩٫١%");
+
     await expect(
-      page.getByText("الأسهم تصف اتجاه الرقم فقط ولا تعني تلقائيًا أن التغير جيد أو سيئ", {
+      page.getByText("الفترات المخصصة في هذه النسخة تبدأ وتنتهي على حدود شهر كامل فقط", {
         exact: false,
       }),
     ).toBeVisible();
-    await expect(page.getByText("Rolling 3 Month", { exact: false })).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect
