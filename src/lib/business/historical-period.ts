@@ -3,6 +3,8 @@ import { parseMonthKey } from "./monthly.ts";
 export const HISTORICAL_PERIOD_MODES = ["rolling3", "ytd", "custom"] as const;
 export type HistoricalPeriodMode = (typeof HISTORICAL_PERIOD_MODES)[number];
 
+export const MAX_CUSTOM_RANGE_MONTHS = 36;
+
 export type HistoricalPeriodResolution =
   | {
       ok: true;
@@ -13,7 +15,11 @@ export type HistoricalPeriodResolution =
     }
   | {
       ok: false;
-      reason: "INVALID_MONTH" | "INVALID_CUSTOM_RANGE" | "UNSUPPORTED_BOUNDARY";
+      reason:
+        | "INVALID_MONTH"
+        | "INVALID_CUSTOM_RANGE"
+        | "CUSTOM_RANGE_TOO_LONG"
+        | "UNSUPPORTED_BOUNDARY";
     };
 
 const MIN_YEAR = 2000;
@@ -94,6 +100,9 @@ export function resolveHistoricalPeriod(
   if (!start || !end) return { ok: false, reason: "INVALID_CUSTOM_RANGE" };
   const monthKeys = enumerateMonths(start.monthKey, end.monthKey);
   if (!monthKeys) return { ok: false, reason: "INVALID_CUSTOM_RANGE" };
+  if (monthKeys.length > MAX_CUSTOM_RANGE_MONTHS) {
+    return { ok: false, reason: "CUSTOM_RANGE_TOO_LONG" };
+  }
 
   return {
     ok: true,
