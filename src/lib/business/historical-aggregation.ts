@@ -75,7 +75,7 @@ function add(left: ExactDecimal, right: ExactDecimal) {
   });
 }
 
-function toString(value: ExactDecimal) {
+function decimalToString(value: ExactDecimal) {
   const normalized = normalize(value);
   const negative = normalized.coefficient < 0n;
   const digits = (negative ? -normalized.coefficient : normalized.coefficient).toString();
@@ -117,7 +117,7 @@ function sumDecimalMetrics(metrics: readonly CalculatedMetric<string>[]): Calcul
     (sum, metric) => add(sum, parseDecimal((metric as { available: true; value: string }).value)),
     ZERO,
   );
-  return available(toString(total));
+  return available(decimalToString(total));
 }
 
 function sumCountMetrics(metrics: readonly CalculatedMetric<number>[]): CalculatedMetric<number> {
