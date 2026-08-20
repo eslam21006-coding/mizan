@@ -96,6 +96,8 @@ The user selects a start month and an end month, inclusive.
 
 The start must not come after the end. Both values must be valid supported month keys. Because the controls are month-based, the period covers complete calendar months only.
 
+To keep one authenticated analytics request bounded in V1, a Custom Range may include at most 36 calendar months. Longer ranges fail closed with an explicit user-facing message instead of starting an excessive number of historical snapshot queries.
+
 ## Historical breakdown
 
 Alongside the combined result, Task 13 shows each included month separately with:
@@ -123,7 +125,7 @@ This is a read-only view of historical actuals. Scenario logic and historical mu
 
 Before merge:
 
-1. Numerical tests must verify full-month period resolution, exact additive aggregation, ratio recomputation, refund-heavy Percentage-of-Revenue behavior, unavailable-value propagation, and customer-count precision boundaries.
+1. Numerical tests must verify full-month period resolution, the 36-month Custom Range boundary, exact additive aggregation, ratio recomputation, refund-heavy Percentage-of-Revenue behavior, unavailable-value propagation, and customer-count precision boundaries.
 2. Authenticated browser verification must save at least four adjacent months and verify Rolling 3 Months, YTD, and Custom Range results.
 3. Browser verification must confirm Arabic `lang=ar`, `dir=rtl`, responsive 390px layout, and no browser errors.
 4. Full CI must pass on the exact PR head.
