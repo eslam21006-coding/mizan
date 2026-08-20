@@ -4,7 +4,7 @@ import {
   type CalculationExpenseCategory,
   type CoreCalculationResult,
   type ExactRatio,
-} from "./calculations";
+} from "./calculations.ts";
 
 type ExactDecimal = {
   coefficient: bigint;
