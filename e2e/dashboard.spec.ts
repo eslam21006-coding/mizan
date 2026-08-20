@@ -157,6 +157,7 @@ test.describe("Task 11 dashboard and Task 12 month comparison", () => {
     await page.getByRole("link", { name: "العودة للبزنسات" }).click();
     businessCard = page.locator("article").filter({ hasText: businessName });
     await businessCard.getByRole("link", { name: "الإدخال الشهري" }).click();
+    await expect(page).toHaveURL(/\/businesses\/[^/]+\/monthly(?:\?.*)?$/);
 
     const businessIdMatch = /\/businesses\/([^/]+)\/monthly/.exec(new URL(page.url()).pathname);
     expect(businessIdMatch?.[1]).toBeTruthy();
