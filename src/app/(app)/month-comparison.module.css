@@ -36,7 +36,7 @@
 }
 
 .comparisonValues dt {
-  color: #7b8780;
+  color: #5d6a63;
   font-size: 0.76rem;
   font-weight: 700;
 }
@@ -56,11 +56,11 @@
 
 .comparisonChange[data-direction="flat"],
 .comparisonChange[data-direction="unavailable"] {
-  color: #7a857f;
+  color: #5c6862;
 }
 
 .comparisonCard small {
-  color: #7a857f;
+  color: #5c6862;
   line-height: 1.55;
 }
 
