@@ -13,6 +13,7 @@ const errorMessages: Record<string, string> = {
   invalid: "تعذر تسجيل الدخول. تأكد من البريد الإلكتروني وكلمة المرور.",
   "not-invited": "هذا الحساب غير مصرح له بالدخول إلى ميزان.",
   "invalid-invite": "رابط الدعوة غير صالح أو انتهت صلاحيته. اطلب دعوة جديدة من المسؤول.",
+  "invalid-recovery": "رابط استعادة كلمة المرور غير صالح أو انتهت صلاحيته. اطلب رابط استعادة جديدًا ثم حاول مرة أخرى.",
 };
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
