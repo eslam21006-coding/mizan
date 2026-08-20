@@ -35,7 +35,8 @@
     ".next/dev/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx",
-    "test/business/monthly-comparison.test.mts"
+    "test/business/monthly-comparison.test.mts",
+    "test/business/historical-analytics.test.mts"
   ],
   "exclude": [
     "node_modules"
