@@ -1,11 +1,16 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import type { CalculatedMetric, ExactRatio } from "../../src/lib/business/calculations.ts";
+import {
+  calculateCoreFinancials,
+  type CalculatedMetric,
+  type ExactRatio,
+} from "../../src/lib/business/calculations.ts";
 import {
   compareCountMetrics,
   compareDecimalMetrics,
   compareRatioMetrics,
 } from "../../src/lib/business/comparison.ts";
+import { buildDashboardCalculationInput } from "../../src/lib/business/dashboard.ts";
 
 function available<T>(value: T): CalculatedMetric<T> {
   return { available: true, value };
@@ -17,6 +22,70 @@ function unavailable<T>(): CalculatedMetric<T> {
 
 function ratio(numerator: string, denominator: string): ExactRatio {
   return { numerator, denominator };
+}
+
+function calculatedMonth({
+  gross,
+  refunds,
+  newCustomers,
+  payingCustomers,
+  acquisition,
+  fulfillmentPerPaying,
+  overhead,
+}: {
+  gross: string;
+  refunds: string;
+  newCustomers: number;
+  payingCustomers: number;
+  acquisition: string;
+  fulfillmentPerPaying: string;
+  overhead: string;
+}) {
+  return calculateCoreFinancials(
+    buildDashboardCalculationInput({
+      period: {
+        new_customers: newCustomers,
+        total_paying_customers: payingCustomers,
+        unallocated_gross_cash_collected: "0",
+        unallocated_refunds: "0",
+      },
+      revenueEntries: [
+        {
+          revenue_stream_id: "main",
+          stream_name_snapshot: "Main",
+          stream_type_snapshot: "front_end",
+          gross_cash_collected: gross,
+          refunds,
+        },
+      ],
+      expenseEntries: [
+        {
+          expense_item_id: "acq",
+          expense_name_snapshot: "Acquisition",
+          category_snapshot: "acquisition",
+          cost_behavior_snapshot: "fixed_monthly",
+          input_value: acquisition,
+          customer_count_basis: null,
+        },
+        {
+          expense_item_id: "fulfillment",
+          expense_name_snapshot: "Fulfillment",
+          category_snapshot: "fulfillment",
+          cost_behavior_snapshot: "per_customer",
+          input_value: fulfillmentPerPaying,
+          customer_count_basis: "total_paying_customers",
+        },
+        {
+          expense_item_id: "overhead",
+          expense_name_snapshot: "Overhead",
+          category_snapshot: "overhead",
+          cost_behavior_snapshot: "fixed_monthly",
+          input_value: overhead,
+          customer_count_basis: null,
+        },
+      ],
+    }),
+  );
 }
 
 test("money comparison keeps exact signed change and relative change", () => {
@@ -79,5 +148,51 @@ test("flat comparison remains exact", () => {
     direction: "flat",
     change: ratio("0", "1"),
     relativeChange: ratio("0", "1"),
+  });
+});
+
+test("known monthly snapshots are recalculated independently before comparison", () => {
+  const previous = calculatedMonth({
+    gross: "10000",
+    refunds: "1000",
+    newCustomers: 10,
+    payingCustomers: 12,
+    acquisition: "2000",
+    fulfillmentPerPaying: "100",
+    overhead: "800",
+  });
+  const current = calculatedMonth({
+    gross: "15000",
+    refunds: "1000",
+    newCustomers: 14,
+    payingCustomers: 18,
+    acquisition: "2800",
+    fulfillmentPerPaying: "100",
+    overhead: "900",
+  });
+
+  assert.deepEqual(compareDecimalMetrics(current.netCashCollected, previous.netCashCollected), {
+    available: true,
+    direction: "up",
+    change: ratio("5000", "1"),
+    relativeChange: ratio("5", "9"),
+  });
+  assert.deepEqual(compareDecimalMetrics(current.realNetProfit, previous.realNetProfit), {
+    available: true,
+    direction: "up",
+    change: ratio("3300", "1"),
+    relativeChange: ratio("33", "50"),
+  });
+  assert.deepEqual(compareRatioMetrics(current.ultimateCac, previous.ultimateCac), {
+    available: true,
+    direction: "down",
+    change: ratio("-950", "7"),
+    relativeChange: ratio("-19", "56"),
+  });
+  assert.deepEqual(compareCountMetrics(current.newCustomers, previous.newCustomers), {
+    available: true,
+    direction: "up",
+    change: ratio("4", "1"),
+    relativeChange: ratio("2", "5"),
   });
 });
