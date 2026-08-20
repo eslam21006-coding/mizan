@@ -1,0 +1,246 @@
+import type {
+  CalculatedMetric,
+  CoreCalculationResult,
+  ExactRatio,
+} from "@/lib/business/calculations";
+import {
+  compareCountMetrics,
+  compareDecimalMetrics,
+  compareRatioMetrics,
+  type MetricComparison,
+} from "@/lib/business/comparison";
+import styles from "./dashboard.module.css";
+
+const numberFormatter = new Intl.NumberFormat("ar-EG", {
+  maximumFractionDigits: 2,
+});
+
+const percentFormatter = new Intl.NumberFormat("ar-EG", {
+  maximumFractionDigits: 1,
+});
+
+function ratioNumber(ratio: ExactRatio) {
+  const numerator = Number(ratio.numerator);
+  const denominator = Number(ratio.denominator);
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return null;
+  return numerator / denominator;
+}
+
+function decimalText(metric: CalculatedMetric<string>, currency: string) {
+  if (!metric.available) return "غير متاح";
+  const value = Number(metric.value);
+  return `${Number.isFinite(value) ? numberFormatter.format(value) : metric.value} ${currency}`;
+}
+
+function countText(metric: CalculatedMetric<number>) {
+  return metric.available ? numberFormatter.format(metric.value) : "غير متاح";
+}
+
+function ratioText(
+  metric: CalculatedMetric<ExactRatio>,
+  kind: "money" | "percent",
+  currency: string,
+) {
+  if (!metric.available) return "غير متاح";
+  const value = ratioNumber(metric.value);
+  if (value === null) return `${metric.value.numerator}/${metric.value.denominator}`;
+  return kind === "percent"
+    ? `${percentFormatter.format(value * 100)}%`
+    : `${numberFormatter.format(value)} ${currency}`;
+}
+
+function comparisonText(
+  comparison: MetricComparison,
+  kind: "money" | "count" | "percentage-point",
+  currency: string,
+) {
+  if (!comparison.available) {
+    return comparison.reason === "CURRENT_UNAVAILABLE"
+      ? "لا يمكن المقارنة: قيمة الشهر الحالي غير متاحة"
+      : "لا يمكن المقارنة: قيمة الشهر السابق غير متاحة";
+  }
+
+  if (comparison.direction === "flat") return "بدون تغيير";
+
+  const change = ratioNumber(comparison.change);
+  if (change === null) return "التغير غير قابل للعرض";
+
+  const arrow = comparison.direction === "up" ? "↑" : "↓";
+  const absoluteChange = Math.abs(change);
+
+  let changeText: string;
+  if (kind === "percentage-point") {
+    changeText = `${arrow} ${percentFormatter.format(absoluteChange * 100)} نقطة مئوية`;
+  } else if (kind === "money") {
+    changeText = `${arrow} ${numberFormatter.format(absoluteChange)} ${currency}`;
+  } else {
+    changeText = `${arrow} ${numberFormatter.format(absoluteChange)} عميل`;
+  }
+
+  if (comparison.relativeChange === null || kind === "percentage-point") return changeText;
+
+  const relative = ratioNumber(comparison.relativeChange);
+  return relative === null
+    ? changeText
+    : `${changeText} (${percentFormatter.format(Math.abs(relative) * 100)}%)`;
+}
+
+type ComparisonCardProps = {
+  label: string;
+  current: string;
+  previous: string;
+  comparison: MetricComparison;
+  kind: "money" | "count" | "percentage-point";
+  currency: string;
+};
+
+function ComparisonCard({
+  label,
+  current,
+  previous,
+  comparison,
+  kind,
+  currency,
+}: ComparisonCardProps) {
+  return (
+    <article className={styles.comparisonCard}>
+      <span className={styles.comparisonLabel}>{label}</span>
+      <dl className={styles.comparisonValues}>
+        <div>
+          <dt>الحالي</dt>
+          <dd>{current}</dd>
+        </div>
+        <div>
+          <dt>السابق</dt>
+          <dd>{previous}</dd>
+        </div>
+      </dl>
+      <strong className={styles.comparisonChange} data-direction={comparison.available ? comparison.direction : "unavailable"}>
+        {comparisonText(comparison, kind, currency)}
+      </strong>
+      {comparison.available && comparison.relativeChange === null && comparison.direction !== "flat" && kind !== "percentage-point" && (
+        <small>نسبة التغير غير متاحة لأن قيمة الشهر السابق تساوي صفرًا.</small>
+      )}
+    </article>
+  );
+}
+
+export function MonthComparison({
+  current,
+  previous,
+  currency,
+  currentMonthLabel,
+  previousMonthLabel,
+}: {
+  current: CoreCalculationResult;
+  previous: CoreCalculationResult;
+  currency: string;
+  currentMonthLabel: string;
+  previousMonthLabel: string;
+}) {
+  const cards: ComparisonCardProps[] = [
+    {
+      label: "هامش صافي الربح الحقيقي",
+      current: ratioText(current.realNetProfitMargin, "percent", currency),
+      previous: ratioText(previous.realNetProfitMargin, "percent", currency),
+      comparison: compareRatioMetrics(current.realNetProfitMargin, previous.realNetProfitMargin),
+      kind: "percentage-point",
+      currency,
+    },
+    {
+      label: "صافي الربح الحقيقي",
+      current: decimalText(current.realNetProfit, currency),
+      previous: decimalText(previous.realNetProfit, currency),
+      comparison: compareDecimalMetrics(current.realNetProfit, previous.realNetProfit),
+      kind: "money",
+      currency,
+    },
+    {
+      label: "Ultimate CAC",
+      current: ratioText(current.ultimateCac, "money", currency),
+      previous: ratioText(previous.ultimateCac, "money", currency),
+      comparison: compareRatioMetrics(current.ultimateCac, previous.ultimateCac),
+      kind: "money",
+      currency,
+    },
+    {
+      label: "صافي الكاش المحصل",
+      current: decimalText(current.netCashCollected, currency),
+      previous: decimalText(previous.netCashCollected, currency),
+      comparison: compareDecimalMetrics(current.netCashCollected, previous.netCashCollected),
+      kind: "money",
+      currency,
+    },
+    {
+      label: "Acquisition CAC",
+      current: ratioText(current.acquisitionCac, "money", currency),
+      previous: ratioText(previous.acquisitionCac, "money", currency),
+      comparison: compareRatioMetrics(current.acquisitionCac, previous.acquisitionCac),
+      kind: "money",
+      currency,
+    },
+    {
+      label: "هامش المساهمة",
+      current: ratioText(current.contributionMargin, "percent", currency),
+      previous: ratioText(previous.contributionMargin, "percent", currency),
+      comparison: compareRatioMetrics(current.contributionMargin, previous.contributionMargin),
+      kind: "percentage-point",
+      currency,
+    },
+    {
+      label: "ربح المساهمة",
+      current: decimalText(current.contributionProfit, currency),
+      previous: decimalText(previous.contributionProfit, currency),
+      comparison: compareDecimalMetrics(current.contributionProfit, previous.contributionProfit),
+      kind: "money",
+      currency,
+    },
+    {
+      label: "العملاء الجدد",
+      current: countText(current.newCustomers),
+      previous: countText(previous.newCustomers),
+      comparison: compareCountMetrics(current.newCustomers, previous.newCustomers),
+      kind: "count",
+      currency,
+    },
+    {
+      label: "إجمالي العملاء الدافعين",
+      current: countText(current.totalPayingCustomers),
+      previous: countText(previous.totalPayingCustomers),
+      comparison: compareCountMetrics(current.totalPayingCustomers, previous.totalPayingCustomers),
+      kind: "count",
+      currency,
+    },
+    {
+      label: "الإيراد لكل عميل دافع",
+      current: ratioText(current.revenuePerPayingCustomer, "money", currency),
+      previous: ratioText(previous.revenuePerPayingCustomer, "money", currency),
+      comparison: compareRatioMetrics(
+        current.revenuePerPayingCustomer,
+        previous.revenuePerPayingCustomer,
+      ),
+      kind: "money",
+      currency,
+    },
+  ];
+
+  return (
+    <section className={styles.sectionCard} aria-label="مقارنة الشهر بالشهر السابق">
+      <div className={styles.sectionHeading}>
+        <div>
+          <span className={styles.eyebrow}>مقارنة شهرية</span>
+          <h2>{currentMonthLabel} مقابل {previousMonthLabel}</h2>
+        </div>
+        <p>التغير محسوب من القيم الأصلية الدقيقة لكل شهر، وليس من أرقام العرض المقربة.</p>
+      </div>
+      <div className={styles.comparisonGrid}>
+        {cards.map((card) => (
+          <ComparisonCard key={card.label} {...card} />
+        ))}
+      </div>
+      <p className={styles.definitionNote}>
+        الأسهم تصف اتجاه الرقم فقط ولا تعني تلقائيًا أن التغير جيد أو سيئ. في النسب مثل هامش الربح وهامش المساهمة نعرض الفرق بالنقاط المئوية.
+      </p>
+    </section>
+  );
+}
