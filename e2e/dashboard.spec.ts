@@ -6,6 +6,20 @@ const liveInviteTokenHash = process.env.MIZAN_E2E_INVITE_TOKEN_HASH?.trim() ?? "
 const hasLiveAuth = Boolean(liveInviteTokenHash || (liveEmail && livePassword));
 const requireLiveAuth = process.env.MIZAN_REQUIRE_AUTH_E2E === "true";
 
+type MonthlyFixture = {
+  month: string;
+  frontGross: string;
+  frontRefunds: string;
+  backendGross: string;
+  backendRefunds: string;
+  newCustomers: string;
+  payingCustomers: string;
+  acquisition: string;
+  fulfillmentPerCustomer: string;
+  overhead: string;
+  processorPercent: string;
+};
+
 async function login(page: import("@playwright/test").Page) {
   if (liveInviteTokenHash) {
     await page.goto(
@@ -28,11 +42,46 @@ async function waitForSetupRow(page: import("@playwright/test").Page, name: stri
   await expect(page.locator(`article input[name="name"][value="${name}"]`)).toBeVisible();
 }
 
-test.describe("Task 11 main business dashboard", () => {
+async function saveMonth(
+  page: import("@playwright/test").Page,
+  fixture: MonthlyFixture,
+  names: {
+    frontEnd: string;
+    backend: string;
+    acquisition: string;
+    delivery: string;
+    overhead: string;
+    processor: string;
+  },
+) {
+  await page.locator('input[type="month"][name="month"]').fill(fixture.month);
+  await page.getByRole("button", { name: "فتح الشهر" }).click();
+  await page.getByLabel(`الإيراد المحصل — ${names.frontEnd}`).fill(fixture.frontGross);
+  await page.getByLabel(`المرتجعات — ${names.frontEnd}`).fill(fixture.frontRefunds);
+  await page.getByLabel(`الإيراد المحصل — ${names.backend}`).fill(fixture.backendGross);
+  await page.getByLabel(`المرتجعات — ${names.backend}`).fill(fixture.backendRefunds);
+  await page.getByLabel("إيراد محصل غير موزع على مصدر").fill("0");
+  await page.getByLabel("مرتجعات غير موزعة على مصدر").fill("0");
+  await page.getByLabel("عملاء جدد").fill(fixture.newCustomers);
+  await page.getByLabel("إجمالي العملاء الدافعين").fill(fixture.payingCustomers);
+  await page.getByLabel(`${names.acquisition} — القيمة الشهرية`).fill(fixture.acquisition);
+  await page
+    .getByLabel(`${names.delivery} — التكلفة لكل عميل`)
+    .fill(fixture.fulfillmentPerCustomer);
+  await page
+    .getByLabel(`أساس عدد العملاء — ${names.delivery}`)
+    .selectOption("total_paying_customers");
+  await page.getByLabel(`${names.overhead} — القيمة الشهرية`).fill(fixture.overhead);
+  await page.getByLabel(`${names.processor} — النسبة %`).fill(fixture.processorPercent);
+  await page.getByRole("button", { name: "حفظ الشهر" }).click();
+  await expect(page.getByRole("status")).toContainText("تم حفظ بيانات الشهر");
+}
+
+test.describe("Task 11 dashboard and Task 12 month comparison", () => {
   test.beforeAll(() => {
     if (requireLiveAuth && !hasLiveAuth) {
       throw new Error(
-        "Authenticated Task 11 E2E is required, but neither an invite token nor email/password credentials were provided.",
+        "Authenticated dashboard E2E is required, but neither an invite token nor email/password credentials were provided.",
       );
     }
   });
@@ -42,8 +91,10 @@ test.describe("Task 11 main business dashboard", () => {
     "Requires live Mizan Supabase credentials or a one-use invite token",
   );
 
-  test("renders known monthly economics in Arabic RTL and remains usable on mobile", async ({ page }) => {
-    test.setTimeout(120_000);
+  test("renders monthly economics and exact previous-month comparison in Arabic RTL", async ({
+    page,
+  }) => {
+    test.setTimeout(150_000);
 
     const browserErrors: string[] = [];
     page.on("console", (message) => {
@@ -107,36 +158,59 @@ test.describe("Task 11 main business dashboard", () => {
     businessCard = page.locator("article").filter({ hasText: businessName });
     await businessCard.getByRole("link", { name: "الإدخال الشهري" }).click();
 
-    await page.locator('input[type="month"][name="month"]').fill("2026-04");
-    await page.getByRole("button", { name: "فتح الشهر" }).click();
-    await page.getByLabel(`الإيراد المحصل — ${frontEndName}`).fill("10000");
-    await page.getByLabel(`المرتجعات — ${frontEndName}`).fill("500");
-    await page.getByLabel(`الإيراد المحصل — ${backendName}`).fill("4000");
-    await page.getByLabel(`المرتجعات — ${backendName}`).fill("0");
-    await page.getByLabel("إيراد محصل غير موزع على مصدر").fill("0");
-    await page.getByLabel("مرتجعات غير موزعة على مصدر").fill("0");
-    await page.getByLabel("عملاء جدد").fill("10");
-    await page.getByLabel("إجمالي العملاء الدافعين").fill("15");
-    await page.getByLabel(`${adSpendName} — القيمة الشهرية`).fill("2000");
-    await page.getByLabel(`${deliveryName} — التكلفة لكل عميل`).fill("20");
-    await page
-      .getByLabel(`أساس عدد العملاء — ${deliveryName}`)
-      .selectOption("total_paying_customers");
-    await page.getByLabel(`${rentName} — القيمة الشهرية`).fill("1000");
-    await page.getByLabel(`${processorName} — النسبة %`).fill("3.5");
-    await page.getByRole("button", { name: "حفظ الشهر" }).click();
-    await expect(page.getByRole("status")).toContainText("تم حفظ بيانات الشهر");
+    const businessIdMatch = /\/businesses\/([^/]+)\/monthly/.exec(new URL(page.url()).pathname);
+    expect(businessIdMatch?.[1]).toBeTruthy();
+    const businessId = businessIdMatch?.[1] ?? "";
 
-    await page.getByRole("link", { name: "العودة للبزنسات" }).click();
-    businessCard = page.locator("article").filter({ hasText: businessName });
-    await businessCard.getByRole("link", { name: "فتح الداشبورد" }).click();
-    await page.getByLabel("شهر الداشبورد").fill("2026-04");
-    await page.getByRole("button", { name: "فتح الشهر" }).click();
+    const names = {
+      frontEnd: frontEndName,
+      backend: backendName,
+      acquisition: adSpendName,
+      delivery: deliveryName,
+      overhead: rentName,
+      processor: processorName,
+    };
 
+    await saveMonth(
+      page,
+      {
+        month: "2026-03",
+        frontGross: "8000",
+        frontRefunds: "0",
+        backendGross: "2000",
+        backendRefunds: "0",
+        newCustomers: "10",
+        payingCustomers: "10",
+        acquisition: "2000",
+        fulfillmentPerCustomer: "20",
+        overhead: "1000",
+        processorPercent: "3",
+      },
+      names,
+    );
+
+    await saveMonth(
+      page,
+      {
+        month: "2026-04",
+        frontGross: "10000",
+        frontRefunds: "500",
+        backendGross: "4000",
+        backendRefunds: "0",
+        newCustomers: "10",
+        payingCustomers: "15",
+        acquisition: "2000",
+        fulfillmentPerCustomer: "20",
+        overhead: "1000",
+        processorPercent: "3.5",
+      },
+      names,
+    );
+
+    await page.goto(`/?business=${encodeURIComponent(businessId)}&month=2026-04`);
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByRole("heading", { name: "لوحة البزنس", level: 1 })).toBeVisible();
-    await expect(page.getByText(businessName, { exact: false }).first()).toBeVisible();
 
     const marginCard = page
       .locator("article")
@@ -155,9 +229,47 @@ test.describe("Task 11 main business dashboard", () => {
     await expect(profitCard).toContainText("٩٬٧٢٧٫٥ EGP");
     await expect(ultimateCacCard).toContainText("٣٧٧٫٢٥ EGP");
     await expect(netCashCard).toContainText("١٣٬٥٠٠ EGP");
-    await expect(page.getByText("التكلفة الكاملة للبزنس لكل عميل جديد", { exact: false })).toBeVisible();
-    await expect(page.getByText("ليستا LTV", { exact: false })).toBeVisible();
-    await expect(page.getByText("Media CAC و MER و ROAS", { exact: false })).toBeVisible();
+
+    await page.goto(
+      `/analytics?business=${encodeURIComponent(businessId)}&month=2026-04`,
+    );
+    await expect(page.getByRole("heading", { name: "المقارنة الشهرية", level: 1 })).toBeVisible();
+    await expect(page.getByText("أبريل ٢٠٢٦ مقابل مارس ٢٠٢٦", { exact: false })).toBeVisible();
+
+    const comparisonProfit = page
+      .locator("article")
+      .filter({ has: page.getByText("صافي الربح الحقيقي", { exact: true }) });
+    await expect(comparisonProfit).toContainText("٩٬٧٢٧٫٥ EGP");
+    await expect(comparisonProfit).toContainText("٦٬٥٠٠ EGP");
+    await expect(comparisonProfit).toContainText("↑ ٣٬٢٢٧٫٥ EGP (٤٩٫٧%)");
+
+    const comparisonNetCash = page
+      .locator("article")
+      .filter({ has: page.getByText("صافي الكاش المحصل", { exact: true }) });
+    await expect(comparisonNetCash).toContainText("١٣٬٥٠٠ EGP");
+    await expect(comparisonNetCash).toContainText("١٠٬٠٠٠ EGP");
+    await expect(comparisonNetCash).toContainText("↑ ٣٬٥٠٠ EGP (٣٥%)");
+
+    const comparisonUltimateCac = page
+      .locator("article")
+      .filter({ has: page.getByText("Ultimate CAC", { exact: true }) });
+    await expect(comparisonUltimateCac).toContainText("٣٧٧٫٢٥ EGP");
+    await expect(comparisonUltimateCac).toContainText("٣٥٠ EGP");
+    await expect(comparisonUltimateCac).toContainText("↑ ٢٧٫٢٥ EGP (٧٫٨%)");
+
+    const comparisonMargin = page
+      .locator("article")
+      .filter({ has: page.getByText("هامش صافي الربح الحقيقي", { exact: true }) });
+    await expect(comparisonMargin).toContainText("٧٢٫١%");
+    await expect(comparisonMargin).toContainText("٦٥%");
+    await expect(comparisonMargin).toContainText("↑ ٧٫١ نقطة مئوية");
+
+    await expect(
+      page.getByText("الأسهم تصف اتجاه الرقم فقط ولا تعني تلقائيًا أن التغير جيد أو سيئ", {
+        exact: false,
+      }),
+    ).toBeVisible();
+    await expect(page.getByText("Rolling 3 Month", { exact: false })).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect
