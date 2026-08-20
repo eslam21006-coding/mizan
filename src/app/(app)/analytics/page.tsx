@@ -102,8 +102,8 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   if (!selectedMonth) throw new Error("Could not resolve a valid analytics month.");
 
   const historicalMode = parseHistoricalPeriodMode(query.period);
-  const customStart = parseMonthKey(query.start)?.monthKey ?? selectedMonth.monthKey;
-  const customEnd = parseMonthKey(query.end)?.monthKey ?? selectedMonth.monthKey;
+  const customStart = query.start ?? selectedMonth.monthKey;
+  const customEnd = query.end ?? selectedMonth.monthKey;
   const historicalResolution = resolveHistoricalPeriod(
     historicalMode,
     selectedMonth.monthKey,
