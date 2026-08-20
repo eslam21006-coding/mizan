@@ -59,21 +59,6 @@ jobs:
       - name: Build exact Task 13 code
         run: npm run build
 
-      - name: Start Mizan locally against hosted Supabase
-        shell: bash
-        run: |
-          set -euo pipefail
-          npm start -- -H 127.0.0.1 -p 3000 > /tmp/mizan-task13.log 2>&1 &
-          echo $! > /tmp/mizan-task13.pid
-          for attempt in {1..30}; do
-            if curl --fail --silent --show-error --connect-timeout 2 --max-time 5 http://127.0.0.1:3000/login > /dev/null; then
-              exit 0
-            fi
-            sleep 1
-          done
-          cat /tmp/mizan-task13.log
-          exit 1
-
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
@@ -102,11 +87,3 @@ jobs:
             -H "x-mizan-test-key: ${LIVE_USER_KEY}" \
             --data "{\"action\":\"cleanup\",\"user_id\":\"${MIZAN_LIVE_USER_ID}\"}" \
             "${LIVE_USER_FUNCTION}" > /dev/null
-
-      - name: Stop local Mizan
-        if: always()
-        shell: bash
-        run: |
-          if [[ -f /tmp/mizan-task13.pid ]]; then
-            kill "$(cat /tmp/mizan-task13.pid)" 2>/dev/null || true
-          fi
