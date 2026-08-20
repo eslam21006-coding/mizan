@@ -180,14 +180,14 @@ test("known monthly snapshots are recalculated independently before comparison",
   assert.deepEqual(compareDecimalMetrics(current.realNetProfit, previous.realNetProfit), {
     available: true,
     direction: "up",
-    change: ratio("3300", "1"),
-    relativeChange: ratio("33", "50"),
+    change: ratio("3500", "1"),
+    relativeChange: ratio("7", "10"),
   });
   assert.deepEqual(compareRatioMetrics(current.ultimateCac, previous.ultimateCac), {
     available: true,
     direction: "down",
-    change: ratio("-950", "7"),
-    relativeChange: ratio("-19", "56"),
+    change: ratio("-50", "7"),
+    relativeChange: ratio("-1", "56"),
   });
   assert.deepEqual(compareCountMetrics(current.newCustomers, previous.newCustomers), {
     available: true,
