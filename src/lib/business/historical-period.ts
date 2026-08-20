@@ -1,4 +1,4 @@
-import { parseMonthKey } from "./monthly";
+import { parseMonthKey } from "./monthly.ts";
 
 export const HISTORICAL_PERIOD_MODES = ["rolling3", "ytd", "custom"] as const;
 export type HistoricalPeriodMode = (typeof HISTORICAL_PERIOD_MODES)[number];
