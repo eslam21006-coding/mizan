@@ -17,6 +17,10 @@ const page = await readFile(
   new URL("../../src/app/(app)/businesses/[businessId]/funnels/page.tsx", import.meta.url),
   "utf8",
 );
+const funnelsOverviewPage = await readFile(
+  new URL("../../src/app/(app)/funnels/page.tsx", import.meta.url),
+  "utf8",
+);
 const businessesPage = await readFile(
   new URL("../../src/app/(app)/businesses/page.tsx", import.meta.url),
   "utf8",
@@ -101,7 +105,10 @@ test("Task 14 has no authenticated hard-delete path", () => {
   assert.doesNotMatch(migration, /create policy funnels_delete/i);
 });
 
-test("funnel management is reachable from each business and explains optionality", () => {
+test("funnel management is reachable from the main funnel route and each business", () => {
+  assert.doesNotMatch(funnelsOverviewPage, /EmptyModule/);
+  assert.match(funnelsOverviewPage, /\/businesses\/\$\{business\.id\}\/funnels/);
+  assert.match(funnelsOverviewPage, /الفانلز طبقة تحليل اختيارية/);
   assert.match(businessesPage, /\/funnels/);
   assert.match(businessesPage, /إدارة الفانلز/);
   assert.match(page, /الفانلز اختيارية/);
