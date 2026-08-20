@@ -71,7 +71,7 @@ function comparisonText(
   } else if (kind === "money") {
     changeText = `${arrow} ${formatArabicExactRatio(absoluteChange, 2)} ${currency}`;
   } else {
-    changeText = `${arrow} ${formatArabicExactRatio(absoluteChange, 0)} عميل`;
+    changeText = `${arrow} عدد العملاء بمقدار ${formatArabicExactRatio(absoluteChange, 0)}`;
   }
 
   if (comparison.relativeChange === null || kind === "percentage-point") return changeText;
