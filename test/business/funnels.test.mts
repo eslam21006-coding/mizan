@@ -32,6 +32,13 @@ const migration = await readFile(
   ),
   "utf8",
 );
+const hardeningMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20260821013000_task_14_protect_funnel_creation_identity.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const rlsRunner = await readFile(new URL("../rls/run-attack-matrix.mjs", import.meta.url), "utf8");
 
 test("Task 14 supports the agreed funnel management types", () => {
@@ -50,11 +57,14 @@ test("Task 14 supports the agreed funnel management types", () => {
   assert.equal(parseFunnelType(""), null);
 });
 
-test("funnel names normalize whitespace and enforce the 120-character boundary", () => {
+test("funnel names accept only strings, normalize whitespace, and enforce 120 characters", () => {
+  assert.equal(normalizeFunnelName({}), null);
   assert.equal(normalizeFunnelName("  ويبينار   البرنامج  "), "ويبينار البرنامج");
   assert.equal(normalizeFunnelName(""), null);
   assert.equal(normalizeFunnelName("x".repeat(120)), "x".repeat(120));
   assert.equal(normalizeFunnelName("x".repeat(121)), null);
+  assert.equal(normalizeFunnelName("ن".repeat(120)), "ن".repeat(120));
+  assert.equal(normalizeFunnelName("ن".repeat(121)), null);
 });
 
 test("funnel resource IDs and active state are parsed explicitly", () => {
@@ -90,12 +100,17 @@ test("funnel writes require authentication and never accept an owner or user ID"
   assert.match(action, /\.eq\("business_id", businessId\)/);
 });
 
-test("funnel creation is database-idempotent and identity is immutable", () => {
-  assert.match(page, /name="creation_request_id" value=\{randomUUID\(\)\}/);
+test("funnel creation is database-idempotent and historical identity is immutable", () => {
+  assert.match(page, /name="creation_request_id"/);
+  assert.match(page, /randomUUID\(\)/);
   assert.match(action, /creation_request_id:\s*creationRequestId/);
   assert.match(action, /!error \|\| error\.code === "23505"/);
+  assert.match(migration, /old\.id is distinct from new\.id/i);
+  assert.match(migration, /old\.created_at is distinct from new\.created_at/i);
   assert.match(migration, /old\.creation_request_id is distinct from new\.creation_request_id/i);
   assert.match(migration, /old\.business_id is distinct from new\.business_id/i);
+  assert.match(hardeningMigration, /old\.id is distinct from new\.id/i);
+  assert.match(hardeningMigration, /old\.created_at is distinct from new\.created_at/i);
 });
 
 test("Task 14 has no authenticated hard-delete path", () => {
@@ -115,10 +130,14 @@ test("funnel management is reachable from the main funnel route and each busines
   assert.match(page, /أرقام البزنس الأساسية تظل مستقلة/);
 });
 
-test("Task 14 migration and attack matrix are wired into database-backed CI", () => {
+test("Task 14 migrations and attack matrix are wired into database-backed CI", () => {
   assert.match(
     rlsRunner,
     /supabase\/migrations\/20260821001500_task_14_funnel_management\.sql/,
+  );
+  assert.match(
+    rlsRunner,
+    /supabase\/migrations\/20260821013000_task_14_protect_funnel_creation_identity\.sql/,
   );
   assert.match(rlsRunner, /test\/business\/task-14-funnel-management\.test\.sql/);
 });
