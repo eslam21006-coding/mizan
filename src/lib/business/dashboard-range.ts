@@ -74,11 +74,21 @@ export async function loadDashboardRange(
     };
   }
 
-  return {
-    aggregate: aggregateHistoricalMonths(months.map(({ result }) => result)),
-    months,
-    missingMonthKeys: [],
-    dataLoadError: false,
-    calculationError: false,
-  };
+  try {
+    return {
+      aggregate: aggregateHistoricalMonths(months.map(({ result }) => result)),
+      months,
+      missingMonthKeys: [],
+      dataLoadError: false,
+      calculationError: false,
+    };
+  } catch {
+    return {
+      aggregate: null,
+      months,
+      missingMonthKeys: [],
+      dataLoadError: false,
+      calculationError: true,
+    };
+  }
 }
