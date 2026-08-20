@@ -38,6 +38,7 @@ export const sqlFiles = Object.freeze([
   "test/business/task-8-history-delete-protection.test.sql",
   "test/business/task-8-monthly-data-entry.test.sql",
   "supabase/migrations/20260821001500_task_14_funnel_management.sql",
+  "supabase/migrations/20260821013000_task_14_protect_funnel_creation_identity.sql",
   "test/business/task-14-funnel-management.test.sql",
 ]);
 
