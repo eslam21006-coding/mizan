@@ -234,7 +234,12 @@ test.describe("Task 11 dashboard and Task 12 month comparison", () => {
       `/analytics?business=${encodeURIComponent(businessId)}&month=2026-04`,
     );
     await expect(page.getByRole("heading", { name: "المقارنة الشهرية", level: 1 })).toBeVisible();
-    await expect(page.getByText("أبريل ٢٠٢٦ مقابل مارس ٢٠٢٦", { exact: false })).toBeVisible();
+    await expect(
+      page.getByRole("heading", {
+        name: "أبريل ٢٠٢٦ مقابل مارس ٢٠٢٦",
+        level: 2,
+      }),
+    ).toBeVisible();
 
     const comparisonProfit = page
       .locator("article")
