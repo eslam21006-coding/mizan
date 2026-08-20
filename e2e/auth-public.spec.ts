@@ -37,6 +37,15 @@ test("invalid invite link returns to login without creating a session", async ({
   expect(errors).toEqual([]);
 });
 
+test("invalid recovery link returns to login with recovery-specific guidance", async ({ page }) => {
+  const errors = captureBrowserErrors(page);
+  await page.goto("/auth/confirm?type=recovery");
+
+  await expect(page).toHaveURL(/\/login\?error=invalid-recovery$/);
+  await expect(page.getByText("رابط استعادة كلمة المرور غير صالح", { exact: false })).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
 test("implicit auth callback fails closed with Arabic RTL guidance", async ({ page }) => {
   const errors = captureBrowserErrors(page);
   await page.setViewportSize({ width: 390, height: 844 });
