@@ -53,11 +53,14 @@ test.describe("Task 14 funnel management", () => {
     await page.getByRole("button", { name: "التالي" }).click();
     await page.getByRole("button", { name: "إنشاء البزنس" }).click();
 
-    const businessCard = page.locator("article").filter({ hasText: businessName });
-    await businessCard.getByRole("link", { name: "إدارة الفانلز" }).click();
-
+    await page.goto("/funnels");
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect(page.getByRole("heading", { name: "الفانلز", level: 1 })).toBeVisible();
+    const overviewBusinessCard = page.locator("article").filter({ hasText: businessName });
+    await expect(overviewBusinessCard).toContainText("فانلز اختيارية");
+    await overviewBusinessCard.getByRole("link", { name: "إدارة الفانلز" }).click();
+
     await expect(page.getByRole("heading", { name: "الفانلز", level: 1 })).toBeVisible();
     await expect(page.getByText("اختيارية بالكامل")).toBeVisible();
 
