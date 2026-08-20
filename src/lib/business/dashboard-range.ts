@@ -1,12 +1,14 @@
+import type { createSupabaseServerClient } from "../supabase/server";
 import type { CoreCalculationResult } from "./calculations";
+import { loadDashboardMonth } from "./dashboard-month";
 import {
   aggregateHistoricalMonths,
   type HistoricalAggregateResult,
 } from "./historical-aggregation";
-import { loadDashboardMonth } from "./dashboard-month";
-import type { createSupabaseServerClient } from "../supabase/server";
 
 type ServerSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
+
+const RANGE_LOAD_BATCH_SIZE = 6;
 
 export type HistoricalMonthResult = {
   monthKey: string;
@@ -36,12 +38,22 @@ export async function loadDashboardRange(
     };
   }
 
-  const loaded = await Promise.all(
-    monthKeys.map(async (monthKey) => ({
-      monthKey,
-      load: await loadDashboardMonth(supabase, businessId, `${monthKey}-01`),
-    })),
-  );
+  const loaded: Array<{
+    monthKey: string;
+    load: Awaited<ReturnType<typeof loadDashboardMonth>>;
+  }> = [];
+
+  for (let start = 0; start < monthKeys.length; start += RANGE_LOAD_BATCH_SIZE) {
+    const batch = monthKeys.slice(start, start + RANGE_LOAD_BATCH_SIZE);
+    loaded.push(
+      ...(await Promise.all(
+        batch.map(async (monthKey) => ({
+          monthKey,
+          load: await loadDashboardMonth(supabase, businessId, `${monthKey}-01`),
+        })),
+      )),
+    );
+  }
 
   const dataLoadError = loaded.some(({ load }) => load.dataLoadError);
   const calculationError = loaded.some(({ load }) => load.calculationError);
