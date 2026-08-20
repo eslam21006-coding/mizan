@@ -9,32 +9,33 @@ import {
   compareRatioMetrics,
   type MetricComparison,
 } from "@/lib/business/comparison";
+import {
+  formatArabicExactDecimal,
+  formatArabicExactPercent,
+  formatArabicExactRatio,
+} from "@/lib/business/format-exact";
 import dashboardStyles from "./dashboard.module.css";
 import comparisonStyles from "./month-comparison.module.css";
 
-const numberFormatter = new Intl.NumberFormat("ar-EG", {
-  maximumFractionDigits: 2,
-});
-
-const percentFormatter = new Intl.NumberFormat("ar-EG", {
-  maximumFractionDigits: 1,
-});
-
-function ratioNumber(ratio: ExactRatio) {
-  const numerator = Number(ratio.numerator);
-  const denominator = Number(ratio.denominator);
-  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return null;
-  return numerator / denominator;
+function absoluteRatio(value: ExactRatio): ExactRatio {
+  const numerator = BigInt(value.numerator);
+  return {
+    numerator: (numerator < 0n ? -numerator : numerator).toString(),
+    denominator: value.denominator,
+  };
 }
 
 function decimalText(metric: CalculatedMetric<string>, currency: string) {
   if (!metric.available) return "غير متاح";
-  const value = Number(metric.value);
-  return `${Number.isFinite(value) ? numberFormatter.format(value) : metric.value} ${currency}`;
+  return `${formatArabicExactDecimal(metric.value, 2)} ${currency}`;
 }
 
 function countText(metric: CalculatedMetric<number>) {
-  return metric.available ? numberFormatter.format(metric.value) : "غير متاح";
+  if (!metric.available) return "غير متاح";
+  return formatArabicExactRatio(
+    { numerator: String(metric.value), denominator: "1" },
+    0,
+  );
 }
 
 function ratioText(
@@ -43,11 +44,9 @@ function ratioText(
   currency: string,
 ) {
   if (!metric.available) return "غير متاح";
-  const value = ratioNumber(metric.value);
-  if (value === null) return `${metric.value.numerator}/${metric.value.denominator}`;
   return kind === "percent"
-    ? `${percentFormatter.format(value * 100)}%`
-    : `${numberFormatter.format(value)} ${currency}`;
+    ? `${formatArabicExactPercent(metric.value, 1)}%`
+    : `${formatArabicExactRatio(metric.value, 2)} ${currency}`;
 }
 
 function comparisonText(
@@ -63,27 +62,21 @@ function comparisonText(
 
   if (comparison.direction === "flat") return "بدون تغيير";
 
-  const change = ratioNumber(comparison.change);
-  if (change === null) return "التغير غير قابل للعرض";
-
   const arrow = comparison.direction === "up" ? "↑" : "↓";
-  const absoluteChange = Math.abs(change);
+  const absoluteChange = absoluteRatio(comparison.change);
 
   let changeText: string;
   if (kind === "percentage-point") {
-    changeText = `${arrow} ${percentFormatter.format(absoluteChange * 100)} نقطة مئوية`;
+    changeText = `${arrow} ${formatArabicExactPercent(absoluteChange, 1)} نقطة مئوية`;
   } else if (kind === "money") {
-    changeText = `${arrow} ${numberFormatter.format(absoluteChange)} ${currency}`;
+    changeText = `${arrow} ${formatArabicExactRatio(absoluteChange, 2)} ${currency}`;
   } else {
-    changeText = `${arrow} ${numberFormatter.format(absoluteChange)} عميل`;
+    changeText = `${arrow} ${formatArabicExactRatio(absoluteChange, 0)} عميل`;
   }
 
   if (comparison.relativeChange === null || kind === "percentage-point") return changeText;
 
-  const relative = ratioNumber(comparison.relativeChange);
-  return relative === null
-    ? changeText
-    : `${changeText} (${percentFormatter.format(Math.abs(relative) * 100)}%)`;
+  return `${changeText} (${formatArabicExactPercent(absoluteRatio(comparison.relativeChange), 1)}%)`;
 }
 
 type ComparisonCardProps = {
