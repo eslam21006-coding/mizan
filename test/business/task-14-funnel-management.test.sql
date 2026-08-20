@@ -130,6 +130,24 @@ begin
   end;
 
   begin
+    update public.funnels
+    set id = '71414141-1414-4414-8414-141414141415'
+    where id = '71414141-1414-4414-8414-141414141414';
+    raise exception 'funnel id was mutable';
+  exception when insufficient_privilege then
+    null;
+  end;
+
+  begin
+    update public.funnels
+    set created_at = created_at - interval '1 day'
+    where id = '71414141-1414-4414-8414-141414141414';
+    raise exception 'funnel created_at was mutable';
+  exception when insufficient_privilege then
+    null;
+  end;
+
+  begin
     delete from public.funnels
     where id = '71414141-1414-4414-8414-141414141414';
     raise exception 'authenticated owner hard-deleted a funnel';
@@ -278,4 +296,31 @@ begin
   end;
 end $$;
 
+reset role;
+set local role anon;
+
+do $$
+begin
+  begin
+    perform 1 from public.funnels;
+    raise exception 'anon read public.funnels';
+  exception when insufficient_privilege then
+    null;
+  end;
+
+  begin
+    insert into public.funnels (business_id, name, funnel_type, creation_request_id)
+    values (
+      'a1414141-1414-4414-8414-141414141414',
+      'Anonymous Funnel',
+      'webinar',
+      'a1414141-1414-4414-8414-141414141499'
+    );
+    raise exception 'anon inserted public.funnels';
+  exception when insufficient_privilege then
+    null;
+  end;
+end $$;
+
+reset role;
 rollback;
