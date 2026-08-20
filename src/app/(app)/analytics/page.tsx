@@ -1,11 +1,8 @@
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
+import { resolvePreviousComparisonMonth } from "@/lib/business/comparison-period";
 import { loadDashboardMonth } from "@/lib/business/dashboard-month";
-import {
-  currentMonthKeyForTimeZone,
-  parseMonthKey,
-  shiftMonthKey,
-} from "@/lib/business/monthly";
+import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import dashboardStyles from "../dashboard.module.css";
 import { MonthComparison } from "../month-comparison";
@@ -77,17 +74,24 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
 
   if (!selectedMonth) throw new Error("Could not resolve a valid comparison month.");
 
-  const previousMonthKey = shiftMonthKey(selectedMonth.monthKey, -1);
-  const previousMonth = previousMonthKey ? parseMonthKey(previousMonthKey) : null;
-  if (!previousMonth) throw new Error("Could not resolve the previous comparison month.");
-
+  const previousResolution = resolvePreviousComparisonMonth(selectedMonth.monthKey);
+  const previousMonth = previousResolution.parsed;
   const [currentLoad, previousLoad] = await Promise.all([
     loadDashboardMonth(supabase, selectedBusiness.id, selectedMonth.monthStart),
-    loadDashboardMonth(supabase, selectedBusiness.id, previousMonth.monthStart),
+    previousMonth
+      ? loadDashboardMonth(supabase, selectedBusiness.id, previousMonth.monthStart)
+      : Promise.resolve({
+          periodExists: false,
+          result: null,
+          dataLoadError: false,
+          calculationError: false,
+        }),
   ]);
 
   const currentLabel = monthLabel(selectedMonth.monthStart);
-  const previousLabel = monthLabel(previousMonth.monthStart);
+  const previousLabel = previousResolution.monthKey
+    ? monthLabel(`${previousResolution.monthKey}-01`)
+    : "الشهر السابق";
   const hasLoadError =
     currentLoad.dataLoadError ||
     currentLoad.calculationError ||
@@ -178,7 +182,17 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         </section>
       )}
 
-      {!hasLoadError && currentLoad.result && !previousLoad.periodExists && (
+      {!hasLoadError && currentLoad.result && !previousMonth && (
+        <section className={dashboardStyles.emptyState}>
+          <span className={dashboardStyles.eyebrow}>بداية النطاق الزمني المدعوم</span>
+          <h2>لا يوجد شهر سابق قابل للمقارنة قبل {currentLabel}</h2>
+          <p>
+            {previousLabel} يقع قبل أول شهر يدعمه ميزان. لن نعتبره صفرًا ولن ننشئ مقارنة وهمية.
+          </p>
+        </section>
+      )}
+
+      {!hasLoadError && currentLoad.result && previousMonth && !previousLoad.periodExists && (
         <section className={dashboardStyles.emptyState}>
           <span className={dashboardStyles.eyebrow}>لا توجد قاعدة مقارنة</span>
           <h2>لا توجد أرقام محفوظة لـ {previousLabel}</h2>
@@ -194,7 +208,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         </section>
       )}
 
-      {!hasLoadError && currentLoad.result && previousLoad.result && (
+      {!hasLoadError && currentLoad.result && previousMonth && previousLoad.result && (
         <MonthComparison
           current={currentLoad.result}
           previous={previousLoad.result}
