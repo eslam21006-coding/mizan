@@ -83,6 +83,9 @@ export default async function BusinessesPage({ searchParams }: BusinessesPagePro
                   <Link className={styles.manageLink} href={`/businesses/${business.id}/expenses`}>
                     إدارة المصروفات
                   </Link>
+                  <Link className={styles.manageLink} href={`/businesses/${business.id}/funnels`}>
+                    إدارة الفانلز
+                  </Link>
                   <Link className={styles.manageLink} href={`/businesses/${business.id}/monthly`}>
                     الإدخال الشهري
                   </Link>
