@@ -1,9 +1,8 @@
 name: Task 12 live browser verification
 
 on:
-  push:
-    branches:
-      - agent/task-12-month-over-month-comparisons
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: read
