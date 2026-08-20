@@ -9,7 +9,8 @@ import {
   compareRatioMetrics,
   type MetricComparison,
 } from "@/lib/business/comparison";
-import styles from "./dashboard.module.css";
+import dashboardStyles from "./dashboard.module.css";
+import comparisonStyles from "./month-comparison.module.css";
 
 const numberFormatter = new Intl.NumberFormat("ar-EG", {
   maximumFractionDigits: 2,
@@ -103,9 +104,9 @@ function ComparisonCard({
   currency,
 }: ComparisonCardProps) {
   return (
-    <article className={styles.comparisonCard}>
-      <span className={styles.comparisonLabel}>{label}</span>
-      <dl className={styles.comparisonValues}>
+    <article className={comparisonStyles.comparisonCard}>
+      <span className={comparisonStyles.comparisonLabel}>{label}</span>
+      <dl className={comparisonStyles.comparisonValues}>
         <div>
           <dt>الحالي</dt>
           <dd>{current}</dd>
@@ -115,12 +116,18 @@ function ComparisonCard({
           <dd>{previous}</dd>
         </div>
       </dl>
-      <strong className={styles.comparisonChange} data-direction={comparison.available ? comparison.direction : "unavailable"}>
+      <strong
+        className={comparisonStyles.comparisonChange}
+        data-direction={comparison.available ? comparison.direction : "unavailable"}
+      >
         {comparisonText(comparison, kind, currency)}
       </strong>
-      {comparison.available && comparison.relativeChange === null && comparison.direction !== "flat" && kind !== "percentage-point" && (
-        <small>نسبة التغير غير متاحة لأن قيمة الشهر السابق تساوي صفرًا.</small>
-      )}
+      {comparison.available &&
+        comparison.relativeChange === null &&
+        comparison.direction !== "flat" &&
+        kind !== "percentage-point" && (
+          <small>نسبة التغير غير متاحة لأن قيمة الشهر السابق تساوي صفرًا.</small>
+        )}
     </article>
   );
 }
@@ -225,21 +232,24 @@ export function MonthComparison({
   ];
 
   return (
-    <section className={styles.sectionCard} aria-label="مقارنة الشهر بالشهر السابق">
-      <div className={styles.sectionHeading}>
+    <section className={dashboardStyles.sectionCard} aria-label="مقارنة الشهر بالشهر السابق">
+      <div className={dashboardStyles.sectionHeading}>
         <div>
-          <span className={styles.eyebrow}>مقارنة شهرية</span>
-          <h2>{currentMonthLabel} مقابل {previousMonthLabel}</h2>
+          <span className={dashboardStyles.eyebrow}>مقارنة شهرية</span>
+          <h2>
+            {currentMonthLabel} مقابل {previousMonthLabel}
+          </h2>
         </div>
         <p>التغير محسوب من القيم الأصلية الدقيقة لكل شهر، وليس من أرقام العرض المقربة.</p>
       </div>
-      <div className={styles.comparisonGrid}>
+      <div className={comparisonStyles.comparisonGrid}>
         {cards.map((card) => (
           <ComparisonCard key={card.label} {...card} />
         ))}
       </div>
-      <p className={styles.definitionNote}>
-        الأسهم تصف اتجاه الرقم فقط ولا تعني تلقائيًا أن التغير جيد أو سيئ. في النسب مثل هامش الربح وهامش المساهمة نعرض الفرق بالنقاط المئوية.
+      <p className={dashboardStyles.definitionNote}>
+        الأسهم تصف اتجاه الرقم فقط ولا تعني تلقائيًا أن التغير جيد أو سيئ. في النسب مثل هامش الربح
+        وهامش المساهمة نعرض الفرق بالنقاط المئوية.
       </p>
     </section>
   );
