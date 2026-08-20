@@ -5,12 +5,18 @@ import {
   type CalculatedMetric,
   type ExactRatio,
 } from "../../src/lib/business/calculations.ts";
+import { resolvePreviousComparisonMonth } from "../../src/lib/business/comparison-period.ts";
 import {
   compareCountMetrics,
   compareDecimalMetrics,
   compareRatioMetrics,
 } from "../../src/lib/business/comparison.ts";
 import { buildDashboardCalculationInput } from "../../src/lib/business/dashboard.ts";
+import {
+  formatArabicExactDecimal,
+  formatArabicExactPercent,
+  formatArabicExactRatio,
+} from "../../src/lib/business/format-exact.ts";
 
 function available<T>(value: T): CalculatedMetric<T> {
   return { available: true, value };
@@ -148,6 +154,36 @@ test("flat comparison remains exact", () => {
     direction: "flat",
     change: ratio("0", "1"),
     relativeChange: ratio("0", "1"),
+  });
+});
+
+test("exact display formatting does not round through JavaScript Number", () => {
+  assert.equal(
+    formatArabicExactDecimal("9007199254740993"),
+    "٩٬٠٠٧٬١٩٩٬٢٥٤٬٧٤٠٬٩٩٣",
+  );
+  assert.equal(
+    formatArabicExactDecimal("9007199254740993.125", 2),
+    "٩٬٠٠٧٬١٩٩٬٢٥٤٬٧٤٠٬٩٩٣٫١٣",
+  );
+  assert.equal(
+    formatArabicExactRatio(ratio("9007199254740993", "1"), 2),
+    "٩٬٠٠٧٬١٩٩٬٢٥٤٬٧٤٠٬٩٩٣",
+  );
+  assert.equal(formatArabicExactPercent(ratio("721", "1000"), 1), "٧٢٫١");
+});
+
+test("January 2000 resolves to an unsupported previous-month boundary instead of throwing", () => {
+  assert.deepEqual(resolvePreviousComparisonMonth("2000-01"), {
+    monthKey: "1999-12",
+    parsed: null,
+  });
+  assert.deepEqual(resolvePreviousComparisonMonth("2000-02"), {
+    monthKey: "2000-01",
+    parsed: {
+      monthKey: "2000-01",
+      monthStart: "2000-01-01",
+    },
   });
 });
 
