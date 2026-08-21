@@ -1,4 +1,4 @@
-export const REVENUE_STREAM_TYPES = ["front_end", "backend"] as const;
+export const REVENUE_STREAM_TYPES = ["front_end", "backend", "other"] as const;
 
 export type RevenueStreamType = (typeof REVENUE_STREAM_TYPES)[number];
 
@@ -8,6 +8,7 @@ export const REVENUE_STREAM_TYPE_OPTIONS: ReadonlyArray<{
 }> = [
   { value: "front_end", label: "Front-End / أمامي" },
   { value: "backend", label: "Backend / خلفي" },
+  { value: "other", label: "Other / أخرى" },
 ];
 
 const UUID_PATTERN =
