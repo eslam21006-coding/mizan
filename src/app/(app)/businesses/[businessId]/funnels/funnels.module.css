@@ -1,0 +1,368 @@
+.headingRow,
+.panelHeading,
+.funnelTopline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.headingRow {
+  align-items: flex-end;
+}
+
+.backLink {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  padding: 9px 14px;
+  color: var(--text-soft);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.backLink:hover {
+  color: var(--brand-strong);
+  border-color: #cbded9;
+}
+
+.backLink:focus-visible,
+.createForm button:focus-visible,
+.editForm button:focus-visible,
+.createForm input:focus-visible,
+.createForm select:focus-visible,
+.editForm input:focus-visible,
+.editForm select:focus-visible,
+.activeToggle input:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.successStatus,
+.errorStatus,
+.readOnlyNotice {
+  padding: 13px 15px;
+  border-radius: 12px;
+  font-size: 13px;
+}
+
+.successStatus {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+  border: 1px solid #d3e7e1;
+  font-weight: 750;
+}
+
+.errorStatus {
+  color: var(--danger);
+  background: #fff7f6;
+  border: 1px solid #f1d6d2;
+  font-weight: 750;
+}
+
+.readOnlyNotice {
+  background: #fbfaf4;
+  border: 1px solid #e8dfbf;
+}
+
+.readOnlyNotice strong {
+  color: #625522;
+}
+
+.readOnlyNotice p {
+  margin: 5px 0 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.explainer {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.explainer > div,
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+.explainer > div {
+  padding: 18px 20px;
+}
+
+.explainer strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.explainer p,
+.emptyState p,
+.historyNote {
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.explainer p {
+  margin: 7px 0 0;
+}
+
+.panel {
+  padding: 24px;
+}
+
+.panelHeading {
+  margin-block-end: 20px;
+}
+
+.panelHeading h2 {
+  margin: 5px 0 0;
+  font-size: 20px;
+}
+
+.kicker,
+.count {
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.kicker {
+  color: var(--brand);
+}
+
+.count {
+  min-width: 32px;
+  min-height: 32px;
+  display: grid;
+  place-items: center;
+  color: var(--text-faint);
+  background: var(--surface-soft);
+  border-radius: 999px;
+}
+
+.createForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(210px, 0.9fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.createForm label,
+.editForm label:not(.activeToggle) {
+  display: grid;
+  gap: 7px;
+}
+
+.createForm label > span,
+.editForm label > span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.createForm input,
+.createForm select,
+.editForm input[type="text"],
+.editForm select {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 11px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.createForm button,
+.editForm button {
+  min-height: 44px;
+  padding: 9px 15px;
+  color: #fff;
+  background: var(--brand);
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.createForm button:hover,
+.editForm button:hover {
+  background: var(--brand-strong);
+}
+
+.funnelList {
+  display: grid;
+  gap: 12px;
+}
+
+.funnelCard {
+  min-width: 0;
+  padding: 18px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+}
+
+.funnelTopline {
+  margin-block-end: 14px;
+}
+
+.funnelTopline > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.activeBadge,
+.inactiveBadge,
+.typeBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 25px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.activeBadge {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+}
+
+.inactiveBadge {
+  color: var(--text-soft);
+  background: #eceeed;
+}
+
+.typeBadge {
+  color: var(--text-soft);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.editForm {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(210px, 0.85fr) minmax(230px, 0.95fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.activeToggle {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px 11px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.activeToggle input {
+  width: 17px;
+  height: 17px;
+  accent-color: var(--brand);
+}
+
+.editForm .activeToggle > span {
+  line-height: 1.5;
+}
+
+.readOnlyFunnel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.readOnlyFunnel strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.readOnlyFunnel span {
+  color: var(--text-soft);
+  font-size: 12px;
+  text-align: left;
+}
+
+.emptyState,
+.loadError {
+  padding: 28px;
+  text-align: center;
+  background: var(--surface-soft);
+  border-radius: 12px;
+}
+
+.emptyState p {
+  margin: 7px auto 0;
+  max-width: 620px;
+}
+
+.loadError {
+  color: var(--danger);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.historyNote {
+  margin: 0;
+  padding-inline: 4px;
+}
+
+@media (max-width: 960px) {
+  .explainer {
+    grid-template-columns: 1fr;
+  }
+
+  .createForm,
+  .editForm {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .activeToggle {
+    align-self: stretch;
+  }
+}
+
+@media (max-width: 640px) {
+  .headingRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .backLink {
+    align-self: flex-start;
+  }
+
+  .createForm,
+  .editForm {
+    grid-template-columns: 1fr;
+  }
+
+  .panel {
+    padding: 18px;
+  }
+
+  .createForm button,
+  .editForm button {
+    width: 100%;
+  }
+
+  .readOnlyFunnel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

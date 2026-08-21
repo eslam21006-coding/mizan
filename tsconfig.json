@@ -36,7 +36,8 @@
     "**/*.ts",
     "**/*.tsx",
     "test/business/monthly-comparison.test.mts",
-    "test/business/historical-analytics.test.mts"
+    "test/business/historical-analytics.test.mts",
+    "test/business/funnels.test.mts"
   ],
   "exclude": [
     "node_modules"
