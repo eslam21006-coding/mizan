@@ -1,0 +1,307 @@
+.headingRow,
+.panelHeading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.headerLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.headerLinks a,
+.panelHeading a,
+.emptyState a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 13px;
+  color: var(--text-soft);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.successStatus,
+.errorStatus,
+.scopeNotice,
+.warning,
+.loadError,
+.readOnlyNotice {
+  padding: 14px 16px;
+  border-radius: 12px;
+}
+
+.successStatus {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+  border: 1px solid #d3e7e1;
+  font-weight: 750;
+}
+
+.errorStatus,
+.loadError {
+  color: var(--danger);
+  background: #fff7f6;
+  border: 1px solid #f1d6d2;
+}
+
+.scopeNotice {
+  background: #f7f8fa;
+  border: 1px solid var(--border);
+}
+
+.warning {
+  background: #fff9eb;
+  border: 1px solid #ead9a7;
+}
+
+.readOnlyNotice {
+  background: #fbfaf4;
+  border: 1px solid #e8dfbf;
+}
+
+.scopeNotice p,
+.warning p,
+.loadError p,
+.readOnlyNotice p,
+.muted,
+.saveBar p {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.monthControl,
+.panel,
+.metricGrid article,
+.emptyState {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+.monthControl,
+.panel,
+.emptyState {
+  padding: 22px;
+}
+
+.monthControl form {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.monthControl label {
+  display: grid;
+  gap: 7px;
+}
+
+.monthControl label span,
+.allocationRow label span,
+.allocationRow > div span,
+.panelHeading > div > span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.monthControl input,
+.allocationRow input {
+  min-height: 43px;
+  padding: 9px 11px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.monthControl button,
+.saveBar button {
+  min-height: 43px;
+  padding: 9px 15px;
+  color: #fff;
+  background: var(--brand);
+  border: 0;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metricGrid article {
+  min-width: 0;
+  padding: 18px;
+}
+
+.metricGrid span,
+.metricGrid small {
+  display: block;
+  color: var(--text-soft);
+  font-size: 11px;
+}
+
+.metricGrid strong {
+  display: block;
+  margin: 8px 0 6px;
+  color: var(--text);
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+
+.panelHeading {
+  margin-bottom: 18px;
+}
+
+.panelHeading h2 {
+  margin: 4px 0 0;
+  font-size: 19px;
+}
+
+.revenueList,
+.allocationList {
+  display: grid;
+  gap: 10px;
+}
+
+.revenueRow,
+.allocationRow {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.revenueRow {
+  grid-template-columns: minmax(0, 1.3fr) 1fr 1fr;
+  align-items: center;
+}
+
+.revenueRow span {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.allocationForm {
+  display: grid;
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.allocationRow {
+  grid-template-columns: minmax(0, 1.3fr) minmax(180px, 0.8fr) minmax(220px, 1fr);
+  align-items: end;
+}
+
+.allocationRow > div,
+.allocationRow label {
+  display: grid;
+  gap: 6px;
+}
+
+.allocationRow > div strong {
+  overflow-wrap: anywhere;
+}
+
+.allocationRow input[readonly] {
+  background: #f2f3f3;
+  color: var(--text-faint);
+}
+
+.saveBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.saveBar p {
+  margin: 0;
+}
+
+.emptyState {
+  text-align: center;
+}
+
+.emptyState p {
+  margin: 7px auto 14px;
+  max-width: 640px;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.headerLinks a:focus-visible,
+.panelHeading a:focus-visible,
+.emptyState a:focus-visible,
+.monthControl input:focus-visible,
+.monthControl button:focus-visible,
+.allocationRow input:focus-visible,
+.saveBar button:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 980px) {
+  .metricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .allocationRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .allocationRow label {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .headingRow,
+  .panelHeading,
+  .saveBar {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .metricGrid,
+  .revenueRow,
+  .allocationRow {
+    grid-template-columns: 1fr;
+  }
+
+  .monthControl form {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .monthControl button,
+  .saveBar button {
+    width: 100%;
+  }
+
+  .headerLinks {
+    align-self: flex-start;
+  }
+}
