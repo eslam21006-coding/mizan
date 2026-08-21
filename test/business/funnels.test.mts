@@ -39,6 +39,13 @@ const hardeningMigration = await readFile(
   ),
   "utf8",
 );
+const retentionMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20260821110500_task_14_restrict_funnel_business_delete.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const rlsRunner = await readFile(new URL("../rls/run-attack-matrix.mjs", import.meta.url), "utf8");
 
 test("Task 14 supports the agreed funnel management types", () => {
@@ -113,6 +120,14 @@ test("funnel creation is database-idempotent and historical identity is immutabl
   assert.match(hardeningMigration, /old\.created_at is distinct from new\.created_at/i);
 });
 
+test("funnel history cannot be cascade-deleted through its business", () => {
+  assert.match(migration, /references public\.businesses\(id\) on delete restrict/i);
+  assert.doesNotMatch(migration, /references public\.businesses\(id\) on delete cascade/i);
+  assert.match(retentionMigration, /foreign key \(business_id\)/i);
+  assert.match(retentionMigration, /references public\.businesses\(id\)/i);
+  assert.match(retentionMigration, /on delete restrict/i);
+});
+
 test("Task 14 has no authenticated hard-delete path", () => {
   assert.doesNotMatch(action, /\.delete\(\)/);
   assert.match(migration, /grant select, insert, update on public\.funnels to authenticated/i);
@@ -139,7 +154,12 @@ test("Task 14 migrations and attack matrix are wired into database-backed CI", (
     rlsRunner,
     /supabase\/migrations\/20260821013000_task_14_protect_funnel_creation_identity\.sql/,
   );
+  assert.match(
+    rlsRunner,
+    /supabase\/migrations\/20260821110500_task_14_restrict_funnel_business_delete\.sql/,
+  );
   assert.match(rlsRunner, /test\/business\/task-14-funnel-management\.test\.sql/);
+  assert.match(rlsRunner, /test\/business\/task-14-funnel-retention\.test\.sql/);
 });
 
 test("Task 14 RLS uses existing read/manage business boundaries", () => {
