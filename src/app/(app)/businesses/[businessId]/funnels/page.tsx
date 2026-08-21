@@ -92,14 +92,18 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
           <p>يمكن للبزنس العمل بدون فانلز، أو بفانل واحدة، أو بعدة فانلز. اقتصاديات البزنس تظل هي الأساس.</p>
         </div>
         <div>
-          <strong>الهيكل فقط في هذه المهمة</strong>
-          <p>هنا نعرّف اسم الفانل ونوعها وحالتها فقط. الإنفاق والليدز والمكالمات والمبيعات تبدأ في المهمة التالية.</p>
+          <strong>الأرقام الشهرية منفصلة عن الهيكل</strong>
+          <p>هذه الصفحة لتعريف اسم الفانل ونوعها وحالتها. الأداء الشهري والـ KPIs يُسجَّلان في شاشة أرقام الفانلز الشهرية.</p>
         </div>
         <div>
           <strong>التاريخ محفوظ</strong>
           <p>عند توقف فانل، عطّلها بدل حذفها حتى تبقى البيانات التاريخية قابلة للربط بها لاحقًا.</p>
         </div>
       </section>
+
+      <Link className={styles.backLink} href={`/businesses/${businessId}/funnels/monthly`}>
+        فتح أرقام الفانلز الشهرية
+      </Link>
 
       {canManage && (
         <section className={styles.panel}>
