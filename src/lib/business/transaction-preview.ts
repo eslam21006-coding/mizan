@@ -475,7 +475,7 @@ function customFormatLooksLikeDate(formatCode: string) {
     .replace(/\[[^\]]*]/g, "")
     .replace(/_.|\*./g, "")
     .toLowerCase();
-  return /(^|[^a-z])[ymdhis]+([^a-z]|$)/.test(stripped) || /[ymdhs]/.test(stripped.replace(/[0#?.,%e+\-]/g, ""));
+  return /(^|[^a-z])[ymdhis]+([^a-z]|$)/.test(stripped) || /[ymdhs]/.test(stripped.replace(/[0#?.,%e+-]/g, ""));
 }
 
 function parseStyles(xml: string | null): XlsxStyles {
