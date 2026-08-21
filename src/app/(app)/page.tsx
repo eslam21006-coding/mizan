@@ -1,14 +1,12 @@
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
-import {
-  calculateCoreFinancials,
-  CalculationInputError,
-  type CalculatedMetric,
-  type CalculationUnavailableReason,
-  type CoreCalculationResult,
-  type ExactRatio,
+import type {
+  CalculatedMetric,
+  CalculationUnavailableReason,
+  CoreCalculationResult,
+  ExactRatio,
 } from "@/lib/business/calculations";
-import { buildDashboardCalculationInput } from "@/lib/business/dashboard";
+import { loadDashboardMonth } from "@/lib/business/dashboard-month";
 import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import styles from "./dashboard.module.css";
@@ -91,6 +89,18 @@ function formattedRatio(
   };
 }
 
+function formattedMultiple(metric: CalculatedMetric<ExactRatio>) {
+  if (!metric.available) {
+    return { value: UNAVAILABLE_LABELS[metric.reason], unavailable: true as const };
+  }
+
+  const number = ratioNumber(metric.value);
+  return {
+    value: number === null ? `${metric.value.numerator}/${metric.value.denominator}` : `${numberFormatter.format(number)}×`,
+    unavailable: false as const,
+  };
+}
+
 function MetricCard({
   label,
   value,
@@ -138,6 +148,8 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
   const ultimateCac = formattedRatio(result.ultimateCac, "money", currency);
   const netCash = formattedMoney(result.netCashCollected, currency);
   const acquisitionCac = formattedRatio(result.acquisitionCac, "money", currency);
+  const mediaCac = formattedRatio(result.mediaCac, "money", currency);
+  const mer = formattedMultiple(result.mer);
   const contributionMargin = formattedRatio(result.contributionMargin, "percent", currency);
   const contributionProfit = formattedMoney(result.contributionProfit, currency);
   const allCosts = formattedMoney(result.allBusinessCosts, currency);
@@ -203,6 +215,18 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
             value={acquisitionCac.value}
             unavailable={acquisitionCac.unavailable}
             note="كل تكاليف الاكتساب والمبيعات والتسويق ÷ العملاء الجدد"
+          />
+          <MetricCard
+            label="Media CAC"
+            value={mediaCac.value}
+            unavailable={mediaCac.unavailable}
+            note="إجمالي الإنفاق الإعلاني المعتمد ÷ العملاء الجدد"
+          />
+          <MetricCard
+            label="MER"
+            value={mer.value}
+            unavailable={mer.unavailable}
+            note="صافي الكاش المحصل ÷ إجمالي الإنفاق الإعلاني المعتمد"
           />
           <MetricCard
             label="هامش المساهمة"
@@ -299,11 +323,12 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
             })}
           </div>
           <div className={styles.boundaryNote}>
-            <strong>Media CAC و MER و ROAS</strong>
+            <strong>حدود الإنفاق الإعلاني و ROAS</strong>
             <p>
-              لا يتم عرضها كأرقام في هذه المرحلة لأن البيانات الحالية لا تحتوي على إنفاق إعلاني
-              business-level صريح أو إيراد منسوب للإعلانات. ميزان لا يستنتج هذه القيم من اسم بند
-              مصروف أو من إجمالي الإيراد.
+              Media CAC و MER يستخدمان إجمالي الإنفاق الإعلاني الصريح للبزنس أو مجموع الفانلز عند
+              اكتمال توزيعها، ولا يتم جمع الاثنين معًا. إدخال الإنفاق هنا لا يضيف مصروفًا جديدًا إلى
+              الربح؛ مصروف الإعلان يظل ضمن تكاليف الاكتساب. ROAS على مستوى البزنس يظل غير متاح بدون
+              إسناد business-level حقيقي.
             </p>
           </div>
         </section>
@@ -362,53 +387,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     throw new Error("Could not resolve a valid dashboard month.");
   }
 
-  const { data: period, error: periodError } = await supabase
-    .from("monthly_periods")
-    .select(
-      "id,new_customers,total_paying_customers,unallocated_gross_cash_collected,unallocated_refunds",
-    )
-    .eq("business_id", selectedBusiness.id)
-    .eq("month_start", selectedMonth.monthStart)
-    .maybeSingle();
-
-  let result: CoreCalculationResult | null = null;
-  let dataLoadError = Boolean(periodError);
-  let calculationError = false;
-
-  if (period?.id && !periodError) {
-    const [revenueResult, expenseResult] = await Promise.all([
-      supabase
-        .from("monthly_revenue_entries")
-        .select(
-          "revenue_stream_id,stream_name_snapshot,stream_type_snapshot,gross_cash_collected,refunds",
-        )
-        .eq("business_id", selectedBusiness.id)
-        .eq("monthly_period_id", period.id),
-      supabase
-        .from("monthly_expense_entries")
-        .select(
-          "expense_item_id,expense_name_snapshot,category_snapshot,cost_behavior_snapshot,input_value,customer_count_basis",
-        )
-        .eq("business_id", selectedBusiness.id)
-        .eq("monthly_period_id", period.id),
-    ]);
-
-    dataLoadError = Boolean(revenueResult.error || expenseResult.error);
-
-    if (!dataLoadError) {
-      try {
-        const input = buildDashboardCalculationInput({
-          period,
-          revenueEntries: revenueResult.data ?? [],
-          expenseEntries: expenseResult.data ?? [],
-        });
-        result = calculateCoreFinancials(input);
-      } catch (error) {
-        if (error instanceof CalculationInputError) calculationError = true;
-        else throw error;
-      }
-    }
-  }
+  const dashboardMonth = await loadDashboardMonth(
+    supabase,
+    selectedBusiness.id,
+    selectedMonth.monthStart,
+  );
+  const { periodExists, result, dataLoadError, calculationError } = dashboardMonth;
 
   const monthLabel = new Intl.DateTimeFormat("ar-EG", {
     month: "long",
@@ -429,6 +413,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             href={`/businesses/${selectedBusiness.id}/monthly?month=${selectedMonth.monthKey}`}
           >
             تعديل أرقام الشهر
+          </Link>
+          <Link
+            className={styles.secondaryAction}
+            href={`/businesses/${selectedBusiness.id}/funnels/monthly?month=${selectedMonth.monthKey}`}
+          >
+            أرقام الفانلز
           </Link>
           <Link className={styles.secondaryAction} href="/businesses">
             إعدادات البزنس
@@ -470,7 +460,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <div className={styles.periodBadge}>
           <span>الفترة المعروضة</span>
           <strong>{monthLabel}</strong>
-          <small>{period ? "بيانات محفوظة" : "لا توجد بيانات محفوظة"}</small>
+          <small>{periodExists ? "بيانات محفوظة" : "لا توجد بيانات محفوظة"}</small>
         </div>
       </section>
 
@@ -484,7 +474,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </section>
       )}
 
-      {!dataLoadError && !calculationError && !period && (
+      {!dataLoadError && !calculationError && !periodExists && (
         <EmptyDashboard business={selectedBusiness} monthKey={selectedMonth.monthKey} />
       )}
 
