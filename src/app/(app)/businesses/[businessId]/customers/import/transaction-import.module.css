@@ -1,3 +1,57 @@
+.headingRow {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.headingLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.businessContext {
+  display: grid;
+  grid-template-columns: minmax(160px, 0.65fr) minmax(130px, 0.35fr) minmax(0, 2fr);
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: var(--surface-secondary);
+  align-items: center;
+}
+
+.businessContext > div {
+  display: grid;
+  gap: 4px;
+}
+
+.businessContext span,
+.businessContext p {
+  color: var(--text-secondary);
+}
+
+.businessContext p {
+  margin: 0;
+  line-height: 1.7;
+}
+
 .previewStack {
   display: grid;
   gap: 20px;
@@ -71,7 +125,8 @@
 .fileControl input[type="file"]:focus-visible,
 .tableShell:focus-visible,
 .secondaryButton:focus-visible,
-.errorBox button:focus-visible {
+.errorBox button:focus-visible,
+.backLink:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
   outline-offset: 2px;
 }
@@ -234,20 +289,34 @@
     grid-template-columns: 1fr;
   }
 
+  .businessContext {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .businessContext p {
+    grid-column: 1 / -1;
+  }
+
   .metaGrid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 720px) {
+  .headingRow,
+  .resultHeading {
+    flex-direction: column;
+  }
+
+  .headingLinks,
+  .backLink {
+    width: 100%;
+  }
+
   .uploadPanel,
   .resultPanel {
     padding: 18px;
     border-radius: 16px;
-  }
-
-  .resultHeading {
-    flex-direction: column;
   }
 
   .metaGrid {
@@ -262,6 +331,15 @@
 @media (max-width: 430px) {
   .previewStack {
     gap: 14px;
+  }
+
+  .businessContext {
+    grid-template-columns: 1fr;
+    padding: 14px;
+  }
+
+  .businessContext p {
+    grid-column: auto;
   }
 
   .uploadPanel,
