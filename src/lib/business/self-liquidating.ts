@@ -195,9 +195,7 @@ function allocatedVariableCosts(
       `variableExpenses[${index}].allocatedAmount`,
     );
     if (compare(allocatedAmount, expenseAmount) > 0) {
-      throw new SelfLiquidationInputError(
-        `variableExpenses[${index}].allocatedAmount cannot exceed expenseAmount.`,
-      );
+      return unavailable("VARIABLE_COST_ALLOCATION_INCOMPLETE");
     }
     total = add(total, allocatedAmount);
   }
