@@ -33,6 +33,7 @@ export type DashboardCalculationSource = {
   period: MonthlyPeriodSnapshot;
   revenueEntries: readonly MonthlyRevenueSnapshot[];
   expenseEntries: readonly MonthlyExpenseSnapshot[];
+  canonicalAdSpend?: unknown;
 };
 
 function nullableDecimalString(value: unknown) {
@@ -60,6 +61,7 @@ export function buildDashboardCalculationInput({
   period,
   revenueEntries,
   expenseEntries,
+  canonicalAdSpend,
 }: DashboardCalculationSource): CoreCalculationInput {
   return {
     revenueStreams: revenueEntries.map((entry) => ({
@@ -81,9 +83,9 @@ export function buildDashboardCalculationInput({
     unallocatedRefunds: nullableDecimalString(period.unallocated_refunds),
     newCustomers: nullableCount(period.new_customers),
     totalPayingCustomers: nullableCount(period.total_paying_customers),
-    // Task 8 does not persist a canonical business-level Ad Spend or attributed revenue field.
-    // Task 11 must not infer either value from expense names or total business revenue.
-    canonicalAdSpend: null,
+    canonicalAdSpend: nullableDecimalString(canonicalAdSpend),
+    // Business-level ROAS still requires explicit business-level attribution.
+    // Funnel Attributed Revenue is not silently promoted to whole-business attribution.
     attributedRevenue: null,
   };
 }

@@ -32,14 +32,33 @@ function normalizeDecimalText(raw: string, maximumFractionDigits: number) {
   return normalizedFraction ? `${normalizedInteger}.${normalizedFraction}` : normalizedInteger;
 }
 
-export function parseOptionalDecimalInput(value: unknown): ParsedInput<string | null> {
-  const raw = normalizeLocalizedDigits(String(value ?? ""))
+function normalizeSignedDecimalText(raw: string, maximumFractionDigits: number) {
+  const negative = raw.startsWith("-");
+  const unsigned = negative ? raw.slice(1) : raw;
+  const normalized = normalizeDecimalText(unsigned, maximumFractionDigits);
+  if (normalized === null) return null;
+  if (normalized === "0") return "0";
+  return negative ? `-${normalized}` : normalized;
+}
+
+function normalizedMoneyInput(value: unknown) {
+  return normalizeLocalizedDigits(String(value ?? ""))
     .trim()
     .replaceAll("٬", "")
     .replaceAll("٫", ".");
+}
 
+export function parseOptionalDecimalInput(value: unknown): ParsedInput<string | null> {
+  const raw = normalizedMoneyInput(value);
   if (raw.length === 0) return { ok: true, value: null };
   const normalized = normalizeDecimalText(raw, 8);
+  return normalized === null ? { ok: false, value: null } : { ok: true, value: normalized };
+}
+
+export function parseOptionalSignedDecimalInput(value: unknown): ParsedInput<string | null> {
+  const raw = normalizedMoneyInput(value);
+  if (raw.length === 0) return { ok: true, value: null };
+  const normalized = normalizeSignedDecimalText(raw, 8);
   return normalized === null ? { ok: false, value: null } : { ok: true, value: normalized };
 }
 

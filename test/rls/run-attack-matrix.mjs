@@ -42,6 +42,8 @@ export const sqlFiles = Object.freeze([
   "supabase/migrations/20260821110500_task_14_restrict_funnel_business_delete.sql",
   "test/business/task-14-funnel-management.test.sql",
   "test/business/task-14-funnel-retention.test.sql",
+  "supabase/migrations/20260821113500_task_15_funnel_monthly_metrics.sql",
+  "test/business/task-15-funnel-monthly-metrics.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -99,7 +101,7 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     }
   }
 
-  console.log("Task 4-8 and Task 14 database-backed security/business matrices passed.");
+  console.log("Task 4-8 and Task 14-15 database-backed security/business matrices passed.");
   return 0;
 }
 
