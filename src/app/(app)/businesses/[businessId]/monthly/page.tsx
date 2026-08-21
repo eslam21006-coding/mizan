@@ -77,7 +77,10 @@ function asInputValue(value: unknown) {
 }
 
 function streamTypeLabel(value: string) {
-  return value === "front_end" ? "Front-End" : "Backend";
+  if (value === "front_end") return "Front-End";
+  if (value === "backend") return "Backend";
+  if (value === "other") return "Other";
+  return value;
 }
 
 function categoryLabel(value: string) {
