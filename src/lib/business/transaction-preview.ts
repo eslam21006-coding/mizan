@@ -571,7 +571,7 @@ export function parseWorksheetXml(
     const rowBody = rowMatch[1];
     const row: string[] = [];
     let sequentialColumn = 0;
-    const cellPattern = /<((?:[A-Za-z_][\w.-]*:)?c\b[^>]*?)(?:>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?c>|\s*\/)>/gi;
+    const cellPattern = /<((?:[A-Za-z_][\w.-]*:)?c\b[^>]*?)(?:>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?c\s*>|\s*\/>)/gi;
 
     for (const cellMatch of rowBody.matchAll(cellPattern)) {
       const tag = cellMatch[1];
