@@ -1,0 +1,86 @@
+name: Temporary Task 16 live browser verification
+
+on:
+  pull_request:
+    branches:
+      - agent/task-16-self-liquidating-funnel-engine
+
+permissions:
+  contents: read
+
+jobs:
+  verify-live-browser:
+    if: github.event.pull_request.head.repo.full_name == github.repository && github.actor == 'eslam21006-coding'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://zpfacvowigsscrnyceqh.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ZlJYC-raGXAQpneYfhJbEQ_N15Mkj15
+      MIZAN_SITE_URL: http://127.0.0.1:3000
+      LIVE_USER_FUNCTION: https://zpfacvowigsscrnyceqh.supabase.co/functions/v1/mizan-task16-live-user-20260821
+      LIVE_USER_KEY: s16_F5hP8mQ2xV7nL4cR9tK3wJ6yB1gD0zA8uE
+    steps:
+      - name: Checkout exact verification branch
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create disposable Mentee
+        shell: bash
+        run: |
+          set -euo pipefail
+          response="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+            -X POST \
+            -H "content-type: application/json" \
+            -H "x-mizan-test-key: ${LIVE_USER_KEY}" \
+            --data '{"action":"create"}' \
+            "${LIVE_USER_FUNCTION}")"
+          user_id="$(jq -er '.user_id' <<<"${response}")"
+          email="$(jq -er '.email' <<<"${response}")"
+          password="$(jq -er '.password' <<<"${response}")"
+          echo "::add-mask::${email}"
+          echo "::add-mask::${password}"
+          echo "MIZAN_E2E_EMAIL=${email}" >> "$GITHUB_ENV"
+          echo "MIZAN_E2E_PASSWORD=${password}" >> "$GITHUB_ENV"
+          echo "MIZAN_LIVE_USER_ID=${user_id}" >> "$GITHUB_ENV"
+
+      - name: Build exact Task 16 code
+        run: npm run build
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run authenticated Arabic RTL Task 16 flow
+        run: npx playwright test e2e/self-liquidating.spec.ts --project=chromium
+
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: task16-live-browser
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Cleanup disposable Mentee and business data
+        if: always() && env.MIZAN_LIVE_USER_ID != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+            -X POST \
+            -H "content-type: application/json" \
+            -H "x-mizan-test-key: ${LIVE_USER_KEY}" \
+            --data "{\"action\":\"cleanup\",\"user_id\":\"${MIZAN_LIVE_USER_ID}\"}" \
+            "${LIVE_USER_FUNCTION}" > /dev/null
