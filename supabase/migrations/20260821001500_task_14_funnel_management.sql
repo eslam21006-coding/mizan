@@ -1,6 +1,6 @@
 create table public.funnels (
   id uuid primary key default gen_random_uuid(),
-  business_id uuid not null references public.businesses(id) on delete cascade,
+  business_id uuid not null references public.businesses(id) on delete restrict,
   name text not null,
   funnel_type text not null,
   is_active boolean not null default true,
