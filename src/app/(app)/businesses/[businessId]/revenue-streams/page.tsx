@@ -82,11 +82,15 @@ export default async function RevenueStreamsPage({
       <section className={styles.explainer}>
         <div>
           <strong>Front-End / أمامي</strong>
-          <p>مصدر الإيراد الذي يأتي في بداية رحلة العميل ويمكن استخدامه لاحقًا في قياس تصفية تكلفة الإعلان.</p>
+          <p>مصدر الإيراد الذي يأتي في بداية رحلة العميل ويُستخدم في حساب تسييل تكلفة الإعلان.</p>
         </div>
         <div>
           <strong>Backend / خلفي</strong>
           <p>مصدر إيراد لاحق مثل ترقية، تجديد، عضوية، أو عرض إضافي بعد العلاقة الأولى مع العميل.</p>
+        </div>
+        <div>
+          <strong>Other / أخرى</strong>
+          <p>إيراد لا ينتمي بوضوح إلى Front-End أو Backend. لا يدخل في حساب Front-End Liquidation.</p>
         </div>
       </section>
 

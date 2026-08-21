@@ -14,7 +14,7 @@ export default async function FunnelsOverviewPage() {
     <div className="page-stack">
       <PageHeading
         title="الفانلز"
-        description="الفانلز طبقة تحليل اختيارية. اختر البزنس الذي تريد إدارة فانلزُه أو إدخال أرقامها الشهرية مع بقاء اقتصاديات البزنس هي المرجع الأساسي."
+        description="الفانلز طبقة تحليل اختيارية. اختر البزنس لإدارة الهيكل، إدخال الأداء الشهري، أو تحليل تسييل تكلفة الإعلان مع بقاء اقتصاديات البزنس هي المرجع الأساسي."
       />
 
       {error ? (
@@ -32,7 +32,7 @@ export default async function FunnelsOverviewPage() {
               </div>
               <h2>{business.name}</h2>
               <div className={styles.nextStep}>
-                <p>نظّم هيكل الفانلز، ثم أدخل الأداء الشهري للفانلز التي تستخدمها.</p>
+                <p>نظّم الفانلز، أدخل أداءها الشهري، ثم راقب اقتصاديات الـ Front-End وتسييل الإنفاق.</p>
                 <div className={styles.manageLinks}>
                   <Link className={styles.manageLink} href={`/businesses/${business.id}/funnels`}>
                     إدارة الفانلز
@@ -42,6 +42,12 @@ export default async function FunnelsOverviewPage() {
                     href={`/businesses/${business.id}/funnels/monthly`}
                   >
                     أرقام الفانلز الشهرية
+                  </Link>
+                  <Link
+                    className={styles.manageLink}
+                    href={`/businesses/${business.id}/liquidation`}
+                  >
+                    تحليل تسييل الإنفاق
                   </Link>
                   <Link className={styles.manageLink} href={`/?business=${business.id}`}>
                     فتح الداشبورد
