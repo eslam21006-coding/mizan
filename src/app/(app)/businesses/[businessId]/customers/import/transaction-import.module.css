@@ -1,0 +1,286 @@
+.previewStack {
+  display: grid;
+  gap: 20px;
+}
+
+.uploadPanel,
+.resultPanel {
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.uploadPanel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+  gap: 28px;
+  padding: 28px;
+  align-items: start;
+}
+
+.uploadCopy h2,
+.resultHeading h2 {
+  margin: 6px 0 8px;
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+}
+
+.uploadCopy p,
+.resultHeading p,
+.nextTaskNotice p,
+.fileControl p,
+.truncationNote,
+.errorBox p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.75;
+}
+
+.kicker {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.fileControl {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-radius: 16px;
+  background: var(--surface-secondary);
+}
+
+.fileControl label {
+  font-weight: 800;
+}
+
+.fileControl input[type="file"] {
+  width: 100%;
+  border: 1px dashed var(--border-strong);
+  border-radius: 14px;
+  background: var(--surface-primary);
+  padding: 16px;
+  color: var(--text-primary);
+}
+
+.fileControl input[type="file"]:focus-visible,
+.tableShell:focus-visible,
+.secondaryButton:focus-visible,
+.errorBox button:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.fileControl p {
+  font-size: 0.86rem;
+}
+
+.readOnlyNotice,
+.statusBox,
+.errorBox,
+.emptyPreview,
+.nextTaskNotice {
+  border-radius: 16px;
+  padding: 16px 18px;
+}
+
+.readOnlyNotice,
+.statusBox,
+.emptyPreview,
+.nextTaskNotice {
+  background: var(--surface-secondary);
+}
+
+.errorBox {
+  border: 1px solid color-mix(in srgb, #b42318 35%, transparent);
+  background: color-mix(in srgb, #b42318 7%, var(--surface-primary));
+}
+
+.errorBox strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.errorBox button,
+.secondaryButton {
+  margin-top: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  padding: 9px 14px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.resultPanel {
+  padding: 24px;
+  min-width: 0;
+}
+
+.resultHeading {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.secondaryButton {
+  flex: 0 0 auto;
+  margin-top: 0;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0 0 20px;
+}
+
+.metaGrid > div {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-secondary);
+}
+
+.metaGrid dt {
+  margin-bottom: 6px;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.metaGrid dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 800;
+}
+
+.tableShell {
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: var(--surface-primary);
+}
+
+.previewTable {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.previewTable th,
+.previewTable td {
+  min-width: 130px;
+  max-width: 320px;
+  padding: 11px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  border-inline-start: 1px solid var(--border-subtle);
+  text-align: start;
+  vertical-align: top;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.previewTable thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.previewTable th:first-child,
+.previewTable td:first-child {
+  min-width: 56px;
+  width: 56px;
+  border-inline-start: 0;
+  color: var(--text-secondary);
+}
+
+.previewTable tbody tr:last-child th,
+.previewTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.truncationNote {
+  margin-top: 12px;
+  font-size: 0.86rem;
+}
+
+.nextTaskNotice {
+  margin-top: 18px;
+}
+
+.nextTaskNotice strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 1050px) {
+  .uploadPanel {
+    grid-template-columns: 1fr;
+  }
+
+  .metaGrid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .uploadPanel,
+  .resultPanel {
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .resultHeading {
+    flex-direction: column;
+  }
+
+  .metaGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .secondaryButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .previewStack {
+    gap: 14px;
+  }
+
+  .uploadPanel,
+  .resultPanel {
+    padding: 14px;
+  }
+
+  .fileControl {
+    padding: 14px;
+  }
+
+  .metaGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .previewTable th,
+  .previewTable td {
+    min-width: 112px;
+    max-width: 240px;
+    padding: 9px 10px;
+  }
+}
