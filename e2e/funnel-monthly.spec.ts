@@ -70,15 +70,19 @@ test.describe("Task 15 funnel monthly metrics", () => {
       page.getByRole("heading", { name: "أرقام الفانلز الشهرية", level: 1 }),
     ).toBeVisible();
 
+    await page.getByLabel("إجمالي الإنفاق الإعلاني للبزنس — EGP").fill("invalid");
+    await page.getByRole("button", { name: "حفظ أرقام الفانلز" }).click();
+    await expect(page.getByRole("alert")).toContainText("راجع القيم المدخلة");
+
     await page.getByLabel("إجمالي الإنفاق الإعلاني للبزنس — EGP").fill("1200");
-    await page.getByLabel("Ad Spend").fill("1000");
-    await page.getByLabel("Leads").fill("100");
-    await page.getByLabel("Booked Calls").fill("20");
-    await page.getByLabel("Showed Calls").fill("13");
-    await page.getByLabel("Qualified Calls").fill("10");
-    await page.getByLabel("Sales").fill("2");
-    await page.getByLabel("New Customers").fill("2");
-    await page.getByLabel("Cash Collected — EGP").fill("5000");
+    await page.getByLabel(`Ad Spend — ${funnelName}`).fill("1000");
+    await page.getByLabel(`Leads — ${funnelName}`).fill("100");
+    await page.getByLabel(`Booked Calls — ${funnelName}`).fill("20");
+    await page.getByLabel(`Showed Calls — ${funnelName}`).fill("13");
+    await page.getByLabel(`Qualified Calls — ${funnelName}`).fill("10");
+    await page.getByLabel(`Sales — ${funnelName}`).fill("2");
+    await page.getByLabel(`New Customers — ${funnelName}`).fill("2");
+    await page.getByLabel(`Cash Collected — ${funnelName}`).fill("5000");
     await page.getByRole("button", { name: "حفظ أرقام الفانلز" }).click();
 
     await expect(page.getByRole("status")).toContainText("تم حفظ أرقام الفانلز");
@@ -90,9 +94,9 @@ test.describe("Task 15 funnel monthly metrics", () => {
     await expect(roasMetric).toContainText("الإسناد غير متاح");
 
     await page.getByLabel("إجمالي الإنفاق الإعلاني للبزنس — EGP").fill("1000");
-    await page.getByLabel("Showed Calls").fill("14");
-    await page.getByLabel("Sales").fill("3");
-    await page.getByLabel("Attributed Revenue — EGP").fill("2000");
+    await page.getByLabel(`Showed Calls — ${funnelName}`).fill("14");
+    await page.getByLabel(`Sales — ${funnelName}`).fill("3");
+    await page.getByLabel(`Attributed Revenue — ${funnelName}`).fill("2000");
     await page.getByRole("button", { name: "حفظ أرقام الفانلز" }).click();
 
     await expect(page.getByRole("status")).toContainText("تم حفظ أرقام الفانلز");
