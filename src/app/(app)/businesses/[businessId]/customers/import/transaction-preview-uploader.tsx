@@ -196,8 +196,8 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
           {preview.previewRows.length === 0 || visibleColumns === 0 ? (
             <div className={styles.emptyPreview}>الملف صالح للقراءة لكنه لا يحتوي على صفوف بيانات قابلة للعرض.</div>
           ) : (
-            <div className={styles.tableShell} tabIndex={0} aria-label="جدول معاينة ملف المعاملات">
-              <table className={styles.previewTable}>
+            <div className={styles.tableShell} tabIndex={0} aria-label="منطقة جدول معاينة ملف المعاملات">
+              <table className={styles.previewTable} aria-label="جدول معاينة ملف المعاملات">
                 <thead>
                   <tr>
                     <th scope="col">#</th>
