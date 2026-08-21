@@ -229,7 +229,14 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
       .order("created_at", { ascending: true }),
   ]);
 
-  const dataLoadError = funnelMonth.dataLoadError || Boolean(funnelsResult.error);
+  const funnelCalculationError = funnelMonth.calculatedEntries.some(
+    (entry) => entry.calculationError,
+  );
+  const dataLoadError =
+    funnelMonth.dataLoadError ||
+    funnelMonth.reconciliationError ||
+    funnelCalculationError ||
+    Boolean(funnelsResult.error);
   const allFunnels = (funnelsResult.data ?? []) as FunnelRow[];
   const existingById = new Map(funnelMonth.entries.map((entry) => [entry.funnel_id, entry]));
   const calculatedById = new Map(
@@ -262,7 +269,10 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
       </div>
 
       {statusMessage && (
-        <div className={statusError ? styles.errorStatus : styles.successStatus} role="status">
+        <div
+          className={statusError ? styles.errorStatus : styles.successStatus}
+          role={statusError ? "alert" : "status"}
+        >
           {statusMessage}
         </div>
       )}
@@ -419,39 +429,102 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
                       <div className={styles.inputGrid}>
                         <label>
                           <span>Ad Spend</span>
-                          <input type="text" inputMode="decimal" name={`ad_spend_${funnel.id}`} defaultValue={rawValue(entry.ad_spend)} readOnly={!canManage} />
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            name={`ad_spend_${funnel.id}`}
+                            aria-label={`Ad Spend — ${displayName}`}
+                            defaultValue={rawValue(entry.ad_spend)}
+                            readOnly={!canManage}
+                          />
                         </label>
                         <label>
                           <span>Leads</span>
-                          <input type="text" inputMode="numeric" name={`leads_${funnel.id}`} defaultValue={rawValue(entry.leads)} readOnly={!canManage} />
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            name={`leads_${funnel.id}`}
+                            aria-label={`Leads — ${displayName}`}
+                            defaultValue={rawValue(entry.leads)}
+                            readOnly={!canManage}
+                          />
                         </label>
                         <label>
                           <span>Booked Calls</span>
-                          <input type="text" inputMode="numeric" name={`booked_calls_${funnel.id}`} defaultValue={rawValue(entry.booked_calls)} readOnly={!canManage} />
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            name={`booked_calls_${funnel.id}`}
+                            aria-label={`Booked Calls — ${displayName}`}
+                            defaultValue={rawValue(entry.booked_calls)}
+                            readOnly={!canManage}
+                          />
                         </label>
                         <label>
                           <span>Showed Calls</span>
-                          <input type="text" inputMode="numeric" name={`showed_calls_${funnel.id}`} defaultValue={rawValue(entry.showed_calls)} readOnly={!canManage} />
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            name={`showed_calls_${funnel.id}`}
+                            aria-label={`Showed Calls — ${displayName}`}
+                            defaultValue={rawValue(entry.showed_calls)}
+                            readOnly={!canManage}
+                          />
                         </label>
                         <label>
                           <span>Qualified Calls</span>
-                          <input type="text" inputMode="numeric" name={`qualified_calls_${funnel.id}`} defaultValue={rawValue(entry.qualified_calls)} readOnly={!canManage} />
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            name={`qualified_calls_${funnel.id}`}
+                            aria-label={`Qualified Calls — ${displayName}`}
+                            defaultValue={rawValue(entry.qualified_calls)}
+                            readOnly={!canManage}
+                          />
                         </label>
                         <label>
                           <span>Sales</span>
-                          <input type="text" inputMode="numeric" name={`sales_${funnel.id}`} defaultValue={rawValue(entry.sales)} readOnly={!canManage} />
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            name={`sales_${funnel.id}`}
+                            aria-label={`Sales — ${displayName}`}
+                            defaultValue={rawValue(entry.sales)}
+                            readOnly={!canManage}
+                          />
                         </label>
                         <label>
                           <span>New Customers</span>
-                          <input type="text" inputMode="numeric" name={`new_customers_${funnel.id}`} defaultValue={rawValue(entry.new_customers)} readOnly={!canManage} />
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            name={`new_customers_${funnel.id}`}
+                            aria-label={`New Customers — ${displayName}`}
+                            defaultValue={rawValue(entry.new_customers)}
+                            readOnly={!canManage}
+                          />
                         </label>
                         <label>
                           <span>Cash Collected — {business.base_currency}</span>
-                          <input type="text" inputMode="decimal" name={`cash_collected_${funnel.id}`} defaultValue={rawValue(entry.cash_collected)} readOnly={!canManage} />
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            name={`cash_collected_${funnel.id}`}
+                            aria-label={`Cash Collected — ${displayName}`}
+                            defaultValue={rawValue(entry.cash_collected)}
+                            readOnly={!canManage}
+                          />
                         </label>
                         <label className={styles.attributionField}>
                           <span>Attributed Revenue — {business.base_currency}</span>
-                          <input type="text" inputMode="decimal" name={`attributed_revenue_${funnel.id}`} defaultValue={rawValue(entry.attributed_revenue)} readOnly={!canManage} />
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            name={`attributed_revenue_${funnel.id}`}
+                            aria-label={`Attributed Revenue — ${displayName}`}
+                            defaultValue={rawValue(entry.attributed_revenue)}
+                            readOnly={!canManage}
+                          />
                           <small>اتركه فارغًا إذا لا يوجد إسناد حقيقي. لا تستخدم Cash Collected كبديل.</small>
                         </label>
                       </div>
