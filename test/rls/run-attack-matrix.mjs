@@ -39,7 +39,9 @@ export const sqlFiles = Object.freeze([
   "test/business/task-8-monthly-data-entry.test.sql",
   "supabase/migrations/20260821001500_task_14_funnel_management.sql",
   "supabase/migrations/20260821013000_task_14_protect_funnel_creation_identity.sql",
+  "supabase/migrations/20260821110500_task_14_restrict_funnel_business_delete.sql",
   "test/business/task-14-funnel-management.test.sql",
+  "test/business/task-14-funnel-retention.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
