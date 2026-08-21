@@ -66,7 +66,7 @@ export async function loadDashboardMonth(
     loadFunnelMonth(supabase, businessId, monthStart),
   ]);
 
-  if (revenueResult.error || expenseResult.error || funnelMonth.dataLoadError) {
+  if (revenueResult.error || expenseResult.error) {
     return {
       periodExists: true,
       result: null,
@@ -80,9 +80,10 @@ export async function loadDashboardMonth(
       period,
       revenueEntries: revenueResult.data ?? [],
       expenseEntries: expenseResult.data ?? [],
-      canonicalAdSpend: funnelMonth.reconciliation.canonicalAdSpend.available
-        ? funnelMonth.reconciliation.canonicalAdSpend.value
-        : null,
+      canonicalAdSpend:
+        !funnelMonth.reconciliationError && funnelMonth.reconciliation.canonicalAdSpend.available
+          ? funnelMonth.reconciliation.canonicalAdSpend.value
+          : null,
     });
     return {
       periodExists: true,
