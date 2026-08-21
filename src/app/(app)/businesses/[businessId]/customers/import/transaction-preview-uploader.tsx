@@ -50,6 +50,16 @@ function columnLabel(index: number) {
   return label;
 }
 
+function keyedRows(rows: string[][]) {
+  const occurrences = new Map<string, number>();
+  return rows.map((row) => {
+    const signature = JSON.stringify(row);
+    const occurrence = (occurrences.get(signature) ?? 0) + 1;
+    occurrences.set(signature, occurrence);
+    return { key: `${signature}:${occurrence}`, row };
+  });
+}
+
 function errorMessage(error: unknown) {
   if (error instanceof TransactionPreviewError) {
     return ERROR_MESSAGES[error.code] ?? "تعذر معاينة الملف. لم يتم حفظ أو رفع أي بيانات.";
@@ -94,6 +104,8 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
   const visibleColumns = preview
     ? Math.min(preview.totalColumns, TRANSACTION_PREVIEW_LIMITS.previewColumns)
     : 0;
+  const visibleColumnLabels = Array.from({ length: visibleColumns }, (_, index) => columnLabel(index));
+  const displayRows = preview ? keyedRows(preview.previewRows) : [];
 
   return (
     <div className={styles.previewStack}>
@@ -196,24 +208,24 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
           {preview.previewRows.length === 0 || visibleColumns === 0 ? (
             <div className={styles.emptyPreview}>الملف صالح للقراءة لكنه لا يحتوي على صفوف بيانات قابلة للعرض.</div>
           ) : (
-            <div className={styles.tableShell} tabIndex={0} aria-label="منطقة جدول معاينة ملف المعاملات">
+            <div className={styles.tableShell}>
               <table className={styles.previewTable} aria-label="جدول معاينة ملف المعاملات">
                 <thead>
                   <tr>
                     <th scope="col">#</th>
-                    {Array.from({ length: visibleColumns }, (_, index) => (
-                      <th scope="col" key={columnLabel(index)} dir="ltr">
-                        {columnLabel(index)}
+                    {visibleColumnLabels.map((label) => (
+                      <th scope="col" key={label} dir="ltr">
+                        {label}
                       </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {preview.previewRows.map((row, rowIndex) => (
-                    <tr key={`preview-row-${rowIndex + 1}`}>
+                  {displayRows.map(({ key, row }, rowIndex) => (
+                    <tr key={key}>
                       <th scope="row">{rowIndex + 1}</th>
-                      {Array.from({ length: visibleColumns }, (_, columnIndex) => (
-                        <td key={`preview-cell-${rowIndex + 1}-${columnIndex + 1}`} dir="auto">
+                      {visibleColumnLabels.map((label, columnIndex) => (
+                        <td key={`${key}:${label}`} dir="auto">
                           {row[columnIndex] ?? ""}
                         </td>
                       ))}
