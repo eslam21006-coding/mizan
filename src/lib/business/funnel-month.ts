@@ -5,7 +5,7 @@ import {
   reconcileBusinessAdSpend,
   type AdSpendReconciliationResult,
   type FunnelCalculationResult,
-} from "./funnel-calculations";
+} from "./funnel-calculations.ts";
 
 type ServerSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
@@ -33,6 +33,7 @@ export type LoadedFunnelMonth = {
   period: FunnelMonthlyPeriodSnapshot | null;
   entries: FunnelMonthlyEntrySnapshot[];
   reconciliation: AdSpendReconciliationResult;
+  reconciliationError: boolean;
   calculatedEntries: Array<{
     entry: FunnelMonthlyEntrySnapshot;
     result: FunnelCalculationResult | null;
@@ -43,6 +44,26 @@ export type LoadedFunnelMonth = {
 
 function nullableDecimal(value: string | number | null | undefined) {
   return value === null || value === undefined || value === "" ? null : String(value);
+}
+
+export function safeReconcileBusinessAdSpend(
+  businessAdSpend: string | null,
+  funnelAdSpends: readonly (string | null)[],
+) {
+  try {
+    return {
+      reconciliation: reconcileBusinessAdSpend(businessAdSpend, funnelAdSpends),
+      reconciliationError: false,
+    };
+  } catch (error) {
+    if (error instanceof FunnelCalculationInputError) {
+      return {
+        reconciliation: reconcileBusinessAdSpend(null, []),
+        reconciliationError: true,
+      };
+    }
+    throw error;
+  }
 }
 
 export async function loadFunnelMonth(
@@ -62,6 +83,7 @@ export async function loadFunnelMonth(
       period: null,
       entries: [],
       reconciliation: reconcileBusinessAdSpend(null, []),
+      reconciliationError: false,
       calculatedEntries: [],
       dataLoadError: true,
     };
@@ -72,6 +94,7 @@ export async function loadFunnelMonth(
       period: null,
       entries: [],
       reconciliation: reconcileBusinessAdSpend(null, []),
+      reconciliationError: false,
       calculatedEntries: [],
       dataLoadError: false,
     };
@@ -87,17 +110,22 @@ export async function loadFunnelMonth(
     .order("created_at", { ascending: true });
 
   if (entriesError) {
+    const safeReconciliation = safeReconcileBusinessAdSpend(
+      nullableDecimal(period.business_ad_spend),
+      [],
+    );
     return {
       period: period as FunnelMonthlyPeriodSnapshot,
       entries: [],
-      reconciliation: reconcileBusinessAdSpend(nullableDecimal(period.business_ad_spend), []),
+      reconciliation: safeReconciliation.reconciliation,
+      reconciliationError: safeReconciliation.reconciliationError,
       calculatedEntries: [],
       dataLoadError: true,
     };
   }
 
   const entries = (entriesData ?? []) as FunnelMonthlyEntrySnapshot[];
-  const reconciliation = reconcileBusinessAdSpend(
+  const safeReconciliation = safeReconcileBusinessAdSpend(
     nullableDecimal(period.business_ad_spend),
     entries.map((entry) => nullableDecimal(entry.ad_spend)),
   );
@@ -130,8 +158,9 @@ export async function loadFunnelMonth(
   return {
     period: period as FunnelMonthlyPeriodSnapshot,
     entries,
-    reconciliation,
+    reconciliation: safeReconciliation.reconciliation,
+    reconciliationError: safeReconciliation.reconciliationError,
     calculatedEntries,
-    dataLoadError: calculatedEntries.some((entry) => entry.calculationError),
+    dataLoadError: false,
   };
 }
