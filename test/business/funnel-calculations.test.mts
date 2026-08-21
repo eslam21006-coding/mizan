@@ -1,13 +1,27 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   calculateFunnelMetrics,
   reconcileBusinessAdSpend,
 } from "../../src/lib/business/funnel-calculations.ts";
+import { safeReconcileBusinessAdSpend } from "../../src/lib/business/funnel-month.ts";
 import {
   parseOptionalDecimalInput,
   parseOptionalSignedDecimalInput,
 } from "../../src/lib/business/monthly.ts";
+
+const dashboardMonthSource = await readFile(
+  new URL("../../src/lib/business/dashboard-month.ts", import.meta.url),
+  "utf8",
+);
+const funnelMonthlyPageSource = await readFile(
+  new URL(
+    "../../src/app/(app)/businesses/[businessId]/funnels/monthly/page.tsx",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 function availableRatio(metric: { available: boolean; value?: { numerator: string; denominator: string } }) {
   assert.equal(metric.available, true);
@@ -214,6 +228,56 @@ test("complete funnel spend can roll up only when business Total Ad Spend is mis
     available: false,
     reason: "INPUT_UNAVAILABLE",
   });
+});
+
+test("malformed stored ad spend fails reconciliation closed without throwing", () => {
+  const malformedBusiness = safeReconcileBusinessAdSpend("1e+21", ["100"]);
+  assert.equal(malformedBusiness.reconciliationError, true);
+  assert.deepEqual(malformedBusiness.reconciliation.canonicalAdSpend, {
+    available: false,
+    reason: "INPUT_UNAVAILABLE",
+  });
+
+  const malformedFunnel = safeReconcileBusinessAdSpend("100", ["-1"]);
+  assert.equal(malformedFunnel.reconciliationError, true);
+  assert.deepEqual(malformedFunnel.reconciliation.canonicalAdSpend, {
+    available: false,
+    reason: "INPUT_UNAVAILABLE",
+  });
+
+  const valid = safeReconcileBusinessAdSpend("100", ["100"]);
+  assert.equal(valid.reconciliationError, false);
+  assert.equal(valid.reconciliation.status, "matched");
+});
+
+test("optional funnel failures cannot suppress otherwise valid core dashboard metrics", () => {
+  assert.match(dashboardMonthSource, /if \(revenueResult\.error \|\| expenseResult\.error\)/);
+  assert.doesNotMatch(
+    dashboardMonthSource,
+    /revenueResult\.error \|\| expenseResult\.error \|\| funnelMonth\.dataLoadError/,
+  );
+  assert.match(dashboardMonthSource, /!funnelMonth\.reconciliationError/);
+});
+
+test("funnel monthly errors are assertive and every repeated metric input has a unique accessible name", () => {
+  assert.match(funnelMonthlyPageSource, /role=\{statusError \? "alert" : "status"\}/);
+
+  for (const label of [
+    "Ad Spend",
+    "Leads",
+    "Booked Calls",
+    "Showed Calls",
+    "Qualified Calls",
+    "Sales",
+    "New Customers",
+    "Cash Collected",
+    "Attributed Revenue",
+  ]) {
+    assert.ok(
+      funnelMonthlyPageSource.includes('aria-label={`' + label + ' — ${displayName}`}'),
+      `Missing unique accessible label for ${label}`,
+    );
+  }
 });
 
 test("signed localized money parsing is limited to attributed-revenue-style inputs", () => {
