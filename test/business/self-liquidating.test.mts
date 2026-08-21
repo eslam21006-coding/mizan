@@ -114,12 +114,38 @@ test("missing canonical ad spend does not hide known Front-End contribution", ()
   });
 });
 
-test("Front-End allocation cannot exceed the actual variable expense amount", () => {
+test("stale Front-End allocation above the recalculated expense fails closed", () => {
+  const result = calculateSelfLiquidation({
+    frontEndRevenue: [{ grossCash: "100", refunds: "0" }],
+    variableExpenses: [{ expenseAmount: "50", allocatedAmount: "51" }],
+    adSpend: "100",
+  });
+
+  assert.deepEqual(result.frontEndVariableCosts, {
+    available: false,
+    reason: "VARIABLE_COST_ALLOCATION_INCOMPLETE",
+  });
+  assert.deepEqual(result.frontEndContributionProfit, {
+    available: false,
+    reason: "VARIABLE_COST_ALLOCATION_INCOMPLETE",
+  });
+  assert.deepEqual(result.adLiquidationRate, {
+    available: false,
+    reason: "VARIABLE_COST_ALLOCATION_INCOMPLETE",
+  });
+  assert.deepEqual(result.effectiveRemainingAdCost, {
+    available: false,
+    reason: "VARIABLE_COST_ALLOCATION_INCOMPLETE",
+  });
+  assert.equal(result.allocationComplete, false);
+});
+
+test("malformed allocation values still throw an input error", () => {
   assert.throws(
     () =>
       calculateSelfLiquidation({
         frontEndRevenue: [{ grossCash: "100", refunds: "0" }],
-        variableExpenses: [{ expenseAmount: "50", allocatedAmount: "51" }],
+        variableExpenses: [{ expenseAmount: "50", allocatedAmount: "not-a-number" }],
         adSpend: "100",
       }),
     SelfLiquidationInputError,
