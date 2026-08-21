@@ -1,10 +1,11 @@
+import type { createSupabaseServerClient } from "../supabase/server";
 import {
   calculateCoreFinancials,
   CalculationInputError,
   type CoreCalculationResult,
 } from "./calculations";
 import { buildDashboardCalculationInput } from "./dashboard";
-import type { createSupabaseServerClient } from "../supabase/server";
+import { loadFunnelMonth } from "./funnel-month";
 
 export type DashboardMonthLoadResult = {
   periodExists: boolean;
@@ -47,7 +48,7 @@ export async function loadDashboardMonth(
     };
   }
 
-  const [revenueResult, expenseResult] = await Promise.all([
+  const [revenueResult, expenseResult, funnelMonth] = await Promise.all([
     supabase
       .from("monthly_revenue_entries")
       .select(
@@ -62,9 +63,10 @@ export async function loadDashboardMonth(
       )
       .eq("business_id", businessId)
       .eq("monthly_period_id", period.id),
+    loadFunnelMonth(supabase, businessId, monthStart),
   ]);
 
-  if (revenueResult.error || expenseResult.error) {
+  if (revenueResult.error || expenseResult.error || funnelMonth.dataLoadError) {
     return {
       periodExists: true,
       result: null,
@@ -78,6 +80,9 @@ export async function loadDashboardMonth(
       period,
       revenueEntries: revenueResult.data ?? [],
       expenseEntries: expenseResult.data ?? [],
+      canonicalAdSpend: funnelMonth.reconciliation.canonicalAdSpend.available
+        ? funnelMonth.reconciliation.canonicalAdSpend.value
+        : null,
     });
     return {
       periodExists: true,
