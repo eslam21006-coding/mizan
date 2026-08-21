@@ -177,6 +177,18 @@ update public.expense_items
 set name = 'Renamed Variable Later'
 where id = '91616161-1616-4616-8616-161616161611';
 
+do $$
+begin
+  if not exists (
+    select 1
+    from public.expense_items
+    where id = '91616161-1616-4616-8616-161616161611'
+      and name = 'Renamed Variable Later'
+  ) then
+    raise exception 'expense item rename did not apply, so the snapshot test is vacuous';
+  end if;
+end $$;
+
 select public.save_front_end_expense_allocations(
   'a1616161-1616-4616-8616-161616161616',
   '2026-05-01',
