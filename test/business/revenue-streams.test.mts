@@ -32,10 +32,11 @@ const migration = await readFile(
   "utf8",
 );
 
-test("Task 6 supports exactly Front-End and Backend revenue streams", () => {
-  assert.deepEqual([...REVENUE_STREAM_TYPES], ["front_end", "backend"]);
+test("Task 16 supports the locked Front-End, Backend, and Other revenue stream types", () => {
+  assert.deepEqual([...REVENUE_STREAM_TYPES], ["front_end", "backend", "other"]);
   assert.equal(parseRevenueStreamType("front_end"), "front_end");
   assert.equal(parseRevenueStreamType("backend"), "backend");
+  assert.equal(parseRevenueStreamType("other"), "other");
   assert.equal(parseRevenueStreamType("upsell"), null);
 });
 
