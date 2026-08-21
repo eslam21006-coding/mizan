@@ -83,6 +83,8 @@ A user deactivates a funnel when it should stop appearing in future entry flows.
 
 The funnel `id`, `business_id`, `creation_request_id`, and `created_at` are immutable after creation. A funnel cannot be moved between businesses, assigned a new historical identity, or have its creation time rewritten later. Normal edits may change only the user-editable structure fields while `updated_at` advances automatically.
 
+The funnel-to-business foreign key uses `ON DELETE RESTRICT`. If a business has funnel history, a privileged business deletion attempt is rejected instead of cascading into `public.funnels`. Any future business-deletion feature must define an explicit archival/retention policy rather than silently erasing funnel history.
+
 ## Creation idempotency
 
 Every create form receives a server-generated UUID `creation_request_id`.
@@ -125,8 +127,8 @@ It provides:
 
 Before merge:
 
-1. Unit/contract tests must verify exact funnel types, normalization, idempotency, no hard delete, and Task 14's structure-only boundary.
-2. Database tests must verify owner access, cross-tenant denial, member read-only access, Admin access, anonymous denial, invalid types, request-ID uniqueness, immutable identity/creation time, and hard-delete denial.
+1. Unit/contract tests must verify exact funnel types, normalization, idempotency, no hard delete, retention-safe business deletion, and Task 14's structure-only boundary.
+2. Database tests must verify owner access, cross-tenant denial, member read-only access, Admin access, anonymous denial, invalid types, request-ID uniqueness, immutable identity/creation time, rejected business deletion when funnel history exists, and hard-delete denial.
 3. The Task 14 migrations and SQL attack matrix must execute in the normal database-backed CI path.
 4. Authenticated browser verification must create, edit, reclassify, and deactivate a funnel.
 5. Browser verification must confirm Arabic `lang=ar`, `dir=rtl`, responsive 390px layout, and no console/page errors.
