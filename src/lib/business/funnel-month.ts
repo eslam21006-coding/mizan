@@ -132,6 +132,6 @@ export async function loadFunnelMonth(
     entries,
     reconciliation,
     calculatedEntries,
-    dataLoadError: false,
+    dataLoadError: calculatedEntries.some((entry) => entry.calculationError),
   };
 }
