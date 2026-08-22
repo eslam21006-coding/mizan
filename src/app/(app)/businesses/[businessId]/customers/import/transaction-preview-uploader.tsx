@@ -84,8 +84,14 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
     if (!file) return;
     setPreview(null);
     setError(null);
-    setIsReading(true);
 
+    if (file.size > TRANSACTION_PREVIEW_LIMITS.maxFileBytes) {
+      setError(ERROR_MESSAGES.FILE_TOO_LARGE);
+      setIsReading(false);
+      return;
+    }
+
+    setIsReading(true);
     try {
       const buffer = await file.arrayBuffer();
       const result = await buildTransactionFilePreview({
@@ -208,7 +214,12 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
           {preview.previewRows.length === 0 || visibleColumns === 0 ? (
             <div className={styles.emptyPreview}>الملف صالح للقراءة لكنه لا يحتوي على صفوف بيانات قابلة للعرض.</div>
           ) : (
-            <div className={styles.tableShell}>
+            <div
+              className={styles.tableShell}
+              tabIndex={0}
+              role="group"
+              aria-labelledby="transaction-preview-title"
+            >
               <table className={styles.previewTable} aria-label="جدول معاينة ملف المعاملات">
                 <thead>
                   <tr>
