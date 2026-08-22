@@ -1,1 +1,1 @@
-export * from "./transaction-preview-core";
+export * from "./transaction-preview-core.ts";
