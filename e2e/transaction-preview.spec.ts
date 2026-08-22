@@ -78,8 +78,12 @@ test.describe("Task 17 CSV/XLSX upload and preview", () => {
 
     await expect(page.getByRole("heading", { name: "معاينة الملف", level: 2 })).toBeVisible();
     await expect(page.getByText("gateway-export.csv", { exact: true })).toBeVisible();
-    await expect(page.getByText("3", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("4", { exact: true }).first()).toBeVisible();
+
+    const rowsTerm = page.getByText("الصفوف المحللة", { exact: true });
+    await expect(rowsTerm.locator("xpath=following-sibling::dd[1]")).toHaveText("3");
+    const columnsTerm = page.getByText("الأعمدة المكتشفة", { exact: true });
+    await expect(columnsTerm.locator("xpath=following-sibling::dd[1]")).toHaveText("4");
+
     await expect(page.getByRole("table", { name: "جدول معاينة ملف المعاملات" })).toContainText(
       "buyer@example.com",
     );
