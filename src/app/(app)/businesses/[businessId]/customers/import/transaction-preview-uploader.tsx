@@ -214,7 +214,6 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
           {preview.previewRows.length === 0 || visibleColumns === 0 ? (
             <div className={styles.emptyPreview}>الملف صالح للقراءة لكنه لا يحتوي على صفوف بيانات قابلة للعرض.</div>
           ) : (
-            // biome-ignore lint/a11y/noNoninteractiveTabindex: A horizontally scrollable data preview needs a keyboard-focusable region.
             <section
               className={styles.tableShell}
               tabIndex={0}
