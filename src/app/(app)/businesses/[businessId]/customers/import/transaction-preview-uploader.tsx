@@ -214,39 +214,37 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
           {preview.previewRows.length === 0 || visibleColumns === 0 ? (
             <div className={styles.emptyPreview}>الملف صالح للقراءة لكنه لا يحتوي على صفوف بيانات قابلة للعرض.</div>
           ) : (
-            <>
-              {/* biome-ignore lint/a11y/noNoninteractiveTabindex: A horizontally scrollable data preview needs a keyboard-focusable region. */}
-              <section
-                className={styles.tableShell}
-                tabIndex={0}
-                aria-label="منطقة تمرير جدول معاينة ملف المعاملات"
-              >
-                <table className={styles.previewTable} aria-label="جدول معاينة ملف المعاملات">
-                  <thead>
-                    <tr>
-                      <th scope="col">#</th>
-                      {visibleColumnLabels.map((label) => (
-                        <th scope="col" key={label} dir="ltr">
-                          {label}
-                        </th>
+            // biome-ignore lint/a11y/noNoninteractiveTabindex: A horizontally scrollable data preview needs a keyboard-focusable region.
+            <section
+              className={styles.tableShell}
+              tabIndex={0}
+              aria-label="منطقة تمرير جدول معاينة ملف المعاملات"
+            >
+              <table className={styles.previewTable} aria-label="جدول معاينة ملف المعاملات">
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    {visibleColumnLabels.map((label) => (
+                      <th scope="col" key={label} dir="ltr">
+                        {label}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {displayRows.map(({ key, row }, rowIndex) => (
+                    <tr key={key}>
+                      <th scope="row">{rowIndex + 1}</th>
+                      {visibleColumnLabels.map((label, columnIndex) => (
+                        <td key={`${key}:${label}`} dir="auto">
+                          {row[columnIndex] ?? ""}
+                        </td>
                       ))}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {displayRows.map(({ key, row }, rowIndex) => (
-                      <tr key={key}>
-                        <th scope="row">{rowIndex + 1}</th>
-                        {visibleColumnLabels.map((label, columnIndex) => (
-                          <td key={`${key}:${label}`} dir="auto">
-                            {row[columnIndex] ?? ""}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </section>
-            </>
+                  ))}
+                </tbody>
+              </table>
+            </section>
           )}
 
           {(preview.truncatedRows || preview.truncatedColumns) && (
