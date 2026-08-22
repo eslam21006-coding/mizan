@@ -24,7 +24,9 @@ test.describe("Task 17 invalid transaction preview", () => {
       mimeType: "text/plain",
       buffer: Buffer.from("not a supported payment export", "utf8"),
     });
-    await expect(page.getByRole("alert")).toContainText("اختر ملف CSV أو XLSX فقط");
+
+    const previewError = page.getByRole("alert").filter({ hasText: "تعذر معاينة الملف" });
+    await expect(previewError).toContainText("اختر ملف CSV أو XLSX فقط");
     await expect(page.getByRole("button", { name: "استيراد المعاملات" })).toHaveCount(0);
   });
 });
