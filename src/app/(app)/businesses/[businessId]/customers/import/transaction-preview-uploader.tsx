@@ -214,9 +214,10 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
           {preview.previewRows.length === 0 || visibleColumns === 0 ? (
             <div className={styles.emptyPreview}>الملف صالح للقراءة لكنه لا يحتوي على صفوف بيانات قابلة للعرض.</div>
           ) : (
-            <section
+            <div
               className={styles.tableShell}
               tabIndex={0}
+              role="group"
               aria-label="منطقة تمرير جدول معاينة ملف المعاملات"
             >
               <table className={styles.previewTable} aria-label="جدول معاينة ملف المعاملات">
@@ -243,7 +244,7 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
                   ))}
                 </tbody>
               </table>
-            </section>
+            </div>
           )}
 
           {(preview.truncatedRows || preview.truncatedColumns) && (
@@ -257,7 +258,7 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
             <strong>الخطوة التالية لاحقًا: Column Mapping</strong>
             <p>
               في Task 18 سنحدد أي عمود يمثل Customer Email وTransaction Date وAmount Collected وباقي الحقول.
-              لا تفترض ميزان أي معنى للأعمدة في هذه المعاينة.
+              لا تفترض أي معنى للأعمدة في هذه المعاينة.
             </p>
           </div>
         </section>
