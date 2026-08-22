@@ -7,6 +7,7 @@ import {
   parseCsvRows,
   TRANSACTION_PREVIEW_LIMITS,
   TransactionPreviewError,
+  type TransactionPreviewErrorCode,
 } from "../../src/lib/business/transaction-preview.ts";
 
 function asArrayBuffer(buffer: Buffer) {
@@ -25,7 +26,16 @@ function writeUInt32(value: number) {
   return buffer;
 }
 
-function createZip(entries: Array<{ name: string; text: string; deflate?: boolean }>) {
+type ZipTestEntry = {
+  name: string;
+  text: string;
+  deflate?: boolean;
+  flags?: number;
+  method?: number;
+  declaredUncompressedSize?: number;
+};
+
+function createZip(entries: ZipTestEntry[]) {
   const locals: Buffer[] = [];
   const centrals: Buffer[] = [];
   let localOffset = 0;
@@ -33,9 +43,10 @@ function createZip(entries: Array<{ name: string; text: string; deflate?: boolea
   for (const entry of entries) {
     const name = Buffer.from(entry.name, "utf8");
     const raw = Buffer.from(entry.text, "utf8");
-    const method = entry.deflate === false ? 0 : 8;
+    const method = entry.method ?? (entry.deflate === false ? 0 : 8);
     const compressed = method === 8 ? deflateRawSync(raw) : raw;
-    const flags = 0x0800;
+    const flags = entry.flags ?? 0x0800;
+    const declaredUncompressedSize = entry.declaredUncompressedSize ?? raw.length;
 
     const local = Buffer.concat([
       writeUInt32(0x04034b50),
@@ -46,7 +57,7 @@ function createZip(entries: Array<{ name: string; text: string; deflate?: boolea
       writeUInt16(0),
       writeUInt32(0),
       writeUInt32(compressed.length),
-      writeUInt32(raw.length),
+      writeUInt32(declaredUncompressedSize),
       writeUInt16(name.length),
       writeUInt16(0),
       name,
@@ -64,7 +75,7 @@ function createZip(entries: Array<{ name: string; text: string; deflate?: boolea
       writeUInt16(0),
       writeUInt32(0),
       writeUInt32(compressed.length),
-      writeUInt32(raw.length),
+      writeUInt32(declaredUncompressedSize),
       writeUInt16(name.length),
       writeUInt16(0),
       writeUInt16(0),
@@ -146,6 +157,17 @@ function minimalXlsx() {
         </worksheet>`,
     },
   ]);
+}
+
+async function expectXlsxPreviewError(bytes: Buffer, code: TransactionPreviewErrorCode) {
+  await assert.rejects(
+    buildTransactionFilePreview({
+      fileName: "payments.xlsx",
+      fileSize: bytes.length,
+      buffer: asArrayBuffer(bytes),
+    }),
+    (error: unknown) => error instanceof TransactionPreviewError && error.code === code,
+  );
 }
 
 test("Task 17 detects common CSV delimiters", () => {
@@ -235,14 +257,44 @@ test("Task 17 rejects unsupported file types and invalid XLSX archives", async (
   );
 
   const invalidXlsx = Buffer.from("PK-not-a-real-xlsx", "utf8");
-  await assert.rejects(
-    buildTransactionFilePreview({
-      fileName: "payments.xlsx",
-      fileSize: invalidXlsx.length,
-      buffer: asArrayBuffer(invalidXlsx),
-    }),
-    (error: unknown) => error instanceof TransactionPreviewError && error.code === "XLSX_INVALID_ARCHIVE",
-  );
+  await expectXlsxPreviewError(invalidXlsx, "XLSX_INVALID_ARCHIVE");
+});
+
+test("Task 17 rejects encrypted and unsupported-compression XLSX entries", async () => {
+  const encrypted = createZip([
+    { name: "xl/workbook.xml", text: "<workbook/>", flags: 0x0801 },
+  ]);
+  await expectXlsxPreviewError(encrypted, "XLSX_UNSUPPORTED_ARCHIVE");
+
+  const unsupportedCompression = createZip([
+    { name: "xl/workbook.xml", text: "<workbook/>", method: 99 },
+  ]);
+  await expectXlsxPreviewError(unsupportedCompression, "XLSX_UNSUPPORTED_ARCHIVE");
+});
+
+test("Task 17 rejects XLSX entry-count and declared expansion limits before extraction", async () => {
+  const tooManyEntries = createZip([{ name: "xl/workbook.xml", text: "<workbook/>" }]);
+  const endSignature = Buffer.from([0x50, 0x4b, 0x05, 0x06]);
+  const endOffset = tooManyEntries.lastIndexOf(endSignature);
+  assert.ok(endOffset >= 0);
+  const excessiveEntryCount = TRANSACTION_PREVIEW_LIMITS.maxZipEntries + 1;
+  tooManyEntries.writeUInt16LE(excessiveEntryCount, endOffset + 8);
+  tooManyEntries.writeUInt16LE(excessiveEntryCount, endOffset + 10);
+  await expectXlsxPreviewError(tooManyEntries, "XLSX_TOO_LARGE");
+
+  const oversizedDeclaration = createZip([
+    {
+      name: "xl/workbook.xml",
+      text: "<workbook/>",
+      declaredUncompressedSize: TRANSACTION_PREVIEW_LIMITS.maxXlsxUncompressedBytes + 1,
+    },
+  ]);
+  await expectXlsxPreviewError(oversizedDeclaration, "XLSX_TOO_LARGE");
+});
+
+test("Task 17 rejects traversal paths in XLSX ZIP entries", async () => {
+  const traversal = createZip([{ name: "../../evil.xml", text: "nope" }]);
+  await expectXlsxPreviewError(traversal, "XLSX_INVALID_ARCHIVE");
 });
 
 test("Task 17 refuses files beyond the browser preview size boundary before parsing", async () => {
