@@ -12,16 +12,18 @@ const branchFiles = {
   ),
   page: join(repoRoot, "src/app/(app)/businesses/[businessId]/customers/import/page.tsx"),
   parser: join(repoRoot, "src/lib/business/transaction-preview.ts"),
+  parserCore: join(repoRoot, "src/lib/business/transaction-preview-core.ts"),
 };
 
 test("Task 17 remains preview-only with no persistence or transaction import action", async () => {
-  const [uploader, page, parser] = await Promise.all([
+  const [uploader, page, parser, parserCore] = await Promise.all([
     readFile(branchFiles.uploader, "utf8"),
     readFile(branchFiles.page, "utf8"),
     readFile(branchFiles.parser, "utf8"),
+    readFile(branchFiles.parserCore, "utf8"),
   ]);
 
-  const combined = `${uploader}\n${page}\n${parser}`;
+  const combined = `${uploader}\n${page}\n${parser}\n${parserCore}`;
   assert.doesNotMatch(combined, /\.from\(["']transactions["']\)/);
   assert.doesNotMatch(combined, /supabase\.storage/);
   assert.doesNotMatch(combined, /saveTransaction|importTransaction|persistTransaction/i);
@@ -38,6 +40,14 @@ test("Task 17 remains preview-only with no persistence or transaction import act
     sizeGuardIndex < fileReadIndex,
     "Task 17 must reject oversized files before materializing them in memory",
   );
+});
+
+test("Task 17 parser retains only the configured preview rows and columns", async () => {
+  const parserCore = await readFile(branchFiles.parserCore, "utf8");
+  assert.match(parserCore, /rowNumber <= TRANSACTION_PREVIEW_LIMITS\.previewRows/);
+  assert.match(parserCore, /columnNumber < TRANSACTION_PREVIEW_LIMITS\.previewColumns/);
+  assert.match(parserCore, /parsedRowNumber <= TRANSACTION_PREVIEW_LIMITS\.previewRows/);
+  assert.match(parserCore, /column < TRANSACTION_PREVIEW_LIMITS\.previewColumns/);
 });
 
 test("Task 17 does not introduce column mapping semantics", async () => {
