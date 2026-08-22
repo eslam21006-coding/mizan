@@ -1,0 +1,103 @@
+name: Temporary Task 17 live browser verification
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  verify-task17-live:
+    if: >-
+      github.event.pull_request.number == 26 &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor == 'eslam21006-coding'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://zpfacvowigsscrnyceqh.supabase.co
+      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ZlJYC-raGXAQpneYfhJbEQ_N15Mkj15
+      MIZAN_SITE_URL: http://127.0.0.1:3000
+      LIVE_USER_FUNCTION: https://zpfacvowigsscrnyceqh.supabase.co/functions/v1/mizan-task17-oidc-live-user-20260822-b793a728e140
+
+    steps:
+      - name: Checkout exact Task 17 branch
+        uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create disposable Mentee via GitHub OIDC
+        shell: bash
+        run: |
+          set -euo pipefail
+          oidc_response="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=mizan-task17-live-verification")"
+          oidc_token="$(jq -er '.value' <<<"${oidc_response}")"
+          response="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+            -X POST \
+            -H "content-type: application/json" \
+            -H "Authorization: Bearer ${oidc_token}" \
+            --data '{"action":"create"}' \
+            "${LIVE_USER_FUNCTION}")"
+          user_id="$(jq -er '.user_id' <<<"${response}")"
+          email="$(jq -er '.email' <<<"${response}")"
+          password="$(jq -er '.password' <<<"${response}")"
+          echo "::add-mask::${email}"
+          echo "::add-mask::${password}"
+          echo "MIZAN_E2E_EMAIL=${email}" >> "$GITHUB_ENV"
+          echo "MIZAN_E2E_PASSWORD=${password}" >> "$GITHUB_ENV"
+          echo "MIZAN_LIVE_USER_ID=${user_id}" >> "$GITHUB_ENV"
+
+      - name: Build exact Task 17 code
+        run: npm run build
+
+      - name: Install Chromium
+        shell: bash
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/google-chrome.list /etc/apt/sources.list.d/google-chrome.sources
+          npx playwright install --with-deps chromium
+
+      - name: Run authenticated Arabic RTL CSV preview flow
+        run: npx playwright test e2e/transaction-preview.spec.ts --project=chromium --workers=1
+
+      - name: Run authenticated invalid-file flow
+        run: npx playwright test e2e/transaction-preview-invalid.spec.ts --project=chromium --workers=1
+
+      - name: Upload live browser evidence
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: task17-live-browser
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Cleanup disposable Mentee via GitHub OIDC
+        if: always() && env.MIZAN_LIVE_USER_ID != ''
+        shell: bash
+        run: |
+          set -euo pipefail
+          oidc_response="$(curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+            -H "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=mizan-task17-live-verification")"
+          oidc_token="$(jq -er '.value' <<<"${oidc_response}")"
+          curl --fail --silent --show-error --connect-timeout 10 --max-time 30 \
+            -X POST \
+            -H "content-type: application/json" \
+            -H "Authorization: Bearer ${oidc_token}" \
+            --data "{\"action\":\"cleanup\",\"user_id\":\"${MIZAN_LIVE_USER_ID}\"}" \
+            "${LIVE_USER_FUNCTION}" > /dev/null

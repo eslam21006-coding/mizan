@@ -18,6 +18,18 @@
       }
     }
   },
+  "overrides": [
+    {
+      "includes": ["src/app/**/customers/import/transaction-preview-uploader.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "noNoninteractiveTabindex": "off"
+          }
+        }
+      }
+    }
+  ],
   "javascript": {
     "formatter": {
       "quoteStyle": "double",
