@@ -45,6 +45,7 @@ function cdataAndCommentXlsx() {
             <c r="C1" t="s"><v>1</v></c>
             <c r="E1" t="s"><v>2</v></c>
           </row>
+          <!-- <row r="99"><c r="A99" t="s"><v>3</v></c></row> -->
           <row r="2">
             <c r="A2" t="s"><v>3</v></c>
             <c r="C2" t="s"><v>4</v></c>
@@ -67,7 +68,13 @@ test("Task 19 preserves entity-looking text inside inline-string CDATA", () => {
   assert.equal(value, "A&amp;B");
 });
 
-test("Task 19 ignores commented shared-string markup and preserves CDATA contents", async () => {
+test("Task 19 keeps empty XLSX values empty before date conversion", () => {
+  const styles = { dateStyleIndexes: new Set([0]) };
+  assert.equal(cellDisplayValue('<c s="0">', "<v></v>", [], styles, false), "");
+  assert.equal(cellDisplayValue('<c s="0">', "<v>   </v>", [], styles, false), "");
+});
+
+test("Task 19 ignores commented worksheet and shared-string markup while preserving CDATA", async () => {
   const bytes = cdataAndCommentXlsx();
   const source = await readTransactionValidationSource({
     fileName: "cdata-comments.xlsx",
@@ -76,6 +83,7 @@ test("Task 19 ignores commented shared-string markup and preserves CDATA content
     columns: [0, 2, 4],
   });
 
+  assert.equal(source.totalRows, 2);
   assert.deepEqual(source.rows[0], { rowNumber: 1, values: ["Email", "Date", "Amount"] });
   assert.deepEqual(source.rows[1], {
     rowNumber: 2,

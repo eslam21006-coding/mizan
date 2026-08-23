@@ -277,11 +277,6 @@ function assertWellFormedXmlFallback(xml: string, label: string) {
 }
 
 function assertWellFormedXml(xml: string, label: string) {
-  if (typeof DOMParser !== "undefined") {
-    const parsed = new DOMParser().parseFromString(xml, "application/xml");
-    if (parsed.getElementsByTagName("parsererror").length > 0) malformedXml(label);
-    return;
-  }
   assertWellFormedXmlFallback(xml, label);
 }
 
@@ -772,6 +767,7 @@ export function cellDisplayValue(
   if (rawValue === undefined) return textFragments(body);
 
   const value = decodeXmlText(rawValue);
+  if (value.trim() === "") return "";
   if (type === "s") {
     const index = Number(value);
     return Number.isInteger(index) && index >= 0 ? (sharedStrings[index] ?? "") : "";
@@ -805,6 +801,7 @@ export async function readFirstXlsxWorksheet(buffer: ArrayBuffer): Promise<First
   const worksheetXml = await extractZipText(buffer, entries, worksheetPath);
   if (!worksheetXml) fail("XLSX_SHEET_MISSING", "The first XLSX worksheet could not be found.");
   assertWellFormedXml(worksheetXml, "worksheet");
+  const sourceWorksheetXml = stripXmlCommentsOutsideCdata(worksheetXml);
 
   const [sharedStringsXml, stylesXml] = await Promise.all([
     extractZipText(buffer, entries, "xl/sharedStrings.xml"),
@@ -820,7 +817,7 @@ export async function readFirstXlsxWorksheet(buffer: ArrayBuffer): Promise<First
 
   return {
     sheetName,
-    worksheetXml,
+    worksheetXml: sourceWorksheetXml,
     sharedStrings: parseSharedStrings(sharedStringsXml),
     styles: parseStyles(stylesXml),
     date1904,
