@@ -49,6 +49,7 @@ const ZIP_END_SIGNATURE = 0x06054b50;
 const UTF8 = new TextDecoder("utf-8", { fatal: true });
 const UTF8_LENIENT = new TextDecoder("utf-8");
 const XML_ENTITY_PATTERN = /&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);/g;
+const XML_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_.:-]*/;
 const BUILTIN_DATE_FORMAT_IDS = new Set([
   14, 15, 16, 17, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 50, 51, 52, 53, 54, 55, 56,
   57, 58,
@@ -109,6 +110,127 @@ function decodeXmlText(value: string) {
   return decodeXmlEntities(value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1"));
 }
 
+function malformedXml(label: string): never {
+  fail("XLSX_INVALID_ARCHIVE", `XLSX ${label} XML is malformed.`);
+}
+
+function validateXmlStartTagBody(body: string, label: string) {
+  const name = body.match(XML_NAME_PATTERN)?.[0];
+  if (!name) malformedXml(label);
+
+  const attributes = new Set<string>();
+  let cursor = name.length;
+  while (cursor < body.length) {
+    while (/\s/.test(body[cursor] ?? "")) cursor += 1;
+    if (cursor >= body.length) break;
+
+    const attributeName = body.slice(cursor).match(XML_NAME_PATTERN)?.[0];
+    if (!attributeName || attributes.has(attributeName)) malformedXml(label);
+    attributes.add(attributeName);
+    cursor += attributeName.length;
+
+    while (/\s/.test(body[cursor] ?? "")) cursor += 1;
+    if (body[cursor] !== "=") malformedXml(label);
+    cursor += 1;
+    while (/\s/.test(body[cursor] ?? "")) cursor += 1;
+
+    const quote = body[cursor];
+    if (quote !== '"' && quote !== "'") malformedXml(label);
+    cursor += 1;
+    const end = body.indexOf(quote, cursor);
+    if (end === -1 || body.slice(cursor, end).includes("<")) malformedXml(label);
+    cursor = end + 1;
+  }
+
+  return name;
+}
+
+function findXmlTagEnd(xml: string, start: number, label: string) {
+  let quote: '"' | "'" | null = null;
+  for (let index = start; index < xml.length; index += 1) {
+    const char = xml[index];
+    if (char === "<") malformedXml(label);
+    if (quote) {
+      if (char === quote) quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === ">") return index;
+  }
+  malformedXml(label);
+}
+
+function assertWellFormedXmlFallback(xml: string, label: string) {
+  const stack: string[] = [];
+  let rootCount = 0;
+  let cursor = 0;
+
+  while (cursor < xml.length) {
+    const open = xml.indexOf("<", cursor);
+    if (open === -1) {
+      if (stack.length === 0 && xml.slice(cursor).trim()) malformedXml(label);
+      break;
+    }
+    if (stack.length === 0 && xml.slice(cursor, open).trim()) malformedXml(label);
+
+    if (xml.startsWith("<!--", open)) {
+      const end = xml.indexOf("-->", open + 4);
+      if (end === -1) malformedXml(label);
+      cursor = end + 3;
+      continue;
+    }
+    if (xml.startsWith("<![CDATA[", open)) {
+      if (stack.length === 0) malformedXml(label);
+      const end = xml.indexOf("]]>", open + 9);
+      if (end === -1) malformedXml(label);
+      cursor = end + 3;
+      continue;
+    }
+    if (xml.startsWith("<?", open)) {
+      const end = xml.indexOf("?>", open + 2);
+      if (end === -1) malformedXml(label);
+      cursor = end + 2;
+      continue;
+    }
+    if (xml.startsWith("<!", open)) malformedXml(label);
+
+    const end = findXmlTagEnd(xml, open + 1, label);
+    const raw = xml.slice(open + 1, end).trim();
+    if (!raw) malformedXml(label);
+
+    if (raw.startsWith("/")) {
+      const closing = raw.slice(1).trim();
+      const name = closing.match(XML_NAME_PATTERN)?.[0];
+      if (!name || closing !== name || stack.pop() !== name) malformedXml(label);
+    } else {
+      const selfClosing = raw.endsWith("/");
+      const body = selfClosing ? raw.slice(0, -1).trimEnd() : raw;
+      const name = validateXmlStartTagBody(body, label);
+      if (stack.length === 0) {
+        rootCount += 1;
+        if (rootCount > 1) malformedXml(label);
+      }
+      if (!selfClosing) stack.push(name);
+    }
+
+    cursor = end + 1;
+  }
+
+  if (stack.length !== 0 || rootCount !== 1) malformedXml(label);
+}
+
+function assertWellFormedXml(xml: string, label: string) {
+  if (typeof DOMParser !== "undefined") {
+    const parsed = new DOMParser().parseFromString(xml, "application/xml");
+    if (parsed.getElementsByTagName("parsererror").length > 0) malformedXml(label);
+    return;
+  }
+  assertWellFormedXmlFallback(xml, label);
+}
+
 function escapeRegex(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
@@ -156,10 +278,12 @@ function sampleDelimiterCounts(text: string, delimiter: string) {
   const counts: number[] = [];
   let quoted = false;
   let count = 0;
+  let rowHasContent = false;
 
   for (let index = 0; index < text.length && counts.length < 12; index += 1) {
     const char = text[index];
     if (char === '"') {
+      rowHasContent = true;
       if (quoted && text[index + 1] === '"') {
         index += 1;
         continue;
@@ -167,20 +291,30 @@ function sampleDelimiterCounts(text: string, delimiter: string) {
       quoted = !quoted;
       continue;
     }
-    if (!quoted && char === delimiter) count += 1;
     if (!quoted && (char === "\n" || char === "\r")) {
       if (char === "\r" && text[index + 1] === "\n") index += 1;
-      if (count > 0) counts.push(count);
+      if (rowHasContent) counts.push(count);
       count = 0;
+      rowHasContent = false;
+      continue;
     }
+    if (!/\s/.test(char)) rowHasContent = true;
+    if (!quoted && char === delimiter) count += 1;
   }
 
-  if (counts.length === 0 && count > 0) counts.push(count);
+  if (counts.length < 12 && rowHasContent) counts.push(count);
   return counts;
+}
+
+function likelyGroupedNumberCommaCount(text: string) {
+  return (
+    text.match(/(?:^|[^\d])[-+]?\d{1,3}(?:,\d{3})+(?:\.\d+)?(?=$|[^\d])/gm)?.length ?? 0
+  );
 }
 
 export function detectCsvDelimiter(text: string) {
   const candidates = [",", ";", "\t"];
+  const groupedNumberCommas = likelyGroupedNumberCommaCount(text);
   let best = ",";
   let bestScore = -1;
 
@@ -190,10 +324,21 @@ export function detectCsvDelimiter(text: string) {
 
     const frequencies = new Map<number, number>();
     for (const count of counts) frequencies.set(count, (frequencies.get(count) ?? 0) + 1);
-    const modeFrequency = Math.max(...frequencies.values());
-    const modeCount =
-      [...frequencies.entries()].find(([, frequency]) => frequency === modeFrequency)?.[0] ?? 0;
-    const score = modeFrequency * 1_000 + modeCount;
+    const mode = [...frequencies.entries()]
+      .filter(([count]) => count > 0)
+      .sort((left, right) => right[1] - left[1] || right[0] - left[0])[0];
+    if (!mode) continue;
+
+    const [modeCount, modeFrequency] = mode;
+    const consistency = modeFrequency / counts.length;
+    const positiveRows = counts.filter((count) => count > 0).length;
+    const groupedNumberPenalty = candidate === "," ? Math.min(groupedNumberCommas, 12) * 100 : 0;
+    const score =
+      consistency * 1_000_000 +
+      modeFrequency * 1_000 +
+      positiveRows * 10 +
+      modeCount -
+      groupedNumberPenalty;
 
     if (score > bestScore) {
       best = candidate;
@@ -597,15 +742,21 @@ export async function readFirstXlsxWorksheet(buffer: ArrayBuffer): Promise<First
   if (!workbookXml || !relationshipsXml) {
     fail("XLSX_WORKBOOK_MISSING", "XLSX workbook metadata is missing.");
   }
+  assertWellFormedXml(workbookXml, "workbook");
+  assertWellFormedXml(relationshipsXml, "workbook relationships");
 
   const { sheetName, worksheetPath } = firstWorksheet(workbookXml, relationshipsXml);
   const worksheetXml = await extractZipText(buffer, entries, worksheetPath);
   if (!worksheetXml) fail("XLSX_SHEET_MISSING", "The first XLSX worksheet could not be found.");
+  assertWellFormedXml(worksheetXml, "worksheet");
 
   const [sharedStringsXml, stylesXml] = await Promise.all([
     extractZipText(buffer, entries, "xl/sharedStrings.xml"),
     extractZipText(buffer, entries, "xl/styles.xml"),
   ]);
+  if (sharedStringsXml) assertWellFormedXml(sharedStringsXml, "shared strings");
+  if (stylesXml) assertWellFormedXml(stylesXml, "styles");
+
   const date1904 =
     /<(?:[A-Za-z_][\w.-]*:)?workbookPr\b[^>]*date1904\s*=\s*(?:"(?:1|true)"|'(?:1|true)')/i.test(
       workbookXml,

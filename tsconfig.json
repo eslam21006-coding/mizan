@@ -42,6 +42,7 @@
     "test/business/self-liquidating.test.mts",
     "test/business/transaction-preview.test.mts",
     "test/business/transaction-preview-bounds.test.mts",
+    "test/business/transaction-import-validation.test.mts",
     "test/business/task-17-boundary.test.mts"
   ],
   "exclude": [

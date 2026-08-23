@@ -7,87 +7,10 @@ import {
   TRANSACTION_PREVIEW_LIMITS,
   TransactionPreviewError,
 } from "../../src/lib/business/transaction-preview.ts";
-import { crc32Checksum } from "../helpers/zip-crc.ts";
-
-function u16(value: number) {
-  const buffer = Buffer.alloc(2);
-  buffer.writeUInt16LE(value);
-  return buffer;
-}
-
-function u32(value: number) {
-  const buffer = Buffer.alloc(4);
-  buffer.writeUInt32LE(value >>> 0);
-  return buffer;
-}
+import { asArrayBuffer, createZip } from "../helpers/zip-crc.ts";
 
 function storedZip(entries: Array<{ name: string; text: string }>) {
-  const localParts: Buffer[] = [];
-  const centralParts: Buffer[] = [];
-  let localOffset = 0;
-
-  for (const entry of entries) {
-    const name = Buffer.from(entry.name, "utf8");
-    const data = Buffer.from(entry.text, "utf8");
-    const checksum = crc32Checksum(data);
-    const local = Buffer.concat([
-      u32(0x04034b50),
-      u16(20),
-      u16(0x0800),
-      u16(0),
-      u16(0),
-      u16(0),
-      u32(checksum),
-      u32(data.length),
-      u32(data.length),
-      u16(name.length),
-      u16(0),
-      name,
-      data,
-    ]);
-    localParts.push(local);
-
-    centralParts.push(
-      Buffer.concat([
-        u32(0x02014b50),
-        u16(20),
-        u16(20),
-        u16(0x0800),
-        u16(0),
-        u16(0),
-        u16(0),
-        u32(checksum),
-        u32(data.length),
-        u32(data.length),
-        u16(name.length),
-        u16(0),
-        u16(0),
-        u16(0),
-        u16(0),
-        u32(0),
-        u32(localOffset),
-        name,
-      ]),
-    );
-    localOffset += local.length;
-  }
-
-  const central = Buffer.concat(centralParts);
-  const end = Buffer.concat([
-    u32(0x06054b50),
-    u16(0),
-    u16(0),
-    u16(entries.length),
-    u16(entries.length),
-    u32(central.length),
-    u32(localOffset),
-    u16(0),
-  ]);
-  return Buffer.concat([...localParts, central, end]);
-}
-
-function asArrayBuffer(buffer: Buffer) {
-  return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+  return createZip(entries.map((entry) => ({ ...entry, compressionMethod: 0 })));
 }
 
 async function expectXlsxError(bytes: Buffer, code: string) {

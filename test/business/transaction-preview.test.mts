@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { deflateRawSync } from "node:zlib";
 import test from "node:test";
 import {
   buildTransactionFilePreview,
@@ -9,102 +8,7 @@ import {
   TransactionPreviewError,
   type TransactionPreviewErrorCode,
 } from "../../src/lib/business/transaction-preview.ts";
-import { crc32Checksum } from "../helpers/zip-crc.ts";
-
-function asArrayBuffer(buffer: Buffer) {
-  return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
-}
-
-function writeUInt16(value: number) {
-  const buffer = Buffer.alloc(2);
-  buffer.writeUInt16LE(value);
-  return buffer;
-}
-
-function writeUInt32(value: number) {
-  const buffer = Buffer.alloc(4);
-  buffer.writeUInt32LE(value >>> 0);
-  return buffer;
-}
-
-type ZipTestEntry = {
-  name: string;
-  text: string;
-  deflate?: boolean;
-  flags?: number;
-  method?: number;
-  declaredUncompressedSize?: number;
-};
-
-function createZip(entries: ZipTestEntry[]) {
-  const locals: Buffer[] = [];
-  const centrals: Buffer[] = [];
-  let localOffset = 0;
-
-  for (const entry of entries) {
-    const name = Buffer.from(entry.name, "utf8");
-    const raw = Buffer.from(entry.text, "utf8");
-    const method = entry.method ?? (entry.deflate === false ? 0 : 8);
-    const compressed = method === 8 ? deflateRawSync(raw) : raw;
-    const flags = entry.flags ?? 0x0800;
-    const declaredUncompressedSize = entry.declaredUncompressedSize ?? raw.length;
-    const checksum = crc32Checksum(raw);
-
-    const local = Buffer.concat([
-      writeUInt32(0x04034b50),
-      writeUInt16(20),
-      writeUInt16(flags),
-      writeUInt16(method),
-      writeUInt16(0),
-      writeUInt16(0),
-      writeUInt32(checksum),
-      writeUInt32(compressed.length),
-      writeUInt32(declaredUncompressedSize),
-      writeUInt16(name.length),
-      writeUInt16(0),
-      name,
-      compressed,
-    ]);
-    locals.push(local);
-
-    const central = Buffer.concat([
-      writeUInt32(0x02014b50),
-      writeUInt16(20),
-      writeUInt16(20),
-      writeUInt16(flags),
-      writeUInt16(method),
-      writeUInt16(0),
-      writeUInt16(0),
-      writeUInt32(checksum),
-      writeUInt32(compressed.length),
-      writeUInt32(declaredUncompressedSize),
-      writeUInt16(name.length),
-      writeUInt16(0),
-      writeUInt16(0),
-      writeUInt16(0),
-      writeUInt16(0),
-      writeUInt32(0),
-      writeUInt32(localOffset),
-      name,
-    ]);
-    centrals.push(central);
-    localOffset += local.length;
-  }
-
-  const centralDirectory = Buffer.concat(centrals);
-  const end = Buffer.concat([
-    writeUInt32(0x06054b50),
-    writeUInt16(0),
-    writeUInt16(0),
-    writeUInt16(entries.length),
-    writeUInt16(entries.length),
-    writeUInt32(centralDirectory.length),
-    writeUInt32(localOffset),
-    writeUInt16(0),
-  ]);
-
-  return Buffer.concat([...locals, centralDirectory, end]);
-}
+import { asArrayBuffer, createZip, writeUInt32 } from "../helpers/zip-crc.ts";
 
 function minimalXlsx() {
   return createZip([
@@ -177,6 +81,17 @@ test("Task 17 detects common CSV delimiters", () => {
   assert.equal(detectCsvDelimiter("a,b,c\n1,2,3\n"), ",");
   assert.equal(detectCsvDelimiter("a;b;c\n1;2;3\n"), ";");
   assert.equal(detectCsvDelimiter("a\tb\tc\n1\t2\t3\n"), "\t");
+});
+
+test("Task 19 delimiter detection includes the final row without a trailing newline", () => {
+  assert.equal(detectCsvDelimiter("a;b\n1,2\n3;4"), ";");
+});
+
+test("Task 19 delimiter detection treats grouped amount commas as field data", () => {
+  assert.equal(
+    detectCsvDelimiter("email;amount\nbuyer@example.com;1,234.50\nsecond@example.com;2,345.00"),
+    ";",
+  );
 });
 
 test("Task 19 delimiter detection scans beyond a 128 KiB quoted first field", () => {
@@ -291,6 +206,36 @@ test("Task 17 rejects unsupported file types and invalid XLSX archives", async (
   await expectXlsxPreviewError(invalidXlsx, "XLSX_INVALID_ARCHIVE");
 });
 
+test("Task 19 rejects malformed workbook and worksheet XML inside valid ZIP archives", async () => {
+  const relationships = `<?xml version="1.0" encoding="UTF-8"?>
+    <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+      <Relationship Id="rId1" Type="worksheet" Target="worksheets/sheet1.xml"/>
+    </Relationships>`;
+  const validWorkbook = `<?xml version="1.0" encoding="UTF-8"?>
+    <workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+      <sheets><sheet name="Payments" sheetId="1" r:id="rId1"/></sheets>
+    </workbook>`;
+
+  const malformedWorkbook = createZip([
+    {
+      name: "xl/workbook.xml",
+      text: `<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Payments" sheetId="1" r:id="rId1"/></workbook>`,
+    },
+    { name: "xl/_rels/workbook.xml.rels", text: relationships },
+  ]);
+  await expectXlsxPreviewError(malformedWorkbook, "XLSX_INVALID_ARCHIVE");
+
+  const malformedWorksheet = createZip([
+    { name: "xl/workbook.xml", text: validWorkbook },
+    { name: "xl/_rels/workbook.xml.rels", text: relationships },
+    {
+      name: "xl/worksheets/sheet1.xml",
+      text: `<worksheet><sheetData><row r="1"></sheetData></worksheet>`,
+    },
+  ]);
+  await expectXlsxPreviewError(malformedWorksheet, "XLSX_INVALID_ARCHIVE");
+});
+
 test("Task 17 rejects encrypted and unsupported-compression XLSX entries", async () => {
   const encrypted = createZip([
     { name: "xl/workbook.xml", text: "<workbook/>", flags: 0x0801 },
@@ -298,7 +243,7 @@ test("Task 17 rejects encrypted and unsupported-compression XLSX entries", async
   await expectXlsxPreviewError(encrypted, "XLSX_UNSUPPORTED_ARCHIVE");
 
   const unsupportedCompression = createZip([
-    { name: "xl/workbook.xml", text: "<workbook/>", method: 99 },
+    { name: "xl/workbook.xml", text: "<workbook/>", compressionMethod: 99 },
   ]);
   await expectXlsxPreviewError(unsupportedCompression, "XLSX_UNSUPPORTED_ARCHIVE");
 });

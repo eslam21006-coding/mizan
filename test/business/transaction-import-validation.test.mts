@@ -1,5 +1,4 @@
 import assert from "node:assert/strict";
-import { deflateRawSync } from "node:zlib";
 import test from "node:test";
 import {
   isValidTransactionDate,
@@ -14,68 +13,7 @@ import {
   TRANSACTION_VALIDATION_SOURCE_LIMITS,
   TransactionValidationSourceError,
 } from "../../src/lib/business/transaction-validation-source.ts";
-import { crc32Checksum } from "../helpers/zip-crc.ts";
-
-function asArrayBuffer(buffer: Buffer) {
-  return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
-}
-
-function writeUInt16(value: number) {
-  const buffer = Buffer.alloc(2);
-  buffer.writeUInt16LE(value);
-  return buffer;
-}
-
-function writeUInt32(value: number) {
-  const buffer = Buffer.alloc(4);
-  buffer.writeUInt32LE(value >>> 0);
-  return buffer;
-}
-
-type TestZipEntry = {
-  name: string;
-  text: string;
-  compressionMethod?: 0 | 8;
-  corruptCrc?: boolean;
-};
-
-function createZip(entries: TestZipEntry[]) {
-  const locals: Buffer[] = [];
-  const centrals: Buffer[] = [];
-  let localOffset = 0;
-
-  for (const entry of entries) {
-    const name = Buffer.from(entry.name, "utf8");
-    const raw = Buffer.from(entry.text, "utf8");
-    const compressionMethod = entry.compressionMethod ?? 8;
-    const compressed = compressionMethod === 8 ? deflateRawSync(raw) : raw;
-    const actualCrc = crc32Checksum(raw);
-    const declaredCrc = entry.corruptCrc ? (actualCrc ^ 0xffffffff) >>> 0 : actualCrc;
-    const local = Buffer.concat([
-      writeUInt32(0x04034b50), writeUInt16(20), writeUInt16(0x0800), writeUInt16(compressionMethod),
-      writeUInt16(0), writeUInt16(0), writeUInt32(declaredCrc), writeUInt32(compressed.length),
-      writeUInt32(raw.length), writeUInt16(name.length), writeUInt16(0), name, compressed,
-    ]);
-    locals.push(local);
-    centrals.push(Buffer.concat([
-      writeUInt32(0x02014b50), writeUInt16(20), writeUInt16(20), writeUInt16(0x0800),
-      writeUInt16(compressionMethod), writeUInt16(0), writeUInt16(0), writeUInt32(declaredCrc),
-      writeUInt32(compressed.length), writeUInt32(raw.length), writeUInt16(name.length),
-      writeUInt16(0), writeUInt16(0), writeUInt16(0), writeUInt16(0), writeUInt32(0),
-      writeUInt32(localOffset), name,
-    ]));
-    localOffset += local.length;
-  }
-
-  const centralDirectory = Buffer.concat(centrals);
-  return Buffer.concat([
-    ...locals,
-    centralDirectory,
-    writeUInt32(0x06054b50), writeUInt16(0), writeUInt16(0), writeUInt16(entries.length),
-    writeUInt16(entries.length), writeUInt32(centralDirectory.length), writeUInt32(localOffset),
-    writeUInt16(0),
-  ]);
-}
+import { asArrayBuffer, createZip } from "../helpers/zip-crc.ts";
 
 function minimalValidationXlsx(
   options: { corruptWorkbookCrc?: boolean; storedWorkbook?: boolean } = {},
@@ -454,6 +392,30 @@ test("Task 19 validates XLSX CRC-32 for both deflated and stored entries", async
         error instanceof TransactionValidationSourceError && error.code === "SOURCE_XLSX_INVALID",
     );
   }
+});
+
+test("Task 19 validation fails closed on malformed XLSX XML", async () => {
+  const bytes = createZip([
+    {
+      name: "xl/workbook.xml",
+      text: `<workbook xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Payments" sheetId="1" r:id="rId1"/></workbook>`,
+    },
+    {
+      name: "xl/_rels/workbook.xml.rels",
+      text: `<Relationships><Relationship Id="rId1" Type="worksheet" Target="worksheets/sheet1.xml"/></Relationships>`,
+    },
+  ]);
+
+  await assert.rejects(
+    readTransactionValidationSource({
+      fileName: "malformed.xlsx",
+      fileSize: bytes.length,
+      buffer: asArrayBuffer(bytes),
+      columns: [0, 1, 2],
+    }),
+    (error: unknown) =>
+      error instanceof TransactionValidationSourceError && error.code === "SOURCE_XLSX_INVALID",
+  );
 });
 
 test("Task 19 selects the first worksheet and excludes XLSX phonetic rich-text runs", async () => {
