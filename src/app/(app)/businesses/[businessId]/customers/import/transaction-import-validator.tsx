@@ -142,7 +142,12 @@ export function TransactionImportValidator({
             <small>فعّل هذا الاختيار فقط إذا كان أول صف Header وليس معاملة فعلية.</small>
           </span>
         </label>
-        <button type="button" className={styles.validationButton} disabled={isValidating} onClick={() => void validate()}>
+        <button
+          type="button"
+          className={styles.validationButton}
+          disabled={isValidating}
+          onClick={() => void validate()}
+        >
           {isValidating ? "جاري التحقق…" : "تشغيل Validation"}
         </button>
       </div>
@@ -161,7 +166,7 @@ export function TransactionImportValidator({
 
       {result && (
         <>
-          <div className={styles.validationSummary} aria-label="ملخص التحقق من ملف المعاملات">
+          <div className={styles.validationSummary}>
             <div>
               <span>صفوف تم فحصها</span>
               <strong>{result.checkedRows}</strong>
@@ -196,8 +201,8 @@ export function TransactionImportValidator({
           ) : (
             <div className={styles.validationIssues}>
               <h3>أول المشكلات المكتشفة</h3>
-              <div className={styles.tableShell} tabIndex={0} role="group" aria-label="جدول أخطاء التحقق من المعاملات">
-                <table className={styles.issueTable}>
+              <div className={styles.tableShell}>
+                <table className={styles.issueTable} aria-label="جدول أخطاء التحقق من المعاملات">
                   <thead>
                     <tr>
                       <th scope="col">الصف</th>
@@ -207,8 +212,8 @@ export function TransactionImportValidator({
                     </tr>
                   </thead>
                   <tbody>
-                    {result.issues.map((issue, index) => (
-                      <tr key={`${issue.rowNumber}:${issue.field}:${issue.code}:${index}`}>
+                    {result.issues.map((issue) => (
+                      <tr key={`${issue.rowNumber}:${issue.field}:${issue.code}`}>
                         <td>{issue.rowNumber}</td>
                         <td>{FIELD_LABELS[issue.field]}</td>
                         <td>{ISSUE_MESSAGES[issue.code]}</td>
