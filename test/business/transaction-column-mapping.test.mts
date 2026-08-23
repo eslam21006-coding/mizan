@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  buildTransactionColumnChoices,
   EMPTY_TRANSACTION_COLUMN_MAPPING,
   inspectTransactionColumnMapping,
   setTransactionFieldColumn,
@@ -52,4 +53,18 @@ test("Task 18 rejects invalid negative column indexes", () => {
     () => setTransactionFieldColumn(EMPTY_TRANSACTION_COLUMN_MAPPING, "customerEmail", -1),
     RangeError,
   );
+});
+
+test("Task 18 offers every detected column while keeping samples preview-bounded", () => {
+  const previewRow = Array.from({ length: 20 }, (_, index) => `sample-${index + 1}`);
+  const choices = buildTransactionColumnChoices({
+    totalColumns: 23,
+    previewRows: [previewRow],
+    sampleColumnLimit: 20,
+  });
+
+  assert.equal(choices.length, 23);
+  assert.deepEqual(choices[19], { column: 19, label: "T", sample: "sample-20" });
+  assert.deepEqual(choices[20], { column: 20, label: "U", sample: "" });
+  assert.deepEqual(choices[22], { column: 22, label: "W", sample: "" });
 });
