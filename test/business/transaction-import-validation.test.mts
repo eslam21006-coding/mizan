@@ -100,7 +100,7 @@ function minimalValidationXlsx() {
       text: `<?xml version="1.0" encoding="UTF-8"?>
         <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
           <row r="1"><c r="A1" t="s"><v>0</v></c><c r="C1" t="s"><v>1</v></c><c r="E1" t="s"><v>2</v></c></row>
-          <row r="2"><c r="A2" t="s"><v>3</v></c><c r="C2" s="1"><v>45292</v></c><c r="E2"><v>1,250.50</v></c></row>
+          <row r="5"><c r="A5" t="s"><v>3</v></c><c r="C5" s="1"><v>45292</v></c><c r="E5"><v>1,250.50</v></c></row>
         </sheetData></worksheet>`,
     },
   ]);
@@ -110,17 +110,22 @@ test("Task 19 normalizes imported customer email with trim plus lowercase", () =
   assert.equal(normalizeTransactionEmail("  Buyer@Example.COM  "), "buyer@example.com");
 });
 
-test("Task 19 accepts real ISO dates and rejects ambiguous or impossible dates", () => {
+test("Task 19 accepts real ISO dates including years before 0100 and rejects ambiguous or impossible dates", () => {
   assert.equal(isValidTransactionDate("2026-08-23"), true);
   assert.equal(isValidTransactionDate("2026-08-23T14:30:00Z"), true);
+  assert.equal(isValidTransactionDate("0001-01-01"), true);
+  assert.equal(isValidTransactionDate("0001-01-01T12:00:00Z"), true);
   assert.equal(isValidTransactionDate("2026-02-30"), false);
   assert.equal(isValidTransactionDate("23/08/2026"), false);
 });
 
-test("Task 19 parses finite decimal amounts without inventing currency semantics", () => {
+test("Task 19 parses finite decimal forms without inventing currency semantics", () => {
   assert.equal(parseTransactionAmount("1,234.50"), 1234.5);
   assert.equal(parseTransactionAmount("-80"), -80);
   assert.equal(parseTransactionAmount("0"), 0);
+  assert.equal(parseTransactionAmount(".5"), 0.5);
+  assert.equal(parseTransactionAmount("1."), 1);
+  assert.equal(parseTransactionAmount("1e3"), 1000);
   assert.equal(parseTransactionAmount("$100"), null);
   assert.equal(parseTransactionAmount("1,23.00"), null);
 });
@@ -181,7 +186,7 @@ test("Task 19 reads mapped columns beyond the visible preview width", async () =
   assert.deepEqual(source.rows[0]?.values, ["far@example.com", "2026-08-23", "99.50"]);
 });
 
-test("Task 19 reads selected XLSX shared strings, sparse columns, and styled dates", async () => {
+test("Task 19 reads selected XLSX values and preserves the worksheet row number", async () => {
   const bytes = minimalValidationXlsx();
   const source = await readTransactionValidationSource({
     fileName: "payments.xlsx",
@@ -191,8 +196,11 @@ test("Task 19 reads selected XLSX shared strings, sparse columns, and styled dat
   });
 
   assert.equal(source.totalRows, 2);
-  assert.deepEqual(source.rows[0]?.values, ["Email", "Date", "Amount"]);
-  assert.deepEqual(source.rows[1]?.values, ["Buyer@Example.COM", "2024-01-01", "1,250.50"]);
+  assert.deepEqual(source.rows[0], { rowNumber: 1, values: ["Email", "Date", "Amount"] });
+  assert.deepEqual(source.rows[1], {
+    rowNumber: 5,
+    values: ["Buyer@Example.COM", "2024-01-01", "1,250.50"],
+  });
 });
 
 test("Task 19 rejects duplicate mapped source columns at the source-reader boundary", async () => {
