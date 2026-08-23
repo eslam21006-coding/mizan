@@ -13,6 +13,7 @@ import {
 import type { TransactionFilePreview } from "@/lib/business/transaction-preview";
 import {
   readTransactionValidationSource,
+  TRANSACTION_VALIDATION_SOURCE_LIMITS,
   TransactionValidationSourceError,
 } from "@/lib/business/transaction-validation-source";
 import styles from "./transaction-import.module.css";
@@ -45,7 +46,7 @@ const SOURCE_ERROR_MESSAGES = {
   SOURCE_CSV_MALFORMED: "ملف CSV غير صالح للتحقق.",
   SOURCE_XLSX_INVALID: "ملف XLSX غير صالح أو تعذر قراءة بياناته للتحقق.",
   SOURCE_XLSX_UNSUPPORTED: "ملف XLSX يستخدم بنية غير مدعومة للتحقق داخل المتصفح.",
-  SOURCE_TOO_MANY_ROWS: "عدد الصفوف أكبر من حد التحقق الآمن داخل المتصفح.",
+  SOURCE_TOO_MANY_ROWS: `عدد الصفوف غير الفارغة أكبر من حد التحقق داخل المتصفح (${TRANSACTION_VALIDATION_SOURCE_LIMITS.maxRows.toLocaleString("en-US")}).`,
   UNSUPPORTED_FILE_TYPE: "يمكن التحقق من CSV أو XLSX فقط.",
 } as const;
 
@@ -166,7 +167,12 @@ export function TransactionImportValidator({
 
       {result && (
         <>
-          <div className={styles.validationSummary}>
+          <div
+            className={styles.validationSummary}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
             <div>
               <span>صفوف تم فحصها</span>
               <strong>{result.checkedRows}</strong>
@@ -190,13 +196,15 @@ export function TransactionImportValidator({
           )}
 
           {result.isValid ? (
-            <div className={styles.validationSuccess} role="status">
+            <div className={styles.validationSuccess}>
               كل الصفوف التي تم فحصها صالحة للحقول المطلوبة. لم يتم بعد تنفيذ Duplicate Protection أو Import؛
               وهذه هي الخطوة التالية فقط.
             </div>
           ) : result.checkedRows === 0 ? (
             <div className={styles.mappingError} role="alert">
-              لا توجد معاملات قابلة للتحقق بعد استبعاد الـ Header.
+              {skipFirstRow
+                ? "لا توجد معاملات قابلة للتحقق بعد استبعاد أول صف باعتباره Header."
+                : "لا توجد صفوف معاملات قابلة للتحقق في الملف."}
             </div>
           ) : (
             <div className={styles.validationIssues}>
