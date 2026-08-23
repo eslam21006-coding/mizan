@@ -17,10 +17,12 @@ import {
   TRANSACTION_PREVIEW_LIMITS,
   type TransactionFilePreview,
 } from "@/lib/business/transaction-preview";
+import { TransactionImportValidator } from "./transaction-import-validator";
 import styles from "./transaction-import.module.css";
 
 type TransactionColumnMapperProps = {
   preview: TransactionFilePreview;
+  fileBuffer: ArrayBuffer;
 };
 
 function fieldDescription(field: RequiredTransactionField) {
@@ -38,7 +40,7 @@ function sampleValue(preview: TransactionFilePreview, column: number) {
   return "";
 }
 
-export function TransactionColumnMapper({ preview }: TransactionColumnMapperProps) {
+export function TransactionColumnMapper({ preview, fileBuffer }: TransactionColumnMapperProps) {
   const [mapping, setMapping] = useState<TransactionColumnMapping>(EMPTY_TRANSACTION_COLUMN_MAPPING);
   const mappingState = inspectTransactionColumnMapping(mapping);
   const hasValidColumnCount = Number.isSafeInteger(preview.totalColumns) && preview.totalColumns > 0;
@@ -85,104 +87,120 @@ export function TransactionColumnMapper({ preview }: TransactionColumnMapperProp
     setMapping((current) => setTransactionFieldColumn(current, field, column));
   };
 
+  const validationKey = mappingState.isComplete
+    ? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.amountCollected}`
+    : "incomplete";
+
   return (
-    <section className={styles.mappingPanel} aria-labelledby="transaction-mapping-title">
-      <div className={styles.mappingHeading}>
-        <div>
-          <span className={styles.kicker}>Task 18 · Column Mapping</span>
-          <h2 id="transaction-mapping-title">اربط أعمدة الملف بالحقول المطلوبة</h2>
-          <p>
-            اختر العمود الصحيح لكل حقل. لا يتم حفظ البيانات أو استيرادها في هذه الخطوة، ولا يتم تنفيذ
-            Validation أو Duplicate Protection بعد.
-          </p>
+    <>
+      <section className={styles.mappingPanel} aria-labelledby="transaction-mapping-title">
+        <div className={styles.mappingHeading}>
+          <div>
+            <span className={styles.kicker}>Task 19 · Mapping جاهز للـ Validation</span>
+            <h2 id="transaction-mapping-title">اربط أعمدة الملف بالحقول المطلوبة</h2>
+            <p>
+              اختر العمود الصحيح لكل حقل. عند اكتمال الـ Mapping يمكنك تشغيل Validation على كل الصفوف بدون
+              رفع الملف أو حفظ أي بيانات.
+            </p>
+          </div>
+          <span className={mappingState.isComplete ? styles.mappingReady : styles.mappingPending}>
+            {mappingState.isComplete ? "Mapping مكتمل" : "Mapping غير مكتمل"}
+          </span>
         </div>
-        <span className={mappingState.isComplete ? styles.mappingReady : styles.mappingPending}>
-          {mappingState.isComplete ? "Mapping مكتمل" : "Mapping غير مكتمل"}
-        </span>
-      </div>
 
-      {!hasValidColumnCount ? (
-        <div className={styles.mappingError} role="alert">
-          عدد الأعمدة في الملف غير صالح للـ Mapping. اختر ملفًا آخر.
-        </div>
-      ) : (
-        <div className={styles.mappingGrid}>
-          {REQUIRED_TRANSACTION_FIELDS.map((field) => {
-            const selected = mapping[field];
-            const selectedSample = selected === null ? "" : sampleValue(preview, selected);
-            const controlId = `mapping-${field}`;
-            const helpId = `mapping-${field}-help`;
+        {!hasValidColumnCount ? (
+          <div className={styles.mappingError} role="alert">
+            عدد الأعمدة في الملف غير صالح للـ Mapping. اختر ملفًا آخر.
+          </div>
+        ) : (
+          <div className={styles.mappingGrid}>
+            {REQUIRED_TRANSACTION_FIELDS.map((field) => {
+              const selected = mapping[field];
+              const selectedSample = selected === null ? "" : sampleValue(preview, selected);
+              const controlId = `mapping-${field}`;
+              const helpId = `mapping-${field}-help`;
 
-            return (
-              <div className={styles.mappingField} key={field}>
-                <label htmlFor={controlId}>{TRANSACTION_FIELD_LABELS[field]}</label>
-                <p>{fieldDescription(field)}</p>
+              return (
+                <div className={styles.mappingField} key={field}>
+                  <label htmlFor={controlId}>{TRANSACTION_FIELD_LABELS[field]}</label>
+                  <p>{fieldDescription(field)}</p>
 
-                {usesDirectColumnEntry ? (
-                  <>
-                    <input
+                  {usesDirectColumnEntry ? (
+                    <>
+                      <input
+                        id={controlId}
+                        type="number"
+                        min={1}
+                        max={preview.totalColumns}
+                        step={1}
+                        inputMode="numeric"
+                        value={selected === null ? "" : selected + 1}
+                        aria-describedby={helpId}
+                        onChange={(event) => setDirectField(field, event.currentTarget.value)}
+                      />
+                      <p id={helpId}>
+                        اكتب رقم العمود من 1 إلى {preview.totalColumns}.
+                        {selected !== null
+                          ? ` المحدد: Column ${transactionColumnLabel(selected)}${selectedSample ? ` — ${selectedSample.slice(0, 48)}` : ""}`
+                          : ""}
+                      </p>
+                    </>
+                  ) : (
+                    <select
                       id={controlId}
-                      type="number"
-                      min={1}
-                      max={preview.totalColumns}
-                      step={1}
-                      inputMode="numeric"
-                      value={selected === null ? "" : selected + 1}
-                      aria-describedby={helpId}
-                      onChange={(event) => setDirectField(field, event.currentTarget.value)}
-                    />
-                    <p id={helpId}>
-                      اكتب رقم العمود من 1 إلى {preview.totalColumns}.
-                      {selected !== null
-                        ? ` المحدد: Column ${transactionColumnLabel(selected)}${selectedSample ? ` — ${selectedSample.slice(0, 48)}` : ""}`
-                        : ""}
-                    </p>
-                  </>
-                ) : (
-                  <select
-                    id={controlId}
-                    value={selected ?? ""}
-                    onChange={(event) => setSelectField(field, event.currentTarget.value)}
-                  >
-                    <option value="">اختر عمودًا</option>
-                    {options.map((option) => (
-                      <option key={option.column} value={option.column}>
-                        {option.label}
-                        {option.sample ? ` — ${option.sample.slice(0, 48)}` : ""}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {hasValidColumnCount && mappingState.hasDuplicateColumns && (
-        <div className={styles.mappingError} role="alert">
-          لا يمكن استخدام نفس العمود لأكثر من حقل مطلوب. اختر عمودًا مختلفًا لكل حقل.
-        </div>
-      )}
-
-      {hasValidColumnCount &&
-        !mappingState.hasDuplicateColumns &&
-        mappingState.missingFields.length > 0 && (
-          <p className={styles.mappingHint}>
-            الحقول المتبقية: {mappingState.missingFields.map((field) => TRANSACTION_FIELD_LABELS[field]).join("، ")}.
-          </p>
+                      value={selected ?? ""}
+                      onChange={(event) => setSelectField(field, event.currentTarget.value)}
+                    >
+                      <option value="">اختر عمودًا</option>
+                      {options.map((option) => (
+                        <option key={option.column} value={option.column}>
+                          {option.label}
+                          {option.sample ? ` — ${option.sample.slice(0, 48)}` : ""}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
 
+        {hasValidColumnCount && mappingState.hasDuplicateColumns && (
+          <div className={styles.mappingError} role="alert">
+            لا يمكن استخدام نفس العمود لأكثر من حقل مطلوب. اختر عمودًا مختلفًا لكل حقل.
+          </div>
+        )}
+
+        {hasValidColumnCount &&
+          !mappingState.hasDuplicateColumns &&
+          mappingState.missingFields.length > 0 && (
+            <p className={styles.mappingHint}>
+              الحقول المتبقية:{" "}
+              {mappingState.missingFields.map((field) => TRANSACTION_FIELD_LABELS[field]).join("، ")}.
+            </p>
+          )}
+
+        {hasValidColumnCount && mappingState.isComplete && (
+          <div className={styles.mappingSummary}>
+            {REQUIRED_TRANSACTION_FIELDS.map((field) => (
+              <div key={field}>
+                <span>{TRANSACTION_FIELD_LABELS[field]}</span>
+                <strong dir="ltr">Column {transactionColumnLabel(mapping[field] as number)}</strong>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
       {hasValidColumnCount && mappingState.isComplete && (
-        <div className={styles.mappingSummary}>
-          {REQUIRED_TRANSACTION_FIELDS.map((field) => (
-            <div key={field}>
-              <span>{TRANSACTION_FIELD_LABELS[field]}</span>
-              <strong dir="ltr">Column {transactionColumnLabel(mapping[field] as number)}</strong>
-            </div>
-          ))}
-        </div>
+        <TransactionImportValidator
+          key={validationKey}
+          preview={preview}
+          fileBuffer={fileBuffer}
+          mapping={mapping}
+        />
       )}
-    </section>
+    </>
   );
 }
