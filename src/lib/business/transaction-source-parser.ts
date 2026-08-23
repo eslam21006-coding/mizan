@@ -37,6 +37,7 @@ export type FirstXlsxWorksheet = {
 type ZipEntry = {
   name: string;
   compressionMethod: number;
+  crc32: number;
   compressedSize: number;
   uncompressedSize: number;
   localHeaderOffset: number;
@@ -52,9 +53,24 @@ const BUILTIN_DATE_FORMAT_IDS = new Set([
   14, 15, 16, 17, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 50, 51, 52, 53, 54, 55, 56,
   57, 58,
 ]);
+const CRC32_TABLE = Array.from({ length: 256 }, (_, index) => {
+  let value = index;
+  for (let bit = 0; bit < 8; bit += 1) {
+    value = (value & 1) !== 0 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  }
+  return value >>> 0;
+});
 
 function fail(code: TransactionSourceParseErrorCode, message: string): never {
   throw new TransactionSourceParseError(code, message);
+}
+
+function crc32Checksum(bytes: Uint8Array) {
+  let crc = 0xffffffff;
+  for (let index = 0; index < bytes.length; index += 1) {
+    crc = CRC32_TABLE[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
 }
 
 function decodeXmlEntities(value: string) {
@@ -256,6 +272,7 @@ function readZipDirectory(buffer: ArrayBuffer) {
 
     const flags = view.getUint16(offset + 8, true);
     const compressionMethod = view.getUint16(offset + 10, true);
+    const crc32 = view.getUint32(offset + 16, true);
     const compressedSize = view.getUint32(offset + 20, true);
     const uncompressedSize = view.getUint32(offset + 24, true);
     const nameLength = view.getUint16(offset + 28, true);
@@ -287,6 +304,7 @@ function readZipDirectory(buffer: ArrayBuffer) {
     entries.set(name, {
       name,
       compressionMethod,
+      crc32,
       compressedSize,
       uncompressedSize,
       localHeaderOffset,
@@ -357,15 +375,20 @@ async function extractZipEntry(buffer: ArrayBuffer, entry: ZipEntry) {
   }
 
   const compressed = new Uint8Array(buffer, dataOffset, entry.compressedSize);
+  let output: Uint8Array;
   if (entry.compressionMethod === 8) {
-    return inflateRaw(compressed, entry.uncompressedSize);
+    output = await inflateRaw(compressed, entry.uncompressedSize);
+  } else {
+    if (entry.compressedSize !== entry.uncompressedSize) {
+      fail("XLSX_INVALID_ARCHIVE", "Stored XLSX entry has inconsistent size metadata.");
+    }
+    output = new Uint8Array(entry.uncompressedSize);
+    output.set(compressed);
   }
 
-  if (entry.compressedSize !== entry.uncompressedSize) {
-    fail("XLSX_INVALID_ARCHIVE", "Stored XLSX entry has inconsistent size metadata.");
+  if (crc32Checksum(output) !== entry.crc32) {
+    fail("XLSX_INVALID_ARCHIVE", `XLSX entry failed CRC-32 validation: ${entry.name}.`);
   }
-  const output = new Uint8Array(entry.uncompressedSize);
-  output.set(compressed);
   return output;
 }
 
@@ -381,24 +404,45 @@ async function extractZipText(buffer: ArrayBuffer, entries: Map<string, ZipEntry
 }
 
 function firstWorksheet(workbookXml: string, relationshipsXml: string) {
-  const sheetTag = workbookXml.match(/<(?:[A-Za-z_][\w.-]*:)?sheet\b[^>]*>/i)?.[0];
-  if (!sheetTag) fail("XLSX_SHEET_MISSING", "XLSX workbook has no worksheet.");
-
-  const sheetName = attributeValue(sheetTag, "name") ?? "Sheet 1";
-  const relationshipId = attributeValue(sheetTag, "r:id") ?? namespacedIdValue(sheetTag);
-  if (!relationshipId) {
-    fail("XLSX_INVALID_ARCHIVE", "XLSX worksheet relationship is missing.");
-  }
+  const sheetTags = workbookXml.match(/<(?:[A-Za-z_][\w.-]*:)?sheet\b[^>]*>/gi) ?? [];
+  if (sheetTags.length === 0) fail("XLSX_SHEET_MISSING", "XLSX workbook has no worksheet.");
 
   const relationshipTags =
     relationshipsXml.match(/<(?:[A-Za-z_][\w.-]*:)?Relationship\b[^>]*\/?\s*>/gi) ?? [];
-  const relationshipTag = relationshipTags.find(
-    (tag) => attributeValue(tag, "Id") === relationshipId,
-  );
-  const target = relationshipTag ? attributeValue(relationshipTag, "Target") : null;
-  if (!target) fail("XLSX_SHEET_MISSING", "XLSX worksheet target is missing.");
 
-  return { sheetName, worksheetPath: resolveZipPath("xl/workbook.xml", target) };
+  for (const sheetTag of sheetTags) {
+    const relationshipId = attributeValue(sheetTag, "r:id") ?? namespacedIdValue(sheetTag);
+    if (!relationshipId) {
+      fail("XLSX_INVALID_ARCHIVE", "XLSX worksheet relationship is missing.");
+    }
+
+    const relationshipTag = relationshipTags.find(
+      (tag) => attributeValue(tag, "Id") === relationshipId,
+    );
+    if (!relationshipTag) {
+      fail("XLSX_INVALID_ARCHIVE", "XLSX sheet relationship could not be resolved.");
+    }
+
+    const relationshipType = attributeValue(relationshipTag, "Type");
+    if (!relationshipType || !/(?:^|\/)worksheet$/i.test(relationshipType)) continue;
+
+    const target = attributeValue(relationshipTag, "Target");
+    if (!target) fail("XLSX_SHEET_MISSING", "XLSX worksheet target is missing.");
+
+    return {
+      sheetName: attributeValue(sheetTag, "name") ?? "Sheet 1",
+      worksheetPath: resolveZipPath("xl/workbook.xml", target),
+    };
+  }
+
+  fail("XLSX_SHEET_MISSING", "XLSX workbook has no worksheet relationship.");
+}
+
+function stripPhoneticRuns(xml: string) {
+  return xml.replace(
+    /<(?:[A-Za-z_][\w.-]*:)?rPh\b(?:[^>"']|"[^"]*"|'[^']*')*(?:\/\s*>|>[\s\S]*?<\/(?:[A-Za-z_][\w.-]*:)?rPh\s*>)/gi,
+    "",
+  );
 }
 
 function parseSharedStrings(xml: string | null) {
@@ -409,9 +453,10 @@ function parseSharedStrings(xml: string | null) {
 
   for (const itemMatch of xml.matchAll(itemPattern)) {
     const fragments: string[] = [];
+    const itemBody = stripPhoneticRuns(itemMatch[1]);
     const textPattern =
       /<(?:[A-Za-z_][\w.-]*:)?t\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?t>/gi;
-    for (const textMatch of itemMatch[1].matchAll(textPattern)) {
+    for (const textMatch of itemBody.matchAll(textPattern)) {
       fragments.push(decodeXmlText(textMatch[1]));
     }
     values.push(fragments.join(""));
@@ -493,7 +538,9 @@ function textFragments(xml: string) {
   const fragments: string[] = [];
   const pattern =
     /<(?:[A-Za-z_][\w.-]*:)?t\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?t>/gi;
-  for (const match of xml.matchAll(pattern)) fragments.push(decodeXmlText(match[1]));
+  for (const match of stripPhoneticRuns(xml).matchAll(pattern)) {
+    fragments.push(decodeXmlText(match[1]));
+  }
   return fragments.join("");
 }
 
