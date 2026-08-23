@@ -44,7 +44,7 @@ export type TransactionImportValidationResult = {
 
 const BASIC_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const ISO_DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?$/;
+const ISO_DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?$/;
 const DECIMAL_AMOUNT_PATTERN = /^[+-]?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/;
 
 export function normalizeTransactionEmail(value: string) {
@@ -58,24 +58,28 @@ export function isValidTransactionEmail(value: string) {
   return firstAt > 0 && firstAt === normalized.lastIndexOf("@") && firstAt < normalized.length - 1;
 }
 
+function isRealCalendarDate(year: number, month: number, day: number) {
+  const candidate = new Date(Date.UTC(year, month - 1, day));
+  return (
+    candidate.getUTCFullYear() === year &&
+    candidate.getUTCMonth() === month - 1 &&
+    candidate.getUTCDate() === day
+  );
+}
+
 export function isValidTransactionDate(value: string) {
   const normalized = value.trim();
   if (!normalized) return false;
 
   const dateOnly = normalized.match(ISO_DATE_PATTERN);
   if (dateOnly) {
-    const year = Number(dateOnly[1]);
-    const month = Number(dateOnly[2]);
-    const day = Number(dateOnly[3]);
-    const candidate = new Date(Date.UTC(year, month - 1, day));
-    return (
-      candidate.getUTCFullYear() === year &&
-      candidate.getUTCMonth() === month - 1 &&
-      candidate.getUTCDate() === day
-    );
+    return isRealCalendarDate(Number(dateOnly[1]), Number(dateOnly[2]), Number(dateOnly[3]));
   }
 
-  return ISO_DATE_TIME_PATTERN.test(normalized) && Number.isFinite(Date.parse(normalized));
+  const dateTime = normalized.match(ISO_DATE_TIME_PATTERN);
+  if (!dateTime) return false;
+  if (!isRealCalendarDate(Number(dateTime[1]), Number(dateTime[2]), Number(dateTime[3]))) return false;
+  return Number.isFinite(Date.parse(normalized));
 }
 
 export function parseTransactionAmount(value: string) {
@@ -156,6 +160,7 @@ export function validateTransactionImportRows(
   let invalidRows = 0;
   let skippedHeaderRows = 0;
   let issueCount = 0;
+  let firstSourceRowSeen = false;
   const issues: TransactionValidationIssue[] = [];
 
   for (const row of rows) {
@@ -163,9 +168,12 @@ export function validateTransactionImportRows(
       throw new RangeError("Transaction validation row numbers must be positive integers.");
     }
 
-    if (options.skipFirstRow && row.rowNumber === 1) {
-      skippedHeaderRows += 1;
-      continue;
+    if (!firstSourceRowSeen) {
+      firstSourceRowSeen = true;
+      if (options.skipFirstRow) {
+        skippedHeaderRows = 1;
+        continue;
+      }
     }
 
     checkedRows += 1;
