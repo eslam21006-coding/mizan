@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import {
   TRANSACTION_FIELD_LABELS,
   type TransactionColumnMapping,
@@ -49,6 +49,11 @@ const SOURCE_ERROR_MESSAGES = {
   SOURCE_TOO_MANY_ROWS: `عدد الصفوف غير الفارغة أكبر من حد التحقق داخل المتصفح (${TRANSACTION_VALIDATION_SOURCE_LIMITS.maxRows.toLocaleString("en-US")}).`,
   UNSUPPORTED_FILE_TYPE: "يمكن التحقق من CSV أو XLSX فقط.",
 } as const;
+
+const VALIDATION_THEME_ALIASES = {
+  "--text-primary": "var(--text)",
+  "--surface-primary": "var(--surface)",
+} as CSSProperties;
 
 function issueValue(issue: TransactionValidationIssue) {
   const value = issue.rawValue.trim();
@@ -113,7 +118,11 @@ export function TransactionImportValidator({
   };
 
   return (
-    <section className={styles.validationPanel} aria-labelledby="transaction-validation-title">
+    <section
+      className={styles.validationPanel}
+      style={VALIDATION_THEME_ALIASES}
+      aria-labelledby="transaction-validation-title"
+    >
       <div className={styles.validationHeading}>
         <div>
           <span className={styles.kicker}>Task 19 · Import Validation</span>
@@ -146,7 +155,6 @@ export function TransactionImportValidator({
         <button
           type="button"
           className={styles.validationButton}
-          style={{ background: "var(--text)", color: "var(--surface)" }}
           disabled={isValidating}
           onClick={() => void validate()}
         >
