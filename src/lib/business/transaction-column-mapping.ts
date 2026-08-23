@@ -1,4 +1,4 @@
-import { transactionColumnLabel } from "./transaction-columns";
+import { transactionColumnLabel } from "./transaction-columns.ts";
 
 export const REQUIRED_TRANSACTION_FIELDS = [
   "customerEmail",
