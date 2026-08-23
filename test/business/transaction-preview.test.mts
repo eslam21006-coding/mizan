@@ -9,6 +9,7 @@ import {
   TransactionPreviewError,
   type TransactionPreviewErrorCode,
 } from "../../src/lib/business/transaction-preview.ts";
+import { crc32Checksum } from "../helpers/zip-crc.ts";
 
 function asArrayBuffer(buffer: Buffer) {
   return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
@@ -24,22 +25,6 @@ function writeUInt32(value: number) {
   const buffer = Buffer.alloc(4);
   buffer.writeUInt32LE(value >>> 0);
   return buffer;
-}
-
-const CRC32_TABLE = Array.from({ length: 256 }, (_, index) => {
-  let value = index;
-  for (let bit = 0; bit < 8; bit += 1) {
-    value = (value & 1) !== 0 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
-  }
-  return value >>> 0;
-});
-
-function crc32Checksum(bytes: Uint8Array) {
-  let crc = 0xffffffff;
-  for (let index = 0; index < bytes.length; index += 1) {
-    crc = CRC32_TABLE[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
-  }
-  return (crc ^ 0xffffffff) >>> 0;
 }
 
 type ZipTestEntry = {
@@ -129,7 +114,7 @@ function minimalXlsx() {
         <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
           xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
           <workbookPr date1904="0"/>
-          <sheets><sheet name="Payments &amp; Refunds" sheetId="1" r:id="rId1"/></sheets>
+          <sheets><sheet name="Payments &amp; Refunds > 2026" sheetId="1" r:id="rId1"/></sheets>
         </workbook>`,
     },
     {
@@ -142,7 +127,8 @@ function minimalXlsx() {
     {
       name: "xl/sharedStrings.xml",
       text: `<?xml version="1.0" encoding="UTF-8"?>
-        <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="3" uniqueCount="3">
+        <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="4" uniqueCount="4">
+          <si/>
           <si><t>Customer Email</t></si>
           <si><t>Amount Collected</t></si>
           <si><r><t>buyer</t></r><r><t>@example.com</t></r></si>
@@ -161,12 +147,12 @@ function minimalXlsx() {
         <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
           <sheetData>
             <row r="1">
-              <c r="A1" t="s"><v>0</v></c>
-              <c r="B1" t="s"><v>1</v></c>
+              <c r="A1" t="s"><v>1</v></c>
+              <c r="B1" t="s"><v>2</v></c>
               <c r="C1" t="inlineStr"><is><t>Transaction Date</t></is></c>
             </row>
             <row r="2">
-              <c r="A2" t="s"><v>2</v></c>
+              <c r="A2" t="s"><v>3</v></c>
               <c r="B2"><v>125.50</v></c>
               <c r="C2" s="1"><v>1</v></c>
             </row>
@@ -191,6 +177,12 @@ test("Task 17 detects common CSV delimiters", () => {
   assert.equal(detectCsvDelimiter("a,b,c\n1,2,3\n"), ",");
   assert.equal(detectCsvDelimiter("a;b;c\n1;2;3\n"), ";");
   assert.equal(detectCsvDelimiter("a\tb\tc\n1\t2\t3\n"), "\t");
+});
+
+test("Task 19 delimiter detection scans beyond a 128 KiB quoted first field", () => {
+  const longField = "x".repeat(128 * 1024 + 32);
+  assert.equal(detectCsvDelimiter(`"${longField}";b;c\n1;2;3\n`), ";");
+  assert.equal(detectCsvDelimiter(`"${longField}"\tb\tc\n1\t2\t3\n`), "\t");
 });
 
 test("Task 17 parses quoted CSV fields, embedded newlines, and escaped quotes", () => {
@@ -253,7 +245,7 @@ test("Task 17 reads a real deflated XLSX archive, shared strings, sheet name, an
   });
 
   assert.equal(preview.fileType, "xlsx");
-  assert.equal(preview.sheetName, "Payments & Refunds");
+  assert.equal(preview.sheetName, "Payments & Refunds > 2026");
   assert.equal(preview.totalRows, 2);
   assert.equal(preview.totalColumns, 3);
   assert.deepEqual(preview.previewRows, [
@@ -280,7 +272,7 @@ test("Task 17 accepts a ZIP comment containing an end-record signature", async (
   });
 
   assert.equal(preview.fileType, "xlsx");
-  assert.equal(preview.sheetName, "Payments & Refunds");
+  assert.equal(preview.sheetName, "Payments & Refunds > 2026");
   assert.equal(preview.totalRows, 2);
 });
 
