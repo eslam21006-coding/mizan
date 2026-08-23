@@ -7,6 +7,7 @@ import {
   TransactionPreviewError,
   type TransactionFilePreview,
 } from "@/lib/business/transaction-preview";
+import { TransactionColumnMapper } from "./transaction-column-mapper";
 import styles from "./transaction-import.module.css";
 
 type TransactionPreviewUploaderProps = {
@@ -117,11 +118,11 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
     <div className={styles.previewStack}>
       <section className={styles.uploadPanel} aria-labelledby="transaction-upload-title">
         <div className={styles.uploadCopy}>
-          <span className={styles.kicker}>Task 17 · Preview فقط</span>
+          <span className={styles.kicker}>Task 18 · Mapping</span>
           <h2 id="transaction-upload-title">اختر ملف معاملات العملاء</h2>
           <p>
-            المعاينة تتم داخل المتصفح فقط. الملف ومحتواه لا يتم رفعهما إلى السيرفر، ولا يتم إنشاء أي
-            معاملات في قاعدة البيانات في هذه الخطوة.
+            المعاينة والـ Mapping يتمان داخل المتصفح فقط. الملف ومحتواه لا يتم رفعهما إلى السيرفر، ولا يتم
+            إنشاء أي معاملات في قاعدة البيانات في هذه الخطوة.
           </p>
         </div>
 
@@ -167,101 +168,102 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
       )}
 
       {preview && !error && (
-        <section className={styles.resultPanel} aria-labelledby="transaction-preview-title">
-          <div className={styles.resultHeading}>
-            <div>
-              <span className={styles.kicker}>تمت القراءة محليًا</span>
-              <h2 id="transaction-preview-title">معاينة الملف</h2>
-              <p>لم يتم عمل Mapping أو Validation أو Import بعد.</p>
-            </div>
-            <button type="button" className={styles.secondaryButton} onClick={reset}>
-              تغيير الملف
-            </button>
-          </div>
-
-          <dl className={styles.metaGrid}>
-            <div>
-              <dt>اسم الملف</dt>
-              <dd dir="ltr">{preview.fileName}</dd>
-            </div>
-            <div>
-              <dt>النوع والحجم</dt>
-              <dd dir="ltr">
-                {preview.fileType.toUpperCase()} · {fileSizeLabel(preview.fileSize)}
-              </dd>
-            </div>
-            <div>
-              <dt>الصفوف المحللة</dt>
-              <dd>{preview.totalRows}</dd>
-            </div>
-            <div>
-              <dt>الأعمدة المكتشفة</dt>
-              <dd>{preview.totalColumns}</dd>
-            </div>
-            {preview.fileType === "xlsx" ? (
+        <>
+          <section className={styles.resultPanel} aria-labelledby="transaction-preview-title">
+            <div className={styles.resultHeading}>
               <div>
-                <dt>Worksheet</dt>
-                <dd dir="ltr">{preview.sheetName ?? "—"}</dd>
+                <span className={styles.kicker}>تمت القراءة محليًا</span>
+                <h2 id="transaction-preview-title">معاينة الملف</h2>
+                <p>تم تفعيل Column Mapping فقط. Validation وImport ما زالا خارج هذه الخطوة.</p>
               </div>
+              <button type="button" className={styles.secondaryButton} onClick={reset}>
+                تغيير الملف
+              </button>
+            </div>
+
+            <dl className={styles.metaGrid}>
+              <div>
+                <dt>اسم الملف</dt>
+                <dd dir="ltr">{preview.fileName}</dd>
+              </div>
+              <div>
+                <dt>النوع والحجم</dt>
+                <dd dir="ltr">
+                  {preview.fileType.toUpperCase()} · {fileSizeLabel(preview.fileSize)}
+                </dd>
+              </div>
+              <div>
+                <dt>الصفوف المحللة</dt>
+                <dd>{preview.totalRows}</dd>
+              </div>
+              <div>
+                <dt>الأعمدة المكتشفة</dt>
+                <dd>{preview.totalColumns}</dd>
+              </div>
+              {preview.fileType === "xlsx" ? (
+                <div>
+                  <dt>Worksheet</dt>
+                  <dd dir="ltr">{preview.sheetName ?? "—"}</dd>
+                </div>
+              ) : (
+                <div>
+                  <dt>الفاصل المكتشف</dt>
+                  <dd>{delimiterLabel(preview.delimiter)}</dd>
+                </div>
+              )}
+            </dl>
+
+            {preview.previewRows.length === 0 || visibleColumns === 0 ? (
+              <div className={styles.emptyPreview}>الملف صالح للقراءة لكنه لا يحتوي على صفوف بيانات قابلة للعرض.</div>
             ) : (
-              <div>
-                <dt>الفاصل المكتشف</dt>
-                <dd>{delimiterLabel(preview.delimiter)}</dd>
-              </div>
-            )}
-          </dl>
-
-          {preview.previewRows.length === 0 || visibleColumns === 0 ? (
-            <div className={styles.emptyPreview}>الملف صالح للقراءة لكنه لا يحتوي على صفوف بيانات قابلة للعرض.</div>
-          ) : (
-            <div
-              className={styles.tableShell}
-              tabIndex={0}
-              role="group"
-              aria-label="منطقة تمرير جدول معاينة ملف المعاملات"
-            >
-              <table className={styles.previewTable} aria-label="جدول معاينة ملف المعاملات">
-                <thead>
-                  <tr>
-                    <th scope="col">#</th>
-                    {visibleColumnLabels.map((label) => (
-                      <th scope="col" key={label} dir="ltr">
-                        {label}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {displayRows.map(({ key, row }, rowIndex) => (
-                    <tr key={key}>
-                      <th scope="row">{rowIndex + 1}</th>
-                      {visibleColumnLabels.map((label, columnIndex) => (
-                        <td key={`${key}:${label}`} dir="auto">
-                          {row[columnIndex] ?? ""}
-                        </td>
+              <div
+                className={styles.tableShell}
+                tabIndex={0}
+                role="group"
+                aria-label="منطقة تمرير جدول معاينة ملف المعاملات"
+              >
+                <table className={styles.previewTable} aria-label="جدول معاينة ملف المعاملات">
+                  <thead>
+                    <tr>
+                      <th scope="col">#</th>
+                      {visibleColumnLabels.map((label) => (
+                        <th scope="col" key={label} dir="ltr">
+                          {label}
+                        </th>
                       ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                  </thead>
+                  <tbody>
+                    {displayRows.map(({ key, row }, rowIndex) => (
+                      <tr key={key}>
+                        <th scope="row">{rowIndex + 1}</th>
+                        {visibleColumnLabels.map((label, columnIndex) => (
+                          <td key={`${key}:${label}`} dir="auto">
+                            {row[columnIndex] ?? ""}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
 
-          {(preview.truncatedRows || preview.truncatedColumns) && (
-            <p className={styles.truncationNote}>
-              هذه معاينة فقط. تم تحليل الملف كاملًا لإظهار الإجماليات، لكن الجدول يعرض نطاقًا محدودًا لحماية
-              أداء المتصفح.
-            </p>
-          )}
+            {(preview.truncatedRows || preview.truncatedColumns) && (
+              <p className={styles.truncationNote}>
+                هذه معاينة فقط. تم تحليل الملف كاملًا لإظهار الإجماليات، لكن الجدول يعرض نطاقًا محدودًا لحماية
+                أداء المتصفح.
+              </p>
+            )}
+          </section>
 
-          <div className={styles.nextTaskNotice}>
-            <strong>الخطوة التالية لاحقًا: Column Mapping</strong>
-            <p>
-              في Task 18 سنحدد أي عمود يمثل Customer Email وTransaction Date وAmount Collected وباقي الحقول.
-              لا تفترض أي معنى للأعمدة في هذه المعاينة.
-            </p>
-          </div>
-        </section>
+          {canManage && preview.previewRows.length > 0 && visibleColumns > 0 && (
+            <TransactionColumnMapper
+              key={`${preview.fileName}:${preview.fileSize}:${preview.totalRows}:${preview.totalColumns}`}
+              preview={preview}
+            />
+          )}
+        </>
       )}
     </div>
   );
