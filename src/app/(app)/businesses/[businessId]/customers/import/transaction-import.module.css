@@ -58,7 +58,8 @@
 }
 
 .uploadPanel,
-.resultPanel {
+.resultPanel,
+.mappingPanel {
   border: 1px solid var(--border-subtle);
   border-radius: 20px;
   background: var(--surface-primary);
@@ -74,17 +75,20 @@
 }
 
 .uploadCopy h2,
-.resultHeading h2 {
+.resultHeading h2,
+.mappingHeading h2 {
   margin: 6px 0 8px;
   font-size: clamp(1.25rem, 2vw, 1.65rem);
 }
 
 .uploadCopy p,
 .resultHeading p,
-.nextTaskNotice p,
+.mappingHeading p,
 .fileControl p,
 .truncationNote,
-.errorBox p {
+.errorBox p,
+.mappingField p,
+.mappingHint {
   margin: 0;
   color: var(--text-secondary);
   line-height: 1.75;
@@ -126,7 +130,8 @@
 .tableShell:focus-visible,
 .secondaryButton:focus-visible,
 .errorBox button:focus-visible,
-.backLink:focus-visible {
+.backLink:focus-visible,
+.mappingField select:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
   outline-offset: 2px;
 }
@@ -139,19 +144,19 @@
 .statusBox,
 .errorBox,
 .emptyPreview,
-.nextTaskNotice {
+.mappingError {
   border-radius: 16px;
   padding: 16px 18px;
 }
 
 .readOnlyNotice,
 .statusBox,
-.emptyPreview,
-.nextTaskNotice {
+.emptyPreview {
   background: var(--surface-secondary);
 }
 
-.errorBox {
+.errorBox,
+.mappingError {
   border: 1px solid color-mix(in srgb, #b42318 35%, transparent);
   background: color-mix(in srgb, #b42318 7%, var(--surface-primary));
 }
@@ -174,12 +179,14 @@
   cursor: pointer;
 }
 
-.resultPanel {
+.resultPanel,
+.mappingPanel {
   padding: 24px;
   min-width: 0;
 }
 
-.resultHeading {
+.resultHeading,
+.mappingHeading {
   display: flex;
   gap: 16px;
   align-items: flex-start;
@@ -275,13 +282,85 @@
   font-size: 0.86rem;
 }
 
-.nextTaskNotice {
-  margin-top: 18px;
+.mappingReady,
+.mappingPending {
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 800;
 }
 
-.nextTaskNotice strong {
-  display: block;
-  margin-bottom: 4px;
+.mappingReady {
+  background: color-mix(in srgb, #067647 12%, var(--surface-primary));
+  color: #067647;
+}
+
+.mappingPending {
+  background: var(--surface-secondary);
+  color: var(--text-secondary);
+}
+
+.mappingGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.mappingField {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: var(--surface-secondary);
+}
+
+.mappingField label {
+  font-weight: 800;
+}
+
+.mappingField p,
+.mappingHint {
+  font-size: 0.86rem;
+}
+
+.mappingField select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  padding: 9px 11px;
+  font: inherit;
+}
+
+.mappingError,
+.mappingHint,
+.mappingSummary {
+  margin-top: 14px;
+}
+
+.mappingSummary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.mappingSummary > div {
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-secondary);
+}
+
+.mappingSummary span {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
 }
 
 @media (max-width: 1050px) {
@@ -297,14 +376,17 @@
     grid-column: 1 / -1;
   }
 
-  .metaGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .metaGrid,
+  .mappingGrid,
+  .mappingSummary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 720px) {
   .headingRow,
-  .resultHeading {
+  .resultHeading,
+  .mappingHeading {
     flex-direction: column;
   }
 
@@ -314,16 +396,21 @@
   }
 
   .uploadPanel,
-  .resultPanel {
+  .resultPanel,
+  .mappingPanel {
     padding: 18px;
     border-radius: 16px;
   }
 
-  .metaGrid {
+  .metaGrid,
+  .mappingGrid,
+  .mappingSummary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .secondaryButton {
+  .secondaryButton,
+  .mappingReady,
+  .mappingPending {
     width: 100%;
   }
 }
@@ -343,7 +430,8 @@
   }
 
   .uploadPanel,
-  .resultPanel {
+  .resultPanel,
+  .mappingPanel {
     padding: 14px;
   }
 
@@ -351,7 +439,9 @@
     padding: 14px;
   }
 
-  .metaGrid {
+  .metaGrid,
+  .mappingGrid,
+  .mappingSummary {
     grid-template-columns: 1fr;
   }
 
