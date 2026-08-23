@@ -106,8 +106,62 @@ function decodeXmlEntities(value: string) {
   });
 }
 
+function stripXmlCommentsOutsideCdata(value: string) {
+  let result = "";
+  let cursor = 0;
+
+  while (cursor < value.length) {
+    const commentStart = value.indexOf("<!--", cursor);
+    const cdataStart = value.indexOf("<![CDATA[", cursor);
+
+    if (commentStart !== -1 && (cdataStart === -1 || commentStart < cdataStart)) {
+      result += value.slice(cursor, commentStart);
+      const commentEnd = value.indexOf("-->", commentStart + 4);
+      if (commentEnd === -1) return result + value.slice(commentStart);
+      cursor = commentEnd + 3;
+      continue;
+    }
+
+    if (cdataStart !== -1) {
+      result += value.slice(cursor, cdataStart);
+      const cdataEnd = value.indexOf("]]>", cdataStart + 9);
+      if (cdataEnd === -1) return result + value.slice(cdataStart);
+      result += value.slice(cdataStart, cdataEnd + 3);
+      cursor = cdataEnd + 3;
+      continue;
+    }
+
+    result += value.slice(cursor);
+    break;
+  }
+
+  return result;
+}
+
 function decodeXmlText(value: string) {
-  return decodeXmlEntities(value.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1"));
+  const withoutComments = stripXmlCommentsOutsideCdata(value);
+  let result = "";
+  let cursor = 0;
+
+  while (cursor < withoutComments.length) {
+    const cdataStart = withoutComments.indexOf("<![CDATA[", cursor);
+    if (cdataStart === -1) {
+      result += decodeXmlEntities(withoutComments.slice(cursor));
+      break;
+    }
+
+    result += decodeXmlEntities(withoutComments.slice(cursor, cdataStart));
+    const cdataEnd = withoutComments.indexOf("]]>", cdataStart + 9);
+    if (cdataEnd === -1) {
+      result += withoutComments.slice(cdataStart);
+      break;
+    }
+
+    result += withoutComments.slice(cdataStart + 9, cdataEnd);
+    cursor = cdataEnd + 3;
+  }
+
+  return result;
 }
 
 function malformedXml(label: string): never {
@@ -604,10 +658,11 @@ function stripPhoneticRuns(xml: string) {
 function parseSharedStrings(xml: string | null) {
   if (!xml) return [];
   const values: string[] = [];
+  const sourceXml = stripXmlCommentsOutsideCdata(xml);
   const itemPattern =
     /<(?:[A-Za-z_][\w.-]*:)?si\b(?:[^>"'\/]|"[^"]*"|'[^']*')*(?:\/\s*>|>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?si\s*>)/gi;
 
-  for (const itemMatch of xml.matchAll(itemPattern)) {
+  for (const itemMatch of sourceXml.matchAll(itemPattern)) {
     const fragments: string[] = [];
     const itemBody = stripPhoneticRuns(itemMatch[1] ?? "");
     const textPattern =
@@ -694,7 +749,8 @@ function textFragments(xml: string) {
   const fragments: string[] = [];
   const pattern =
     /<(?:[A-Za-z_][\w.-]*:)?t\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?t>/gi;
-  for (const match of stripPhoneticRuns(xml).matchAll(pattern)) {
+  const sourceXml = stripPhoneticRuns(stripXmlCommentsOutsideCdata(xml));
+  for (const match of sourceXml.matchAll(pattern)) {
     fragments.push(decodeXmlText(match[1]));
   }
   return fragments.join("");
