@@ -1,0 +1,209 @@
+import assert from "node:assert/strict";
+import { deflateRawSync } from "node:zlib";
+import test from "node:test";
+import {
+  isValidTransactionDate,
+  normalizeTransactionEmail,
+  parseTransactionAmount,
+  validateTransactionImportRows,
+} from "../../src/lib/business/transaction-import-validation.ts";
+import {
+  readTransactionValidationSource,
+  TransactionValidationSourceError,
+} from "../../src/lib/business/transaction-validation-source.ts";
+
+function asArrayBuffer(buffer: Buffer) {
+  return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+}
+
+function writeUInt16(value: number) {
+  const buffer = Buffer.alloc(2);
+  buffer.writeUInt16LE(value);
+  return buffer;
+}
+
+function writeUInt32(value: number) {
+  const buffer = Buffer.alloc(4);
+  buffer.writeUInt32LE(value >>> 0);
+  return buffer;
+}
+
+function createZip(entries: Array<{ name: string; text: string }>) {
+  const locals: Buffer[] = [];
+  const centrals: Buffer[] = [];
+  let localOffset = 0;
+
+  for (const entry of entries) {
+    const name = Buffer.from(entry.name, "utf8");
+    const raw = Buffer.from(entry.text, "utf8");
+    const compressed = deflateRawSync(raw);
+    const local = Buffer.concat([
+      writeUInt32(0x04034b50), writeUInt16(20), writeUInt16(0x0800), writeUInt16(8),
+      writeUInt16(0), writeUInt16(0), writeUInt32(0), writeUInt32(compressed.length),
+      writeUInt32(raw.length), writeUInt16(name.length), writeUInt16(0), name, compressed,
+    ]);
+    locals.push(local);
+    centrals.push(Buffer.concat([
+      writeUInt32(0x02014b50), writeUInt16(20), writeUInt16(20), writeUInt16(0x0800),
+      writeUInt16(8), writeUInt16(0), writeUInt16(0), writeUInt32(0),
+      writeUInt32(compressed.length), writeUInt32(raw.length), writeUInt16(name.length),
+      writeUInt16(0), writeUInt16(0), writeUInt16(0), writeUInt16(0), writeUInt32(0),
+      writeUInt32(localOffset), name,
+    ]));
+    localOffset += local.length;
+  }
+
+  const centralDirectory = Buffer.concat(centrals);
+  return Buffer.concat([
+    ...locals,
+    centralDirectory,
+    writeUInt32(0x06054b50), writeUInt16(0), writeUInt16(0), writeUInt16(entries.length),
+    writeUInt16(entries.length), writeUInt32(centralDirectory.length), writeUInt32(localOffset),
+    writeUInt16(0),
+  ]);
+}
+
+function minimalValidationXlsx() {
+  return createZip([
+    {
+      name: "xl/workbook.xml",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+          <workbookPr date1904="0"/>
+          <sheets><sheet name="Payments" sheetId="1" r:id="rId1"/></sheets>
+        </workbook>`,
+    },
+    {
+      name: "xl/_rels/workbook.xml.rels",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+          <Relationship Id="rId1" Type="worksheet" Target="worksheets/sheet1.xml"/>
+        </Relationships>`,
+    },
+    {
+      name: "xl/sharedStrings.xml",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="4" uniqueCount="4">
+          <si><t>Email</t></si><si><t>Date</t></si><si><t>Amount</t></si><si><t>Buyer@Example.COM</t></si>
+        </sst>`,
+    },
+    {
+      name: "xl/styles.xml",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+          <cellXfs count="2"><xf numFmtId="0"/><xf numFmtId="14"/></cellXfs>
+        </styleSheet>`,
+    },
+    {
+      name: "xl/worksheets/sheet1.xml",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
+          <row r="1"><c r="A1" t="s"><v>0</v></c><c r="C1" t="s"><v>1</v></c><c r="E1" t="s"><v>2</v></c></row>
+          <row r="2"><c r="A2" t="s"><v>3</v></c><c r="C2" s="1"><v>45292</v></c><c r="E2"><v>1,250.50</v></c></row>
+        </sheetData></worksheet>`,
+    },
+  ]);
+}
+
+test("Task 19 normalizes imported customer email with trim plus lowercase", () => {
+  assert.equal(normalizeTransactionEmail("  Buyer@Example.COM  "), "buyer@example.com");
+});
+
+test("Task 19 accepts real ISO dates and rejects ambiguous or impossible dates", () => {
+  assert.equal(isValidTransactionDate("2026-08-23"), true);
+  assert.equal(isValidTransactionDate("2026-08-23T14:30:00Z"), true);
+  assert.equal(isValidTransactionDate("2026-02-30"), false);
+  assert.equal(isValidTransactionDate("23/08/2026"), false);
+});
+
+test("Task 19 parses finite decimal amounts without inventing currency semantics", () => {
+  assert.equal(parseTransactionAmount("1,234.50"), 1234.5);
+  assert.equal(parseTransactionAmount("-80"), -80);
+  assert.equal(parseTransactionAmount("0"), 0);
+  assert.equal(parseTransactionAmount("$100"), null);
+  assert.equal(parseTransactionAmount("1,23.00"), null);
+});
+
+test("Task 19 validates required fields, skips the first source row only when explicitly selected, and caps issue samples", () => {
+  const rows = [
+    { rowNumber: 4, customerEmail: "Email", transactionDate: "Date", amountCollected: "Amount" },
+    { rowNumber: 5, customerEmail: " Buyer@Example.COM ", transactionDate: "2026-08-23", amountCollected: "125.50" },
+    { rowNumber: 6, customerEmail: "bad email", transactionDate: "2026-02-30", amountCollected: "$25" },
+  ];
+
+  const result = validateTransactionImportRows(rows, { skipFirstRow: true, issueSampleLimit: 2 });
+  assert.equal(result.totalSourceRows, 3);
+  assert.equal(result.skippedHeaderRows, 1);
+  assert.equal(result.checkedRows, 2);
+  assert.equal(result.validRows, 1);
+  assert.equal(result.invalidRows, 1);
+  assert.equal(result.issueCount, 3);
+  assert.equal(result.issues.length, 2);
+  assert.equal(result.issuesTruncated, true);
+  assert.equal(result.isValid, false);
+});
+
+test("Task 19 reads every non-empty CSV source row instead of validating only the 25-row preview", async () => {
+  const lines = ["email,date,amount,ignored"];
+  for (let index = 1; index <= 40; index += 1) {
+    lines.push(`buyer${index}@example.com,2026-08-23,${index},extra`);
+  }
+  const bytes = Buffer.from(lines.join("\n"), "utf8");
+  const source = await readTransactionValidationSource({
+    fileName: "payments.csv",
+    fileSize: bytes.length,
+    buffer: asArrayBuffer(bytes),
+    columns: [0, 1, 2],
+  });
+
+  assert.equal(source.totalRows, 41);
+  assert.deepEqual(source.rows[40], {
+    rowNumber: 41,
+    values: ["buyer40@example.com", "2026-08-23", "40"],
+  });
+});
+
+test("Task 19 reads mapped columns beyond the visible preview width", async () => {
+  const row = Array.from({ length: 30 }, (_, column) => `c${column + 1}`);
+  row[25] = "far@example.com";
+  row[27] = "2026-08-23";
+  row[29] = "99.50";
+  const text = row.join(",");
+  const bytes = Buffer.from(text, "utf8");
+  const source = await readTransactionValidationSource({
+    fileName: "wide.csv",
+    fileSize: bytes.length,
+    buffer: asArrayBuffer(bytes),
+    columns: [25, 27, 29],
+  });
+
+  assert.deepEqual(source.rows[0]?.values, ["far@example.com", "2026-08-23", "99.50"]);
+});
+
+test("Task 19 reads selected XLSX shared strings, sparse columns, and styled dates", async () => {
+  const bytes = minimalValidationXlsx();
+  const source = await readTransactionValidationSource({
+    fileName: "payments.xlsx",
+    fileSize: bytes.length,
+    buffer: asArrayBuffer(bytes),
+    columns: [0, 2, 4],
+  });
+
+  assert.equal(source.totalRows, 2);
+  assert.deepEqual(source.rows[0]?.values, ["Email", "Date", "Amount"]);
+  assert.deepEqual(source.rows[1]?.values, ["Buyer@Example.COM", "2024-01-01", "1,250.50"]);
+});
+
+test("Task 19 rejects duplicate mapped source columns at the source-reader boundary", async () => {
+  const bytes = Buffer.from("a,b\n1,2", "utf8");
+  await assert.rejects(
+    readTransactionValidationSource({
+      fileName: "payments.csv",
+      fileSize: bytes.length,
+      buffer: asArrayBuffer(bytes),
+      columns: [0, 0],
+    }),
+    (error: unknown) => error instanceof TransactionValidationSourceError && error.code === "INVALID_MAPPING",
+  );
+});
