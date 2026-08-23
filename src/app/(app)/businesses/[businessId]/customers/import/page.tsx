@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
@@ -10,6 +11,15 @@ import { TransactionPreviewUploader } from "./transaction-preview-uploader";
 type TransactionImportPageProps = {
   params: Promise<{ businessId: string }>;
 };
+
+const IMPORT_THEME_ALIASES = {
+  "--text-primary": "var(--text)",
+  "--text-secondary": "var(--text-soft)",
+  "--surface-primary": "var(--surface)",
+  "--surface-secondary": "var(--surface-soft)",
+  "--border-subtle": "var(--border)",
+  "--accent-primary": "var(--brand)",
+} as CSSProperties;
 
 export default async function TransactionImportPage({ params }: TransactionImportPageProps) {
   const { businessId: rawBusinessId } = await params;
@@ -28,7 +38,7 @@ export default async function TransactionImportPage({ params }: TransactionImpor
   const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
 
   return (
-    <div className="page-stack">
+    <div className="page-stack" style={IMPORT_THEME_ALIASES}>
       <div className={styles.headingRow}>
         <PageHeading
           title="معاينة ملف معاملات العملاء"
