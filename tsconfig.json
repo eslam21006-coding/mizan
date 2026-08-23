@@ -39,7 +39,10 @@
     "test/business/historical-analytics.test.mts",
     "test/business/funnels.test.mts",
     "test/business/funnel-calculations.test.mts",
-    "test/business/self-liquidating.test.mts"
+    "test/business/self-liquidating.test.mts",
+    "test/business/transaction-preview.test.mts",
+    "test/business/transaction-preview-bounds.test.mts",
+    "test/business/task-17-boundary.test.mts"
   ],
   "exclude": [
     "node_modules"
