@@ -346,7 +346,12 @@ function previewFromParsed(
 function findZipEnd(view: DataView) {
   const minimumOffset = Math.max(0, view.byteLength - 65_557);
   for (let offset = view.byteLength - 22; offset >= minimumOffset; offset -= 1) {
-    if (view.getUint32(offset, true) === ZIP_END_SIGNATURE) return offset;
+    if (
+      view.getUint32(offset, true) === ZIP_END_SIGNATURE &&
+      offset + 22 + view.getUint16(offset + 20, true) === view.byteLength
+    ) {
+      return offset;
+    }
   }
   fail("XLSX_INVALID_ARCHIVE", "XLSX ZIP end record is missing.");
 }
