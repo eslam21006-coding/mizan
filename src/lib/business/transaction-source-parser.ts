@@ -49,8 +49,8 @@ const UTF8 = new TextDecoder("utf-8", { fatal: true });
 const UTF8_LENIENT = new TextDecoder("utf-8");
 const XML_ENTITY_PATTERN = /&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);/g;
 const BUILTIN_DATE_FORMAT_IDS = new Set([
-  14, 15, 16, 17, 18, 19, 20, 21, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 45, 46, 47,
-  50, 51, 52, 53, 54, 55, 56, 57, 58,
+  14, 15, 16, 17, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 50, 51, 52, 53, 54, 55, 56,
+  57, 58,
 ]);
 
 function fail(code: TransactionSourceParseErrorCode, message: string): never {
@@ -421,23 +421,24 @@ function parseSharedStrings(xml: string | null) {
 }
 
 function customFormatLooksLikeDate(formatCode: string) {
-  const stripped = formatCode
-    .replace(/"[^"]*"/g, "")
-    .replace(/\\./g, "")
+  const withoutLiterals = formatCode.replace(/"[^"]*"/g, "").replace(/\\./g, "");
+  const hasElapsedTime = /\[(?:h+|m+|s+)\]/i.test(withoutLiterals);
+  const stripped = withoutLiterals
     .replace(/\[[^\]]*]/g, "")
     .replace(/_.|\*./g, "")
     .toLowerCase();
-  return (
-    /(^|[^a-z])[ymdhis]+([^a-z]|$)/.test(stripped) ||
-    /[ymdhs]/.test(stripped.replace(/[0#?.,%e+-]/g, ""))
-  );
+
+  if (/[yd]/.test(stripped)) return true;
+  if (hasElapsedTime || /[hs]/.test(stripped)) return false;
+  return /m/.test(stripped);
 }
 
 function parseStyles(xml: string | null): XlsxStyles {
   const dateFormatIds = new Set(BUILTIN_DATE_FORMAT_IDS);
   if (!xml) return { dateStyleIndexes: new Set() };
 
-  const customFormats = xml.match(/<(?:[A-Za-z_][\w.-]*:)?numFmt\b[^>]*\/?\s*>/gi) ?? [];
+  const customFormats =
+    xml.match(/<(?:[A-Za-z_][\w.-]*:)?numFmt\b(?:[^>"']|"[^"]*"|'[^']*')*\/?\s*>/gi) ?? [];
   for (const tag of customFormats) {
     const id = Number(attributeValue(tag, "numFmtId"));
     const code = attributeValue(tag, "formatCode");
@@ -473,8 +474,8 @@ function excelDateString(serialText: string, date1904: boolean) {
   if (!Number.isFinite(serial)) return serialText;
 
   const wholeDays = Math.trunc(serial);
+  if (!date1904 && wholeDays === 60) return serialText;
   const fraction = serial - wholeDays;
-  if (!date1904 && wholeDays === 60 && fraction === 0) return "1900-02-29";
 
   const adjustedDays = date1904 ? wholeDays : wholeDays >= 60 ? wholeDays - 1 : wholeDays;
   const epoch = date1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 31);
