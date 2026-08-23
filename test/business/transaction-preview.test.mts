@@ -245,6 +245,28 @@ test("Task 17 reads a real deflated XLSX archive, shared strings, sheet name, an
   ]);
 });
 
+test("Task 17 accepts a ZIP comment containing an end-record signature", async () => {
+  const bytes = minimalXlsx();
+  const comment = Buffer.concat([
+    Buffer.from("valid-comment-prefix", "utf8"),
+    writeUInt32(0x06054b50),
+    Buffer.from("valid-comment-suffix", "utf8"),
+  ]);
+  const endOffset = bytes.length - 22;
+  bytes.writeUInt16LE(comment.length, endOffset + 20);
+  const withComment = Buffer.concat([bytes, comment]);
+
+  const preview = await buildTransactionFilePreview({
+    fileName: "payments.xlsx",
+    fileSize: withComment.length,
+    buffer: asArrayBuffer(withComment),
+  });
+
+  assert.equal(preview.fileType, "xlsx");
+  assert.equal(preview.sheetName, "Payments & Refunds");
+  assert.equal(preview.totalRows, 2);
+});
+
 test("Task 17 rejects unsupported file types and invalid XLSX archives", async () => {
   const csvBytes = Buffer.from("a,b\n1,2", "utf8");
   await assert.rejects(
