@@ -460,7 +460,7 @@ function parseSharedStrings(xml: string | null) {
   if (!xml) return [];
   const values: string[] = [];
   const itemPattern =
-    /<(?:[A-Za-z_][\w.-]*:)?si\b(?:[^>"']|"[^"]*"|'[^']*')*(?:\/\s*>|>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?si\s*>)/gi;
+    /<(?:[A-Za-z_][\w.-]*:)?si\b(?:[^>"'\/]|"[^"]*"|'[^']*')*(?:\/\s*>|>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?si\s*>)/gi;
 
   for (const itemMatch of xml.matchAll(itemPattern)) {
     const fragments: string[] = [];
