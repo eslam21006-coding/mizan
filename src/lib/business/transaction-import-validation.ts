@@ -45,7 +45,8 @@ export type TransactionImportValidationResult = {
 const BASIC_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const ISO_DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?$/;
-const DECIMAL_AMOUNT_PATTERN = /^[+-]?(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d+)?$/;
+const DECIMAL_AMOUNT_PATTERN =
+  /^[+-]?(?:(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
 
 export function normalizeTransactionEmail(value: string) {
   return value.trim().toLowerCase();
@@ -59,7 +60,9 @@ export function isValidTransactionEmail(value: string) {
 }
 
 function isRealCalendarDate(year: number, month: number, day: number) {
-  const candidate = new Date(Date.UTC(year, month - 1, day));
+  const candidate = new Date(0);
+  candidate.setUTCHours(0, 0, 0, 0);
+  candidate.setUTCFullYear(year, month - 1, day);
   return (
     candidate.getUTCFullYear() === year &&
     candidate.getUTCMonth() === month - 1 &&
