@@ -1,8 +1,12 @@
+import { transactionColumnLabel } from "./transaction-columns";
+
 export const REQUIRED_TRANSACTION_FIELDS = [
   "customerEmail",
   "transactionDate",
   "amountCollected",
 ] as const;
+
+export const TRANSACTION_NATIVE_MAPPING_OPTION_LIMIT = 256;
 
 export type RequiredTransactionField = (typeof REQUIRED_TRANSACTION_FIELDS)[number];
 
@@ -33,21 +37,6 @@ export type TransactionColumnChoice = {
   sample: string;
 };
 
-export function transactionColumnLabel(index: number) {
-  if (!Number.isSafeInteger(index) || index < 0) {
-    throw new RangeError("Transaction column index must be a non-negative integer.");
-  }
-
-  let value = index + 1;
-  let label = "";
-  while (value > 0) {
-    const remainder = (value - 1) % 26;
-    label = String.fromCharCode(65 + remainder) + label;
-    value = Math.floor((value - 1) / 26);
-  }
-  return label;
-}
-
 export function buildTransactionColumnChoices(input: {
   totalColumns: number;
   previewRows: readonly (readonly string[])[];
@@ -60,7 +49,8 @@ export function buildTransactionColumnChoices(input: {
     throw new RangeError("Transaction sample column limit must be a non-negative integer.");
   }
 
-  return Array.from({ length: input.totalColumns }, (_, column) => {
+  const choiceCount = Math.min(input.totalColumns, TRANSACTION_NATIVE_MAPPING_OPTION_LIMIT);
+  return Array.from({ length: choiceCount }, (_, column) => {
     let sample = "";
     if (column < input.sampleColumnLimit) {
       for (const row of input.previewRows) {
