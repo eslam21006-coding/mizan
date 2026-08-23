@@ -2,11 +2,13 @@
 
 import { useMemo, useState } from "react";
 import {
+  buildTransactionColumnChoices,
   EMPTY_TRANSACTION_COLUMN_MAPPING,
   inspectTransactionColumnMapping,
   REQUIRED_TRANSACTION_FIELDS,
   setTransactionFieldColumn,
   TRANSACTION_FIELD_LABELS,
+  transactionColumnLabel,
   type RequiredTransactionField,
   type TransactionColumnMapping,
 } from "@/lib/business/transaction-column-mapping";
@@ -20,25 +22,6 @@ type TransactionColumnMapperProps = {
   preview: TransactionFilePreview;
 };
 
-function columnLabel(index: number) {
-  let value = index + 1;
-  let label = "";
-  while (value > 0) {
-    const remainder = (value - 1) % 26;
-    label = String.fromCharCode(65 + remainder) + label;
-    value = Math.floor((value - 1) / 26);
-  }
-  return label;
-}
-
-function sampleValue(preview: TransactionFilePreview, column: number) {
-  for (const row of preview.previewRows) {
-    const value = row[column]?.trim();
-    if (value) return value;
-  }
-  return "";
-}
-
 function fieldDescription(field: RequiredTransactionField) {
   if (field === "customerEmail") return "العمود الذي يحتوي على بريد العميل.";
   if (field === "transactionDate") return "العمود الذي يحتوي على تاريخ المعاملة.";
@@ -48,19 +31,15 @@ function fieldDescription(field: RequiredTransactionField) {
 export function TransactionColumnMapper({ preview }: TransactionColumnMapperProps) {
   const [mapping, setMapping] = useState<TransactionColumnMapping>(EMPTY_TRANSACTION_COLUMN_MAPPING);
   const mappingState = inspectTransactionColumnMapping(mapping);
-  const visibleColumns = Math.min(
-    preview.totalColumns,
-    TRANSACTION_PREVIEW_LIMITS.previewColumns,
-  );
 
   const options = useMemo(
     () =>
-      Array.from({ length: visibleColumns }, (_, column) => ({
-        column,
-        label: columnLabel(column),
-        sample: sampleValue(preview, column),
-      })),
-    [preview, visibleColumns],
+      buildTransactionColumnChoices({
+        totalColumns: preview.totalColumns,
+        previewRows: preview.previewRows,
+        sampleColumnLimit: TRANSACTION_PREVIEW_LIMITS.previewColumns,
+      }),
+    [preview],
   );
 
   const setField = (field: RequiredTransactionField, value: string) => {
@@ -126,7 +105,7 @@ export function TransactionColumnMapper({ preview }: TransactionColumnMapperProp
           {REQUIRED_TRANSACTION_FIELDS.map((field) => (
             <div key={field}>
               <span>{TRANSACTION_FIELD_LABELS[field]}</span>
-              <strong dir="ltr">Column {columnLabel(mapping[field] as number)}</strong>
+              <strong dir="ltr">Column {transactionColumnLabel(mapping[field] as number)}</strong>
             </div>
           ))}
         </div>
