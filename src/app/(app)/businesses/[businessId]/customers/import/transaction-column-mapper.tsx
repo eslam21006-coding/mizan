@@ -122,7 +122,7 @@ export function TransactionColumnMapper({ preview }: TransactionColumnMapperProp
       )}
 
       {mappingState.isComplete && (
-        <div className={styles.mappingSummary} role="group" aria-label="ملخص Column Mapping">
+        <div className={styles.mappingSummary}>
           {REQUIRED_TRANSACTION_FIELDS.map((field) => (
             <div key={field}>
               <span>{TRANSACTION_FIELD_LABELS[field]}</span>
