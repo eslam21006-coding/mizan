@@ -5,7 +5,9 @@ import {
   EMPTY_TRANSACTION_COLUMN_MAPPING,
   inspectTransactionColumnMapping,
   setTransactionFieldColumn,
+  TRANSACTION_NATIVE_MAPPING_OPTION_LIMIT,
 } from "../../src/lib/business/transaction-column-mapping.ts";
+import { transactionColumnLabel } from "../../src/lib/business/transaction-columns.ts";
 
 test("Task 18 mapping starts incomplete with all required fields missing", () => {
   const state = inspectTransactionColumnMapping(EMPTY_TRANSACTION_COLUMN_MAPPING);
@@ -55,7 +57,15 @@ test("Task 18 rejects invalid negative column indexes", () => {
   );
 });
 
-test("Task 18 offers every detected column while keeping samples preview-bounded", () => {
+test("Task 18 uses one shared Excel-style column label formatter", () => {
+  assert.equal(transactionColumnLabel(0), "A");
+  assert.equal(transactionColumnLabel(19), "T");
+  assert.equal(transactionColumnLabel(22), "W");
+  assert.equal(transactionColumnLabel(25), "Z");
+  assert.equal(transactionColumnLabel(26), "AA");
+});
+
+test("Task 18 offers every ordinary detected column while keeping samples preview-bounded", () => {
   const previewRow = Array.from({ length: 20 }, (_, index) => `sample-${index + 1}`);
   const choices = buildTransactionColumnChoices({
     totalColumns: 23,
@@ -67,4 +77,21 @@ test("Task 18 offers every detected column while keeping samples preview-bounded
   assert.deepEqual(choices[19], { column: 19, label: "T", sample: "sample-20" });
   assert.deepEqual(choices[20], { column: 20, label: "U", sample: "" });
   assert.deepEqual(choices[22], { column: 22, label: "W", sample: "" });
+});
+
+test("Task 18 bounds native choices for extremely wide files", () => {
+  const choices = buildTransactionColumnChoices({
+    totalColumns: 50_000,
+    previewRows: [["email", "date", "amount"]],
+    sampleColumnLimit: 20,
+  });
+
+  assert.equal(choices.length, TRANSACTION_NATIVE_MAPPING_OPTION_LIMIT);
+  assert.equal(choices.at(-1)?.column, TRANSACTION_NATIVE_MAPPING_OPTION_LIMIT - 1);
+});
+
+test("Task 18 mapping model accepts a valid far-right column for direct wide-file entry", () => {
+  const updated = setTransactionFieldColumn(EMPTY_TRANSACTION_COLUMN_MAPPING, "amountCollected", 49_999);
+  assert.equal(updated.amountCollected, 49_999);
+  assert.equal(transactionColumnLabel(updated.amountCollected as number), "BUYB");
 });
