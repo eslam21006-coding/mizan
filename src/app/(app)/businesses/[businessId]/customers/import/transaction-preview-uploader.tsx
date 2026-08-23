@@ -8,6 +8,7 @@ import {
   TransactionPreviewError,
   type TransactionFilePreview,
 } from "@/lib/business/transaction-preview";
+import { TRANSACTION_VALIDATION_SOURCE_LIMITS } from "@/lib/business/transaction-validation-source";
 import { TransactionColumnMapper } from "./transaction-column-mapper";
 import styles from "./transaction-import.module.css";
 
@@ -138,7 +139,7 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
             <p id="transaction-file-help">
               الحد الأقصى للملف {Math.round(TRANSACTION_PREVIEW_LIMITS.maxFileBytes / 1024 / 1024)} MB.
               نعرض أول {TRANSACTION_PREVIEW_LIMITS.previewRows} صفًا وأول {TRANSACTION_PREVIEW_LIMITS.previewColumns}
-              عمودًا، بينما Validation يفحص كل الصفوف غير الفارغة بعد اكتمال الـ Mapping.
+              عمودًا. Validation يفحص حتى {TRANSACTION_VALIDATION_SOURCE_LIMITS.maxRows.toLocaleString("en-US")} صف غير فارغ بعد اكتمال الـ Mapping، ويرفض الملف إذا تجاوز هذا الحد.
             </p>
           </div>
         ) : (
