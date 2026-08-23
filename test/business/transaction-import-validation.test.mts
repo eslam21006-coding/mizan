@@ -8,11 +8,13 @@ import {
   parseTransactionAmount,
   validateTransactionImportRows,
 } from "../../src/lib/business/transaction-import-validation.ts";
+import { attributeValue } from "../../src/lib/business/transaction-source-parser.ts";
 import {
   readTransactionValidationSource,
   TRANSACTION_VALIDATION_SOURCE_LIMITS,
   TransactionValidationSourceError,
 } from "../../src/lib/business/transaction-validation-source.ts";
+import { crc32Checksum } from "../helpers/zip-crc.ts";
 
 function asArrayBuffer(buffer: Buffer) {
   return buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
@@ -28,22 +30,6 @@ function writeUInt32(value: number) {
   const buffer = Buffer.alloc(4);
   buffer.writeUInt32LE(value >>> 0);
   return buffer;
-}
-
-const CRC32_TABLE = Array.from({ length: 256 }, (_, index) => {
-  let value = index;
-  for (let bit = 0; bit < 8; bit += 1) {
-    value = (value & 1) !== 0 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
-  }
-  return value >>> 0;
-});
-
-function crc32Checksum(bytes: Uint8Array) {
-  let crc = 0xffffffff;
-  for (let index = 0; index < bytes.length; index += 1) {
-    crc = CRC32_TABLE[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
-  }
-  return (crc ^ 0xffffffff) >>> 0;
 }
 
 type TestZipEntry = {
@@ -273,6 +259,10 @@ test("Task 19 validates email syntax and preserves required-vs-invalid classific
   assert.deepEqual(result.issues.map((issue) => issue.code), ["EMAIL_REQUIRED", "EMAIL_INVALID"]);
 });
 
+test("Task 19 leaves XML-disallowed numeric character references undecoded", () => {
+  assert.equal(attributeValue('<tag value="a&#0;b&#x1f;c&#9;d"/>', "value"), "a&#0;b&#x1f;c\td");
+});
+
 test("Task 19 accepts real ISO dates including years before 0100 and rejects ambiguous or impossible dates", () => {
   assert.equal(isValidTransactionDate("2026-08-23"), true);
   assert.equal(isValidTransactionDate("2026-08-23T14:30:00Z"), true);
@@ -325,10 +315,14 @@ test("Task 19 does not skip a header-looking first row unless explicitly request
   assert.equal(result.issueCount, 3);
 });
 
-test("Task 19 reads every non-empty CSV source row instead of validating only the 25-row preview", async () => {
+test("Task 19 reads and validates every non-empty CSV source row beyond the 25-row preview", async () => {
   const lines = ["email,date,amount,ignored"];
   for (let index = 1; index <= 40; index += 1) {
-    lines.push(`buyer${index}@example.com,2026-08-23,${index},extra`);
+    lines.push(
+      index === 40
+        ? "bad email,2026-08-23,40,extra"
+        : `buyer${index}@example.com,2026-08-23,${index},extra`,
+    );
   }
   const bytes = Buffer.from(lines.join("\n"), "utf8");
   const source = await readTransactionValidationSource({
@@ -341,8 +335,25 @@ test("Task 19 reads every non-empty CSV source row instead of validating only th
   assert.equal(source.totalRows, 41);
   assert.deepEqual(source.rows[40], {
     rowNumber: 41,
-    values: ["buyer40@example.com", "2026-08-23", "40"],
+    values: ["bad email", "2026-08-23", "40"],
   });
+
+  const result = validateTransactionImportRows(
+    source.rows.map((row) => ({
+      rowNumber: row.rowNumber,
+      customerEmail: row.values[0] ?? "",
+      transactionDate: row.values[1] ?? "",
+      amountCollected: row.values[2] ?? "",
+    })),
+    { skipFirstRow: true },
+  );
+  assert.equal(result.checkedRows, 40);
+  assert.equal(result.validRows, 39);
+  assert.equal(result.invalidRows, 1);
+  assert.equal(result.issueCount, 1);
+  assert.equal(result.issues[0]?.rowNumber, 41);
+  assert.equal(result.issues[0]?.code, "EMAIL_INVALID");
+  assert.equal(result.isValid, false);
 });
 
 test("Task 19 fails closed when the source exceeds the browser validation row cap", async () => {
