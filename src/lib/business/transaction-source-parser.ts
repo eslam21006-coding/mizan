@@ -419,9 +419,7 @@ function firstWorksheet(workbookXml: string, relationshipsXml: string) {
     const relationshipTag = relationshipTags.find(
       (tag) => attributeValue(tag, "Id") === relationshipId,
     );
-    if (!relationshipTag) {
-      fail("XLSX_INVALID_ARCHIVE", "XLSX sheet relationship could not be resolved.");
-    }
+    if (!relationshipTag) continue;
 
     const relationshipType = attributeValue(relationshipTag, "Type");
     if (!relationshipType || !/(?:^|\/)worksheet$/i.test(relationshipType)) continue;
