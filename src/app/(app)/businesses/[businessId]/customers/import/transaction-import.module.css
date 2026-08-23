@@ -131,7 +131,8 @@
 .secondaryButton:focus-visible,
 .errorBox button:focus-visible,
 .backLink:focus-visible,
-.mappingField select:focus-visible {
+.mappingField select:focus-visible,
+.mappingField input[type="number"]:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
   outline-offset: 2px;
 }
@@ -326,7 +327,8 @@
   font-size: 0.86rem;
 }
 
-.mappingField select {
+.mappingField select,
+.mappingField input[type="number"] {
   width: 100%;
   min-height: 44px;
   border: 1px solid var(--border-strong);
@@ -335,6 +337,11 @@
   color: var(--text-primary);
   padding: 9px 11px;
   font: inherit;
+}
+
+.mappingField input[type="number"] {
+  direction: ltr;
+  text-align: start;
 }
 
 .mappingError,
