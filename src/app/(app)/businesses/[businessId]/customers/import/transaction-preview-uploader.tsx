@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { transactionColumnLabel } from "@/lib/business/transaction-columns";
 import {
   buildTransactionFilePreview,
   TRANSACTION_PREVIEW_LIMITS,
@@ -38,17 +39,6 @@ function delimiterLabel(delimiter: string | null) {
   if (delimiter === ";") return "فاصلة منقوطة ;";
   if (delimiter === "\t") return "Tab";
   return "—";
-}
-
-function columnLabel(index: number) {
-  let value = index + 1;
-  let label = "";
-  while (value > 0) {
-    const remainder = (value - 1) % 26;
-    label = String.fromCharCode(65 + remainder) + label;
-    value = Math.floor((value - 1) / 26);
-  }
-  return label;
 }
 
 function keyedRows(rows: string[][]) {
@@ -111,7 +101,9 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
   const visibleColumns = preview
     ? Math.min(preview.totalColumns, TRANSACTION_PREVIEW_LIMITS.previewColumns)
     : 0;
-  const visibleColumnLabels = Array.from({ length: visibleColumns }, (_, index) => columnLabel(index));
+  const visibleColumnLabels = Array.from({ length: visibleColumns }, (_, index) =>
+    transactionColumnLabel(index),
+  );
   const displayRows = preview ? keyedRows(preview.previewRows) : [];
 
   return (
