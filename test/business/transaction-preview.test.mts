@@ -26,6 +26,22 @@ function writeUInt32(value: number) {
   return buffer;
 }
 
+const CRC32_TABLE = Array.from({ length: 256 }, (_, index) => {
+  let value = index;
+  for (let bit = 0; bit < 8; bit += 1) {
+    value = (value & 1) !== 0 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  }
+  return value >>> 0;
+});
+
+function crc32Checksum(bytes: Uint8Array) {
+  let crc = 0xffffffff;
+  for (let index = 0; index < bytes.length; index += 1) {
+    crc = CRC32_TABLE[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
 type ZipTestEntry = {
   name: string;
   text: string;
@@ -47,6 +63,7 @@ function createZip(entries: ZipTestEntry[]) {
     const compressed = method === 8 ? deflateRawSync(raw) : raw;
     const flags = entry.flags ?? 0x0800;
     const declaredUncompressedSize = entry.declaredUncompressedSize ?? raw.length;
+    const checksum = crc32Checksum(raw);
 
     const local = Buffer.concat([
       writeUInt32(0x04034b50),
@@ -55,7 +72,7 @@ function createZip(entries: ZipTestEntry[]) {
       writeUInt16(method),
       writeUInt16(0),
       writeUInt16(0),
-      writeUInt32(0),
+      writeUInt32(checksum),
       writeUInt32(compressed.length),
       writeUInt32(declaredUncompressedSize),
       writeUInt16(name.length),
@@ -73,7 +90,7 @@ function createZip(entries: ZipTestEntry[]) {
       writeUInt16(method),
       writeUInt16(0),
       writeUInt16(0),
-      writeUInt32(0),
+      writeUInt32(checksum),
       writeUInt32(compressed.length),
       writeUInt32(declaredUncompressedSize),
       writeUInt16(name.length),
