@@ -20,6 +20,22 @@ function u32(value: number) {
   return buffer;
 }
 
+const CRC32_TABLE = Array.from({ length: 256 }, (_, index) => {
+  let value = index;
+  for (let bit = 0; bit < 8; bit += 1) {
+    value = (value & 1) !== 0 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  }
+  return value >>> 0;
+});
+
+function crc32Checksum(bytes: Uint8Array) {
+  let crc = 0xffffffff;
+  for (let index = 0; index < bytes.length; index += 1) {
+    crc = CRC32_TABLE[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
 function storedZip(entries: Array<{ name: string; text: string }>) {
   const localParts: Buffer[] = [];
   const centralParts: Buffer[] = [];
@@ -28,6 +44,7 @@ function storedZip(entries: Array<{ name: string; text: string }>) {
   for (const entry of entries) {
     const name = Buffer.from(entry.name, "utf8");
     const data = Buffer.from(entry.text, "utf8");
+    const checksum = crc32Checksum(data);
     const local = Buffer.concat([
       u32(0x04034b50),
       u16(20),
@@ -35,7 +52,7 @@ function storedZip(entries: Array<{ name: string; text: string }>) {
       u16(0),
       u16(0),
       u16(0),
-      u32(0),
+      u32(checksum),
       u32(data.length),
       u32(data.length),
       u16(name.length),
@@ -54,7 +71,7 @@ function storedZip(entries: Array<{ name: string; text: string }>) {
         u16(0),
         u16(0),
         u16(0),
-        u32(0),
+        u32(checksum),
         u32(data.length),
         u32(data.length),
         u16(name.length),
