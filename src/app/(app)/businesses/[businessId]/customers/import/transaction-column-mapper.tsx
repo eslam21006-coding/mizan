@@ -10,7 +10,10 @@ import {
   type RequiredTransactionField,
   type TransactionColumnMapping,
 } from "@/lib/business/transaction-column-mapping";
-import type { TransactionFilePreview } from "@/lib/business/transaction-preview";
+import {
+  TRANSACTION_PREVIEW_LIMITS,
+  type TransactionFilePreview,
+} from "@/lib/business/transaction-preview";
 import styles from "./transaction-import.module.css";
 
 type TransactionColumnMapperProps = {
@@ -45,7 +48,10 @@ function fieldDescription(field: RequiredTransactionField) {
 export function TransactionColumnMapper({ preview }: TransactionColumnMapperProps) {
   const [mapping, setMapping] = useState<TransactionColumnMapping>(EMPTY_TRANSACTION_COLUMN_MAPPING);
   const mappingState = inspectTransactionColumnMapping(mapping);
-  const visibleColumns = Math.min(preview.totalColumns, preview.previewRows[0]?.length ?? preview.totalColumns);
+  const visibleColumns = Math.min(
+    preview.totalColumns,
+    TRANSACTION_PREVIEW_LIMITS.previewColumns,
+  );
 
   const options = useMemo(
     () =>
