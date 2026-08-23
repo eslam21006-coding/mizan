@@ -146,6 +146,7 @@ export function TransactionImportValidator({
         <button
           type="button"
           className={styles.validationButton}
+          style={{ background: "var(--text)", color: "var(--surface)" }}
           disabled={isValidating}
           onClick={() => void validate()}
         >
