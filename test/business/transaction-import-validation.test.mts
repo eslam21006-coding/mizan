@@ -3,12 +3,14 @@ import { deflateRawSync } from "node:zlib";
 import test from "node:test";
 import {
   isValidTransactionDate,
+  isValidTransactionEmail,
   normalizeTransactionEmail,
   parseTransactionAmount,
   validateTransactionImportRows,
 } from "../../src/lib/business/transaction-import-validation.ts";
 import {
   readTransactionValidationSource,
+  TRANSACTION_VALIDATION_SOURCE_LIMITS,
   TransactionValidationSourceError,
 } from "../../src/lib/business/transaction-validation-source.ts";
 
@@ -106,8 +108,84 @@ function minimalValidationXlsx() {
   ]);
 }
 
+function xlsxDateEdgeCases() {
+  return createZip([
+    {
+      name: "xl/workbook.xml",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+          <workbookPr date1904="0"/>
+          <sheets><sheet name="Payments" sheetId="1" r:id="rId1"/></sheets>
+        </workbook>`,
+    },
+    {
+      name: "xl/_rels/workbook.xml.rels",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+          <Relationship Id="rId1" Type="worksheet" Target="worksheets/sheet1.xml"/>
+        </Relationships>`,
+    },
+    {
+      name: "xl/styles.xml",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+          <numFmts count="1">
+            <numFmt numFmtId="164" formatCode="[>1]yyyy-mm-dd"/>
+          </numFmts>
+          <cellXfs count="4">
+            <xf numFmtId="0"/>
+            <xf numFmtId="164"/>
+            <xf numFmtId="20"/>
+            <xf numFmtId="14"/>
+          </cellXfs>
+        </styleSheet>`,
+    },
+    {
+      name: "xl/worksheets/sheet1.xml",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
+          <row r="1">
+            <c r="A1" t="inlineStr"><is><t>Email</t></is></c>
+            <c r="C1" t="inlineStr"><is><t>Date</t></is></c>
+            <c r="E1" t="inlineStr"><is><t>Amount</t></is></c>
+          </row>
+          <row r="2">
+            <c r="A2" t="inlineStr"><is><t>date@example.com</t></is></c>
+            <c r="C2" s="1"><v>45292</v></c>
+            <c r="E2"><v>10</v></c>
+          </row>
+          <row r="3">
+            <c r="A3" t="inlineStr"><is><t>time@example.com</t></is></c>
+            <c r="C3" s="2"><v>0.5</v></c>
+            <c r="E3"><v>20</v></c>
+          </row>
+          <row r="4">
+            <c r="A4" t="inlineStr"><is><t>serial60@example.com</t></is></c>
+            <c r="C4" s="3"><v>60.5</v></c>
+            <c r="E4"><v>30</v></c>
+          </row>
+        </sheetData></worksheet>`,
+    },
+  ]);
+}
+
 test("Task 19 normalizes imported customer email with trim plus lowercase", () => {
   assert.equal(normalizeTransactionEmail("  Buyer@Example.COM  "), "buyer@example.com");
+});
+
+test("Task 19 validates email syntax and preserves required-vs-invalid classification", () => {
+  assert.equal(isValidTransactionEmail(" Buyer@Example.COM "), true);
+  assert.equal(isValidTransactionEmail("bad@@example.com"), false);
+  assert.equal(isValidTransactionEmail("   "), false);
+  assert.equal(isValidTransactionEmail("@example.com"), false);
+  assert.equal(isValidTransactionEmail("buyer@"), false);
+
+  const result = validateTransactionImportRows([
+    { rowNumber: 1, customerEmail: "   ", transactionDate: "2026-08-23", amountCollected: "10" },
+    { rowNumber: 2, customerEmail: "bad@@example.com", transactionDate: "2026-08-23", amountCollected: "10" },
+  ]);
+  assert.deepEqual(result.issues.map((issue) => issue.code), ["EMAIL_REQUIRED", "EMAIL_INVALID"]);
 });
 
 test("Task 19 accepts real ISO dates including years before 0100 and rejects ambiguous or impossible dates", () => {
@@ -149,6 +227,19 @@ test("Task 19 validates required fields, skips the first source row only when ex
   assert.equal(result.isValid, false);
 });
 
+test("Task 19 does not skip a header-looking first row unless explicitly requested", () => {
+  const result = validateTransactionImportRows([
+    { rowNumber: 1, customerEmail: "Email", transactionDate: "Date", amountCollected: "Amount" },
+    { rowNumber: 2, customerEmail: "buyer@example.com", transactionDate: "2026-08-23", amountCollected: "25" },
+  ]);
+
+  assert.equal(result.skippedHeaderRows, 0);
+  assert.equal(result.checkedRows, 2);
+  assert.equal(result.validRows, 1);
+  assert.equal(result.invalidRows, 1);
+  assert.equal(result.issueCount, 3);
+});
+
 test("Task 19 reads every non-empty CSV source row instead of validating only the 25-row preview", async () => {
   const lines = ["email,date,amount,ignored"];
   for (let index = 1; index <= 40; index += 1) {
@@ -167,6 +258,25 @@ test("Task 19 reads every non-empty CSV source row instead of validating only th
     rowNumber: 41,
     values: ["buyer40@example.com", "2026-08-23", "40"],
   });
+});
+
+test("Task 19 fails closed when the source exceeds the browser validation row cap", async () => {
+  const lines = Array.from(
+    { length: TRANSACTION_VALIDATION_SOURCE_LIMITS.maxRows + 1 },
+    (_, index) => `buyer${index}@example.com,2026-08-23,1`,
+  );
+  const bytes = Buffer.from(lines.join("\n"), "utf8");
+
+  await assert.rejects(
+    readTransactionValidationSource({
+      fileName: "too-many.csv",
+      fileSize: bytes.length,
+      buffer: asArrayBuffer(bytes),
+      columns: [0, 1, 2],
+    }),
+    (error: unknown) =>
+      error instanceof TransactionValidationSourceError && error.code === "SOURCE_TOO_MANY_ROWS",
+  );
 });
 
 test("Task 19 reads mapped columns beyond the visible preview width", async () => {
@@ -201,6 +311,37 @@ test("Task 19 reads selected XLSX values and preserves the worksheet row number"
     rowNumber: 5,
     values: ["Buyer@Example.COM", "2024-01-01", "1,250.50"],
   });
+});
+
+test("Task 19 handles conditional XLSX date formats but rejects time-only cells and Excel serial 60", async () => {
+  const bytes = xlsxDateEdgeCases();
+  const source = await readTransactionValidationSource({
+    fileName: "date-edge-cases.xlsx",
+    fileSize: bytes.length,
+    buffer: asArrayBuffer(bytes),
+    columns: [0, 2, 4],
+  });
+
+  assert.deepEqual(source.rows[1]?.values, ["date@example.com", "2024-01-01", "10"]);
+  assert.deepEqual(source.rows[2]?.values, ["time@example.com", "0.5", "20"]);
+  assert.deepEqual(source.rows[3]?.values, ["serial60@example.com", "60.5", "30"]);
+
+  const result = validateTransactionImportRows(
+    source.rows.map((row) => ({
+      rowNumber: row.rowNumber,
+      customerEmail: row.values[0] ?? "",
+      transactionDate: row.values[1] ?? "",
+      amountCollected: row.values[2] ?? "",
+    })),
+    { skipFirstRow: true },
+  );
+  assert.equal(result.checkedRows, 3);
+  assert.equal(result.validRows, 1);
+  assert.equal(result.invalidRows, 2);
+  assert.deepEqual(result.issues.map((issue) => issue.code), [
+    "TRANSACTION_DATE_INVALID",
+    "TRANSACTION_DATE_INVALID",
+  ]);
 });
 
 test("Task 19 rejects duplicate mapped source columns at the source-reader boundary", async () => {
