@@ -73,6 +73,17 @@ function crc32Checksum(bytes: Uint8Array) {
   return (crc ^ 0xffffffff) >>> 0;
 }
 
+function isAllowedXmlCodePoint(codePoint: number) {
+  return (
+    codePoint === 0x09 ||
+    codePoint === 0x0a ||
+    codePoint === 0x0d ||
+    (codePoint >= 0x20 && codePoint <= 0xd7ff) ||
+    (codePoint >= 0xe000 && codePoint <= 0xfffd) ||
+    (codePoint >= 0x10000 && codePoint <= 0x10ffff)
+  );
+}
+
 function decodeXmlEntities(value: string) {
   return value.replace(XML_ENTITY_PATTERN, (entity) => {
     if (entity === "&amp;") return "&";
@@ -84,7 +95,7 @@ function decodeXmlEntities(value: string) {
     const radix = entity.startsWith("&#x") ? 16 : 10;
     const start = radix === 16 ? 3 : 2;
     const codePoint = Number.parseInt(entity.slice(start, -1), radix);
-    if (!Number.isInteger(codePoint) || codePoint < 0 || codePoint > 0x10ffff) return entity;
+    if (!Number.isInteger(codePoint) || !isAllowedXmlCodePoint(codePoint)) return entity;
 
     try {
       return String.fromCodePoint(codePoint);
@@ -145,9 +156,8 @@ function sampleDelimiterCounts(text: string, delimiter: string) {
   const counts: number[] = [];
   let quoted = false;
   let count = 0;
-  const limit = Math.min(text.length, 128 * 1024);
 
-  for (let index = 0; index < limit && counts.length < 12; index += 1) {
+  for (let index = 0; index < text.length && counts.length < 12; index += 1) {
     const char = text[index];
     if (char === '"') {
       if (quoted && text[index + 1] === '"') {
@@ -404,7 +414,10 @@ async function extractZipText(buffer: ArrayBuffer, entries: Map<string, ZipEntry
 }
 
 function firstWorksheet(workbookXml: string, relationshipsXml: string) {
-  const sheetTags = workbookXml.match(/<(?:[A-Za-z_][\w.-]*:)?sheet\b[^>]*>/gi) ?? [];
+  const sheetTags =
+    workbookXml.match(
+      /<(?:[A-Za-z_][\w.-]*:)?sheet\b(?:[^>"']|"[^"]*"|'[^']*')*\/?\s*>/gi,
+    ) ?? [];
   if (sheetTags.length === 0) fail("XLSX_SHEET_MISSING", "XLSX workbook has no worksheet.");
 
   const relationshipTags =
@@ -447,11 +460,11 @@ function parseSharedStrings(xml: string | null) {
   if (!xml) return [];
   const values: string[] = [];
   const itemPattern =
-    /<(?:[A-Za-z_][\w.-]*:)?si\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?si>/gi;
+    /<(?:[A-Za-z_][\w.-]*:)?si\b(?:[^>"']|"[^"]*"|'[^']*')*(?:\/\s*>|>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?si\s*>)/gi;
 
   for (const itemMatch of xml.matchAll(itemPattern)) {
     const fragments: string[] = [];
-    const itemBody = stripPhoneticRuns(itemMatch[1]);
+    const itemBody = stripPhoneticRuns(itemMatch[1] ?? "");
     const textPattern =
       /<(?:[A-Za-z_][\w.-]*:)?t\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?t>/gi;
     for (const textMatch of itemBody.matchAll(textPattern)) {
