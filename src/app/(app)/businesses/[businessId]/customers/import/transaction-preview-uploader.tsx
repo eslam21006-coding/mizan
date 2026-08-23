@@ -61,12 +61,14 @@ function errorMessage(error: unknown) {
 export function TransactionPreviewUploader({ canManage }: TransactionPreviewUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<TransactionFilePreview | null>(null);
+  const [fileBuffer, setFileBuffer] = useState<ArrayBuffer | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isReading, setIsReading] = useState(false);
 
   const reset = () => {
     if (inputRef.current) inputRef.current.value = "";
     setPreview(null);
+    setFileBuffer(null);
     setError(null);
     setIsReading(false);
   };
@@ -74,6 +76,7 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
     setPreview(null);
+    setFileBuffer(null);
     setError(null);
 
     if (file.size > TRANSACTION_PREVIEW_LIMITS.maxFileBytes) {
@@ -90,8 +93,10 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
         fileSize: file.size,
         buffer,
       });
+      setFileBuffer(buffer);
       setPreview(result);
     } catch (caught) {
+      setFileBuffer(null);
       setError(errorMessage(caught));
     } finally {
       setIsReading(false);
@@ -110,11 +115,11 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
     <div className={styles.previewStack}>
       <section className={styles.uploadPanel} aria-labelledby="transaction-upload-title">
         <div className={styles.uploadCopy}>
-          <span className={styles.kicker}>Task 18 · Mapping</span>
+          <span className={styles.kicker}>Task 19 · Import Validation</span>
           <h2 id="transaction-upload-title">اختر ملف معاملات العملاء</h2>
           <p>
-            المعاينة والـ Mapping يتمان داخل المتصفح فقط. الملف ومحتواه لا يتم رفعهما إلى السيرفر، ولا يتم
-            إنشاء أي معاملات في قاعدة البيانات في هذه الخطوة.
+            المعاينة والـ Mapping والـ Validation تتم داخل المتصفح فقط. الملف ومحتواه لا يتم رفعهما إلى
+            السيرفر، ولا يتم إنشاء أي معاملات في قاعدة البيانات في هذه الخطوة.
           </p>
         </div>
 
@@ -133,7 +138,7 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
             <p id="transaction-file-help">
               الحد الأقصى للملف {Math.round(TRANSACTION_PREVIEW_LIMITS.maxFileBytes / 1024 / 1024)} MB.
               نعرض أول {TRANSACTION_PREVIEW_LIMITS.previewRows} صفًا وأول {TRANSACTION_PREVIEW_LIMITS.previewColumns}
-              عمودًا مع إظهار إجمالي الصفوف والأعمدة التي تم تحليلها.
+              عمودًا، بينما Validation يفحص كل الصفوف غير الفارغة بعد اكتمال الـ Mapping.
             </p>
           </div>
         ) : (
@@ -166,7 +171,7 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
               <div>
                 <span className={styles.kicker}>تمت القراءة محليًا</span>
                 <h2 id="transaction-preview-title">معاينة الملف</h2>
-                <p>تم تفعيل Column Mapping فقط. Validation وImport ما زالا خارج هذه الخطوة.</p>
+                <p>بعد الـ Mapping يمكنك تشغيل Validation. Duplicate Protection وImport ما زالا خارج هذه الخطوة.</p>
               </div>
               <button type="button" className={styles.secondaryButton} onClick={reset}>
                 تغيير الملف
@@ -249,10 +254,11 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
             )}
           </section>
 
-          {canManage && preview.previewRows.length > 0 && visibleColumns > 0 && (
+          {canManage && fileBuffer && preview.previewRows.length > 0 && visibleColumns > 0 && (
             <TransactionColumnMapper
               key={`${preview.fileName}:${preview.fileSize}:${preview.totalRows}:${preview.totalColumns}`}
               preview={preview}
+              fileBuffer={fileBuffer}
             />
           )}
         </>
