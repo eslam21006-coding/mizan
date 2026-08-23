@@ -138,6 +138,40 @@ function stripXmlCommentsOutsideCdata(value: string) {
   return result;
 }
 
+function maskXmlCdataContents(value: string) {
+  let result = "";
+  let cursor = 0;
+
+  while (cursor < value.length) {
+    const cdataStart = value.indexOf("<![CDATA[", cursor);
+    if (cdataStart === -1) {
+      result += value.slice(cursor);
+      break;
+    }
+
+    result += value.slice(cursor, cdataStart + 9);
+    const cdataEnd = value.indexOf("]]>", cdataStart + 9);
+    if (cdataEnd === -1) {
+      result += value.slice(cdataStart + 9);
+      break;
+    }
+
+    result += " ".repeat(cdataEnd - (cdataStart + 9));
+    result += "]]>";
+    cursor = cdataEnd + 3;
+  }
+
+  return result;
+}
+
+function originalMatchedElementBody(sourceXml: string, maskedMatch: RegExpMatchArray) {
+  if (maskedMatch[1] === undefined || maskedMatch.index === undefined) return "";
+  const openingEnd = maskedMatch[0].indexOf(">");
+  if (openingEnd === -1) return "";
+  const bodyStart = maskedMatch.index + openingEnd + 1;
+  return sourceXml.slice(bodyStart, bodyStart + maskedMatch[1].length);
+}
+
 function decodeXmlText(value: string) {
   const withoutComments = stripXmlCommentsOutsideCdata(value);
   let result = "";
@@ -608,14 +642,18 @@ async function extractZipText(buffer: ArrayBuffer, entries: Map<string, ZipEntry
 }
 
 function firstWorksheet(workbookXml: string, relationshipsXml: string) {
+  const sourceWorkbookXml = stripXmlCommentsOutsideCdata(workbookXml);
+  const sourceRelationshipsXml = stripXmlCommentsOutsideCdata(relationshipsXml);
   const sheetTags =
-    workbookXml.match(
+    sourceWorkbookXml.match(
       /<(?:[A-Za-z_][\w.-]*:)?sheet\b(?:[^>"']|"[^"]*"|'[^']*')*\/?\s*>/gi,
     ) ?? [];
   if (sheetTags.length === 0) fail("XLSX_SHEET_MISSING", "XLSX workbook has no worksheet.");
 
   const relationshipTags =
-    relationshipsXml.match(/<(?:[A-Za-z_][\w.-]*:)?Relationship\b[^>]*\/?\s*>/gi) ?? [];
+    sourceRelationshipsXml.match(
+      /<(?:[A-Za-z_][\w.-]*:)?Relationship\b(?:[^>"']|"[^"]*"|'[^']*')*\/?\s*>/gi,
+    ) ?? [];
 
   for (const sheetTag of sheetTags) {
     const relationshipId = attributeValue(sheetTag, "r:id") ?? namespacedIdValue(sheetTag);
@@ -644,28 +682,36 @@ function firstWorksheet(workbookXml: string, relationshipsXml: string) {
 }
 
 function stripPhoneticRuns(xml: string) {
-  return xml.replace(
-    /<(?:[A-Za-z_][\w.-]*:)?rPh\b(?:[^>"']|"[^"]*"|'[^']*')*(?:\/\s*>|>[\s\S]*?<\/(?:[A-Za-z_][\w.-]*:)?rPh\s*>)/gi,
-    "",
-  );
+  const sourceXml = stripXmlCommentsOutsideCdata(xml);
+  const maskedXml = maskXmlCdataContents(sourceXml);
+  const pattern =
+    /<(?:[A-Za-z_][\w.-]*:)?rPh\b(?:[^>"']|"[^"]*"|'[^']*')*(?:\/\s*>|>[\s\S]*?<\/(?:[A-Za-z_][\w.-]*:)?rPh\s*>)/gi;
+  let result = "";
+  let cursor = 0;
+
+  for (const match of maskedXml.matchAll(pattern)) {
+    if (match.index === undefined) continue;
+    result += sourceXml.slice(cursor, match.index);
+    cursor = match.index + match[0].length;
+  }
+
+  return result + sourceXml.slice(cursor);
 }
 
 function parseSharedStrings(xml: string | null) {
   if (!xml) return [];
   const values: string[] = [];
   const sourceXml = stripXmlCommentsOutsideCdata(xml);
+  const maskedXml = maskXmlCdataContents(sourceXml);
   const itemPattern =
     /<(?:[A-Za-z_][\w.-]*:)?si\b(?:[^>"'\/]|"[^"]*"|'[^']*')*(?:\/\s*>|>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?si\s*>)/gi;
 
-  for (const itemMatch of sourceXml.matchAll(itemPattern)) {
-    const fragments: string[] = [];
-    const itemBody = stripPhoneticRuns(itemMatch[1] ?? "");
-    const textPattern =
-      /<(?:[A-Za-z_][\w.-]*:)?t\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?t>/gi;
-    for (const textMatch of itemBody.matchAll(textPattern)) {
-      fragments.push(decodeXmlText(textMatch[1]));
+  for (const itemMatch of maskedXml.matchAll(itemPattern)) {
+    if (itemMatch[1] === undefined) {
+      values.push("");
+      continue;
     }
-    values.push(fragments.join(""));
+    values.push(textFragments(originalMatchedElementBody(sourceXml, itemMatch)));
   }
 
   return values;
@@ -742,11 +788,12 @@ function excelDateString(serialText: string, date1904: boolean) {
 
 function textFragments(xml: string) {
   const fragments: string[] = [];
-  const pattern =
-    /<(?:[A-Za-z_][\w.-]*:)?t\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?t>/gi;
   const sourceXml = stripPhoneticRuns(stripXmlCommentsOutsideCdata(xml));
-  for (const match of sourceXml.matchAll(pattern)) {
-    fragments.push(decodeXmlText(match[1]));
+  const maskedXml = maskXmlCdataContents(sourceXml);
+  const pattern =
+    /<(?:[A-Za-z_][\w.-]*:)?t\b(?:[^>"']|"[^"]*"|'[^']*')*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?t>/gi;
+  for (const match of maskedXml.matchAll(pattern)) {
+    fragments.push(decodeXmlText(originalMatchedElementBody(sourceXml, match)));
   }
   return fragments.join("");
 }
@@ -810,9 +857,10 @@ export async function readFirstXlsxWorksheet(buffer: ArrayBuffer): Promise<First
   if (sharedStringsXml) assertWellFormedXml(sharedStringsXml, "shared strings");
   if (stylesXml) assertWellFormedXml(stylesXml, "styles");
 
+  const sourceWorkbookXml = stripXmlCommentsOutsideCdata(workbookXml);
   const date1904 =
     /<(?:[A-Za-z_][\w.-]*:)?workbookPr\b[^>]*date1904\s*=\s*(?:"(?:1|true)"|'(?:1|true)')/i.test(
-      workbookXml,
+      sourceWorkbookXml,
     );
 
   return {

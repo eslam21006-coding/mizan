@@ -11,13 +11,19 @@ function cdataAndCommentXlsx() {
       text: `<?xml version="1.0" encoding="UTF-8"?>
         <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
           xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
-          <sheets><sheet name="Payments" sheetId="1" r:id="rId1"/></sheets>
+          <sheets>
+            <!-- <sheet name="Commented" sheetId="99" r:id="rFake"/> -->
+            <sheet name="Payments" sheetId="1" r:id="rId1"/>
+          </sheets>
         </workbook>`,
     },
     {
       name: "xl/_rels/workbook.xml.rels",
       text: `<?xml version="1.0" encoding="UTF-8"?>
         <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+          <!-- <Relationship Id="rFake"
+            Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"
+            Target="worksheets/missing.xml"/> -->
           <Relationship Id="rId1"
             Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"
             Target="worksheets/sheet1.xml"/>
@@ -33,7 +39,7 @@ function cdataAndCommentXlsx() {
           <si><t>Amount</t></si>
           <si><t><![CDATA[buyer&amp;raw@example.com]]></t></si>
           <si><t><![CDATA[2026-08-23]]></t></si>
-          <si><t><![CDATA[1&amp;2]]></t></si>
+          <si><t><![CDATA[1</t></si><si><t>2]]></t></si>
         </sst>`,
     },
     {
@@ -68,13 +74,25 @@ test("Task 19 preserves entity-looking text inside inline-string CDATA", () => {
   assert.equal(value, "A&amp;B");
 });
 
+test("Task 19 preserves markup-looking text inside inline-string CDATA", () => {
+  const value = cellDisplayValue(
+    '<c t="inlineStr">',
+    '<is><t><![CDATA[A</t><t>B]]></t></is>',
+    [],
+    { dateStyleIndexes: new Set() },
+    false,
+  );
+
+  assert.equal(value, "A</t><t>B");
+});
+
 test("Task 19 keeps empty XLSX values empty before date conversion", () => {
   const styles = { dateStyleIndexes: new Set([0]) };
   assert.equal(cellDisplayValue('<c s="0">', "<v></v>", [], styles, false), "");
   assert.equal(cellDisplayValue('<c s="0">', "<v>   </v>", [], styles, false), "");
 });
 
-test("Task 19 ignores commented worksheet and shared-string markup while preserving CDATA", async () => {
+test("Task 19 ignores commented workbook, relationship, worksheet, and shared-string markup while preserving CDATA", async () => {
   const bytes = cdataAndCommentXlsx();
   const source = await readTransactionValidationSource({
     fileName: "cdata-comments.xlsx",
@@ -87,6 +105,6 @@ test("Task 19 ignores commented worksheet and shared-string markup while preserv
   assert.deepEqual(source.rows[0], { rowNumber: 1, values: ["Email", "Date", "Amount"] });
   assert.deepEqual(source.rows[1], {
     rowNumber: 2,
-    values: ["buyer&amp;raw@example.com", "2026-08-23", "1&amp;2"],
+    values: ["buyer&amp;raw@example.com", "2026-08-23", "1</t></si><si><t>2"],
   });
 });
