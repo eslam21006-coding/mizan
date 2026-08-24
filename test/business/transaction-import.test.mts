@@ -8,6 +8,11 @@ import {
   transactionImportChunks,
   TransactionImportPreparationError,
 } from "../../src/lib/business/transaction-import.ts";
+import {
+  isValidTransactionEmail,
+  TRANSACTION_EMAIL_MAX_LENGTH,
+  validateTransactionImportRows,
+} from "../../src/lib/business/transaction-import-validation.ts";
 
 test("Task 20 normalizes import sources and transaction IDs deterministically", () => {
   assert.equal(normalizeTransactionImportSource(" Stripe "), "stripe");
@@ -96,6 +101,25 @@ test("Task 20 refuses rows that have not passed the required validation contract
     (error: unknown) =>
       error instanceof TransactionImportPreparationError && error.code === "ROW_NOT_VALIDATED",
   );
+});
+
+test("Task 20 rejects emails beyond the database storage boundary during validation", () => {
+  const oversizedEmail = `${"a".repeat(TRANSACTION_EMAIL_MAX_LENGTH - "@b.com".length + 1)}@b.com`;
+  assert.equal(oversizedEmail.length, TRANSACTION_EMAIL_MAX_LENGTH + 1);
+  assert.equal(isValidTransactionEmail(oversizedEmail), false);
+
+  const result = validateTransactionImportRows([
+    {
+      rowNumber: 1,
+      customerEmail: oversizedEmail,
+      transactionDate: "2026-08-24",
+      amountCollected: "10",
+    },
+  ]);
+
+  assert.equal(result.isValid, false);
+  assert.equal(result.invalidRows, 1);
+  assert.equal(result.issues[0]?.code, "EMAIL_INVALID");
 });
 
 test("Task 20 refuses oversized transaction IDs before any import RPC", () => {
