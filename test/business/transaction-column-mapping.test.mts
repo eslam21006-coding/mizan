@@ -95,3 +95,31 @@ test("Task 18 mapping model accepts a valid far-right column for direct wide-fil
   assert.equal(updated.amountCollected, 49_999);
   assert.equal(transactionColumnLabel(updated.amountCollected as number), "BUYB");
 });
+
+test("Task 20 keeps Transaction ID optional while using it in duplicate-column checks when mapped", () => {
+  const withoutId = inspectTransactionColumnMapping({
+    customerEmail: 0,
+    transactionDate: 1,
+    amountCollected: 2,
+    transactionId: null,
+  });
+  assert.equal(withoutId.isComplete, true);
+
+  const withId = inspectTransactionColumnMapping({
+    customerEmail: 0,
+    transactionDate: 1,
+    amountCollected: 2,
+    transactionId: 3,
+  });
+  assert.equal(withId.isComplete, true);
+  assert.equal(withId.hasDuplicateColumns, false);
+
+  const conflictingId = inspectTransactionColumnMapping({
+    customerEmail: 0,
+    transactionDate: 1,
+    amountCollected: 2,
+    transactionId: 2,
+  });
+  assert.equal(conflictingId.isComplete, false);
+  assert.equal(conflictingId.hasDuplicateColumns, true);
+});
