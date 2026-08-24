@@ -24,7 +24,7 @@ async function login(page: import("@playwright/test").Page) {
 test.describe("Task 20 transaction duplicate protection", () => {
   test.skip(!hasLiveAuth, "Requires live Mizan Supabase credentials or a one-use invite token");
 
-  test("shows skipped duplicates and keeps repeated imports explicit", async ({ page }) => {
+  test("shows definitive duplicate counts and keeps repeated imports explicit", async ({ page }) => {
     test.setTimeout(150_000);
 
     const browserErrors: string[] = [];
@@ -80,8 +80,18 @@ test.describe("Task 20 transaction duplicate protection", () => {
     await page.route("**/rest/v1/rpc/import_customer_transactions", async (route) => {
       rpcCalls += 1;
       const response = rpcCalls === 1
-        ? { inserted_count: 2, duplicate_count: 1 }
-        : { inserted_count: 0, duplicate_count: 3 };
+        ? {
+            inserted_count: 2,
+            duplicate_count: 1,
+            candidate_count: 0,
+            candidate_collisions: [],
+          }
+        : {
+            inserted_count: 0,
+            duplicate_count: 3,
+            candidate_count: 0,
+            candidate_collisions: [],
+          };
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -92,11 +102,12 @@ test.describe("Task 20 transaction duplicate protection", () => {
     await page.getByLabel("مصدر المعاملات").fill("Stripe");
     await page.getByRole("button", { name: "استيراد المعاملات" }).click();
     await expect(page.getByText("تمت إضافتها", { exact: true }).locator("xpath=following-sibling::strong[1]")).toHaveText("2");
-    await expect(page.getByText("مكررة تم تخطيها", { exact: true }).locator("xpath=following-sibling::strong[1]")).toHaveText("1");
+    await expect(page.getByText("مكررة مؤكدة", { exact: true }).locator("xpath=following-sibling::strong[1]")).toHaveText("1");
+    await expect(page.getByText("تحتاج قرارًا", { exact: true }).locator("xpath=following-sibling::strong[1]")).toHaveText("0");
 
     await page.getByRole("button", { name: "استيراد المعاملات" }).click();
     await expect(page.getByText("تمت إضافتها", { exact: true }).locator("xpath=following-sibling::strong[1]")).toHaveText("0");
-    await expect(page.getByText("مكررة تم تخطيها", { exact: true }).locator("xpath=following-sibling::strong[1]")).toHaveText("3");
+    await expect(page.getByText("مكررة مؤكدة", { exact: true }).locator("xpath=following-sibling::strong[1]")).toHaveText("3");
     await expect(page.getByText(/لم تتم مضاعفة أي معاملات/)).toBeVisible();
     expect(rpcCalls).toBe(2);
 
