@@ -41,8 +41,8 @@ export default async function TransactionImportPage({ params }: TransactionImpor
     <div className="page-stack" style={IMPORT_THEME_ALIASES}>
       <div className={styles.headingRow}>
         <PageHeading
-          title="معاينة ملف معاملات العملاء"
-          description={`اختر تصدير CSV أو XLSX خاص بـ ${business.name} وتأكد من شكل البيانات قبل بدء الـ Mapping والاستيراد.`}
+          title="استيراد معاملات العملاء"
+          description={`اختر تصدير CSV أو XLSX خاص بـ ${business.name}، راجع الـ Mapping والـ Validation، ثم استورد المعاملات مع منع التكرار.`}
         />
         <div className={styles.headingLinks}>
           <Link className={styles.backLink} href="/customers">
@@ -64,12 +64,12 @@ export default async function TransactionImportPage({ params }: TransactionImpor
           <strong dir="ltr">{business.base_currency}</strong>
         </div>
         <p>
-          هذه الخطوة لا تربط الأعمدة ولا تحفظ معاملات. سيتم التعامل مع Customer Email وTransaction Date وAmount
-          Collected في المهام التالية بعد أن توافق على شكل الملف.
+          المعاينة والـ Mapping والـ Validation تظل داخل المتصفح. لا تُحفظ المعاملات إلا بعد نجاح Validation
+          وضغطك على زر الاستيراد، وعندها يطبق Mizan Duplicate Protection داخل قاعدة البيانات.
         </p>
       </section>
 
-      <TransactionPreviewUploader canManage={canManage} />
+      <TransactionPreviewUploader businessId={business.id} canManage={canManage} />
     </div>
   );
 }
