@@ -338,18 +338,12 @@ export function TransactionImportValidator({
               <div className={styles.validationSuccess}>
                 كل الصفوف صالحة. يمكنك الآن تحديد مصدر المعاملات وبدء الاستيراد الآمن من التكرار.
               </div>
-              <div
-                className={task20Styles.importPanel}
-                role="group"
-                aria-labelledby="transaction-import-ready-title"
-              >
-                <div>
-                  <h3 id="transaction-import-ready-title">Duplicate Protection قبل الحفظ</h3>
-                  <p>
-                    إذا كان Transaction ID مربوطًا نستخدمه كمفتاح أساسي داخل نفس المصدر. عند غيابه نستخدم
-                    البريد الموحّد + التاريخ + المبلغ + المصدر. أي تكرار يتم تخطيه وإظهاره في النتيجة.
-                  </p>
-                </div>
+              <fieldset className={task20Styles.importPanel}>
+                <legend className={task20Styles.importLegend}>Duplicate Protection قبل الحفظ</legend>
+                <p>
+                  إذا كان Transaction ID مربوطًا نستخدمه كمفتاح أساسي داخل نفس المصدر. عند غيابه نستخدم
+                  البريد الموحّد + التاريخ + المبلغ + المصدر. أي تكرار يتم تخطيه وإظهاره في النتيجة.
+                </p>
                 <div className={task20Styles.sourceField}>
                   <label htmlFor="transaction-import-source">مصدر المعاملات</label>
                   <input
@@ -400,7 +394,7 @@ export function TransactionImportValidator({
                     {importError}
                   </div>
                 )}
-              </div>
+              </fieldset>
             </>
           ) : result.checkedRows === 0 ? (
             <div className={styles.mappingError} role="alert">
