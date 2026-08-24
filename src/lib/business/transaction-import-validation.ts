@@ -67,6 +67,7 @@ export function isValidTransactionEmail(value: string) {
 }
 
 function isRealCalendarDate(year: number, month: number, day: number) {
+  if (year < 1) return false;
   const candidate = new Date(0);
   candidate.setUTCHours(0, 0, 0, 0);
   candidate.setUTCFullYear(year, month - 1, day);
