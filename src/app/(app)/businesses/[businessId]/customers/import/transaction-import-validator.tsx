@@ -502,6 +502,7 @@ export function TransactionImportValidator({
       if (resolutionsApplied) {
         setPendingCandidates([]);
         setCandidateDecisions({});
+        setRetryRows(remainingRows);
         setRemainingRows([]);
         onImportBusyChange(false);
       }
