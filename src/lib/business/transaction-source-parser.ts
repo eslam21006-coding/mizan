@@ -166,8 +166,7 @@ function maskXmlCdataContents(value: string) {
 
 function originalMatchedElementBody(sourceXml: string, maskedMatch: RegExpMatchArray) {
   if (maskedMatch[1] === undefined || maskedMatch.index === undefined) return "";
-  const openingEnd = maskedMatch[0].indexOf(">");
-  if (openingEnd === -1) return "";
+  const openingEnd = findXmlTagEnd(maskedMatch[0], 1, "matched element");
   const bodyStart = maskedMatch.index + openingEnd + 1;
   return sourceXml.slice(bodyStart, bodyStart + maskedMatch[1].length);
 }
@@ -554,12 +553,27 @@ function readZipDirectory(buffer: ArrayBuffer) {
 }
 
 async function inflateRaw(bytes: Uint8Array, expectedSize: number) {
+  let decompressor: DecompressionStream;
+  try {
+    if (typeof DecompressionStream === "undefined") {
+      fail(
+        "XLSX_UNSUPPORTED_ARCHIVE",
+        "This browser does not support XLSX DEFLATE decompression.",
+      );
+    }
+    decompressor = new DecompressionStream("deflate-raw");
+  } catch (error) {
+    if (error instanceof TransactionSourceParseError) throw error;
+    fail(
+      "XLSX_UNSUPPORTED_ARCHIVE",
+      "This browser does not support XLSX DEFLATE decompression.",
+    );
+  }
+
   try {
     const ownedBytes = new Uint8Array(bytes.byteLength);
     ownedBytes.set(bytes);
-    const stream = new Blob([ownedBytes.buffer])
-      .stream()
-      .pipeThrough(new DecompressionStream("deflate-raw"));
+    const stream = new Blob([ownedBytes.buffer]).stream().pipeThrough(decompressor);
     const reader = stream.getReader();
     const chunks: Uint8Array[] = [];
     let total = 0;
@@ -734,15 +748,19 @@ function parseStyles(xml: string | null): XlsxStyles {
   const dateFormatIds = new Set(BUILTIN_DATE_FORMAT_IDS);
   if (!xml) return { dateStyleIndexes: new Set() };
 
+  const sourceXml = stripXmlCommentsOutsideCdata(xml);
+  const searchableXml = maskXmlCdataContents(sourceXml);
   const customFormats =
-    xml.match(/<(?:[A-Za-z_][\w.-]*:)?numFmt\b(?:[^>"']|"[^"]*"|'[^']*')*\/?\s*>/gi) ?? [];
+    searchableXml.match(
+      /<(?:[A-Za-z_][\w.-]*:)?numFmt\b(?:[^>"']|"[^"]*"|'[^']*')*\/?\s*>/gi,
+    ) ?? [];
   for (const tag of customFormats) {
     const id = Number(attributeValue(tag, "numFmtId"));
     const code = attributeValue(tag, "formatCode");
     if (Number.isInteger(id) && code && customFormatLooksLikeDate(code)) dateFormatIds.add(id);
   }
 
-  const cellXfs = xml.match(
+  const cellXfs = searchableXml.match(
     /<(?:[A-Za-z_][\w.-]*:)?cellXfs\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?cellXfs>/i,
   )?.[1];
   const dateStyleIndexes = new Set<number>();

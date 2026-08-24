@@ -34,8 +34,8 @@ function cdataAndCommentXlsx() {
       text: `<?xml version="1.0" encoding="UTF-8"?>
         <sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="6" uniqueCount="6">
           <!-- <si><t>COMMENTED-FAKE-ENTRY</t></si> -->
-          <si><t>Email</t></si>
-          <si><t>Date</t></si>
+          <si data-note="A>B"><t>Email</t></si>
+          <si><t data-note="C>D">Date</t></si>
           <si><t>Amount</t></si>
           <si><t><![CDATA[buyer&amp;raw@example.com]]></t></si>
           <si><t><![CDATA[2026-08-23]]></t></si>
@@ -62,6 +62,47 @@ function cdataAndCommentXlsx() {
   ]);
 }
 
+function commentedStylesXlsx() {
+  return createZip([
+    {
+      name: "xl/workbook.xml",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"
+          xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+          <sheets><sheet name="Payments" sheetId="1" r:id="rId1"/></sheets>
+        </workbook>`,
+    },
+    {
+      name: "xl/_rels/workbook.xml.rels",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+          <Relationship Id="rId1"
+            Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet"
+            Target="worksheets/sheet1.xml"/>
+        </Relationships>`,
+    },
+    {
+      name: "xl/styles.xml",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+          <!-- <numFmt numFmtId="165" formatCode="yyyy-mm-dd"/> -->
+          <cellXfs count="2">
+            <!-- <xf numFmtId="14"/> -->
+            <xf numFmtId="0"/>
+            <xf numFmtId="14"/>
+          </cellXfs>
+        </styleSheet>`,
+    },
+    {
+      name: "xl/worksheets/sheet1.xml",
+      text: `<?xml version="1.0" encoding="UTF-8"?>
+        <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>
+          <row r="1"><c r="A1" s="1"><v>1</v></c></row>
+        </sheetData></worksheet>`,
+    },
+  ]);
+}
+
 test("Task 19 preserves entity-looking text inside inline-string CDATA", () => {
   const value = cellDisplayValue(
     '<c t="inlineStr">',
@@ -77,7 +118,7 @@ test("Task 19 preserves entity-looking text inside inline-string CDATA", () => {
 test("Task 19 preserves markup-looking text inside inline-string CDATA", () => {
   const value = cellDisplayValue(
     '<c t="inlineStr">',
-    '<is><t><![CDATA[A</t><t>B]]></t></is>',
+    '<is><t data-note="A>B"><![CDATA[A</t><t>B]]></t></is>',
     [],
     { dateStyleIndexes: new Set() },
     false,
@@ -107,4 +148,16 @@ test("Task 19 ignores commented workbook, relationship, worksheet, and shared-st
     rowNumber: 2,
     values: ["buyer&amp;raw@example.com", "2026-08-23", "1</t></si><si><t>2"],
   });
+});
+
+test("Task 19 ignores commented XLSX style entries when resolving date style indexes", async () => {
+  const bytes = commentedStylesXlsx();
+  const source = await readTransactionValidationSource({
+    fileName: "commented-styles.xlsx",
+    fileSize: bytes.length,
+    buffer: asArrayBuffer(bytes),
+    columns: [0],
+  });
+
+  assert.deepEqual(source.rows, [{ rowNumber: 1, values: ["1900-01-01"] }]);
 });

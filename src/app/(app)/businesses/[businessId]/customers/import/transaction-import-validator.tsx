@@ -8,13 +8,16 @@ import {
 import {
   validateTransactionImportRows,
   type TransactionImportValidationResult,
+  type TransactionValidationField,
   type TransactionValidationIssue,
+  type TransactionValidationIssueCode,
 } from "@/lib/business/transaction-import-validation";
 import type { TransactionFilePreview } from "@/lib/business/transaction-preview";
 import {
   readTransactionValidationSource,
   TRANSACTION_VALIDATION_SOURCE_LIMITS,
   TransactionValidationSourceError,
+  type TransactionValidationSourceErrorCode,
 } from "@/lib/business/transaction-validation-source";
 import styles from "./transaction-import.module.css";
 
@@ -28,7 +31,7 @@ const FIELD_LABELS = {
   customerEmail: "بريد العميل",
   transactionDate: "تاريخ المعاملة",
   amountCollected: "المبلغ المحصل",
-} as const;
+} as const satisfies Record<TransactionValidationField, string>;
 
 const ISSUE_MESSAGES = {
   EMAIL_REQUIRED: "بريد العميل مطلوب.",
@@ -37,7 +40,7 @@ const ISSUE_MESSAGES = {
   TRANSACTION_DATE_INVALID: "استخدم تاريخ ISO صالحًا مثل 2026-08-23.",
   AMOUNT_REQUIRED: "المبلغ المحصل مطلوب.",
   AMOUNT_INVALID: "المبلغ يجب أن يكون رقمًا صالحًا بدون رمز عملة.",
-} as const;
+} as const satisfies Record<TransactionValidationIssueCode, string>;
 
 const SOURCE_ERROR_MESSAGES = {
   INVALID_MAPPING: "الـ Mapping غير صالح. راجع الأعمدة المطلوبة ثم أعد المحاولة.",
@@ -48,7 +51,7 @@ const SOURCE_ERROR_MESSAGES = {
   SOURCE_XLSX_UNSUPPORTED: "ملف XLSX يستخدم بنية غير مدعومة للتحقق داخل المتصفح.",
   SOURCE_TOO_MANY_ROWS: `عدد الصفوف غير الفارغة أكبر من حد التحقق داخل المتصفح (${TRANSACTION_VALIDATION_SOURCE_LIMITS.maxRows.toLocaleString("en-US")}).`,
   UNSUPPORTED_FILE_TYPE: "يمكن التحقق من CSV أو XLSX فقط.",
-} as const;
+} as const satisfies Record<TransactionValidationSourceErrorCode, string>;
 
 const VALIDATION_THEME_ALIASES = {
   "--text-primary": "var(--text)",
@@ -87,6 +90,7 @@ export function TransactionImportValidator({
     setResult(null);
     setError(null);
     try {
+      await new Promise<void>((resolve) => setTimeout(resolve, 0));
       const source = await readTransactionValidationSource({
         fileName: preview.fileName,
         fileSize: preview.fileSize,
