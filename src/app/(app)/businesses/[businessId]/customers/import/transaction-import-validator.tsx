@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import {
   TRANSACTION_FIELD_LABELS,
   type TransactionColumnMapping,
@@ -8,6 +8,7 @@ import {
 import {
   type CandidateDuplicateResolution,
   isValidTransactionImportSource,
+  type NormalizedTransactionType,
   normalizeTransactionImportSource,
   prepareTransactionImportRows,
   transactionImportChunks,
@@ -182,7 +183,13 @@ export function TransactionImportValidator({
   const [result, setResult] = useState<TransactionImportValidationResult | null>(null);
   const [validatedRows, setValidatedRows] = useState<TransactionDuplicateInputRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sources, setSources] = useState<string[]>([]);
   const [source, setSource] = useState("");
+  const [newSource, setNewSource] = useState("");
+  const [isLoadingSources, setIsLoadingSources] = useState(true);
+  const [isCreatingSource, setIsCreatingSource] = useState(false);
+  const [sourceError, setSourceError] = useState<string | null>(null);
+  const [transactionType, setTransactionType] = useState<NormalizedTransactionType | "">("");
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -191,9 +198,55 @@ export function TransactionImportValidator({
     Record<number, CandidateDuplicateResolution | undefined>
   >({});
   const [remainingRows, setRemainingRows] = useState<PreparedTransactionImportRow[]>([]);
+  const [retryRows, setRetryRows] = useState<PreparedTransactionImportRow[] | null>(null);
 
   const hasPendingCandidates = pendingCandidates.length > 0;
   const workflowLocked = isImporting || hasPendingCandidates;
+
+  useEffect(() => {
+    let active = true;
+
+    const loadSources = async () => {
+      setIsLoadingSources(true);
+      const supabase = createSupabaseBrowserClient();
+      const { data, error: sourceLoadError } = await supabase
+        .from("customer_transaction_sources")
+        .select("source")
+        .eq("business_id", businessId)
+        .order("source");
+
+      if (!active) return;
+      if (sourceLoadError) {
+        setSources([]);
+        setSource("");
+        setSourceError("تعذر تحميل مصادر المعاملات المسجلة. أعد تحميل الصفحة ثم حاول مرة أخرى.");
+      } else {
+        const loadedSources = (data ?? []).flatMap((row) =>
+          typeof row.source === "string" ? [row.source] : [],
+        );
+        setSources(loadedSources);
+        setSource((current) =>
+          current && loadedSources.includes(current) ? current : (loadedSources[0] ?? ""),
+        );
+        setSourceError(null);
+      }
+      setIsLoadingSources(false);
+    };
+
+    void loadSources();
+    return () => {
+      active = false;
+    };
+  }, [businessId]);
+
+  const resetImportProgress = () => {
+    setImportResult(null);
+    setImportError(null);
+    setPendingCandidates([]);
+    setCandidateDecisions({});
+    setRemainingRows([]);
+    setRetryRows(null);
+  };
 
   const validate = async () => {
     const selected = mappedColumns(mapping);
@@ -208,11 +261,7 @@ export function TransactionImportValidator({
     setResult(null);
     setValidatedRows(null);
     setError(null);
-    setImportResult(null);
-    setImportError(null);
-    setPendingCandidates([]);
-    setCandidateDecisions({});
-    setRemainingRows([]);
+    resetImportProgress();
     try {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       const sourceRows = await readTransactionValidationSource({
@@ -242,6 +291,38 @@ export function TransactionImportValidator({
     }
   };
 
+  const createSource = async () => {
+    if (workflowLocked) return;
+    if (!isValidTransactionImportSource(newSource)) {
+      setSourceError("اكتب اسم مصدر من 1 إلى 80 حرفًا قبل إضافته.");
+      return;
+    }
+
+    setIsCreatingSource(true);
+    setSourceError(null);
+    const supabase = createSupabaseBrowserClient();
+    const { data, error: sourceCreateError } = await supabase.rpc(
+      "create_customer_transaction_source",
+      {
+        p_business_id: businessId,
+        p_source: newSource,
+      },
+    );
+
+    if (sourceCreateError || typeof data !== "string") {
+      setSourceError("تعذر إضافة مصدر المعاملات. تأكد من صلاحيتك ثم أعد المحاولة.");
+      setIsCreatingSource(false);
+      return;
+    }
+
+    const normalized = normalizeTransactionImportSource(data);
+    setSources((current) => Array.from(new Set([...current, normalized])).sort());
+    setSource(normalized);
+    setNewSource("");
+    resetImportProgress();
+    setIsCreatingSource(false);
+  };
+
   const processRows = async (
     rows: PreparedTransactionImportRow[],
     baseResult: ImportResult,
@@ -254,7 +335,7 @@ export function TransactionImportValidator({
       const chunk = chunks[chunkIndex] ?? [];
       const { data, error: rpcError } = await supabase.rpc("import_customer_transactions", {
         p_business_id: businessId,
-        p_source: normalizeTransactionImportSource(source),
+        p_source: source,
         p_rows: chunk,
       });
       if (rpcError) throw new TransactionImportProcessError(confirmed);
@@ -302,7 +383,10 @@ export function TransactionImportValidator({
     setPendingCandidates(outcome.pendingCandidates);
     setCandidateDecisions({});
     setRemainingRows(outcome.remainingRows);
-    if (outcome.pendingCandidates.length === 0) onImportBusyChange(false);
+    if (outcome.pendingCandidates.length === 0) {
+      setRetryRows(null);
+      onImportBusyChange(false);
+    }
   };
 
   const importTransactions = async () => {
@@ -310,21 +394,34 @@ export function TransactionImportValidator({
       setImportError("شغّل Validation ناجحًا قبل الاستيراد.");
       return;
     }
-    if (!isValidTransactionImportSource(source)) {
-      setImportError("اكتب مصدرًا واضحًا للمعاملات من 1 إلى 80 حرفًا، مثل Stripe أو PayPal.");
+    if (!source || !sources.includes(source)) {
+      setImportError("اختر مصدر معاملات مسجلًا، أو أضف مصدرًا جديدًا مرة واحدة ثم اختره.");
+      return;
+    }
+    if (!transactionType) {
+      setImportError("حدد هل هذا الملف يحتوي Collections أم Refunds قبل الاستيراد.");
       return;
     }
 
-    let prepared: PreparedTransactionImportRow[];
-    try {
-      prepared = prepareTransactionImportRows(validatedRows, { skipFirstRow });
-    } catch (caught) {
-      if (caught instanceof TransactionImportPreparationError) {
-        setImportError(`تعذر تجهيز الصف ${caught.rowNumber} للاستيراد. أعد Validation بعد مراجعة الملف.`);
-      } else {
-        setImportError("تعذر تجهيز الصفوف للاستيراد. لم يتم إرسال أي بيانات.");
+    let prepared = retryRows;
+    if (!prepared) {
+      try {
+        prepared = prepareTransactionImportRows(validatedRows, {
+          skipFirstRow,
+          transactionType,
+          createImportRowToken: () => crypto.randomUUID(),
+        });
+        setRetryRows(prepared);
+      } catch (caught) {
+        if (caught instanceof TransactionImportPreparationError) {
+          setImportError(
+            `تعذر تجهيز الصف ${caught.rowNumber} للاستيراد. Collections يجب أن تكون موجبة، وRefunds يجب أن تكون غير صفرية.`,
+          );
+        } else {
+          setImportError("تعذر تجهيز الصفوف للاستيراد. لم يتم إرسال أي بيانات.");
+        }
+        return;
       }
-      return;
     }
 
     if (prepared.length === 0) {
@@ -349,7 +446,7 @@ export function TransactionImportValidator({
       if (confirmed.insertedCount + confirmed.duplicateCount > 0) setImportResult(confirmed);
       setImportError(
         confirmed.insertedCount + confirmed.duplicateCount > 0
-          ? `توقف الاستيراد بعد تأكيد معالجة ${confirmed.insertedCount + confirmed.duplicateCount} صف. تمت إضافة ${confirmed.insertedCount} وتأكيد ${confirmed.duplicateCount} مكرر. يمكنك إعادة المحاولة بأمان.`
+          ? `توقف الاستيراد بعد تأكيد معالجة ${confirmed.insertedCount + confirmed.duplicateCount} صف. تمت إضافة ${confirmed.insertedCount} وتأكيد ${confirmed.duplicateCount} مكرر. أعد المحاولة؛ هوية إعادة المحاولة لكل صف تمنع مضاعفة صف تم حفظه قبل انقطاع الرد.`
           : "تعذر استيراد المعاملات. لم يؤكد السيرفر حفظ أي صفوف. أعد المحاولة بعد التحقق من الاتصال.",
       );
       onImportBusyChange(false);
@@ -376,6 +473,7 @@ export function TransactionImportValidator({
 
     setIsImporting(true);
     setImportError(null);
+    let resolutionsApplied = false;
     try {
       const resolutionOutcome = await processRows(resolvedRows, {
         ...importResult,
@@ -385,6 +483,11 @@ export function TransactionImportValidator({
         throw new TransactionImportProcessError(resolutionOutcome.result);
       }
 
+      resolutionsApplied = true;
+      setImportResult(resolutionOutcome.result);
+      setPendingCandidates([]);
+      setCandidateDecisions({});
+
       if (remainingRows.length === 0) {
         applyOutcome(resolutionOutcome);
         return;
@@ -392,9 +495,20 @@ export function TransactionImportValidator({
 
       const continuation = await processRows(remainingRows, resolutionOutcome.result);
       applyOutcome(continuation);
-    } catch {
+    } catch (caught) {
+      const confirmed =
+        caught instanceof TransactionImportProcessError ? caught.confirmed : null;
+      if (confirmed) setImportResult(confirmed);
+      if (resolutionsApplied) {
+        setPendingCandidates([]);
+        setCandidateDecisions({});
+        setRemainingRows([]);
+        onImportBusyChange(false);
+      }
       setImportError(
-        "تعذر تطبيق قرارات التصادم أو متابعة الاستيراد. أعد المحاولة؛ معرفات القرار تمنع تكرار قرار تم حفظه بالفعل.",
+        confirmed
+          ? `تم تأكيد التقدم حتى الآن: ${confirmed.insertedCount} مضافة و${confirmed.duplicateCount} مكررة. تعذر إكمال الطلب التالي؛ أعد الاستيراد بأمان لإكمال الصفوف المتبقية.`
+          : "تعذر تطبيق قرارات التصادم أو متابعة الاستيراد. أعد المحاولة؛ معرفات القرار تمنع تكرار قرار تم حفظه بالفعل.",
       );
     } finally {
       setIsImporting(false);
@@ -406,11 +520,7 @@ export function TransactionImportValidator({
     setResult(null);
     setValidatedRows(null);
     setError(null);
-    setImportResult(null);
-    setImportError(null);
-    setPendingCandidates([]);
-    setCandidateDecisions({});
-    setRemainingRows([]);
+    resetImportProgress();
   };
 
   return (
@@ -506,36 +616,98 @@ export function TransactionImportValidator({
           {result.isValid ? (
             <>
               <div className={styles.validationSuccess}>
-                كل الصفوف صالحة. يمكنك الآن تحديد مصدر المعاملات وبدء الاستيراد مع Duplicate Protection.
+                كل الصفوف صالحة. أكمل مصدر المعاملات ونوعها قبل بدء الاستيراد مع Duplicate Protection.
               </div>
               <fieldset className={task20Styles.importPanel}>
                 <legend className={task20Styles.importLegend}>Duplicate Protection قبل الحفظ</legend>
                 <p>
                   إذا كان Transaction ID موجودًا نستخدمه كدليل Duplicate نهائي داخل نفس المصدر. عند غيابه،
-                  التطابق في البريد + التاريخ + المبلغ + المصدر يعتبر Candidate فقط ولا يتم حذفه أو إضافته حتى
-                  تحسمه أنت.
+                  التطابق في البريد + التاريخ + المبلغ + المصدر + نوع المعاملة يعتبر Candidate فقط ولا يتم حذفه
+                  أو إضافته حتى تحسمه أنت.
                 </p>
+
                 <div className={task20Styles.sourceField}>
-                  <label htmlFor="transaction-import-source">مصدر المعاملات</label>
-                  <input
+                  <label htmlFor="transaction-import-source">مصدر المعاملات المسجل</label>
+                  <select
                     id="transaction-import-source"
                     className={task20Styles.sourceInput}
                     value={source}
-                    disabled={workflowLocked}
+                    disabled={workflowLocked || isLoadingSources || isCreatingSource}
+                    onChange={(event) => {
+                      setSource(event.currentTarget.value);
+                      resetImportProgress();
+                    }}
+                  >
+                    <option value="">اختر مصدرًا مسجلًا</option>
+                    {sources.map((sourceOption) => (
+                      <option value={sourceOption} key={sourceOption}>
+                        {sourceOption}
+                      </option>
+                    ))}
+                  </select>
+                  <small>
+                    إعادة الاستيراد يجب أن تستخدم نفس المصدر المسجل. إنشاء مصدر جديد مخصص لبوابة مختلفة فعلًا،
+                    وليس لكتابة اسم مختلف لنفس البوابة.
+                  </small>
+                </div>
+
+                <div className={task20Styles.sourceField}>
+                  <label htmlFor="transaction-new-source">إضافة مصدر جديد</label>
+                  <input
+                    id="transaction-new-source"
+                    className={task20Styles.sourceInput}
+                    value={newSource}
+                    disabled={workflowLocked || isLoadingSources || isCreatingSource}
                     placeholder="مثال: Stripe"
                     autoComplete="off"
                     onChange={(event) => {
-                      setSource(event.currentTarget.value);
-                      setImportResult(null);
-                      setImportError(null);
+                      setNewSource(event.currentTarget.value);
+                      setSourceError(null);
                     }}
                   />
-                  <small>من 1 إلى 80 حرفًا Unicode. استخدم نفس الاسم دائمًا لنفس بوابة الدفع.</small>
+                  <button
+                    type="button"
+                    className={task20Styles.importButton}
+                    disabled={
+                      workflowLocked ||
+                      isLoadingSources ||
+                      isCreatingSource ||
+                      !isValidTransactionImportSource(newSource)
+                    }
+                    onClick={() => void createSource()}
+                  >
+                    {isCreatingSource ? "جاري الإضافة…" : "إضافة المصدر"}
+                  </button>
+                  {isLoadingSources && <small>جاري تحميل المصادر المسجلة…</small>}
+                  {sourceError && <div className={task20Styles.importError}>{sourceError}</div>}
                 </div>
+
+                <div className={task20Styles.sourceField}>
+                  <label htmlFor="transaction-import-type">نوع المعاملات في هذا الملف</label>
+                  <select
+                    id="transaction-import-type"
+                    className={task20Styles.sourceInput}
+                    value={transactionType}
+                    disabled={workflowLocked}
+                    onChange={(event) => {
+                      setTransactionType(event.currentTarget.value as NormalizedTransactionType | "");
+                      resetImportProgress();
+                    }}
+                  >
+                    <option value="">اختر النوع</option>
+                    <option value="collection">Collections — مبالغ محصلة</option>
+                    <option value="refund">Refunds — مبالغ مستردة</option>
+                  </select>
+                  <small>
+                    هذا Default على مستوى الملف. Collections تُقبل كمبالغ موجبة فقط؛ Refunds تُحفظ كمقادير موجبة
+                    حتى لا تُحسب كمصروف.
+                  </small>
+                </div>
+
                 <button
                   type="button"
                   className={task20Styles.importButton}
-                  disabled={workflowLocked}
+                  disabled={workflowLocked || !source || !transactionType || isLoadingSources || isCreatingSource}
                   onClick={() => void importTransactions()}
                 >
                   {isImporting ? "جاري الاستيراد…" : "استيراد المعاملات"}
@@ -581,6 +753,7 @@ export function TransactionImportValidator({
                             <th scope="col">الصف</th>
                             <th scope="col">البريد</th>
                             <th scope="col">التاريخ</th>
+                            <th scope="col">النوع</th>
                             <th scope="col">المبلغ</th>
                             <th scope="col">مطابقات موجودة</th>
                             <th scope="col">القرار</th>
@@ -594,6 +767,7 @@ export function TransactionImportValidator({
                                 <td>{rowNumber}</td>
                                 <td dir="auto">{candidate.row.customer_email}</td>
                                 <td dir="ltr">{candidate.row.transaction_date}</td>
+                                <td dir="ltr">{candidate.row.transaction_type}</td>
                                 <td dir="ltr">{candidate.row.amount_collected}</td>
                                 <td>{candidate.existingCount}</td>
                                 <td>

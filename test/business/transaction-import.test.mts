@@ -16,6 +16,18 @@ import {
   validateTransactionImportRows,
 } from "../../src/lib/business/transaction-import-validation.ts";
 
+const TOKEN_1 = "20202020-2020-4020-8020-20202020e001";
+
+function prepareOptions(
+  transactionType: "collection" | "refund" = "collection",
+  token = TOKEN_1,
+) {
+  return {
+    transactionType,
+    createImportRowToken: () => token,
+  } as const;
+}
+
 test("Task 20 normalizes import sources and transaction IDs deterministically", () => {
   assert.equal(normalizeTransactionImportSource(" Stripe "), "stripe");
   assert.equal(normalizeTransactionId(" txn_123 "), "txn_123");
@@ -35,43 +47,71 @@ test("Task 20 counts Unicode code points at database character boundaries", () =
   assert.equal(isValidTransactionEmail(exactEmail), true);
 });
 
-test("Task 20 prepares validated rows using normalized fallback identity inputs", () => {
-  const rows = prepareTransactionImportRows([
-    {
-      rowNumber: 1,
-      customerEmail: " Buyer@Example.com ",
-      transactionDate: "2026-08-24T14:30:00Z",
-      amountCollected: "1,250.50",
-      transactionId: " txn_123 ",
-    },
-  ]);
+test("Task 20 prepares validated collection rows with stable retry identity", () => {
+  const rows = prepareTransactionImportRows(
+    [
+      {
+        rowNumber: 1,
+        customerEmail: " Buyer@Example.com ",
+        transactionDate: "2026-08-24T14:30:00Z",
+        amountCollected: "+1,250.50",
+        transactionId: " txn_123 ",
+      },
+    ],
+    prepareOptions(),
+  );
 
   assert.deepEqual(rows, [
     {
       row_number: 1,
       transaction_id: "txn_123",
+      import_row_token: TOKEN_1,
       customer_email: "buyer@example.com",
       transaction_date: "2026-08-24",
       amount_collected: "1250.50",
+      transaction_type: "collection",
     },
   ]);
 });
 
-test("Task 20 preserves no-ID rows for database candidate duplicate detection", () => {
-  const rows = prepareTransactionImportRows([
-    {
-      rowNumber: 7,
-      customerEmail: "buyer@example.com",
-      transactionDate: "2026-08-24",
-      amountCollected: "100",
-      transactionId: "",
-    },
-  ]);
+test("Task 20 normalizes refunds to positive magnitudes", () => {
+  const rows = prepareTransactionImportRows(
+    [
+      {
+        rowNumber: 7,
+        customerEmail: "buyer@example.com",
+        transactionDate: "2026-08-24",
+        amountCollected: "-25.50",
+        transactionId: "",
+      },
+    ],
+    prepareOptions("refund", "20202020-2020-4020-8020-20202020e002"),
+  );
 
   assert.equal(rows[0]?.transaction_id, null);
-  assert.equal(rows[0]?.customer_email, "buyer@example.com");
-  assert.equal(rows[0]?.transaction_date, "2026-08-24");
-  assert.equal(rows[0]?.amount_collected, "100");
+  assert.equal(rows[0]?.amount_collected, "25.50");
+  assert.equal(rows[0]?.transaction_type, "refund");
+});
+
+test("Task 20 rejects negative collections and zero-value rows before import", () => {
+  for (const amountCollected of ["-10", "0"]) {
+    assert.throws(
+      () =>
+        prepareTransactionImportRows(
+          [
+            {
+              rowNumber: 4,
+              customerEmail: "buyer@example.com",
+              transactionDate: "2026-08-24",
+              amountCollected,
+            },
+          ],
+          prepareOptions(),
+        ),
+      (error: unknown) =>
+        error instanceof TransactionImportPreparationError && error.code === "ROW_NOT_VALIDATED",
+    );
+  }
 });
 
 test("Task 20 applies explicit header skipping before preparing rows", () => {
@@ -92,7 +132,10 @@ test("Task 20 applies explicit header skipping before preparing rows", () => {
         transactionId: "txn_25",
       },
     ],
-    { skipFirstRow: true },
+    {
+      ...prepareOptions(),
+      skipFirstRow: true,
+    },
   );
 
   assert.equal(rows.length, 1);
@@ -102,14 +145,17 @@ test("Task 20 applies explicit header skipping before preparing rows", () => {
 test("Task 20 refuses rows that have not passed the required validation contract", () => {
   assert.throws(
     () =>
-      prepareTransactionImportRows([
-        {
-          rowNumber: 1,
-          customerEmail: "not-an-email",
-          transactionDate: "2026-08-24",
-          amountCollected: "10",
-        },
-      ]),
+      prepareTransactionImportRows(
+        [
+          {
+            rowNumber: 1,
+            customerEmail: "not-an-email",
+            transactionDate: "2026-08-24",
+            amountCollected: "10",
+          },
+        ],
+        prepareOptions(),
+      ),
     (error: unknown) =>
       error instanceof TransactionImportPreparationError && error.code === "ROW_NOT_VALIDATED",
   );
@@ -144,49 +190,24 @@ test("Task 20 validates Transaction ID length before import using database chara
   const exactId = "😀".repeat(TRANSACTION_ID_MAX_LENGTH);
   const oversizedId = `${exactId}😀`;
 
-  const validResult = validateTransactionImportRows([
-    {
-      rowNumber: 11,
-      customerEmail: "buyer@example.com",
-      transactionDate: "2026-08-24",
-      amountCollected: "10",
-      transactionId: exactId,
-    },
-  ]);
+  const validRow = {
+    rowNumber: 11,
+    customerEmail: "buyer@example.com",
+    transactionDate: "2026-08-24",
+    amountCollected: "10",
+    transactionId: exactId,
+  };
+  const validResult = validateTransactionImportRows([validRow]);
   assert.equal(validResult.isValid, true);
-  assert.equal(prepareTransactionImportRows([
-    {
-      rowNumber: 11,
-      customerEmail: "buyer@example.com",
-      transactionDate: "2026-08-24",
-      amountCollected: "10",
-      transactionId: exactId,
-    },
-  ])[0]?.transaction_id, exactId);
+  assert.equal(prepareTransactionImportRows([validRow], prepareOptions())[0]?.transaction_id, exactId);
 
-  const invalidResult = validateTransactionImportRows([
-    {
-      rowNumber: 12,
-      customerEmail: "buyer@example.com",
-      transactionDate: "2026-08-24",
-      amountCollected: "10",
-      transactionId: oversizedId,
-    },
-  ]);
+  const invalidRow = { ...validRow, rowNumber: 12, transactionId: oversizedId };
+  const invalidResult = validateTransactionImportRows([invalidRow]);
   assert.equal(invalidResult.isValid, false);
   assert.equal(invalidResult.issues[0]?.code, "TRANSACTION_ID_TOO_LONG");
 
   assert.throws(
-    () =>
-      prepareTransactionImportRows([
-        {
-          rowNumber: 12,
-          customerEmail: "buyer@example.com",
-          transactionDate: "2026-08-24",
-          amountCollected: "10",
-          transactionId: oversizedId,
-        },
-      ]),
+    () => prepareTransactionImportRows([invalidRow], prepareOptions()),
     (error: unknown) =>
       error instanceof TransactionImportPreparationError &&
       error.code === "TRANSACTION_ID_TOO_LONG" &&

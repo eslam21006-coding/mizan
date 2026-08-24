@@ -1,4 +1,4 @@
-create table public.customer_transactions (
+create table public.customer_transaction_sources (
   id uuid primary key default gen_random_uuid(),
   business_id uuid not null references public.businesses(id) on delete restrict,
   source text not null check (
@@ -6,6 +6,15 @@ create table public.customer_transactions (
     and source = btrim(source)
     and source = lower(source)
   ),
+  created_by_user_id uuid not null references auth.users(id) on delete restrict,
+  created_at timestamptz not null default now(),
+  constraint customer_transaction_sources_business_source_key unique (business_id, source)
+);
+
+create table public.customer_transactions (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses(id) on delete restrict,
+  source text not null,
   source_transaction_id text check (
     source_transaction_id is null
     or (
@@ -13,6 +22,7 @@ create table public.customer_transactions (
       and source_transaction_id = btrim(source_transaction_id)
     )
   ),
+  import_row_token uuid not null,
   customer_email text not null check (
     char_length(customer_email) between 3 and 320
     and customer_email = btrim(customer_email)
@@ -20,15 +30,23 @@ create table public.customer_transactions (
     and customer_email ~ '^[^[:space:]@]+@[^[:space:]@]+$'
   ),
   transaction_date date not null,
-  amount_collected numeric not null,
+  amount_collected numeric not null check (amount_collected > 0),
+  transaction_type text not null check (transaction_type in ('collection', 'refund')),
   source_row_number integer not null check (source_row_number > 0),
   imported_by_user_id uuid not null references auth.users(id) on delete restrict,
-  created_at timestamptz not null default now()
+  created_at timestamptz not null default now(),
+  constraint customer_transactions_registered_source_fkey
+    foreign key (business_id, source)
+    references public.customer_transaction_sources (business_id, source)
+    on delete restrict
 );
 
 create unique index customer_transactions_source_id_unique_idx
   on public.customer_transactions (business_id, source, source_transaction_id)
   where source_transaction_id is not null;
+
+create unique index customer_transactions_import_row_token_unique_idx
+  on public.customer_transactions (business_id, import_row_token);
 
 create index customer_transactions_candidate_lookup_idx
   on public.customer_transactions (
@@ -36,9 +54,9 @@ create index customer_transactions_candidate_lookup_idx
     source,
     customer_email,
     transaction_date,
-    amount_collected
-  )
-  where source_transaction_id is null;
+    amount_collected,
+    transaction_type
+  );
 
 create index customer_transactions_business_date_idx
   on public.customer_transactions (business_id, transaction_date, id);
@@ -46,36 +64,47 @@ create index customer_transactions_business_date_idx
 create table public.customer_transaction_duplicate_resolutions (
   id uuid primary key default gen_random_uuid(),
   resolution_token uuid not null unique,
+  import_row_token uuid not null,
   business_id uuid not null references public.businesses(id) on delete restrict,
-  source text not null check (
-    char_length(source) between 1 and 80
-    and source = btrim(source)
-    and source = lower(source)
-  ),
+  source text not null,
   customer_email text not null check (
     char_length(customer_email) between 3 and 320
     and customer_email = btrim(customer_email)
     and customer_email = lower(customer_email)
   ),
   transaction_date date not null,
-  amount_collected numeric not null,
+  amount_collected numeric not null check (amount_collected > 0),
+  transaction_type text not null check (transaction_type in ('collection', 'refund')),
   source_row_number integer not null check (source_row_number > 0),
   decision text not null check (decision in ('duplicate', 'keep_distinct')),
   candidate_match_count integer not null check (candidate_match_count > 0),
   kept_transaction_id uuid references public.customer_transactions(id) on delete restrict,
   resolved_by_user_id uuid not null references auth.users(id) on delete restrict,
   resolved_at timestamptz not null default now(),
+  constraint customer_transaction_duplicate_resolutions_registered_source_fkey
+    foreign key (business_id, source)
+    references public.customer_transaction_sources (business_id, source)
+    on delete restrict,
   check (
     (decision = 'duplicate' and kept_transaction_id is null)
     or (decision = 'keep_distinct' and kept_transaction_id is not null)
   )
 );
 
+create unique index customer_transaction_duplicate_resolutions_import_row_unique_idx
+  on public.customer_transaction_duplicate_resolutions (business_id, import_row_token);
+
 create index customer_transaction_duplicate_resolutions_business_idx
   on public.customer_transaction_duplicate_resolutions (business_id, resolved_at, id);
 
+alter table public.customer_transaction_sources enable row level security;
 alter table public.customer_transactions enable row level security;
 alter table public.customer_transaction_duplicate_resolutions enable row level security;
+
+revoke all on public.customer_transaction_sources from anon;
+revoke all on public.customer_transaction_sources from authenticated;
+grant select on public.customer_transaction_sources to authenticated;
+grant all on public.customer_transaction_sources to service_role;
 
 revoke all on public.customer_transactions from anon;
 revoke all on public.customer_transactions from authenticated;
@@ -86,6 +115,18 @@ revoke all on public.customer_transaction_duplicate_resolutions from anon;
 revoke all on public.customer_transaction_duplicate_resolutions from authenticated;
 grant select on public.customer_transaction_duplicate_resolutions to authenticated;
 grant all on public.customer_transaction_duplicate_resolutions to service_role;
+
+create policy customer_transaction_sources_select
+on public.customer_transaction_sources for select
+to authenticated
+using (
+  (select private.is_admin())
+  or business_id in (
+    select membership.business_id
+    from public.business_memberships as membership
+    where membership.user_id = (select auth.uid())
+  )
+);
 
 create policy customer_transactions_select
 on public.customer_transactions for select
@@ -111,6 +152,59 @@ using (
   )
 );
 
+create or replace function public.create_customer_transaction_source(
+  p_business_id uuid,
+  p_source text
+)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  normalized_source text := lower(btrim(coalesce(p_source, '')));
+begin
+  if (select auth.uid()) is null then
+    raise insufficient_privilege using message = 'Authentication is required to create a transaction source.';
+  end if;
+
+  if not (
+    (select private.is_admin())
+    or exists (
+      select 1
+      from public.businesses as business
+      where business.id = p_business_id
+        and business.owner_user_id = (select auth.uid())
+    )
+  ) then
+    raise insufficient_privilege using message = 'Only the business owner or an admin can create transaction sources.';
+  end if;
+
+  if char_length(normalized_source) not between 1 and 80 then
+    raise invalid_parameter_value using message = 'Transaction source must be between 1 and 80 characters.';
+  end if;
+
+  insert into public.customer_transaction_sources (
+    business_id,
+    source,
+    created_by_user_id
+  ) values (
+    p_business_id,
+    normalized_source,
+    (select auth.uid())
+  )
+  on conflict (business_id, source) do nothing;
+
+  return normalized_source;
+end;
+$$;
+
+revoke all on function public.create_customer_transaction_source(uuid, text) from public;
+revoke all on function public.create_customer_transaction_source(uuid, text) from anon;
+revoke all on function public.create_customer_transaction_source(uuid, text) from authenticated;
+grant execute on function public.create_customer_transaction_source(uuid, text) to authenticated;
+grant execute on function public.create_customer_transaction_source(uuid, text) to service_role;
+
 create or replace function public.import_customer_transactions(
   p_business_id uuid,
   p_source text,
@@ -125,17 +219,20 @@ declare
   normalized_source text := lower(btrim(coalesce(p_source, '')));
   source_row jsonb;
   source_transaction_id_value text;
+  import_row_token_value uuid;
   customer_email_value text;
   transaction_date_text text;
   transaction_date_value date;
   amount_text text;
   amount_value numeric;
+  transaction_type_value text;
   row_number_value integer;
   candidate_resolution_value text;
   candidate_resolution_token uuid;
   candidate_lock_key text;
   candidate_match_count integer;
   inserted_transaction_id uuid;
+  existing_import public.customer_transactions%rowtype;
   existing_resolution public.customer_transaction_duplicate_resolutions%rowtype;
   affected_rows integer;
   inserted_count integer := 0;
@@ -161,6 +258,15 @@ begin
 
   if char_length(normalized_source) not between 1 and 80 then
     raise invalid_parameter_value using message = 'Transaction source must be between 1 and 80 characters.';
+  end if;
+
+  if not exists (
+    select 1
+    from public.customer_transaction_sources as registered_source
+    where registered_source.business_id = p_business_id
+      and registered_source.source = normalized_source
+  ) then
+    raise invalid_parameter_value using message = 'Select a registered transaction source before importing.';
   end if;
 
   if jsonb_typeof(p_rows) is distinct from 'array' then
@@ -192,6 +298,20 @@ begin
     if source_transaction_id_value is not null
       and char_length(source_transaction_id_value) > 512 then
       raise invalid_parameter_value using message = 'Transaction ID must be 512 characters or fewer.';
+    end if;
+
+    begin
+      import_row_token_value := (source_row ->> 'import_row_token')::uuid;
+    exception when others then
+      raise invalid_parameter_value using message = 'Import row token must be a UUID.';
+    end;
+    if import_row_token_value is null then
+      raise invalid_parameter_value using message = 'Import row token is required.';
+    end if;
+
+    transaction_type_value := lower(btrim(coalesce(source_row ->> 'transaction_type', '')));
+    if transaction_type_value not in ('collection', 'refund') then
+      raise invalid_parameter_value using message = 'Transaction type must be collection or refund.';
     end if;
 
     candidate_resolution_value := nullif(btrim(coalesce(source_row ->> 'candidate_resolution', '')), '');
@@ -248,7 +368,18 @@ begin
       raise invalid_parameter_value using message = 'Amount collected is outside the supported numeric range.';
     end;
 
+    if transaction_type_value = 'refund' then
+      amount_value := abs(amount_value);
+    end if;
+    if amount_value <= 0 then
+      raise invalid_parameter_value using message = 'Collections and refund magnitudes must be positive.';
+    end if;
+
     if candidate_resolution_token is not null then
+      perform pg_catalog.pg_advisory_xact_lock(
+        pg_catalog.hashtextextended('resolution:' || candidate_resolution_token::text, 0)
+      );
+
       select resolution.*
       into existing_resolution
       from public.customer_transaction_duplicate_resolutions as resolution
@@ -257,9 +388,11 @@ begin
       if found then
         if existing_resolution.business_id <> p_business_id
           or existing_resolution.source <> normalized_source
+          or existing_resolution.import_row_token <> import_row_token_value
           or existing_resolution.customer_email <> customer_email_value
           or existing_resolution.transaction_date <> transaction_date_value
           or existing_resolution.amount_collected <> amount_value
+          or existing_resolution.transaction_type <> transaction_type_value
           or existing_resolution.source_row_number <> row_number_value
           or existing_resolution.decision <> candidate_resolution_value then
           raise invalid_parameter_value using message = 'Candidate resolution ID does not match this candidate decision.';
@@ -274,14 +407,80 @@ begin
       end if;
     end if;
 
+    perform pg_catalog.pg_advisory_xact_lock(
+      pg_catalog.hashtextextended('import-row:' || import_row_token_value::text, 0)
+    );
+
+    select transaction.*
+    into existing_import
+    from public.customer_transactions as transaction
+    where transaction.business_id = p_business_id
+      and transaction.import_row_token = import_row_token_value;
+
+    if found then
+      if candidate_resolution_value is not null
+        or existing_import.source <> normalized_source
+        or existing_import.source_transaction_id is distinct from source_transaction_id_value
+        or existing_import.customer_email <> customer_email_value
+        or existing_import.transaction_date <> transaction_date_value
+        or existing_import.amount_collected <> amount_value
+        or existing_import.transaction_type <> transaction_type_value
+        or existing_import.source_row_number <> row_number_value then
+        raise invalid_parameter_value using message = 'Import row token does not match this transaction row.';
+      end if;
+      inserted_count := inserted_count + 1;
+      continue;
+    end if;
+
+    if candidate_resolution_value is not null then
+      select resolution.*
+      into existing_resolution
+      from public.customer_transaction_duplicate_resolutions as resolution
+      where resolution.business_id = p_business_id
+        and resolution.import_row_token = import_row_token_value;
+
+      if found then
+        if existing_resolution.resolution_token <> candidate_resolution_token
+          or existing_resolution.source <> normalized_source
+          or existing_resolution.customer_email <> customer_email_value
+          or existing_resolution.transaction_date <> transaction_date_value
+          or existing_resolution.amount_collected <> amount_value
+          or existing_resolution.transaction_type <> transaction_type_value
+          or existing_resolution.source_row_number <> row_number_value
+          or existing_resolution.decision <> candidate_resolution_value then
+          raise invalid_parameter_value using message = 'Import row token was already resolved with a different decision.';
+        end if;
+
+        if existing_resolution.decision = 'duplicate' then
+          duplicate_count := duplicate_count + 1;
+        else
+          inserted_count := inserted_count + 1;
+        end if;
+        continue;
+      end if;
+    end if;
+
+    candidate_lock_key := concat_ws(
+      E'\x1f',
+      p_business_id::text,
+      normalized_source,
+      customer_email_value,
+      transaction_date_value::text,
+      pg_catalog.trim_scale(amount_value)::text,
+      transaction_type_value
+    );
+    perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(candidate_lock_key, 0));
+
     if source_transaction_id_value is not null then
       insert into public.customer_transactions (
         business_id,
         source,
         source_transaction_id,
+        import_row_token,
         customer_email,
         transaction_date,
         amount_collected,
+        transaction_type,
         source_row_number,
         imported_by_user_id
       )
@@ -289,9 +488,11 @@ begin
         p_business_id,
         normalized_source,
         source_transaction_id_value,
+        import_row_token_value,
         customer_email_value,
         transaction_date_value,
         amount_value,
+        transaction_type_value,
         row_number_value,
         (select auth.uid())
       )
@@ -306,25 +507,15 @@ begin
       continue;
     end if;
 
-    candidate_lock_key := concat_ws(
-      E'\x1f',
-      p_business_id::text,
-      normalized_source,
-      customer_email_value,
-      transaction_date_value::text,
-      amount_value::text
-    );
-    perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(candidate_lock_key, 0));
-
     select count(*)::integer
     into candidate_match_count
     from public.customer_transactions as existing
     where existing.business_id = p_business_id
       and existing.source = normalized_source
-      and existing.source_transaction_id is null
       and existing.customer_email = customer_email_value
       and existing.transaction_date = transaction_date_value
-      and existing.amount_collected = amount_value;
+      and existing.amount_collected = amount_value
+      and existing.transaction_type = transaction_type_value;
 
     if candidate_match_count > 0 then
       if candidate_resolution_value is null then
@@ -341,11 +532,13 @@ begin
       if candidate_resolution_value = 'duplicate' then
         insert into public.customer_transaction_duplicate_resolutions (
           resolution_token,
+          import_row_token,
           business_id,
           source,
           customer_email,
           transaction_date,
           amount_collected,
+          transaction_type,
           source_row_number,
           decision,
           candidate_match_count,
@@ -353,11 +546,13 @@ begin
           resolved_by_user_id
         ) values (
           candidate_resolution_token,
+          import_row_token_value,
           p_business_id,
           normalized_source,
           customer_email_value,
           transaction_date_value,
           amount_value,
+          transaction_type_value,
           row_number_value,
           'duplicate',
           candidate_match_count,
@@ -372,18 +567,22 @@ begin
         business_id,
         source,
         source_transaction_id,
+        import_row_token,
         customer_email,
         transaction_date,
         amount_collected,
+        transaction_type,
         source_row_number,
         imported_by_user_id
       ) values (
         p_business_id,
         normalized_source,
         null,
+        import_row_token_value,
         customer_email_value,
         transaction_date_value,
         amount_value,
+        transaction_type_value,
         row_number_value,
         (select auth.uid())
       )
@@ -391,11 +590,13 @@ begin
 
       insert into public.customer_transaction_duplicate_resolutions (
         resolution_token,
+        import_row_token,
         business_id,
         source,
         customer_email,
         transaction_date,
         amount_collected,
+        transaction_type,
         source_row_number,
         decision,
         candidate_match_count,
@@ -403,11 +604,13 @@ begin
         resolved_by_user_id
       ) values (
         candidate_resolution_token,
+        import_row_token_value,
         p_business_id,
         normalized_source,
         customer_email_value,
         transaction_date_value,
         amount_value,
+        transaction_type_value,
         row_number_value,
         'keep_distinct',
         candidate_match_count,
@@ -426,18 +629,22 @@ begin
       business_id,
       source,
       source_transaction_id,
+      import_row_token,
       customer_email,
       transaction_date,
       amount_collected,
+      transaction_type,
       source_row_number,
       imported_by_user_id
     ) values (
       p_business_id,
       normalized_source,
       null,
+      import_row_token_value,
       customer_email_value,
       transaction_date_value,
       amount_value,
+      transaction_type_value,
       row_number_value,
       (select auth.uid())
     );

@@ -9,17 +9,21 @@ import {
 
 export const TRANSACTION_IMPORT_CHUNK_SIZE = 500;
 export const TRANSACTION_IMPORT_SOURCE_MAX_LENGTH = 80;
+export const TRANSACTION_IMPORT_TYPES = ["collection", "refund"] as const;
 
 export type CandidateDuplicateResolution = "duplicate" | "keep_distinct";
+export type NormalizedTransactionType = (typeof TRANSACTION_IMPORT_TYPES)[number];
 
 export type TransactionDuplicateInputRow = TransactionValidationInputRow;
 
 export type PreparedTransactionImportRow = {
   row_number: number;
   transaction_id: string | null;
+  import_row_token: string;
   customer_email: string;
   transaction_date: string;
   amount_collected: string;
+  transaction_type: NormalizedTransactionType;
   candidate_resolution?: CandidateDuplicateResolution;
   candidate_resolution_id?: string;
 };
@@ -53,9 +57,19 @@ export function normalizeTransactionId(value: string | undefined) {
   return normalized ? normalized : null;
 }
 
+function normalizedAmountText(value: string, transactionType: NormalizedTransactionType) {
+  const normalized = value.trim().replaceAll(",", "");
+  if (transactionType === "refund") return normalized.replace(/^[+-]/, "");
+  return normalized.replace(/^\+/, "");
+}
+
 export function prepareTransactionImportRows(
   rows: readonly TransactionDuplicateInputRow[],
-  options: { skipFirstRow?: boolean } = {},
+  options: {
+    skipFirstRow?: boolean;
+    transactionType: NormalizedTransactionType;
+    createImportRowToken: () => string;
+  },
 ): PreparedTransactionImportRow[] {
   const prepared: PreparedTransactionImportRow[] = [];
   let firstSourceRowSeen = false;
@@ -78,20 +92,37 @@ export function prepareTransactionImportRows(
     const email = normalizeTransactionEmail(row.customerEmail);
     const transactionDate = row.transactionDate.trim();
     const amount = parseTransactionAmount(row.amountCollected);
-    if (!isValidTransactionEmail(email) || !isValidTransactionDate(transactionDate) || amount === null) {
+    const amountHasValidSign =
+      amount !== null && amount !== 0 && (options.transactionType === "refund" || amount > 0);
+    if (
+      !isValidTransactionEmail(email) ||
+      !isValidTransactionDate(transactionDate) ||
+      !amountHasValidSign
+    ) {
       throw new TransactionImportPreparationError(
         "ROW_NOT_VALIDATED",
         row.rowNumber,
-        "Only validated transaction rows can be prepared for import.",
+        "Only validated positive collections or non-zero refunds can be prepared for import.",
+      );
+    }
+
+    const importRowToken = options.createImportRowToken();
+    if (!importRowToken) {
+      throw new TransactionImportPreparationError(
+        "ROW_NOT_VALIDATED",
+        row.rowNumber,
+        "Every prepared transaction row requires a stable retry token.",
       );
     }
 
     prepared.push({
       row_number: row.rowNumber,
       transaction_id: transactionId,
+      import_row_token: importRowToken,
       customer_email: email,
       transaction_date: transactionDate.slice(0, 10),
-      amount_collected: row.amountCollected.trim().replaceAll(",", ""),
+      amount_collected: normalizedAmountText(row.amountCollected, options.transactionType),
+      transaction_type: options.transactionType,
     });
   }
 
