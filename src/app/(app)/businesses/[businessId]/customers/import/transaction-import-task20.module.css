@@ -47,7 +47,8 @@
 }
 
 .sourceInput:focus-visible,
-.importButton:focus-visible {
+.importButton:focus-visible,
+.candidateTable select:focus-visible {
   outline: 3px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
   outline-offset: 2px;
 }
@@ -72,13 +73,14 @@
 
 .importSummary {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
 }
 
 .importSummary > div {
   display: grid;
   gap: 4px;
+  min-width: 0;
   padding: 13px;
   border: 1px solid var(--border-subtle);
   border-radius: 14px;
@@ -113,18 +115,78 @@
   color: #b42318;
 }
 
+.candidatePanel {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-primary);
+}
+
+.candidatePanel h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.candidateTableShell {
+  max-width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-primary);
+}
+
+.candidateTable {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  text-align: start;
+}
+
+.candidateTable th,
+.candidateTable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.candidateTable th {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.candidateTable tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.candidateTable select {
+  min-height: 40px;
+  max-width: 230px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  padding: 7px 9px;
+  font: inherit;
+}
+
 @media (max-width: 720px) {
   .importButton {
     width: 100%;
   }
-}
-
-@media (max-width: 430px) {
-  .importPanel {
-    padding: 14px;
-  }
 
   .importSummary {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 430px) {
+  .importPanel,
+  .candidatePanel {
+    padding: 14px;
   }
 }
