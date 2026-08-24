@@ -574,7 +574,12 @@ export function TransactionImportValidator({
                         احتفظ به كمعاملة مستقلة. يتم حفظ القرار في سجل تدقيق.
                       </p>
                     </div>
-                    <div className={task20Styles.candidateTableShell} tabIndex={0}>
+                    <div
+                      className={task20Styles.candidateTableShell}
+                      tabIndex={0}
+                      role="group"
+                      aria-label="منطقة تمرير جدول تصادمات منع تكرار المعاملات"
+                    >
                       <table className={task20Styles.candidateTable} aria-label="تصادمات منع تكرار المعاملات">
                         <thead>
                           <tr>
