@@ -26,6 +26,7 @@ declare
   first_result jsonb;
   resolve_duplicate_result jsonb;
   keep_distinct_result jsonb;
+  keep_distinct_retry_result jsonb;
   reimport_result jsonb;
   reimport_resolution_result jsonb;
   other_source_result jsonb;
@@ -65,7 +66,7 @@ begin
   resolve_duplicate_result := public.import_customer_transactions(
     '20202020-2020-4020-8020-20202020a001',
     'stripe',
-    '[{"row_number":2,"transaction_id":null,"customer_email":"buyer@example.com","transaction_date":"2026-08-24","amount_collected":"100","candidate_resolution":"duplicate"}]'::jsonb
+    '[{"row_number":2,"transaction_id":null,"customer_email":"buyer@example.com","transaction_date":"2026-08-24","amount_collected":"100","candidate_resolution":"duplicate","candidate_resolution_id":"20202020-2020-4020-8020-20202020d001"}]'::jsonb
   );
 
   if (resolve_duplicate_result ->> 'inserted_count')::integer <> 0
@@ -77,13 +78,23 @@ begin
   keep_distinct_result := public.import_customer_transactions(
     '20202020-2020-4020-8020-20202020a001',
     'stripe',
-    '[{"row_number":5,"transaction_id":null,"customer_email":"buyer@example.com","transaction_date":"2026-08-24","amount_collected":"100","candidate_resolution":"keep_distinct"}]'::jsonb
+    '[{"row_number":5,"transaction_id":null,"customer_email":"buyer@example.com","transaction_date":"2026-08-24","amount_collected":"100","candidate_resolution":"keep_distinct","candidate_resolution_id":"20202020-2020-4020-8020-20202020d002"}]'::jsonb
   );
 
   if (keep_distinct_result ->> 'inserted_count')::integer <> 1
     or (keep_distinct_result ->> 'duplicate_count')::integer <> 0
     or (keep_distinct_result ->> 'candidate_count')::integer <> 0 then
     raise exception 'keep-distinct candidate resolution failed: %', keep_distinct_result;
+  end if;
+
+  keep_distinct_retry_result := public.import_customer_transactions(
+    '20202020-2020-4020-8020-20202020a001',
+    'stripe',
+    '[{"row_number":5,"transaction_id":null,"customer_email":"buyer@example.com","transaction_date":"2026-08-24","amount_collected":"100","candidate_resolution":"keep_distinct","candidate_resolution_id":"20202020-2020-4020-8020-20202020d002"}]'::jsonb
+  );
+
+  if (keep_distinct_retry_result ->> 'inserted_count')::integer <> 1 then
+    raise exception 'retry-safe keep-distinct resolution did not replay its prior result: %', keep_distinct_retry_result;
   end if;
 
   select coalesce(sum(amount_collected), 0)
@@ -93,7 +104,7 @@ begin
     and source = 'stripe';
 
   if total_amount <> 400 then
-    raise exception 'legitimate repeated same-value purchase was lost: %', total_amount;
+    raise exception 'legitimate repeated same-value purchase was lost or resolution retry duplicated it: %', total_amount;
   end if;
 
   reimport_result := public.import_customer_transactions(
@@ -114,7 +125,7 @@ begin
   reimport_resolution_result := public.import_customer_transactions(
     '20202020-2020-4020-8020-20202020a001',
     'stripe',
-    '[{"row_number":1,"transaction_id":null,"customer_email":"buyer@example.com","transaction_date":"2026-08-24","amount_collected":"100","candidate_resolution":"duplicate"}]'::jsonb
+    '[{"row_number":1,"transaction_id":null,"customer_email":"buyer@example.com","transaction_date":"2026-08-24","amount_collected":"100","candidate_resolution":"duplicate","candidate_resolution_id":"20202020-2020-4020-8020-20202020d003"}]'::jsonb
   );
 
   if (reimport_resolution_result ->> 'duplicate_count')::integer <> 1 then
@@ -133,7 +144,7 @@ begin
 
   if (select count(*) from public.customer_transaction_duplicate_resolutions
       where business_id = '20202020-2020-4020-8020-20202020a001') <> 3 then
-    raise exception 'candidate duplicate decisions were not preserved for audit';
+    raise exception 'candidate duplicate decisions were not preserved exactly once for audit';
   end if;
 
   other_source_result := public.import_customer_transactions(
@@ -228,9 +239,10 @@ begin
 
   begin
     insert into public.customer_transaction_duplicate_resolutions (
-      business_id, source, customer_email, transaction_date, amount_collected,
+      resolution_token, business_id, source, customer_email, transaction_date, amount_collected,
       source_row_number, decision, candidate_match_count, resolved_by_user_id
     ) values (
+      '20202020-2020-4020-8020-20202020d099',
       '20202020-2020-4020-8020-20202020a001', 'stripe', 'bypass@example.com', '2026-08-24', 10,
       99, 'duplicate', 1, '20202020-2020-4020-8020-202020202001'
     );
