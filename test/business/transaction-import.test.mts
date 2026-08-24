@@ -12,6 +12,7 @@ import {
   isValidTransactionDate,
   isValidTransactionEmail,
   TRANSACTION_EMAIL_MAX_LENGTH,
+  TRANSACTION_ID_MAX_LENGTH,
   validateTransactionImportRows,
 } from "../../src/lib/business/transaction-import-validation.ts";
 
@@ -22,6 +23,16 @@ test("Task 20 normalizes import sources and transaction IDs deterministically", 
   assert.equal(isValidTransactionImportSource("PayPal"), true);
   assert.equal(isValidTransactionImportSource("   "), false);
   assert.equal(isValidTransactionImportSource("x".repeat(81)), false);
+});
+
+test("Task 20 counts Unicode code points at database character boundaries", () => {
+  assert.equal(isValidTransactionImportSource("😀".repeat(80)), true);
+  assert.equal(isValidTransactionImportSource("😀".repeat(81)), false);
+
+  const exactEmail = `${"😀".repeat(315)}@b.co`;
+  assert.equal(Array.from(exactEmail).length, TRANSACTION_EMAIL_MAX_LENGTH);
+  assert.ok(exactEmail.length > TRANSACTION_EMAIL_MAX_LENGTH);
+  assert.equal(isValidTransactionEmail(exactEmail), true);
 });
 
 test("Task 20 prepares validated rows using normalized fallback identity inputs", () => {
@@ -46,7 +57,7 @@ test("Task 20 prepares validated rows using normalized fallback identity inputs"
   ]);
 });
 
-test("Task 20 preserves no-ID rows for the email/date/amount/source database fallback key", () => {
+test("Task 20 preserves no-ID rows for database candidate duplicate detection", () => {
   const rows = prepareTransactionImportRows([
     {
       rowNumber: 7,
@@ -129,7 +140,42 @@ test("Task 20 rejects year zero before PostgreSQL date conversion", () => {
   assert.equal(isValidTransactionDate("0000-01-01T12:00:00Z"), false);
 });
 
-test("Task 20 refuses oversized transaction IDs before any import RPC", () => {
+test("Task 20 validates Transaction ID length before import using database character semantics", () => {
+  const exactId = "😀".repeat(TRANSACTION_ID_MAX_LENGTH);
+  const oversizedId = `${exactId}😀`;
+
+  const validResult = validateTransactionImportRows([
+    {
+      rowNumber: 11,
+      customerEmail: "buyer@example.com",
+      transactionDate: "2026-08-24",
+      amountCollected: "10",
+      transactionId: exactId,
+    },
+  ]);
+  assert.equal(validResult.isValid, true);
+  assert.equal(prepareTransactionImportRows([
+    {
+      rowNumber: 11,
+      customerEmail: "buyer@example.com",
+      transactionDate: "2026-08-24",
+      amountCollected: "10",
+      transactionId: exactId,
+    },
+  ])[0]?.transaction_id, exactId);
+
+  const invalidResult = validateTransactionImportRows([
+    {
+      rowNumber: 12,
+      customerEmail: "buyer@example.com",
+      transactionDate: "2026-08-24",
+      amountCollected: "10",
+      transactionId: oversizedId,
+    },
+  ]);
+  assert.equal(invalidResult.isValid, false);
+  assert.equal(invalidResult.issues[0]?.code, "TRANSACTION_ID_TOO_LONG");
+
   assert.throws(
     () =>
       prepareTransactionImportRows([
@@ -138,7 +184,7 @@ test("Task 20 refuses oversized transaction IDs before any import RPC", () => {
           customerEmail: "buyer@example.com",
           transactionDate: "2026-08-24",
           amountCollected: "10",
-          transactionId: "x".repeat(513),
+          transactionId: oversizedId,
         },
       ]),
     (error: unknown) =>
