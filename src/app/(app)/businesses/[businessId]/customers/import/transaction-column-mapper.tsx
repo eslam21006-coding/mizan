@@ -25,6 +25,8 @@ type TransactionColumnMapperProps = {
   businessId: string;
   preview: TransactionFilePreview;
   fileBuffer: ArrayBuffer;
+  importBusy: boolean;
+  onImportBusyChange: (busy: boolean) => void;
 };
 
 function fieldDescription(field: TransactionMappingField) {
@@ -47,6 +49,8 @@ export function TransactionColumnMapper({
   businessId,
   preview,
   fileBuffer,
+  importBusy,
+  onImportBusyChange,
 }: TransactionColumnMapperProps) {
   const [mapping, setMapping] = useState<TransactionColumnMapping>(EMPTY_TRANSACTION_COLUMN_MAPPING);
   const mappingState = inspectTransactionColumnMapping(mapping);
@@ -64,6 +68,7 @@ export function TransactionColumnMapper({
   }, [preview, hasValidColumnCount, usesDirectColumnEntry]);
 
   const setSelectField = (field: TransactionMappingField, value: string) => {
+    if (importBusy) return;
     if (value === "") {
       setMapping((current) => setTransactionFieldColumn(current, field, null));
       return;
@@ -75,6 +80,7 @@ export function TransactionColumnMapper({
   };
 
   const setDirectField = (field: TransactionMappingField, value: string) => {
+    if (importBusy) return;
     if (value.trim() === "") {
       setMapping((current) => setTransactionFieldColumn(current, field, null));
       return;
@@ -149,6 +155,7 @@ export function TransactionColumnMapper({
                         inputMode="numeric"
                         value={selected === null ? "" : selected + 1}
                         aria-describedby={helpId}
+                        disabled={importBusy}
                         onChange={(event) => setDirectField(field, event.currentTarget.value)}
                       />
                       <p id={helpId}>
@@ -162,6 +169,7 @@ export function TransactionColumnMapper({
                     <select
                       id={controlId}
                       value={selected ?? ""}
+                      disabled={importBusy}
                       onChange={(event) => setSelectField(field, event.currentTarget.value)}
                     >
                       <option value="">{required ? "اختر عمودًا" : "بدون Transaction ID"}</option>
@@ -206,7 +214,7 @@ export function TransactionColumnMapper({
               <span>{TRANSACTION_FIELD_LABELS.transactionId}</span>
               <strong dir="ltr">
                 {mapping.transactionId === null || mapping.transactionId === undefined
-                  ? "Fallback duplicate key"
+                  ? "Candidate duplicate check"
                   : `Column ${transactionColumnLabel(mapping.transactionId)}`}
               </strong>
             </div>
@@ -221,6 +229,7 @@ export function TransactionColumnMapper({
           preview={preview}
           fileBuffer={fileBuffer}
           mapping={mapping}
+          onImportBusyChange={onImportBusyChange}
         />
       )}
     </>
