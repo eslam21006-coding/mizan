@@ -9,6 +9,7 @@ import {
   TransactionImportPreparationError,
 } from "../../src/lib/business/transaction-import.ts";
 import {
+  isValidTransactionDate,
   isValidTransactionEmail,
   TRANSACTION_EMAIL_MAX_LENGTH,
   validateTransactionImportRows,
@@ -120,6 +121,12 @@ test("Task 20 rejects emails beyond the database storage boundary during validat
   assert.equal(result.isValid, false);
   assert.equal(result.invalidRows, 1);
   assert.equal(result.issues[0]?.code, "EMAIL_INVALID");
+});
+
+test("Task 20 rejects year zero before PostgreSQL date conversion", () => {
+  assert.equal(isValidTransactionDate("0001-01-01"), true);
+  assert.equal(isValidTransactionDate("0000-01-01"), false);
+  assert.equal(isValidTransactionDate("0000-01-01T12:00:00Z"), false);
 });
 
 test("Task 20 refuses oversized transaction IDs before any import RPC", () => {
