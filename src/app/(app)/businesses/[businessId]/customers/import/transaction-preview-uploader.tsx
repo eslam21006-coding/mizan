@@ -13,6 +13,7 @@ import { TransactionColumnMapper } from "./transaction-column-mapper";
 import styles from "./transaction-import.module.css";
 
 type TransactionPreviewUploaderProps = {
+  businessId: string;
   canManage: boolean;
 };
 
@@ -59,7 +60,10 @@ function errorMessage(error: unknown) {
   return "حدث خطأ غير متوقع أثناء قراءة الملف. لم يتم حفظ أو رفع أي بيانات.";
 }
 
-export function TransactionPreviewUploader({ canManage }: TransactionPreviewUploaderProps) {
+export function TransactionPreviewUploader({
+  businessId,
+  canManage,
+}: TransactionPreviewUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<TransactionFilePreview | null>(null);
   const [fileBuffer, setFileBuffer] = useState<ArrayBuffer | null>(null);
@@ -116,11 +120,11 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
     <div className={styles.previewStack}>
       <section className={styles.uploadPanel} aria-labelledby="transaction-upload-title">
         <div className={styles.uploadCopy}>
-          <span className={styles.kicker}>Task 19 · Import Validation</span>
+          <span className={styles.kicker}>Task 20 · Duplicate Protection</span>
           <h2 id="transaction-upload-title">اختر ملف معاملات العملاء</h2>
           <p>
-            المعاينة والـ Mapping والـ Validation تتم داخل المتصفح فقط. الملف ومحتواه لا يتم رفعهما إلى
-            السيرفر، ولا يتم إنشاء أي معاملات في قاعدة البيانات في هذه الخطوة.
+            المعاينة والـ Mapping والـ Validation تتم داخل المتصفح. الحفظ يبدأ فقط بعد نجاح Validation وضغطك
+            على زر استيراد المعاملات.
           </p>
         </div>
 
@@ -144,7 +148,7 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
           </div>
         ) : (
           <div className={styles.readOnlyNotice}>
-            صلاحيتك في هذا البزنس للعرض فقط. رفع ملفات معاملات العملاء متاح للأدمن أو مالك البزنس.
+            صلاحيتك في هذا البزنس للعرض فقط. استيراد معاملات العملاء متاح للأدمن أو مالك البزنس.
           </div>
         )}
       </section>
@@ -172,7 +176,7 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
               <div>
                 <span className={styles.kicker}>تمت القراءة محليًا</span>
                 <h2 id="transaction-preview-title">معاينة الملف</h2>
-                <p>بعد الـ Mapping يمكنك تشغيل Validation. Duplicate Protection وImport ما زالا خارج هذه الخطوة.</p>
+                <p>أكمل الـ Mapping ثم Validation قبل تفعيل الاستيراد ومنع التكرار.</p>
               </div>
               <button type="button" className={styles.secondaryButton} onClick={reset}>
                 تغيير الملف
@@ -258,6 +262,7 @@ export function TransactionPreviewUploader({ canManage }: TransactionPreviewUplo
           {canManage && fileBuffer && preview.previewRows.length > 0 && visibleColumns > 0 && (
             <TransactionColumnMapper
               key={`${preview.fileName}:${preview.fileSize}:${preview.totalRows}:${preview.totalColumns}`}
+              businessId={businessId}
               preview={preview}
               fileBuffer={fileBuffer}
             />
