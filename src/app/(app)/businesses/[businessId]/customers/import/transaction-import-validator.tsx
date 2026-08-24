@@ -338,7 +338,11 @@ export function TransactionImportValidator({
               <div className={styles.validationSuccess}>
                 كل الصفوف صالحة. يمكنك الآن تحديد مصدر المعاملات وبدء الاستيراد الآمن من التكرار.
               </div>
-              <div className={task20Styles.importPanel} aria-labelledby="transaction-import-ready-title">
+              <div
+                className={task20Styles.importPanel}
+                role="group"
+                aria-labelledby="transaction-import-ready-title"
+              >
                 <div>
                   <h3 id="transaction-import-ready-title">Duplicate Protection قبل الحفظ</h3>
                   <p>
