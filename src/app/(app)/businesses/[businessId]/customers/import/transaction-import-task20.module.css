@@ -1,0 +1,127 @@
+.importPanel {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: var(--surface-secondary);
+}
+
+.importPanel h3,
+.importPanel p {
+  margin: 0;
+}
+
+.importPanel p {
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.sourceField {
+  display: grid;
+  gap: 7px;
+}
+
+.sourceField label {
+  font-weight: 800;
+}
+
+.sourceField small {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.sourceInput {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  padding: 9px 11px;
+  font: inherit;
+}
+
+.sourceInput:focus-visible,
+.importButton:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
+  outline-offset: 2px;
+}
+
+.importButton {
+  min-height: 44px;
+  width: fit-content;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--text-primary);
+  color: var(--surface-primary);
+  padding: 10px 16px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.importButton:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.importSummary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.importSummary > div {
+  display: grid;
+  gap: 4px;
+  padding: 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 14px;
+  background: var(--surface-primary);
+}
+
+.importSummary span {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.importSummary strong {
+  font-size: 1.25rem;
+}
+
+.importSuccess,
+.importError {
+  border-radius: 14px;
+  padding: 13px 14px;
+  line-height: 1.7;
+}
+
+.importSuccess {
+  border: 1px solid color-mix(in srgb, #067647 35%, transparent);
+  background: color-mix(in srgb, #067647 7%, var(--surface-primary));
+  color: #067647;
+}
+
+.importError {
+  border: 1px solid color-mix(in srgb, #b42318 35%, transparent);
+  background: color-mix(in srgb, #b42318 7%, var(--surface-primary));
+  color: #b42318;
+}
+
+@media (max-width: 720px) {
+  .importButton {
+    width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+  .importPanel {
+    padding: 14px;
+  }
+
+  .importSummary {
+    grid-template-columns: 1fr;
+  }
+}
