@@ -42,8 +42,12 @@ export class TransactionImportPreparationError extends Error {
   }
 }
 
+function trimPostgresBtrimSpace(value: string) {
+  return value.replace(/^ +| +$/g, "");
+}
+
 export function normalizeTransactionImportSource(value: string) {
-  return value.trim().toLowerCase();
+  return trimPostgresBtrimSpace(value).toLowerCase();
 }
 
 export function isValidTransactionImportSource(value: string) {
@@ -61,6 +65,14 @@ function normalizedAmountText(value: string, transactionType: NormalizedTransact
   const normalized = value.trim().replaceAll(",", "");
   if (transactionType === "refund") return normalized.replace(/^[+-]/, "");
   return normalized.replace(/^\+/, "");
+}
+
+function exactDecimalSign(value: string) {
+  const normalized = value.trim().replaceAll(",", "");
+  const unsigned = normalized.replace(/^[+-]/, "");
+  const coefficient = unsigned.split(/[eE]/, 1)[0] ?? "";
+  if (!/[1-9]/.test(coefficient)) return 0;
+  return normalized.startsWith("-") ? -1 : 1;
 }
 
 export function prepareTransactionImportRows(
@@ -92,8 +104,11 @@ export function prepareTransactionImportRows(
     const email = normalizeTransactionEmail(row.customerEmail);
     const transactionDate = row.transactionDate.trim();
     const amount = parseTransactionAmount(row.amountCollected);
+    const amountSign = exactDecimalSign(row.amountCollected);
     const amountHasValidSign =
-      amount !== null && amount !== 0 && (options.transactionType === "refund" || amount > 0);
+      amount !== null &&
+      amountSign !== 0 &&
+      (options.transactionType === "refund" || amountSign > 0);
     if (
       !isValidTransactionEmail(email) ||
       !isValidTransactionDate(transactionDate) ||
