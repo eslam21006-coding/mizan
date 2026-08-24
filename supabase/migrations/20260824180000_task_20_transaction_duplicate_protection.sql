@@ -45,6 +45,7 @@ create index customer_transactions_business_date_idx
 
 create table public.customer_transaction_duplicate_resolutions (
   id uuid primary key default gen_random_uuid(),
+  resolution_token uuid not null unique,
   business_id uuid not null references public.businesses(id) on delete restrict,
   source text not null check (
     char_length(source) between 1 and 80
@@ -131,9 +132,11 @@ declare
   amount_value numeric;
   row_number_value integer;
   candidate_resolution_value text;
+  candidate_resolution_token uuid;
   candidate_lock_key text;
   candidate_match_count integer;
   inserted_transaction_id uuid;
+  existing_resolution public.customer_transaction_duplicate_resolutions%rowtype;
   affected_rows integer;
   inserted_count integer := 0;
   duplicate_count integer := 0;
@@ -200,6 +203,22 @@ begin
       raise invalid_parameter_value using message = 'Candidate resolution is only valid for rows without a Transaction ID.';
     end if;
 
+    if candidate_resolution_value is null then
+      if nullif(btrim(coalesce(source_row ->> 'candidate_resolution_id', '')), '') is not null then
+        raise invalid_parameter_value using message = 'Candidate resolution ID requires a candidate resolution.';
+      end if;
+      candidate_resolution_token := null;
+    else
+      begin
+        candidate_resolution_token := (source_row ->> 'candidate_resolution_id')::uuid;
+      exception when others then
+        raise invalid_parameter_value using message = 'Candidate resolution ID must be a UUID.';
+      end;
+      if candidate_resolution_token is null then
+        raise invalid_parameter_value using message = 'Candidate resolution ID is required for candidate resolution.';
+      end if;
+    end if;
+
     customer_email_value := lower(btrim(coalesce(source_row ->> 'customer_email', '')));
     if char_length(customer_email_value) not between 3 and 320
       or customer_email_value !~ '^[^[:space:]@]+@[^[:space:]@]+$' then
@@ -228,6 +247,32 @@ begin
     exception when others then
       raise invalid_parameter_value using message = 'Amount collected is outside the supported numeric range.';
     end;
+
+    if candidate_resolution_token is not null then
+      select resolution.*
+      into existing_resolution
+      from public.customer_transaction_duplicate_resolutions as resolution
+      where resolution.resolution_token = candidate_resolution_token;
+
+      if found then
+        if existing_resolution.business_id <> p_business_id
+          or existing_resolution.source <> normalized_source
+          or existing_resolution.customer_email <> customer_email_value
+          or existing_resolution.transaction_date <> transaction_date_value
+          or existing_resolution.amount_collected <> amount_value
+          or existing_resolution.source_row_number <> row_number_value
+          or existing_resolution.decision <> candidate_resolution_value then
+          raise invalid_parameter_value using message = 'Candidate resolution ID does not match this candidate decision.';
+        end if;
+
+        if existing_resolution.decision = 'duplicate' then
+          duplicate_count := duplicate_count + 1;
+        else
+          inserted_count := inserted_count + 1;
+        end if;
+        continue;
+      end if;
+    end if;
 
     if source_transaction_id_value is not null then
       insert into public.customer_transactions (
@@ -295,6 +340,7 @@ begin
 
       if candidate_resolution_value = 'duplicate' then
         insert into public.customer_transaction_duplicate_resolutions (
+          resolution_token,
           business_id,
           source,
           customer_email,
@@ -306,6 +352,7 @@ begin
           kept_transaction_id,
           resolved_by_user_id
         ) values (
+          candidate_resolution_token,
           p_business_id,
           normalized_source,
           customer_email_value,
@@ -343,6 +390,7 @@ begin
       returning id into inserted_transaction_id;
 
       insert into public.customer_transaction_duplicate_resolutions (
+        resolution_token,
         business_id,
         source,
         customer_email,
@@ -354,6 +402,7 @@ begin
         kept_transaction_id,
         resolved_by_user_id
       ) values (
+        candidate_resolution_token,
         p_business_id,
         normalized_source,
         customer_email_value,
