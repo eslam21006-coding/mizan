@@ -21,6 +21,7 @@ export type PreparedTransactionImportRow = {
   transaction_date: string;
   amount_collected: string;
   candidate_resolution?: CandidateDuplicateResolution;
+  candidate_resolution_id?: string;
 };
 
 export type TransactionImportPreparationErrorCode = "TRANSACTION_ID_TOO_LONG" | "ROW_NOT_VALIDATED";
