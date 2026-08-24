@@ -3,16 +3,16 @@ import {
   isValidTransactionEmail,
   normalizeTransactionEmail,
   parseTransactionAmount,
+  TRANSACTION_ID_MAX_LENGTH,
   type TransactionValidationInputRow,
 } from "./transaction-import-validation.ts";
 
 export const TRANSACTION_IMPORT_CHUNK_SIZE = 500;
 export const TRANSACTION_IMPORT_SOURCE_MAX_LENGTH = 80;
-export const TRANSACTION_ID_MAX_LENGTH = 512;
 
-export type TransactionDuplicateInputRow = TransactionValidationInputRow & {
-  transactionId?: string;
-};
+export type CandidateDuplicateResolution = "duplicate" | "keep_distinct";
+
+export type TransactionDuplicateInputRow = TransactionValidationInputRow;
 
 export type PreparedTransactionImportRow = {
   row_number: number;
@@ -20,6 +20,7 @@ export type PreparedTransactionImportRow = {
   customer_email: string;
   transaction_date: string;
   amount_collected: string;
+  candidate_resolution?: CandidateDuplicateResolution;
 };
 
 export type TransactionImportPreparationErrorCode = "TRANSACTION_ID_TOO_LONG" | "ROW_NOT_VALIDATED";
@@ -42,7 +43,8 @@ export function normalizeTransactionImportSource(value: string) {
 
 export function isValidTransactionImportSource(value: string) {
   const normalized = normalizeTransactionImportSource(value);
-  return normalized.length > 0 && normalized.length <= TRANSACTION_IMPORT_SOURCE_MAX_LENGTH;
+  const characterLength = Array.from(normalized).length;
+  return characterLength > 0 && characterLength <= TRANSACTION_IMPORT_SOURCE_MAX_LENGTH;
 }
 
 export function normalizeTransactionId(value: string | undefined) {
@@ -64,7 +66,7 @@ export function prepareTransactionImportRows(
     }
 
     const transactionId = normalizeTransactionId(row.transactionId);
-    if (transactionId && transactionId.length > TRANSACTION_ID_MAX_LENGTH) {
+    if (transactionId && Array.from(transactionId).length > TRANSACTION_ID_MAX_LENGTH) {
       throw new TransactionImportPreparationError(
         "TRANSACTION_ID_TOO_LONG",
         row.rowNumber,
