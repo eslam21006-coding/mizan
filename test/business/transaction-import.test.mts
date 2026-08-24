@@ -30,6 +30,7 @@ function prepareOptions(
 
 test("Task 20 normalizes import sources and transaction IDs deterministically", () => {
   assert.equal(normalizeTransactionImportSource(" Stripe "), "stripe");
+  assert.equal(normalizeTransactionImportSource("\u00a0Stripe\u00a0"), "\u00a0stripe\u00a0");
   assert.equal(normalizeTransactionId(" txn_123 "), "txn_123");
   assert.equal(normalizeTransactionId("   "), null);
   assert.equal(isValidTransactionImportSource("PayPal"), true);
@@ -91,6 +92,29 @@ test("Task 20 normalizes refunds to positive magnitudes", () => {
   assert.equal(rows[0]?.transaction_id, null);
   assert.equal(rows[0]?.amount_collected, "25.50");
   assert.equal(rows[0]?.transaction_type, "refund");
+});
+
+test("Task 20 preserves non-zero decimals below JavaScript Number range", () => {
+  const sourceRow = {
+    rowNumber: 8,
+    customerEmail: "tiny@example.com",
+    transactionDate: "2026-08-24",
+    amountCollected: "1e-324",
+  };
+
+  assert.equal(validateTransactionImportRows([sourceRow]).isValid, true);
+
+  const collection = prepareTransactionImportRows(
+    [sourceRow],
+    prepareOptions("collection", "20202020-2020-4020-8020-20202020e003"),
+  );
+  assert.equal(collection[0]?.amount_collected, "1e-324");
+
+  const refund = prepareTransactionImportRows(
+    [{ ...sourceRow, rowNumber: 9, amountCollected: "-1e-324" }],
+    prepareOptions("refund", "20202020-2020-4020-8020-20202020e004"),
+  );
+  assert.equal(refund[0]?.amount_collected, "1e-324");
 });
 
 test("Task 20 rejects negative collections and zero-value rows before import", () => {
