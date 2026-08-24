@@ -69,8 +69,10 @@ export function TransactionPreviewUploader({
   const [fileBuffer, setFileBuffer] = useState<ArrayBuffer | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isReading, setIsReading] = useState(false);
+  const [importBusy, setImportBusy] = useState(false);
 
   const reset = () => {
+    if (importBusy) return;
     if (inputRef.current) inputRef.current.value = "";
     setPreview(null);
     setFileBuffer(null);
@@ -79,7 +81,7 @@ export function TransactionPreviewUploader({
   };
 
   const handleFile = async (file: File | undefined) => {
-    if (!file) return;
+    if (!file || importBusy) return;
     setPreview(null);
     setFileBuffer(null);
     setError(null);
@@ -137,7 +139,7 @@ export function TransactionPreviewUploader({
               type="file"
               accept=".csv,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
               aria-describedby="transaction-file-help"
-              disabled={isReading}
+              disabled={isReading || importBusy}
               onChange={(event) => void handleFile(event.currentTarget.files?.[0])}
             />
             <p id="transaction-file-help">
@@ -145,6 +147,11 @@ export function TransactionPreviewUploader({
               نعرض أول {TRANSACTION_PREVIEW_LIMITS.previewRows} صفًا وأول {TRANSACTION_PREVIEW_LIMITS.previewColumns}
               عمودًا. Validation يفحص حتى {TRANSACTION_VALIDATION_SOURCE_LIMITS.maxRows.toLocaleString("en-US")} صف غير فارغ بعد اكتمال الـ Mapping، ويرفض الملف إذا تجاوز هذا الحد.
             </p>
+            {importBusy && (
+              <p className={styles.mappingHint} role="status" aria-live="polite">
+                تم قفل تغيير الملف والـ Mapping مؤقتًا حتى ينتهي الاستيراد أو تحسم تصادمات Duplicate Protection.
+              </p>
+            )}
           </div>
         ) : (
           <div className={styles.readOnlyNotice}>
@@ -163,7 +170,7 @@ export function TransactionPreviewUploader({
         <div className={styles.errorBox} role="alert">
           <strong>تعذر معاينة الملف</strong>
           <p>{error}</p>
-          <button type="button" onClick={reset}>
+          <button type="button" disabled={importBusy} onClick={reset}>
             اختيار ملف آخر
           </button>
         </div>
@@ -178,7 +185,12 @@ export function TransactionPreviewUploader({
                 <h2 id="transaction-preview-title">معاينة الملف</h2>
                 <p>أكمل الـ Mapping ثم Validation قبل تفعيل الاستيراد ومنع التكرار.</p>
               </div>
-              <button type="button" className={styles.secondaryButton} onClick={reset}>
+              <button
+                type="button"
+                className={styles.secondaryButton}
+                disabled={importBusy}
+                onClick={reset}
+              >
                 تغيير الملف
               </button>
             </div>
@@ -265,6 +277,8 @@ export function TransactionPreviewUploader({
               businessId={businessId}
               preview={preview}
               fileBuffer={fileBuffer}
+              importBusy={importBusy}
+              onImportBusyChange={setImportBusy}
             />
           )}
         </>
