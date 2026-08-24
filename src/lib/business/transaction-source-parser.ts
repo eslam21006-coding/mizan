@@ -1,0 +1,891 @@
+export const TRANSACTION_SOURCE_LIMITS = {
+  maxFileBytes: 25 * 1024 * 1024,
+  maxXlsxUncompressedBytes: 100 * 1024 * 1024,
+  maxZipEntries: 20_000,
+} as const;
+
+export type TransactionSourceParseErrorCode =
+  | "CSV_ENCODING_UNSUPPORTED"
+  | "XLSX_INVALID_ARCHIVE"
+  | "XLSX_UNSUPPORTED_ARCHIVE"
+  | "XLSX_TOO_LARGE"
+  | "XLSX_WORKBOOK_MISSING"
+  | "XLSX_SHEET_MISSING";
+
+export class TransactionSourceParseError extends Error {
+  readonly code: TransactionSourceParseErrorCode;
+
+  constructor(code: TransactionSourceParseErrorCode, message: string) {
+    super(message);
+    this.name = "TransactionSourceParseError";
+    this.code = code;
+  }
+}
+
+export type XlsxStyles = {
+  dateStyleIndexes: Set<number>;
+};
+
+export type FirstXlsxWorksheet = {
+  sheetName: string;
+  worksheetXml: string;
+  sharedStrings: string[];
+  styles: XlsxStyles;
+  date1904: boolean;
+};
+
+type ZipEntry = {
+  name: string;
+  compressionMethod: number;
+  crc32: number;
+  compressedSize: number;
+  uncompressedSize: number;
+  localHeaderOffset: number;
+};
+
+const ZIP_LOCAL_FILE_SIGNATURE = 0x04034b50;
+const ZIP_CENTRAL_DIRECTORY_SIGNATURE = 0x02014b50;
+const ZIP_END_SIGNATURE = 0x06054b50;
+const UTF8 = new TextDecoder("utf-8", { fatal: true });
+const UTF8_LENIENT = new TextDecoder("utf-8");
+const XML_ENTITY_PATTERN = /&(?:amp|lt|gt|quot|apos|#\d+|#x[0-9a-fA-F]+);/g;
+const XML_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_.:-]*/;
+const BUILTIN_DATE_FORMAT_IDS = new Set([
+  14, 15, 16, 17, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 50, 51, 52, 53, 54, 55, 56,
+  57, 58,
+]);
+const CRC32_TABLE = Array.from({ length: 256 }, (_, index) => {
+  let value = index;
+  for (let bit = 0; bit < 8; bit += 1) {
+    value = (value & 1) !== 0 ? 0xedb88320 ^ (value >>> 1) : value >>> 1;
+  }
+  return value >>> 0;
+});
+
+function fail(code: TransactionSourceParseErrorCode, message: string): never {
+  throw new TransactionSourceParseError(code, message);
+}
+
+function crc32Checksum(bytes: Uint8Array) {
+  let crc = 0xffffffff;
+  for (let index = 0; index < bytes.length; index += 1) {
+    crc = CRC32_TABLE[(crc ^ bytes[index]) & 0xff] ^ (crc >>> 8);
+  }
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function isAllowedXmlCodePoint(codePoint: number) {
+  return (
+    codePoint === 0x09 ||
+    codePoint === 0x0a ||
+    codePoint === 0x0d ||
+    (codePoint >= 0x20 && codePoint <= 0xd7ff) ||
+    (codePoint >= 0xe000 && codePoint <= 0xfffd) ||
+    (codePoint >= 0x10000 && codePoint <= 0x10ffff)
+  );
+}
+
+function decodeXmlEntities(value: string) {
+  return value.replace(XML_ENTITY_PATTERN, (entity) => {
+    if (entity === "&amp;") return "&";
+    if (entity === "&lt;") return "<";
+    if (entity === "&gt;") return ">";
+    if (entity === "&quot;") return '"';
+    if (entity === "&apos;") return "'";
+
+    const radix = entity.startsWith("&#x") ? 16 : 10;
+    const start = radix === 16 ? 3 : 2;
+    const codePoint = Number.parseInt(entity.slice(start, -1), radix);
+    if (!Number.isInteger(codePoint) || !isAllowedXmlCodePoint(codePoint)) return entity;
+
+    try {
+      return String.fromCodePoint(codePoint);
+    } catch {
+      return entity;
+    }
+  });
+}
+
+function stripXmlCommentsOutsideCdata(value: string) {
+  let result = "";
+  let cursor = 0;
+
+  while (cursor < value.length) {
+    const commentStart = value.indexOf("<!--", cursor);
+    const cdataStart = value.indexOf("<![CDATA[", cursor);
+
+    if (commentStart !== -1 && (cdataStart === -1 || commentStart < cdataStart)) {
+      result += value.slice(cursor, commentStart);
+      const commentEnd = value.indexOf("-->", commentStart + 4);
+      if (commentEnd === -1) return result + value.slice(commentStart);
+      cursor = commentEnd + 3;
+      continue;
+    }
+
+    if (cdataStart !== -1) {
+      result += value.slice(cursor, cdataStart);
+      const cdataEnd = value.indexOf("]]>", cdataStart + 9);
+      if (cdataEnd === -1) return result + value.slice(cdataStart);
+      result += value.slice(cdataStart, cdataEnd + 3);
+      cursor = cdataEnd + 3;
+      continue;
+    }
+
+    result += value.slice(cursor);
+    break;
+  }
+
+  return result;
+}
+
+function maskXmlCdataContents(value: string) {
+  let result = "";
+  let cursor = 0;
+
+  while (cursor < value.length) {
+    const cdataStart = value.indexOf("<![CDATA[", cursor);
+    if (cdataStart === -1) {
+      result += value.slice(cursor);
+      break;
+    }
+
+    result += value.slice(cursor, cdataStart + 9);
+    const cdataEnd = value.indexOf("]]>", cdataStart + 9);
+    if (cdataEnd === -1) {
+      result += value.slice(cdataStart + 9);
+      break;
+    }
+
+    result += " ".repeat(cdataEnd - (cdataStart + 9));
+    result += "]]>";
+    cursor = cdataEnd + 3;
+  }
+
+  return result;
+}
+
+function originalMatchedElementBody(sourceXml: string, maskedMatch: RegExpMatchArray) {
+  if (maskedMatch[1] === undefined || maskedMatch.index === undefined) return "";
+  const openingEnd = findXmlTagEnd(maskedMatch[0], 1, "matched element");
+  const bodyStart = maskedMatch.index + openingEnd + 1;
+  return sourceXml.slice(bodyStart, bodyStart + maskedMatch[1].length);
+}
+
+function decodeXmlText(value: string) {
+  const withoutComments = stripXmlCommentsOutsideCdata(value);
+  let result = "";
+  let cursor = 0;
+
+  while (cursor < withoutComments.length) {
+    const cdataStart = withoutComments.indexOf("<![CDATA[", cursor);
+    if (cdataStart === -1) {
+      result += decodeXmlEntities(withoutComments.slice(cursor));
+      break;
+    }
+
+    result += decodeXmlEntities(withoutComments.slice(cursor, cdataStart));
+    const cdataEnd = withoutComments.indexOf("]]>", cdataStart + 9);
+    if (cdataEnd === -1) {
+      result += withoutComments.slice(cdataStart);
+      break;
+    }
+
+    result += withoutComments.slice(cdataStart + 9, cdataEnd);
+    cursor = cdataEnd + 3;
+  }
+
+  return result;
+}
+
+function malformedXml(label: string): never {
+  fail("XLSX_INVALID_ARCHIVE", `XLSX ${label} XML is malformed.`);
+}
+
+function validateXmlStartTagBody(body: string, label: string) {
+  const name = body.match(XML_NAME_PATTERN)?.[0];
+  if (!name) malformedXml(label);
+
+  const attributes = new Set<string>();
+  let cursor = name.length;
+  while (cursor < body.length) {
+    while (/\s/.test(body[cursor] ?? "")) cursor += 1;
+    if (cursor >= body.length) break;
+
+    const attributeName = body.slice(cursor).match(XML_NAME_PATTERN)?.[0];
+    if (!attributeName || attributes.has(attributeName)) malformedXml(label);
+    attributes.add(attributeName);
+    cursor += attributeName.length;
+
+    while (/\s/.test(body[cursor] ?? "")) cursor += 1;
+    if (body[cursor] !== "=") malformedXml(label);
+    cursor += 1;
+    while (/\s/.test(body[cursor] ?? "")) cursor += 1;
+
+    const quote = body[cursor];
+    if (quote !== '"' && quote !== "'") malformedXml(label);
+    cursor += 1;
+    const end = body.indexOf(quote, cursor);
+    if (end === -1 || body.slice(cursor, end).includes("<")) malformedXml(label);
+    cursor = end + 1;
+  }
+
+  return name;
+}
+
+function findXmlTagEnd(xml: string, start: number, label: string) {
+  let quote: '"' | "'" | null = null;
+  for (let index = start; index < xml.length; index += 1) {
+    const char = xml[index];
+    if (char === "<") malformedXml(label);
+    if (quote) {
+      if (char === quote) quote = null;
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      quote = char;
+      continue;
+    }
+    if (char === ">") return index;
+  }
+  malformedXml(label);
+}
+
+function assertWellFormedXmlFallback(xml: string, label: string) {
+  const stack: string[] = [];
+  let rootCount = 0;
+  let cursor = 0;
+
+  while (cursor < xml.length) {
+    const open = xml.indexOf("<", cursor);
+    if (open === -1) {
+      if (stack.length === 0 && xml.slice(cursor).trim()) malformedXml(label);
+      break;
+    }
+    if (stack.length === 0 && xml.slice(cursor, open).trim()) malformedXml(label);
+
+    if (xml.startsWith("<!--", open)) {
+      const end = xml.indexOf("-->", open + 4);
+      if (end === -1) malformedXml(label);
+      cursor = end + 3;
+      continue;
+    }
+    if (xml.startsWith("<![CDATA[", open)) {
+      if (stack.length === 0) malformedXml(label);
+      const end = xml.indexOf("]]>", open + 9);
+      if (end === -1) malformedXml(label);
+      cursor = end + 3;
+      continue;
+    }
+    if (xml.startsWith("<?", open)) {
+      const end = xml.indexOf("?>", open + 2);
+      if (end === -1) malformedXml(label);
+      cursor = end + 2;
+      continue;
+    }
+    if (xml.startsWith("<!", open)) malformedXml(label);
+
+    const end = findXmlTagEnd(xml, open + 1, label);
+    const raw = xml.slice(open + 1, end).trim();
+    if (!raw) malformedXml(label);
+
+    if (raw.startsWith("/")) {
+      const closing = raw.slice(1).trim();
+      const name = closing.match(XML_NAME_PATTERN)?.[0];
+      if (!name || closing !== name || stack.pop() !== name) malformedXml(label);
+    } else {
+      const selfClosing = raw.endsWith("/");
+      const body = selfClosing ? raw.slice(0, -1).trimEnd() : raw;
+      const name = validateXmlStartTagBody(body, label);
+      if (stack.length === 0) {
+        rootCount += 1;
+        if (rootCount > 1) malformedXml(label);
+      }
+      if (!selfClosing) stack.push(name);
+    }
+
+    cursor = end + 1;
+  }
+
+  if (stack.length !== 0 || rootCount !== 1) malformedXml(label);
+}
+
+function assertWellFormedXml(xml: string, label: string) {
+  assertWellFormedXmlFallback(xml, label);
+}
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+export function attributeValue(tag: string, attributeName: string) {
+  const escaped = escapeRegex(attributeName);
+  const match = tag.match(
+    new RegExp(`(?:^|\\s)${escaped}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "i"),
+  );
+  const raw = match?.[1] ?? match?.[2];
+  return raw === undefined ? null : decodeXmlEntities(raw);
+}
+
+function namespacedIdValue(tag: string) {
+  const match = tag.match(
+    /(?:^|\s)(?:[A-Za-z_][\w.-]*:)?id\s*=\s*(?:"([^"]*)"|'([^']*)')/i,
+  );
+  const raw = match?.[1] ?? match?.[2];
+  return raw === undefined ? null : decodeXmlEntities(raw);
+}
+
+export function decodeCsvBuffer(buffer: ArrayBuffer) {
+  const bytes = new Uint8Array(buffer);
+  try {
+    if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+      return new TextDecoder("utf-16le", { fatal: true }).decode(bytes.subarray(2));
+    }
+    if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+      return new TextDecoder("utf-16be", { fatal: true }).decode(bytes.subarray(2));
+    }
+    const start =
+      bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf ? 3 : 0;
+    const decoded = UTF8.decode(bytes.subarray(start));
+    if (decoded.includes("\u0000")) {
+      fail("CSV_ENCODING_UNSUPPORTED", "CSV contains unsupported binary data.");
+    }
+    return decoded;
+  } catch (error) {
+    if (error instanceof TransactionSourceParseError) throw error;
+    fail("CSV_ENCODING_UNSUPPORTED", "CSV must be UTF-8 or UTF-16 with a byte-order mark.");
+  }
+}
+
+function sampleDelimiterCounts(text: string, delimiter: string) {
+  const counts: number[] = [];
+  let quoted = false;
+  let count = 0;
+  let rowHasContent = false;
+
+  for (let index = 0; index < text.length && counts.length < 12; index += 1) {
+    const char = text[index];
+    if (char === '"') {
+      rowHasContent = true;
+      if (quoted && text[index + 1] === '"') {
+        index += 1;
+        continue;
+      }
+      quoted = !quoted;
+      continue;
+    }
+    if (!quoted && (char === "\n" || char === "\r")) {
+      if (char === "\r" && text[index + 1] === "\n") index += 1;
+      if (rowHasContent) counts.push(count);
+      count = 0;
+      rowHasContent = false;
+      continue;
+    }
+    if (!/\s/.test(char)) rowHasContent = true;
+    if (!quoted && char === delimiter) count += 1;
+  }
+
+  if (counts.length < 12 && rowHasContent) counts.push(count);
+  return counts;
+}
+
+function likelyGroupedNumberCommaCount(text: string) {
+  return (
+    text.match(/(?:^|[^\d])[-+]?\d{1,3}(?:,\d{3})+(?:\.\d+)?(?=$|[^\d])/gm)?.length ?? 0
+  );
+}
+
+export function detectCsvDelimiter(text: string) {
+  const candidates = [",", ";", "\t"];
+  const groupedNumberCommas = likelyGroupedNumberCommaCount(text);
+  let best = ",";
+  let bestScore = -1;
+
+  for (const candidate of candidates) {
+    const counts = sampleDelimiterCounts(text, candidate);
+    if (counts.length === 0) continue;
+
+    const frequencies = new Map<number, number>();
+    for (const count of counts) frequencies.set(count, (frequencies.get(count) ?? 0) + 1);
+    const mode = [...frequencies.entries()]
+      .filter(([count]) => count > 0)
+      .sort((left, right) => right[1] - left[1] || right[0] - left[0])[0];
+    if (!mode) continue;
+
+    const [modeCount, modeFrequency] = mode;
+    const consistency = modeFrequency / counts.length;
+    const positiveRows = counts.filter((count) => count > 0).length;
+    const groupedNumberPenalty = candidate === "," ? Math.min(groupedNumberCommas, 12) * 100 : 0;
+    const score =
+      consistency * 1_000_000 +
+      modeFrequency * 1_000 +
+      positiveRows * 10 +
+      modeCount -
+      groupedNumberPenalty;
+
+    if (score > bestScore) {
+      best = candidate;
+      bestScore = score;
+    }
+  }
+
+  return best;
+}
+
+function findZipEnd(view: DataView) {
+  const minimumOffset = Math.max(0, view.byteLength - 65_557);
+  for (let offset = view.byteLength - 22; offset >= minimumOffset; offset -= 1) {
+    if (
+      view.getUint32(offset, true) === ZIP_END_SIGNATURE &&
+      offset + 22 + view.getUint16(offset + 20, true) === view.byteLength
+    ) {
+      return offset;
+    }
+  }
+  fail("XLSX_INVALID_ARCHIVE", "XLSX ZIP end record is missing.");
+}
+
+function normalizeZipPath(value: string) {
+  const parts: string[] = [];
+  for (const segment of value.replaceAll("\\", "/").split("/")) {
+    if (!segment || segment === ".") continue;
+    if (segment === "..") {
+      if (parts.length === 0) {
+        fail("XLSX_INVALID_ARCHIVE", "XLSX contains an unsafe archive path.");
+      }
+      parts.pop();
+      continue;
+    }
+    parts.push(segment);
+  }
+  return parts.join("/");
+}
+
+function resolveZipPath(baseFile: string, target: string) {
+  if (target.startsWith("/")) return normalizeZipPath(target.slice(1));
+  const slash = baseFile.lastIndexOf("/");
+  const baseDirectory = slash === -1 ? "" : baseFile.slice(0, slash + 1);
+  return normalizeZipPath(`${baseDirectory}${target}`);
+}
+
+function readZipDirectory(buffer: ArrayBuffer) {
+  const view = new DataView(buffer);
+  if (view.byteLength < 22) fail("XLSX_INVALID_ARCHIVE", "XLSX archive is too small.");
+
+  const endOffset = findZipEnd(view);
+  const diskNumber = view.getUint16(endOffset + 4, true);
+  const centralDisk = view.getUint16(endOffset + 6, true);
+  const entriesOnDisk = view.getUint16(endOffset + 8, true);
+  const totalEntries = view.getUint16(endOffset + 10, true);
+  const centralSize = view.getUint32(endOffset + 12, true);
+  const centralOffset = view.getUint32(endOffset + 16, true);
+
+  if (diskNumber !== 0 || centralDisk !== 0 || entriesOnDisk !== totalEntries) {
+    fail("XLSX_UNSUPPORTED_ARCHIVE", "Multi-disk XLSX archives are not supported.");
+  }
+  if (totalEntries === 0xffff) {
+    fail("XLSX_UNSUPPORTED_ARCHIVE", "ZIP64 XLSX files are not supported for browser parsing.");
+  }
+  if (totalEntries > TRANSACTION_SOURCE_LIMITS.maxZipEntries) {
+    fail("XLSX_TOO_LARGE", "XLSX contains too many archive entries.");
+  }
+  if (centralOffset === 0xffffffff || centralSize === 0xffffffff) {
+    fail("XLSX_UNSUPPORTED_ARCHIVE", "ZIP64 XLSX files are not supported for browser parsing.");
+  }
+  if (centralOffset + centralSize > view.byteLength) {
+    fail("XLSX_INVALID_ARCHIVE", "XLSX central directory is outside the file boundary.");
+  }
+
+  const entries = new Map<string, ZipEntry>();
+  let offset = centralOffset;
+  let totalUncompressed = 0;
+
+  for (let index = 0; index < totalEntries; index += 1) {
+    if (
+      offset + 46 > view.byteLength ||
+      view.getUint32(offset, true) !== ZIP_CENTRAL_DIRECTORY_SIGNATURE
+    ) {
+      fail("XLSX_INVALID_ARCHIVE", "XLSX central directory entry is malformed.");
+    }
+
+    const flags = view.getUint16(offset + 8, true);
+    const compressionMethod = view.getUint16(offset + 10, true);
+    const crc32 = view.getUint32(offset + 16, true);
+    const compressedSize = view.getUint32(offset + 20, true);
+    const uncompressedSize = view.getUint32(offset + 24, true);
+    const nameLength = view.getUint16(offset + 28, true);
+    const extraLength = view.getUint16(offset + 30, true);
+    const commentLength = view.getUint16(offset + 32, true);
+    const localHeaderOffset = view.getUint32(offset + 42, true);
+    const recordEnd = offset + 46 + nameLength + extraLength + commentLength;
+
+    if (recordEnd > view.byteLength) {
+      fail("XLSX_INVALID_ARCHIVE", "XLSX entry exceeds file boundary.");
+    }
+    if ((flags & 0x0001) !== 0) {
+      fail("XLSX_UNSUPPORTED_ARCHIVE", "Encrypted XLSX files are not supported.");
+    }
+    if (![0, 8].includes(compressionMethod)) {
+      fail("XLSX_UNSUPPORTED_ARCHIVE", "XLSX uses an unsupported ZIP compression method.");
+    }
+    if ([compressedSize, uncompressedSize, localHeaderOffset].includes(0xffffffff)) {
+      fail("XLSX_UNSUPPORTED_ARCHIVE", "ZIP64 XLSX files are not supported for browser parsing.");
+    }
+
+    const nameBytes = new Uint8Array(buffer, offset + 46, nameLength);
+    const name = normalizeZipPath(UTF8_LENIENT.decode(nameBytes));
+    totalUncompressed += uncompressedSize;
+    if (totalUncompressed > TRANSACTION_SOURCE_LIMITS.maxXlsxUncompressedBytes) {
+      fail("XLSX_TOO_LARGE", "XLSX expands beyond the safe browser limit.");
+    }
+
+    entries.set(name, {
+      name,
+      compressionMethod,
+      crc32,
+      compressedSize,
+      uncompressedSize,
+      localHeaderOffset,
+    });
+    offset = recordEnd;
+  }
+
+  return entries;
+}
+
+async function inflateRaw(bytes: Uint8Array, expectedSize: number) {
+  let decompressor: DecompressionStream;
+  try {
+    if (typeof DecompressionStream === "undefined") {
+      fail(
+        "XLSX_UNSUPPORTED_ARCHIVE",
+        "This browser does not support XLSX DEFLATE decompression.",
+      );
+    }
+    decompressor = new DecompressionStream("deflate-raw");
+  } catch (error) {
+    if (error instanceof TransactionSourceParseError) throw error;
+    fail(
+      "XLSX_UNSUPPORTED_ARCHIVE",
+      "This browser does not support XLSX DEFLATE decompression.",
+    );
+  }
+
+  try {
+    const ownedBytes = new Uint8Array(bytes.byteLength);
+    ownedBytes.set(bytes);
+    const stream = new Blob([ownedBytes.buffer]).stream().pipeThrough(decompressor);
+    const reader = stream.getReader();
+    const chunks: Uint8Array[] = [];
+    let total = 0;
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      if (!value) continue;
+
+      total += value.byteLength;
+      if (total > expectedSize || total > TRANSACTION_SOURCE_LIMITS.maxXlsxUncompressedBytes) {
+        await reader.cancel();
+        fail("XLSX_TOO_LARGE", "XLSX entry expands beyond its declared safe size.");
+      }
+
+      const ownedChunk = new Uint8Array(value.byteLength);
+      ownedChunk.set(value);
+      chunks.push(ownedChunk);
+    }
+
+    if (total !== expectedSize) {
+      fail("XLSX_INVALID_ARCHIVE", "XLSX entry size does not match its ZIP metadata.");
+    }
+
+    const output = new Uint8Array(total);
+    let offset = 0;
+    for (const chunk of chunks) {
+      output.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+    return output;
+  } catch (error) {
+    if (error instanceof TransactionSourceParseError) throw error;
+    fail("XLSX_INVALID_ARCHIVE", "XLSX compressed data could not be decompressed.");
+  }
+}
+
+async function extractZipEntry(buffer: ArrayBuffer, entry: ZipEntry) {
+  const view = new DataView(buffer);
+  const offset = entry.localHeaderOffset;
+  if (offset + 30 > view.byteLength || view.getUint32(offset, true) !== ZIP_LOCAL_FILE_SIGNATURE) {
+    fail("XLSX_INVALID_ARCHIVE", `XLSX local header is missing for ${entry.name}.`);
+  }
+
+  const nameLength = view.getUint16(offset + 26, true);
+  const extraLength = view.getUint16(offset + 28, true);
+  const dataOffset = offset + 30 + nameLength + extraLength;
+  const dataEnd = dataOffset + entry.compressedSize;
+  if (dataEnd > view.byteLength) {
+    fail("XLSX_INVALID_ARCHIVE", "XLSX compressed entry exceeds file boundary.");
+  }
+
+  const compressed = new Uint8Array(buffer, dataOffset, entry.compressedSize);
+  let output: Uint8Array;
+  if (entry.compressionMethod === 8) {
+    output = await inflateRaw(compressed, entry.uncompressedSize);
+  } else {
+    if (entry.compressedSize !== entry.uncompressedSize) {
+      fail("XLSX_INVALID_ARCHIVE", "Stored XLSX entry has inconsistent size metadata.");
+    }
+    output = new Uint8Array(entry.uncompressedSize);
+    output.set(compressed);
+  }
+
+  if (crc32Checksum(output) !== entry.crc32) {
+    fail("XLSX_INVALID_ARCHIVE", `XLSX entry failed CRC-32 validation: ${entry.name}.`);
+  }
+  return output;
+}
+
+async function extractZipText(buffer: ArrayBuffer, entries: Map<string, ZipEntry>, path: string) {
+  const entry = entries.get(normalizeZipPath(path));
+  if (!entry) return null;
+  const bytes = await extractZipEntry(buffer, entry);
+  try {
+    return UTF8.decode(bytes);
+  } catch {
+    fail("XLSX_INVALID_ARCHIVE", `XLSX XML is not valid UTF-8: ${path}.`);
+  }
+}
+
+function firstWorksheet(workbookXml: string, relationshipsXml: string) {
+  const sourceWorkbookXml = stripXmlCommentsOutsideCdata(workbookXml);
+  const sourceRelationshipsXml = stripXmlCommentsOutsideCdata(relationshipsXml);
+  const sheetTags =
+    sourceWorkbookXml.match(
+      /<(?:[A-Za-z_][\w.-]*:)?sheet\b(?:[^>"']|"[^"]*"|'[^']*')*\/?\s*>/gi,
+    ) ?? [];
+  if (sheetTags.length === 0) fail("XLSX_SHEET_MISSING", "XLSX workbook has no worksheet.");
+
+  const relationshipTags =
+    sourceRelationshipsXml.match(
+      /<(?:[A-Za-z_][\w.-]*:)?Relationship\b(?:[^>"']|"[^"]*"|'[^']*')*\/?\s*>/gi,
+    ) ?? [];
+
+  for (const sheetTag of sheetTags) {
+    const relationshipId = attributeValue(sheetTag, "r:id") ?? namespacedIdValue(sheetTag);
+    if (!relationshipId) {
+      fail("XLSX_INVALID_ARCHIVE", "XLSX worksheet relationship is missing.");
+    }
+
+    const relationshipTag = relationshipTags.find(
+      (tag) => attributeValue(tag, "Id") === relationshipId,
+    );
+    if (!relationshipTag) continue;
+
+    const relationshipType = attributeValue(relationshipTag, "Type");
+    if (!relationshipType || !/(?:^|\/)worksheet$/i.test(relationshipType)) continue;
+
+    const target = attributeValue(relationshipTag, "Target");
+    if (!target) fail("XLSX_SHEET_MISSING", "XLSX worksheet target is missing.");
+
+    return {
+      sheetName: attributeValue(sheetTag, "name") ?? "Sheet 1",
+      worksheetPath: resolveZipPath("xl/workbook.xml", target),
+    };
+  }
+
+  fail("XLSX_SHEET_MISSING", "XLSX workbook has no worksheet relationship.");
+}
+
+function stripPhoneticRuns(xml: string) {
+  const sourceXml = stripXmlCommentsOutsideCdata(xml);
+  const maskedXml = maskXmlCdataContents(sourceXml);
+  const pattern =
+    /<(?:[A-Za-z_][\w.-]*:)?rPh\b(?:[^>"']|"[^"]*"|'[^']*')*(?:\/\s*>|>[\s\S]*?<\/(?:[A-Za-z_][\w.-]*:)?rPh\s*>)/gi;
+  let result = "";
+  let cursor = 0;
+
+  for (const match of maskedXml.matchAll(pattern)) {
+    if (match.index === undefined) continue;
+    result += sourceXml.slice(cursor, match.index);
+    cursor = match.index + match[0].length;
+  }
+
+  return result + sourceXml.slice(cursor);
+}
+
+function parseSharedStrings(xml: string | null) {
+  if (!xml) return [];
+  const values: string[] = [];
+  const sourceXml = stripXmlCommentsOutsideCdata(xml);
+  const maskedXml = maskXmlCdataContents(sourceXml);
+  const itemPattern =
+    /<(?:[A-Za-z_][\w.-]*:)?si\b(?:[^>"'\/]|"[^"]*"|'[^']*')*(?:\/\s*>|>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?si\s*>)/gi;
+
+  for (const itemMatch of maskedXml.matchAll(itemPattern)) {
+    if (itemMatch[1] === undefined) {
+      values.push("");
+      continue;
+    }
+    values.push(textFragments(originalMatchedElementBody(sourceXml, itemMatch)));
+  }
+
+  return values;
+}
+
+function customFormatLooksLikeDate(formatCode: string) {
+  const withoutLiterals = formatCode.replace(/"[^"]*"/g, "").replace(/\\./g, "");
+  const hasElapsedTime = /\[(?:h+|m+|s+)\]/i.test(withoutLiterals);
+  const stripped = withoutLiterals
+    .replace(/\[[^\]]*]/g, "")
+    .replace(/_.|\*./g, "")
+    .toLowerCase();
+
+  if (/[yd]/.test(stripped)) return true;
+  if (hasElapsedTime || /[hs]/.test(stripped)) return false;
+  return /m/.test(stripped);
+}
+
+function parseStyles(xml: string | null): XlsxStyles {
+  const dateFormatIds = new Set(BUILTIN_DATE_FORMAT_IDS);
+  if (!xml) return { dateStyleIndexes: new Set() };
+
+  const sourceXml = stripXmlCommentsOutsideCdata(xml);
+  const searchableXml = maskXmlCdataContents(sourceXml);
+  const customFormats =
+    searchableXml.match(
+      /<(?:[A-Za-z_][\w.-]*:)?numFmt\b(?:[^>"']|"[^"]*"|'[^']*')*\/?\s*>/gi,
+    ) ?? [];
+  for (const tag of customFormats) {
+    const id = Number(attributeValue(tag, "numFmtId"));
+    const code = attributeValue(tag, "formatCode");
+    if (Number.isInteger(id) && code && customFormatLooksLikeDate(code)) dateFormatIds.add(id);
+  }
+
+  const cellXfs = searchableXml.match(
+    /<(?:[A-Za-z_][\w.-]*:)?cellXfs\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?cellXfs>/i,
+  )?.[1];
+  const dateStyleIndexes = new Set<number>();
+  if (!cellXfs) return { dateStyleIndexes };
+
+  const xfTags = cellXfs.match(/<(?:[A-Za-z_][\w.-]*:)?xf\b[^>]*\/?\s*>/gi) ?? [];
+  xfTags.forEach((tag, index) => {
+    const numFmtId = Number(attributeValue(tag, "numFmtId") ?? 0);
+    if (dateFormatIds.has(numFmtId)) dateStyleIndexes.add(index);
+  });
+  return { dateStyleIndexes };
+}
+
+export function columnIndexFromReference(reference: string | null) {
+  if (!reference) return null;
+  const letters = reference.match(/^[A-Za-z]+/)?.[0]?.toUpperCase();
+  if (!letters) return null;
+
+  let index = 0;
+  for (const letter of letters) index = index * 26 + (letter.charCodeAt(0) - 64);
+  return index - 1;
+}
+
+function excelDateString(serialText: string, date1904: boolean) {
+  const serial = Number(serialText);
+  if (!Number.isFinite(serial)) return serialText;
+
+  const wholeDays = Math.trunc(serial);
+  if (!date1904 && wholeDays === 60) return serialText;
+  const fraction = serial - wholeDays;
+
+  const adjustedDays = date1904 ? wholeDays : wholeDays >= 60 ? wholeDays - 1 : wholeDays;
+  const epoch = date1904 ? Date.UTC(1904, 0, 1) : Date.UTC(1899, 11, 31);
+  const millis = epoch + adjustedDays * 86_400_000 + Math.round(fraction * 86_400_000);
+  const date = new Date(millis);
+  if (!Number.isFinite(date.getTime())) return serialText;
+
+  const iso = date.toISOString();
+  return iso.endsWith("T00:00:00.000Z")
+    ? iso.slice(0, 10)
+    : iso.replace("T", " ").replace(/\.000Z$/, "Z");
+}
+
+function textFragments(xml: string) {
+  const fragments: string[] = [];
+  const sourceXml = stripPhoneticRuns(stripXmlCommentsOutsideCdata(xml));
+  const maskedXml = maskXmlCdataContents(sourceXml);
+  const pattern =
+    /<(?:[A-Za-z_][\w.-]*:)?t\b(?:[^>"']|"[^"]*"|'[^']*')*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?t>/gi;
+  for (const match of maskedXml.matchAll(pattern)) {
+    fragments.push(decodeXmlText(originalMatchedElementBody(sourceXml, match)));
+  }
+  return fragments.join("");
+}
+
+export function cellDisplayValue(
+  tag: string,
+  body: string,
+  sharedStrings: string[],
+  styles: XlsxStyles,
+  date1904: boolean,
+) {
+  const type = attributeValue(tag, "t");
+  if (type === "inlineStr") return textFragments(body);
+
+  const rawValue = body.match(
+    /<(?:[A-Za-z_][\w.-]*:)?v\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?v>/i,
+  )?.[1];
+  if (rawValue === undefined) return textFragments(body);
+
+  const value = decodeXmlText(rawValue);
+  if (value.trim() === "") return "";
+  if (type === "s") {
+    const index = Number(value);
+    return Number.isInteger(index) && index >= 0 ? (sharedStrings[index] ?? "") : "";
+  }
+  if (type === "b") return value === "1" ? "TRUE" : "FALSE";
+  if (type === "str" || type === "e" || type === "d") return value;
+
+  const styleIndex = Number(attributeValue(tag, "s") ?? -1);
+  if (Number.isInteger(styleIndex) && styles.dateStyleIndexes.has(styleIndex)) {
+    return excelDateString(value, date1904);
+  }
+  return value;
+}
+
+export async function readFirstXlsxWorksheet(buffer: ArrayBuffer): Promise<FirstXlsxWorksheet> {
+  const bytes = new Uint8Array(buffer);
+  if (bytes.length < 4 || bytes[0] !== 0x50 || bytes[1] !== 0x4b) {
+    fail("XLSX_INVALID_ARCHIVE", "XLSX does not contain a ZIP file signature.");
+  }
+
+  const entries = readZipDirectory(buffer);
+  const workbookXml = await extractZipText(buffer, entries, "xl/workbook.xml");
+  const relationshipsXml = await extractZipText(buffer, entries, "xl/_rels/workbook.xml.rels");
+  if (!workbookXml || !relationshipsXml) {
+    fail("XLSX_WORKBOOK_MISSING", "XLSX workbook metadata is missing.");
+  }
+  assertWellFormedXml(workbookXml, "workbook");
+  assertWellFormedXml(relationshipsXml, "workbook relationships");
+
+  const { sheetName, worksheetPath } = firstWorksheet(workbookXml, relationshipsXml);
+  const worksheetXml = await extractZipText(buffer, entries, worksheetPath);
+  if (!worksheetXml) fail("XLSX_SHEET_MISSING", "The first XLSX worksheet could not be found.");
+  assertWellFormedXml(worksheetXml, "worksheet");
+  const sourceWorksheetXml = stripXmlCommentsOutsideCdata(worksheetXml);
+
+  const [sharedStringsXml, stylesXml] = await Promise.all([
+    extractZipText(buffer, entries, "xl/sharedStrings.xml"),
+    extractZipText(buffer, entries, "xl/styles.xml"),
+  ]);
+  if (sharedStringsXml) assertWellFormedXml(sharedStringsXml, "shared strings");
+  if (stylesXml) assertWellFormedXml(stylesXml, "styles");
+
+  const sourceWorkbookXml = stripXmlCommentsOutsideCdata(workbookXml);
+  const date1904 =
+    /<(?:[A-Za-z_][\w.-]*:)?workbookPr\b[^>]*date1904\s*=\s*(?:"(?:1|true)"|'(?:1|true)')/i.test(
+      sourceWorkbookXml,
+    );
+
+  return {
+    sheetName,
+    worksheetXml: sourceWorksheetXml,
+    sharedStrings: parseSharedStrings(sharedStringsXml),
+    styles: parseStyles(stylesXml),
+    date1904,
+  };
+}
