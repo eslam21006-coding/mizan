@@ -33,7 +33,7 @@ Transaction source is not accepted as arbitrary free text during import.
 - An owner/admin explicitly creates a canonical source once, for example `stripe` or `paypal`.
 - The browser then selects from registered sources for every import and re-import.
 - The guarded import RPC rejects unregistered source labels.
-- Source values are normalized with trim + lowercase and constrained to 1–80 Unicode characters.
+- Source values use lowercase plus the same U+0020 space trimming rule as PostgreSQL `btrim`, so browser and RPC normalization stay identical.
 
 This prevents an accidental label change such as `Stripe` versus `Stripe Export` from silently creating a second deduplication namespace. A new registered source should represent a genuinely different transaction system, not a spelling variant of an existing gateway.
 
@@ -76,7 +76,7 @@ Task 20 supports a file-level default because a source export may be known to co
 - Definitive Transaction ID duplicates are skipped and counted explicitly.
 - If a no-ID candidate collision is found, processing stops after the current chunk and the UI surfaces each collision for explicit resolution before continuing later chunks.
 - File selection, mapping, source, and classification controls are disabled while an RPC is running or candidate decisions are pending. This does not claim to block unrelated application navigation.
-- If candidate resolution succeeds but a later continuation request fails, the UI applies the server-confirmed counters before showing the retry message.
+- If candidate resolution succeeds but a later continuation request fails, the UI applies the server-confirmed counters and retains only the unresolved continuation rows as the next retry payload, so committed candidate decisions are not resubmitted as fresh unresolved rows.
 - If an import response is lost, retrying the same in-memory import uses the same per-row retry identities so already-committed rows are replayed rather than duplicated.
 
 ## Acceptance tests
@@ -87,12 +87,12 @@ The database-backed test matrix proves:
 - a no-ID same-signature row is surfaced as a candidate instead of being silently discarded;
 - an existing ID-bearing transaction is still found when a later import omits that Transaction ID;
 - collection and refund candidate signatures remain distinct;
-- confirming a candidate as duplicate does not change aggregate cash;
+- confirming a candidate as duplicate does not add a transaction row;
 - keeping a candidate distinct preserves a legitimate repeated same-value purchase;
 - retrying a `keep_distinct` decision with the same resolution token does not insert it twice;
 - retrying an already-committed transaction row with the same `import_row_token` does not insert it twice;
 - scale-equivalent amounts use one candidate identity;
-- aggregate cash/revenue does not double after a re-import is explicitly resolved as duplicate;
+- re-importing a candidate and explicitly resolving it as duplicate does not persist another transaction;
 - candidate decisions are preserved exactly once in the audit table;
 - canonical source registration is required before import;
 - guarded RPC boundaries reject oversized source, Transaction ID, and email values plus a missing row number;
@@ -101,4 +101,4 @@ The database-backed test matrix proves:
 - RLS prevents cross-business reads of sources, transactions, and resolution audit history;
 - admins can create sources, import, and inspect authorized records.
 
-The Playwright verification covers the Arabic RTL browser flow, canonical source selection/creation, transaction-type selection, Transaction ID mapping, definitive duplicate counts, repeated-import feedback, and mobile containment. The database-backed SQL suite—not the browser mock—executes the actual guarded RPC and persistence rules against PostgreSQL in CI.
+The Playwright verification covers the Arabic RTL browser flow, canonical source selection/creation, transaction-type selection, Transaction ID mapping, duplicate-count rendering, repeated-import feedback, and mobile containment. The database-backed SQL suite—not the browser mock—executes the actual guarded RPC and persistence rules against PostgreSQL in CI.
