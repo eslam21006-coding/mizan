@@ -30,7 +30,7 @@ create unique index customer_transactions_source_id_unique_idx
   on public.customer_transactions (business_id, source, source_transaction_id)
   where source_transaction_id is not null;
 
-create unique index customer_transactions_fallback_unique_idx
+create index customer_transactions_candidate_lookup_idx
   on public.customer_transactions (
     business_id,
     source,
@@ -43,15 +43,63 @@ create unique index customer_transactions_fallback_unique_idx
 create index customer_transactions_business_date_idx
   on public.customer_transactions (business_id, transaction_date, id);
 
+create table public.customer_transaction_duplicate_resolutions (
+  id uuid primary key default gen_random_uuid(),
+  business_id uuid not null references public.businesses(id) on delete restrict,
+  source text not null check (
+    char_length(source) between 1 and 80
+    and source = btrim(source)
+    and source = lower(source)
+  ),
+  customer_email text not null check (
+    char_length(customer_email) between 3 and 320
+    and customer_email = btrim(customer_email)
+    and customer_email = lower(customer_email)
+  ),
+  transaction_date date not null,
+  amount_collected numeric not null,
+  source_row_number integer not null check (source_row_number > 0),
+  decision text not null check (decision in ('duplicate', 'keep_distinct')),
+  candidate_match_count integer not null check (candidate_match_count > 0),
+  kept_transaction_id uuid references public.customer_transactions(id) on delete restrict,
+  resolved_by_user_id uuid not null references auth.users(id) on delete restrict,
+  resolved_at timestamptz not null default now(),
+  check (
+    (decision = 'duplicate' and kept_transaction_id is null)
+    or (decision = 'keep_distinct' and kept_transaction_id is not null)
+  )
+);
+
+create index customer_transaction_duplicate_resolutions_business_idx
+  on public.customer_transaction_duplicate_resolutions (business_id, resolved_at, id);
+
 alter table public.customer_transactions enable row level security;
+alter table public.customer_transaction_duplicate_resolutions enable row level security;
 
 revoke all on public.customer_transactions from anon;
 revoke all on public.customer_transactions from authenticated;
 grant select on public.customer_transactions to authenticated;
 grant all on public.customer_transactions to service_role;
 
+revoke all on public.customer_transaction_duplicate_resolutions from anon;
+revoke all on public.customer_transaction_duplicate_resolutions from authenticated;
+grant select on public.customer_transaction_duplicate_resolutions to authenticated;
+grant all on public.customer_transaction_duplicate_resolutions to service_role;
+
 create policy customer_transactions_select
 on public.customer_transactions for select
+to authenticated
+using (
+  (select private.is_admin())
+  or business_id in (
+    select membership.business_id
+    from public.business_memberships as membership
+    where membership.user_id = (select auth.uid())
+  )
+);
+
+create policy customer_transaction_duplicate_resolutions_select
+on public.customer_transaction_duplicate_resolutions for select
 to authenticated
 using (
   (select private.is_admin())
@@ -82,9 +130,15 @@ declare
   amount_text text;
   amount_value numeric;
   row_number_value integer;
+  candidate_resolution_value text;
+  candidate_lock_key text;
+  candidate_match_count integer;
+  inserted_transaction_id uuid;
   affected_rows integer;
   inserted_count integer := 0;
   duplicate_count integer := 0;
+  candidate_count integer := 0;
+  candidate_collisions jsonb := '[]'::jsonb;
 begin
   if (select auth.uid()) is null then
     raise insufficient_privilege using message = 'Authentication is required to import customer transactions.';
@@ -127,7 +181,7 @@ begin
     exception when others then
       raise invalid_parameter_value using message = 'Transaction source row number must be a positive integer.';
     end;
-    if row_number_value <= 0 then
+    if row_number_value is null or row_number_value <= 0 then
       raise invalid_parameter_value using message = 'Transaction source row number must be a positive integer.';
     end if;
 
@@ -137,10 +191,18 @@ begin
       raise invalid_parameter_value using message = 'Transaction ID must be 512 characters or fewer.';
     end if;
 
+    candidate_resolution_value := nullif(btrim(coalesce(source_row ->> 'candidate_resolution', '')), '');
+    if candidate_resolution_value is not null
+      and candidate_resolution_value not in ('duplicate', 'keep_distinct') then
+      raise invalid_parameter_value using message = 'Candidate resolution must be duplicate or keep_distinct.';
+    end if;
+    if source_transaction_id_value is not null and candidate_resolution_value is not null then
+      raise invalid_parameter_value using message = 'Candidate resolution is only valid for rows without a Transaction ID.';
+    end if;
+
     customer_email_value := lower(btrim(coalesce(source_row ->> 'customer_email', '')));
     if char_length(customer_email_value) not between 3 and 320
-      or customer_email_value !~ '^[^[:space:]@]+@[^[:space:]@]+$'
-      or customer_email_value <> lower(customer_email_value) then
+      or customer_email_value !~ '^[^[:space:]@]+@[^[:space:]@]+$' then
       raise invalid_parameter_value using message = 'Customer email is invalid.';
     end if;
 
@@ -167,6 +229,150 @@ begin
       raise invalid_parameter_value using message = 'Amount collected is outside the supported numeric range.';
     end;
 
+    if source_transaction_id_value is not null then
+      insert into public.customer_transactions (
+        business_id,
+        source,
+        source_transaction_id,
+        customer_email,
+        transaction_date,
+        amount_collected,
+        source_row_number,
+        imported_by_user_id
+      )
+      values (
+        p_business_id,
+        normalized_source,
+        source_transaction_id_value,
+        customer_email_value,
+        transaction_date_value,
+        amount_value,
+        row_number_value,
+        (select auth.uid())
+      )
+      on conflict do nothing;
+
+      get diagnostics affected_rows = row_count;
+      if affected_rows = 1 then
+        inserted_count := inserted_count + 1;
+      else
+        duplicate_count := duplicate_count + 1;
+      end if;
+      continue;
+    end if;
+
+    candidate_lock_key := concat_ws(
+      E'\x1f',
+      p_business_id::text,
+      normalized_source,
+      customer_email_value,
+      transaction_date_value::text,
+      amount_value::text
+    );
+    perform pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(candidate_lock_key, 0));
+
+    select count(*)::integer
+    into candidate_match_count
+    from public.customer_transactions as existing
+    where existing.business_id = p_business_id
+      and existing.source = normalized_source
+      and existing.source_transaction_id is null
+      and existing.customer_email = customer_email_value
+      and existing.transaction_date = transaction_date_value
+      and existing.amount_collected = amount_value;
+
+    if candidate_match_count > 0 then
+      if candidate_resolution_value is null then
+        candidate_count := candidate_count + 1;
+        candidate_collisions := candidate_collisions || jsonb_build_array(
+          jsonb_build_object(
+            'row_number', row_number_value,
+            'existing_count', candidate_match_count
+          )
+        );
+        continue;
+      end if;
+
+      if candidate_resolution_value = 'duplicate' then
+        insert into public.customer_transaction_duplicate_resolutions (
+          business_id,
+          source,
+          customer_email,
+          transaction_date,
+          amount_collected,
+          source_row_number,
+          decision,
+          candidate_match_count,
+          kept_transaction_id,
+          resolved_by_user_id
+        ) values (
+          p_business_id,
+          normalized_source,
+          customer_email_value,
+          transaction_date_value,
+          amount_value,
+          row_number_value,
+          'duplicate',
+          candidate_match_count,
+          null,
+          (select auth.uid())
+        );
+        duplicate_count := duplicate_count + 1;
+        continue;
+      end if;
+
+      insert into public.customer_transactions (
+        business_id,
+        source,
+        source_transaction_id,
+        customer_email,
+        transaction_date,
+        amount_collected,
+        source_row_number,
+        imported_by_user_id
+      ) values (
+        p_business_id,
+        normalized_source,
+        null,
+        customer_email_value,
+        transaction_date_value,
+        amount_value,
+        row_number_value,
+        (select auth.uid())
+      )
+      returning id into inserted_transaction_id;
+
+      insert into public.customer_transaction_duplicate_resolutions (
+        business_id,
+        source,
+        customer_email,
+        transaction_date,
+        amount_collected,
+        source_row_number,
+        decision,
+        candidate_match_count,
+        kept_transaction_id,
+        resolved_by_user_id
+      ) values (
+        p_business_id,
+        normalized_source,
+        customer_email_value,
+        transaction_date_value,
+        amount_value,
+        row_number_value,
+        'keep_distinct',
+        candidate_match_count,
+        inserted_transaction_id,
+        (select auth.uid())
+      );
+      inserted_count := inserted_count + 1;
+      continue;
+    end if;
+
+    if candidate_resolution_value is not null then
+      raise invalid_parameter_value using message = 'Candidate resolution was supplied but no matching candidate exists.';
+    end if;
+
     insert into public.customer_transactions (
       business_id,
       source,
@@ -176,30 +382,24 @@ begin
       amount_collected,
       source_row_number,
       imported_by_user_id
-    )
-    values (
+    ) values (
       p_business_id,
       normalized_source,
-      source_transaction_id_value,
+      null,
       customer_email_value,
       transaction_date_value,
       amount_value,
       row_number_value,
       (select auth.uid())
-    )
-    on conflict do nothing;
-
-    get diagnostics affected_rows = row_count;
-    if affected_rows = 1 then
-      inserted_count := inserted_count + 1;
-    else
-      duplicate_count := duplicate_count + 1;
-    end if;
+    );
+    inserted_count := inserted_count + 1;
   end loop;
 
   return jsonb_build_object(
     'inserted_count', inserted_count,
-    'duplicate_count', duplicate_count
+    'duplicate_count', duplicate_count,
+    'candidate_count', candidate_count,
+    'candidate_collisions', candidate_collisions
   );
 end;
 $$;
