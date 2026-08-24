@@ -76,7 +76,6 @@ const VALIDATION_THEME_ALIASES = {
   "--surface-primary": "var(--surface)",
   "--surface-secondary": "var(--surface-soft)",
   "--border-subtle": "var(--border)",
-  "--border-strong": "var(--border-strong)",
   "--accent-primary": "var(--brand)",
 } as CSSProperties;
 
@@ -99,12 +98,19 @@ function mappedColumns(mapping: TransactionColumnMapping) {
 function parseRpcResult(data: unknown): { inserted_count: number; duplicate_count: number } | null {
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   const record = data as Record<string, unknown>;
-  if (!Number.isSafeInteger(record.inserted_count) || !Number.isSafeInteger(record.duplicate_count)) {
+  if (
+    typeof record.inserted_count !== "number" ||
+    typeof record.duplicate_count !== "number" ||
+    !Number.isSafeInteger(record.inserted_count) ||
+    !Number.isSafeInteger(record.duplicate_count) ||
+    record.inserted_count < 0 ||
+    record.duplicate_count < 0
+  ) {
     return null;
   }
   return {
-    inserted_count: record.inserted_count as number,
-    duplicate_count: record.duplicate_count as number,
+    inserted_count: record.inserted_count,
+    duplicate_count: record.duplicate_count,
   };
 }
 
