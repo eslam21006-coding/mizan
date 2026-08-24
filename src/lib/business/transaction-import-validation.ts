@@ -1,4 +1,5 @@
 export const TRANSACTION_VALIDATION_ERROR_SAMPLE_LIMIT = 25;
+export const TRANSACTION_EMAIL_MAX_LENGTH = 320;
 
 export const TRANSACTION_VALIDATION_FIELDS = [
   "customerEmail",
@@ -54,7 +55,13 @@ export function normalizeTransactionEmail(value: string) {
 
 export function isValidTransactionEmail(value: string) {
   const normalized = normalizeTransactionEmail(value);
-  if (!normalized || !BASIC_EMAIL_PATTERN.test(normalized)) return false;
+  if (
+    !normalized ||
+    normalized.length > TRANSACTION_EMAIL_MAX_LENGTH ||
+    !BASIC_EMAIL_PATTERN.test(normalized)
+  ) {
+    return false;
+  }
   const firstAt = normalized.indexOf("@");
   return firstAt > 0 && firstAt === normalized.lastIndexOf("@") && firstAt < normalized.length - 1;
 }
