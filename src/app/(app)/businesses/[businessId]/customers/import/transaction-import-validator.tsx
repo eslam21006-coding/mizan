@@ -6,6 +6,7 @@ import {
   type TransactionColumnMapping,
 } from "@/lib/business/transaction-column-mapping";
 import {
+  type CandidateDuplicateResolution,
   isValidTransactionImportSource,
   normalizeTransactionImportSource,
   prepareTransactionImportRows,
@@ -37,26 +38,64 @@ type TransactionImportValidatorProps = {
   preview: TransactionFilePreview;
   fileBuffer: ArrayBuffer;
   mapping: TransactionColumnMapping;
+  onImportBusyChange: (busy: boolean) => void;
 };
 
 type ImportResult = {
   insertedCount: number;
   duplicateCount: number;
+  candidateCount: number;
 };
+
+type RpcCandidateCollision = {
+  row_number: number;
+  existing_count: number;
+};
+
+type RpcImportResult = {
+  inserted_count: number;
+  duplicate_count: number;
+  candidate_count: number;
+  candidate_collisions: RpcCandidateCollision[];
+};
+
+type PendingCandidate = {
+  row: PreparedTransactionImportRow;
+  existingCount: number;
+  resolutionId: string;
+};
+
+type ProcessingOutcome = {
+  result: ImportResult;
+  pendingCandidates: PendingCandidate[];
+  remainingRows: PreparedTransactionImportRow[];
+};
+
+class TransactionImportProcessError extends Error {
+  readonly confirmed: ImportResult;
+
+  constructor(confirmed: ImportResult) {
+    super("Transaction import RPC failed.");
+    this.name = "TransactionImportProcessError";
+    this.confirmed = confirmed;
+  }
+}
 
 const FIELD_LABELS = {
   customerEmail: "بريد العميل",
   transactionDate: "تاريخ المعاملة",
   amountCollected: "المبلغ المحصل",
+  transactionId: "Transaction ID",
 } as const satisfies Record<TransactionValidationField, string>;
 
 const ISSUE_MESSAGES = {
   EMAIL_REQUIRED: "بريد العميل مطلوب.",
-  EMAIL_INVALID: "صيغة بريد العميل غير صالحة.",
+  EMAIL_INVALID: "صيغة بريد العميل غير صالحة أو أطول من الحد المسموح.",
   TRANSACTION_DATE_REQUIRED: "تاريخ المعاملة مطلوب.",
   TRANSACTION_DATE_INVALID: "استخدم تاريخ ISO صالحًا مثل 2026-08-23.",
   AMOUNT_REQUIRED: "المبلغ المحصل مطلوب.",
   AMOUNT_INVALID: "المبلغ يجب أن يكون رقمًا صالحًا بدون رمز عملة.",
+  TRANSACTION_ID_TOO_LONG: "Transaction ID أطول من 512 حرفًا.",
 } as const satisfies Record<TransactionValidationIssueCode, string>;
 
 const SOURCE_ERROR_MESSAGES = {
@@ -95,23 +134,40 @@ function mappedColumns(mapping: TransactionColumnMapping) {
   };
 }
 
-function parseRpcResult(data: unknown): { inserted_count: number; duplicate_count: number } | null {
+function parseNonNegativeInteger(value: unknown) {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
+}
+
+function parseRpcResult(data: unknown): RpcImportResult | null {
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   const record = data as Record<string, unknown>;
-  if (
-    typeof record.inserted_count !== "number" ||
-    typeof record.duplicate_count !== "number" ||
-    !Number.isSafeInteger(record.inserted_count) ||
-    !Number.isSafeInteger(record.duplicate_count) ||
-    record.inserted_count < 0 ||
-    record.duplicate_count < 0
-  ) {
-    return null;
+  const insertedCount = parseNonNegativeInteger(record.inserted_count);
+  const duplicateCount = parseNonNegativeInteger(record.duplicate_count);
+  const candidateCount = parseNonNegativeInteger(record.candidate_count);
+  if (insertedCount === null || duplicateCount === null || candidateCount === null) return null;
+  if (!Array.isArray(record.candidate_collisions)) return null;
+
+  const candidateCollisions: RpcCandidateCollision[] = [];
+  for (const rawCandidate of record.candidate_collisions) {
+    if (!rawCandidate || typeof rawCandidate !== "object" || Array.isArray(rawCandidate)) return null;
+    const candidate = rawCandidate as Record<string, unknown>;
+    const rowNumber = parseNonNegativeInteger(candidate.row_number);
+    const existingCount = parseNonNegativeInteger(candidate.existing_count);
+    if (rowNumber === null || rowNumber < 1 || existingCount === null || existingCount < 1) return null;
+    candidateCollisions.push({ row_number: rowNumber, existing_count: existingCount });
   }
+
+  if (candidateCollisions.length !== candidateCount) return null;
   return {
-    inserted_count: record.inserted_count,
-    duplicate_count: record.duplicate_count,
+    inserted_count: insertedCount,
+    duplicate_count: duplicateCount,
+    candidate_count: candidateCount,
+    candidate_collisions: candidateCollisions,
   };
+}
+
+function zeroImportResult(): ImportResult {
+  return { insertedCount: 0, duplicateCount: 0, candidateCount: 0 };
 }
 
 export function TransactionImportValidator({
@@ -119,6 +175,7 @@ export function TransactionImportValidator({
   preview,
   fileBuffer,
   mapping,
+  onImportBusyChange,
 }: TransactionImportValidatorProps) {
   const [skipFirstRow, setSkipFirstRow] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -129,6 +186,14 @@ export function TransactionImportValidator({
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [pendingCandidates, setPendingCandidates] = useState<PendingCandidate[]>([]);
+  const [candidateDecisions, setCandidateDecisions] = useState<
+    Record<number, CandidateDuplicateResolution | undefined>
+  >({});
+  const [remainingRows, setRemainingRows] = useState<PreparedTransactionImportRow[]>([]);
+
+  const hasPendingCandidates = pendingCandidates.length > 0;
+  const workflowLocked = isImporting || hasPendingCandidates;
 
   const validate = async () => {
     const selected = mappedColumns(mapping);
@@ -145,6 +210,9 @@ export function TransactionImportValidator({
     setError(null);
     setImportResult(null);
     setImportError(null);
+    setPendingCandidates([]);
+    setCandidateDecisions({});
+    setRemainingRows([]);
     try {
       await new Promise<void>((resolve) => setTimeout(resolve, 0));
       const sourceRows = await readTransactionValidationSource({
@@ -172,6 +240,69 @@ export function TransactionImportValidator({
     } finally {
       setIsValidating(false);
     }
+  };
+
+  const processRows = async (
+    rows: PreparedTransactionImportRow[],
+    baseResult: ImportResult,
+  ): Promise<ProcessingOutcome> => {
+    const supabase = createSupabaseBrowserClient();
+    const chunks = transactionImportChunks(rows);
+    let confirmed: ImportResult = { ...baseResult, candidateCount: 0 };
+
+    for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex += 1) {
+      const chunk = chunks[chunkIndex] ?? [];
+      const { data, error: rpcError } = await supabase.rpc("import_customer_transactions", {
+        p_business_id: businessId,
+        p_source: normalizeTransactionImportSource(source),
+        p_rows: chunk,
+      });
+      if (rpcError) throw new TransactionImportProcessError(confirmed);
+
+      const parsed = parseRpcResult(data);
+      if (!parsed) throw new TransactionImportProcessError(confirmed);
+
+      confirmed = {
+        insertedCount: confirmed.insertedCount + parsed.inserted_count,
+        duplicateCount: confirmed.duplicateCount + parsed.duplicate_count,
+        candidateCount: parsed.candidate_count,
+      };
+
+      if (parsed.candidate_count > 0) {
+        const rowsByNumber = new Map(chunk.map((row) => [row.row_number, row]));
+        const candidates = parsed.candidate_collisions.map((candidate) => {
+          const row = rowsByNumber.get(candidate.row_number);
+          if (!row || row.transaction_id !== null) {
+            throw new TransactionImportProcessError({ ...confirmed, candidateCount: 0 });
+          }
+          return {
+            row,
+            existingCount: candidate.existing_count,
+            resolutionId: crypto.randomUUID(),
+          } satisfies PendingCandidate;
+        });
+
+        return {
+          result: confirmed,
+          pendingCandidates: candidates,
+          remainingRows: chunks.slice(chunkIndex + 1).flat(),
+        };
+      }
+    }
+
+    return {
+      result: { ...confirmed, candidateCount: 0 },
+      pendingCandidates: [],
+      remainingRows: [],
+    };
+  };
+
+  const applyOutcome = (outcome: ProcessingOutcome) => {
+    setImportResult(outcome.result);
+    setPendingCandidates(outcome.pendingCandidates);
+    setCandidateDecisions({});
+    setRemainingRows(outcome.remainingRows);
+    if (outcome.pendingCandidates.length === 0) onImportBusyChange(false);
   };
 
   const importTransactions = async () => {
@@ -202,32 +333,68 @@ export function TransactionImportValidator({
     }
 
     setIsImporting(true);
+    onImportBusyChange(true);
     setImportResult(null);
     setImportError(null);
-    const supabase = createSupabaseBrowserClient();
-    let insertedCount = 0;
-    let duplicateCount = 0;
+    setPendingCandidates([]);
+    setCandidateDecisions({});
+    setRemainingRows([]);
 
     try {
-      for (const chunk of transactionImportChunks(prepared)) {
-        const { data, error: rpcError } = await supabase.rpc("import_customer_transactions", {
-          p_business_id: businessId,
-          p_source: normalizeTransactionImportSource(source),
-          p_rows: chunk,
-        });
-        if (rpcError) throw rpcError;
-        const parsed = parseRpcResult(data);
-        if (!parsed) throw new Error("Unexpected transaction import response.");
-        insertedCount += parsed.inserted_count;
-        duplicateCount += parsed.duplicate_count;
+      const outcome = await processRows(prepared, zeroImportResult());
+      applyOutcome(outcome);
+    } catch (caught) {
+      const confirmed =
+        caught instanceof TransactionImportProcessError ? caught.confirmed : zeroImportResult();
+      if (confirmed.insertedCount + confirmed.duplicateCount > 0) setImportResult(confirmed);
+      setImportError(
+        confirmed.insertedCount + confirmed.duplicateCount > 0
+          ? `توقف الاستيراد بعد تأكيد معالجة ${confirmed.insertedCount + confirmed.duplicateCount} صف. تمت إضافة ${confirmed.insertedCount} وتأكيد ${confirmed.duplicateCount} مكرر. يمكنك إعادة المحاولة بأمان.`
+          : "تعذر استيراد المعاملات. لم يؤكد السيرفر حفظ أي صفوف. أعد المحاولة بعد التحقق من الاتصال.",
+      );
+      onImportBusyChange(false);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  const resolveCandidates = async () => {
+    if (pendingCandidates.length === 0 || !importResult) return;
+    const allResolved = pendingCandidates.every(
+      (candidate) => candidateDecisions[candidate.row.row_number] !== undefined,
+    );
+    if (!allResolved) {
+      setImportError("اختر قرارًا لكل صف متصادم قبل المتابعة.");
+      return;
+    }
+
+    const resolvedRows = pendingCandidates.map((candidate) => ({
+      ...candidate.row,
+      candidate_resolution: candidateDecisions[candidate.row.row_number] as CandidateDuplicateResolution,
+      candidate_resolution_id: candidate.resolutionId,
+    }));
+
+    setIsImporting(true);
+    setImportError(null);
+    try {
+      const resolutionOutcome = await processRows(resolvedRows, {
+        ...importResult,
+        candidateCount: 0,
+      });
+      if (resolutionOutcome.pendingCandidates.length > 0) {
+        throw new TransactionImportProcessError(resolutionOutcome.result);
       }
 
-      setImportResult({ insertedCount, duplicateCount });
+      if (remainingRows.length === 0) {
+        applyOutcome(resolutionOutcome);
+        return;
+      }
+
+      const continuation = await processRows(remainingRows, resolutionOutcome.result);
+      applyOutcome(continuation);
     } catch {
       setImportError(
-        insertedCount + duplicateCount > 0
-          ? `توقف الاستيراد بعد معالجة ${insertedCount + duplicateCount} صف. تمت إضافة ${insertedCount} وتخطي ${duplicateCount} مكرر. إعادة المحاولة آمنة لأن Duplicate Protection يعمل داخل قاعدة البيانات.`
-          : "تعذر استيراد المعاملات. لم يؤكد السيرفر حفظ أي صفوف. أعد المحاولة بعد التحقق من الاتصال.",
+        "تعذر تطبيق قرارات التصادم أو متابعة الاستيراد. أعد المحاولة؛ معرفات القرار تمنع تكرار قرار تم حفظه بالفعل.",
       );
     } finally {
       setIsImporting(false);
@@ -241,6 +408,9 @@ export function TransactionImportValidator({
     setError(null);
     setImportResult(null);
     setImportError(null);
+    setPendingCandidates([]);
+    setCandidateDecisions({});
+    setRemainingRows([]);
   };
 
   return (
@@ -252,10 +422,10 @@ export function TransactionImportValidator({
       <div className={styles.validationHeading}>
         <div>
           <span className={styles.kicker}>Task 20 · Validation + Duplicate Protection</span>
-          <h2 id="transaction-validation-title">تحقق من الصفوف ثم استوردها بدون تكرار</h2>
+          <h2 id="transaction-validation-title">تحقق من الصفوف ثم استوردها بدون تكرار صامت</h2>
           <p>
-            Validation يفحص الملف كاملًا أولًا. بعد نجاحه، الاستيراد يحفظ الصفوف الجديدة فقط ويعرض عدد الصفوف
-            المكررة التي تم تخطيها بدلًا من مضاعفة الأرقام بصمت.
+            Validation يفحص الملف كاملًا أولًا. Transaction ID يعطي Duplicate مؤكدة؛ أما التطابق بدون ID فيتوقف
+            حتى تختار بنفسك هل الصف مكرر أم شراء مستقل.
           </p>
         </div>
         {result && (
@@ -270,7 +440,7 @@ export function TransactionImportValidator({
           <input
             type="checkbox"
             checked={skipFirstRow}
-            disabled={isValidating || isImporting}
+            disabled={isValidating || workflowLocked}
             onChange={(event) => changeHeaderMode(event.currentTarget.checked)}
           />
           <span>
@@ -281,7 +451,7 @@ export function TransactionImportValidator({
         <button
           type="button"
           className={styles.validationButton}
-          disabled={isValidating || isImporting}
+          disabled={isValidating || workflowLocked}
           onClick={() => void validate()}
         >
           {isValidating ? "جاري التحقق…" : "تشغيل Validation"}
@@ -293,7 +463,7 @@ export function TransactionImportValidator({
         <span>{TRANSACTION_FIELD_LABELS.transactionDate}</span>
         <span>{TRANSACTION_FIELD_LABELS.amountCollected}</span>
         <span>
-          {TRANSACTION_FIELD_LABELS.transactionId}: {mapping.transactionId == null ? "Fallback key" : "Mapped"}
+          {TRANSACTION_FIELD_LABELS.transactionId}: {mapping.transactionId == null ? "Candidate check" : "Mapped"}
         </span>
       </div>
 
@@ -336,13 +506,14 @@ export function TransactionImportValidator({
           {result.isValid ? (
             <>
               <div className={styles.validationSuccess}>
-                كل الصفوف صالحة. يمكنك الآن تحديد مصدر المعاملات وبدء الاستيراد الآمن من التكرار.
+                كل الصفوف صالحة. يمكنك الآن تحديد مصدر المعاملات وبدء الاستيراد مع Duplicate Protection.
               </div>
               <fieldset className={task20Styles.importPanel}>
                 <legend className={task20Styles.importLegend}>Duplicate Protection قبل الحفظ</legend>
                 <p>
-                  إذا كان Transaction ID مربوطًا نستخدمه كمفتاح أساسي داخل نفس المصدر. عند غيابه نستخدم
-                  البريد الموحّد + التاريخ + المبلغ + المصدر. أي تكرار يتم تخطيه وإظهاره في النتيجة.
+                  إذا كان Transaction ID موجودًا نستخدمه كدليل Duplicate نهائي داخل نفس المصدر. عند غيابه،
+                  التطابق في البريد + التاريخ + المبلغ + المصدر يعتبر Candidate فقط ولا يتم حذفه أو إضافته حتى
+                  تحسمه أنت.
                 </p>
                 <div className={task20Styles.sourceField}>
                   <label htmlFor="transaction-import-source">مصدر المعاملات</label>
@@ -350,8 +521,7 @@ export function TransactionImportValidator({
                     id="transaction-import-source"
                     className={task20Styles.sourceInput}
                     value={source}
-                    maxLength={80}
-                    disabled={isImporting}
+                    disabled={workflowLocked}
                     placeholder="مثال: Stripe"
                     autoComplete="off"
                     onChange={(event) => {
@@ -360,12 +530,12 @@ export function TransactionImportValidator({
                       setImportError(null);
                     }}
                   />
-                  <small>استخدم نفس اسم المصدر في كل تصدير من نفس بوابة الدفع حتى يعمل الـ fallback key بثبات.</small>
+                  <small>من 1 إلى 80 حرفًا Unicode. استخدم نفس الاسم دائمًا لنفس بوابة الدفع.</small>
                 </div>
                 <button
                   type="button"
                   className={task20Styles.importButton}
-                  disabled={isImporting}
+                  disabled={workflowLocked}
                   onClick={() => void importTransactions()}
                 >
                   {isImporting ? "جاري الاستيراد…" : "استيراد المعاملات"}
@@ -379,13 +549,91 @@ export function TransactionImportValidator({
                         <strong>{importResult.insertedCount}</strong>
                       </div>
                       <div>
-                        <span>مكررة تم تخطيها</span>
+                        <span>مكررة مؤكدة</span>
                         <strong>{importResult.duplicateCount}</strong>
                       </div>
+                      <div>
+                        <span>تحتاج قرارًا</span>
+                        <strong>{importResult.candidateCount}</strong>
+                      </div>
                     </div>
-                    {importResult.insertedCount === 0 && importResult.duplicateCount > 0
-                      ? " لم تتم مضاعفة أي معاملات؛ كل الصفوف كانت موجودة بالفعل."
-                      : " تم حفظ الصفوف الجديدة فقط، ولم يتم احتساب الصفوف المكررة مرة أخرى."}
+                    {importResult.candidateCount > 0
+                      ? " تم إيقاف الاستيراد عند أول مجموعة تصادمات حتى لا نفقد شراءً حقيقيًا أو نضاعف صفًا بصمت."
+                      : importResult.insertedCount === 0 && importResult.duplicateCount > 0
+                        ? " لم تتم مضاعفة أي معاملات؛ كل الصفوف كانت مكررة مؤكدة أو تم تأكيدها كمكررة."
+                        : " تم حفظ الصفوف الجديدة فقط مع تطبيق قرارات التصادم بشكل قابل للتدقيق."}
+                  </div>
+                )}
+
+                {pendingCandidates.length > 0 && (
+                  <div className={task20Styles.candidatePanel}>
+                    <div>
+                      <h3>تصادمات تحتاج قرارك</h3>
+                      <p>
+                        هذه الصفوف تشبه معاملات موجودة لكنها ليست Duplicate مؤكدة. اختر لكل صف: مكرر فعلًا أو
+                        احتفظ به كمعاملة مستقلة. يتم حفظ القرار في سجل تدقيق.
+                      </p>
+                    </div>
+                    <div className={task20Styles.candidateTableShell} tabIndex={0}>
+                      <table className={task20Styles.candidateTable} aria-label="تصادمات منع تكرار المعاملات">
+                        <thead>
+                          <tr>
+                            <th scope="col">الصف</th>
+                            <th scope="col">البريد</th>
+                            <th scope="col">التاريخ</th>
+                            <th scope="col">المبلغ</th>
+                            <th scope="col">مطابقات موجودة</th>
+                            <th scope="col">القرار</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {pendingCandidates.map((candidate) => {
+                            const rowNumber = candidate.row.row_number;
+                            return (
+                              <tr key={`${rowNumber}:${candidate.resolutionId}`}>
+                                <td>{rowNumber}</td>
+                                <td dir="auto">{candidate.row.customer_email}</td>
+                                <td dir="ltr">{candidate.row.transaction_date}</td>
+                                <td dir="ltr">{candidate.row.amount_collected}</td>
+                                <td>{candidate.existingCount}</td>
+                                <td>
+                                  <select
+                                    aria-label={`قرار التصادم للصف ${rowNumber}`}
+                                    value={candidateDecisions[rowNumber] ?? ""}
+                                    disabled={isImporting}
+                                    onChange={(event) => {
+                                      const value = event.currentTarget.value as CandidateDuplicateResolution | "";
+                                      setCandidateDecisions((current) => ({
+                                        ...current,
+                                        [rowNumber]: value || undefined,
+                                      }));
+                                      setImportError(null);
+                                    }}
+                                  >
+                                    <option value="">اختر</option>
+                                    <option value="duplicate">مكرر — لا تضفه</option>
+                                    <option value="keep_distinct">شراء مستقل — احتفظ به</option>
+                                  </select>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                    <button
+                      type="button"
+                      className={task20Styles.importButton}
+                      disabled={
+                        isImporting ||
+                        pendingCandidates.some(
+                          (candidate) => candidateDecisions[candidate.row.row_number] === undefined,
+                        )
+                      }
+                      onClick={() => void resolveCandidates()}
+                    >
+                      {isImporting ? "جاري تطبيق القرارات…" : "تطبيق القرارات والمتابعة"}
+                    </button>
                   </div>
                 )}
 
