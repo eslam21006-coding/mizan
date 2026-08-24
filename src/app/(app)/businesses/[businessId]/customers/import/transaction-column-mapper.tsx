@@ -8,9 +8,10 @@ import {
   REQUIRED_TRANSACTION_FIELDS,
   setTransactionFieldColumn,
   TRANSACTION_FIELD_LABELS,
+  TRANSACTION_MAPPING_FIELDS,
   TRANSACTION_NATIVE_MAPPING_OPTION_LIMIT,
-  type RequiredTransactionField,
   type TransactionColumnMapping,
+  type TransactionMappingField,
 } from "@/lib/business/transaction-column-mapping";
 import { transactionColumnLabel } from "@/lib/business/transaction-columns";
 import {
@@ -21,14 +22,16 @@ import { TransactionImportValidator } from "./transaction-import-validator";
 import styles from "./transaction-import.module.css";
 
 type TransactionColumnMapperProps = {
+  businessId: string;
   preview: TransactionFilePreview;
   fileBuffer: ArrayBuffer;
 };
 
-function fieldDescription(field: RequiredTransactionField) {
+function fieldDescription(field: TransactionMappingField) {
   if (field === "customerEmail") return "العمود الذي يحتوي على بريد العميل.";
   if (field === "transactionDate") return "العمود الذي يحتوي على تاريخ المعاملة.";
-  return "العمود الذي يحتوي على المبلغ المحصل.";
+  if (field === "amountCollected") return "العمود الذي يحتوي على المبلغ المحصل.";
+  return "اختياري. اربطه إذا كان تصدير بوابة الدفع يحتوي على Transaction ID ثابت.";
 }
 
 function sampleValue(preview: TransactionFilePreview, column: number) {
@@ -40,7 +43,11 @@ function sampleValue(preview: TransactionFilePreview, column: number) {
   return "";
 }
 
-export function TransactionColumnMapper({ preview, fileBuffer }: TransactionColumnMapperProps) {
+export function TransactionColumnMapper({
+  businessId,
+  preview,
+  fileBuffer,
+}: TransactionColumnMapperProps) {
   const [mapping, setMapping] = useState<TransactionColumnMapping>(EMPTY_TRANSACTION_COLUMN_MAPPING);
   const mappingState = inspectTransactionColumnMapping(mapping);
   const hasValidColumnCount = Number.isSafeInteger(preview.totalColumns) && preview.totalColumns > 0;
@@ -56,7 +63,7 @@ export function TransactionColumnMapper({ preview, fileBuffer }: TransactionColu
     });
   }, [preview, hasValidColumnCount, usesDirectColumnEntry]);
 
-  const setSelectField = (field: RequiredTransactionField, value: string) => {
+  const setSelectField = (field: TransactionMappingField, value: string) => {
     if (value === "") {
       setMapping((current) => setTransactionFieldColumn(current, field, null));
       return;
@@ -67,7 +74,7 @@ export function TransactionColumnMapper({ preview, fileBuffer }: TransactionColu
     setMapping((current) => setTransactionFieldColumn(current, field, column));
   };
 
-  const setDirectField = (field: RequiredTransactionField, value: string) => {
+  const setDirectField = (field: TransactionMappingField, value: string) => {
     if (value.trim() === "") {
       setMapping((current) => setTransactionFieldColumn(current, field, null));
       return;
@@ -88,7 +95,7 @@ export function TransactionColumnMapper({ preview, fileBuffer }: TransactionColu
   };
 
   const validationKey = mappingState.isComplete
-    ? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.amountCollected}`
+    ? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}`
     : "incomplete";
 
   return (
@@ -96,11 +103,11 @@ export function TransactionColumnMapper({ preview, fileBuffer }: TransactionColu
       <section className={styles.mappingPanel} aria-labelledby="transaction-mapping-title">
         <div className={styles.mappingHeading}>
           <div>
-            <span className={styles.kicker}>Task 19 · Mapping جاهز للـ Validation</span>
+            <span className={styles.kicker}>Task 20 · Mapping + Duplicate Key</span>
             <h2 id="transaction-mapping-title">اربط أعمدة الملف بالحقول المطلوبة</h2>
             <p>
-              اختر العمود الصحيح لكل حقل. عند اكتمال الـ Mapping يمكنك تشغيل Validation على كل الصفوف بدون
-              رفع الملف أو حفظ أي بيانات.
+              الحقول الثلاثة الأولى مطلوبة. Transaction ID اختياري، لكنه يكون مفتاح منع التكرار الأقوى عند
+              توفره في بوابة الدفع.
             </p>
           </div>
           <span className={mappingState.isComplete ? styles.mappingReady : styles.mappingPending}>
@@ -114,15 +121,21 @@ export function TransactionColumnMapper({ preview, fileBuffer }: TransactionColu
           </div>
         ) : (
           <div className={styles.mappingGrid}>
-            {REQUIRED_TRANSACTION_FIELDS.map((field) => {
-              const selected = mapping[field];
+            {TRANSACTION_MAPPING_FIELDS.map((field) => {
+              const selected = mapping[field] ?? null;
               const selectedSample = selected === null ? "" : sampleValue(preview, selected);
               const controlId = `mapping-${field}`;
               const helpId = `mapping-${field}-help`;
+              const required = REQUIRED_TRANSACTION_FIELDS.includes(
+                field as (typeof REQUIRED_TRANSACTION_FIELDS)[number],
+              );
 
               return (
                 <div className={styles.mappingField} key={field}>
-                  <label htmlFor={controlId}>{TRANSACTION_FIELD_LABELS[field]}</label>
+                  <label htmlFor={controlId}>
+                    {TRANSACTION_FIELD_LABELS[field]}
+                    {!required && " · اختياري"}
+                  </label>
                   <p>{fieldDescription(field)}</p>
 
                   {usesDirectColumnEntry ? (
@@ -151,7 +164,7 @@ export function TransactionColumnMapper({ preview, fileBuffer }: TransactionColu
                       value={selected ?? ""}
                       onChange={(event) => setSelectField(field, event.currentTarget.value)}
                     >
-                      <option value="">اختر عمودًا</option>
+                      <option value="">{required ? "اختر عمودًا" : "بدون Transaction ID"}</option>
                       {options.map((option) => (
                         <option key={option.column} value={option.column}>
                           {option.label}
@@ -168,7 +181,7 @@ export function TransactionColumnMapper({ preview, fileBuffer }: TransactionColu
 
         {hasValidColumnCount && mappingState.hasDuplicateColumns && (
           <div className={styles.mappingError} role="alert">
-            لا يمكن استخدام نفس العمود لأكثر من حقل مطلوب. اختر عمودًا مختلفًا لكل حقل.
+            لا يمكن استخدام نفس العمود لأكثر من حقل. اختر عمودًا مختلفًا لكل Mapping.
           </div>
         )}
 
@@ -176,7 +189,7 @@ export function TransactionColumnMapper({ preview, fileBuffer }: TransactionColu
           !mappingState.hasDuplicateColumns &&
           mappingState.missingFields.length > 0 && (
             <p className={styles.mappingHint}>
-              الحقول المتبقية:{" "}
+              الحقول المطلوبة المتبقية:{" "}
               {mappingState.missingFields.map((field) => TRANSACTION_FIELD_LABELS[field]).join("، ")}.
             </p>
           )}
@@ -189,6 +202,14 @@ export function TransactionColumnMapper({ preview, fileBuffer }: TransactionColu
                 <strong dir="ltr">Column {transactionColumnLabel(mapping[field] as number)}</strong>
               </div>
             ))}
+            <div>
+              <span>{TRANSACTION_FIELD_LABELS.transactionId}</span>
+              <strong dir="ltr">
+                {mapping.transactionId === null || mapping.transactionId === undefined
+                  ? "Fallback duplicate key"
+                  : `Column ${transactionColumnLabel(mapping.transactionId)}`}
+              </strong>
+            </div>
           </div>
         )}
       </section>
@@ -196,6 +217,7 @@ export function TransactionColumnMapper({ preview, fileBuffer }: TransactionColu
       {hasValidColumnCount && mappingState.isComplete && (
         <TransactionImportValidator
           key={validationKey}
+          businessId={businessId}
           preview={preview}
           fileBuffer={fileBuffer}
           mapping={mapping}
