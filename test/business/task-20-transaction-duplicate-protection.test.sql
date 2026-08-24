@@ -24,7 +24,10 @@ set local request.jwt.claims =
 do $$
 declare
   first_result jsonb;
-  second_result jsonb;
+  resolve_duplicate_result jsonb;
+  keep_distinct_result jsonb;
+  reimport_result jsonb;
+  reimport_resolution_result jsonb;
   other_source_result jsonb;
   total_amount numeric;
 begin
@@ -40,8 +43,13 @@ begin
   );
 
   if (first_result ->> 'inserted_count')::integer <> 2
-    or (first_result ->> 'duplicate_count')::integer <> 2 then
-    raise exception 'first import did not distinguish new and duplicate rows: %', first_result;
+    or (first_result ->> 'duplicate_count')::integer <> 1
+    or (first_result ->> 'candidate_count')::integer <> 1 then
+    raise exception 'first import did not separate definitive duplicates from candidate collisions: %', first_result;
+  end if;
+
+  if first_result -> 'candidate_collisions' -> 0 ->> 'row_number' <> '2' then
+    raise exception 'candidate collision did not identify the source row: %', first_result;
   end if;
 
   select coalesce(sum(amount_collected), 0)
@@ -51,23 +59,66 @@ begin
     and source = 'stripe';
 
   if total_amount <> 300 then
-    raise exception 'first import persisted wrong cash total: %', total_amount;
+    raise exception 'candidate collision affected cash before explicit resolution: %', total_amount;
   end if;
 
-  second_result := public.import_customer_transactions(
+  resolve_duplicate_result := public.import_customer_transactions(
+    '20202020-2020-4020-8020-20202020a001',
+    'stripe',
+    '[{"row_number":2,"transaction_id":null,"customer_email":"buyer@example.com","transaction_date":"2026-08-24","amount_collected":"100","candidate_resolution":"duplicate"}]'::jsonb
+  );
+
+  if (resolve_duplicate_result ->> 'inserted_count')::integer <> 0
+    or (resolve_duplicate_result ->> 'duplicate_count')::integer <> 1
+    or (resolve_duplicate_result ->> 'candidate_count')::integer <> 0 then
+    raise exception 'explicit duplicate resolution failed: %', resolve_duplicate_result;
+  end if;
+
+  keep_distinct_result := public.import_customer_transactions(
+    '20202020-2020-4020-8020-20202020a001',
+    'stripe',
+    '[{"row_number":5,"transaction_id":null,"customer_email":"buyer@example.com","transaction_date":"2026-08-24","amount_collected":"100","candidate_resolution":"keep_distinct"}]'::jsonb
+  );
+
+  if (keep_distinct_result ->> 'inserted_count')::integer <> 1
+    or (keep_distinct_result ->> 'duplicate_count')::integer <> 0
+    or (keep_distinct_result ->> 'candidate_count')::integer <> 0 then
+    raise exception 'keep-distinct candidate resolution failed: %', keep_distinct_result;
+  end if;
+
+  select coalesce(sum(amount_collected), 0)
+  into total_amount
+  from public.customer_transactions
+  where business_id = '20202020-2020-4020-8020-20202020a001'
+    and source = 'stripe';
+
+  if total_amount <> 400 then
+    raise exception 'legitimate repeated same-value purchase was lost: %', total_amount;
+  end if;
+
+  reimport_result := public.import_customer_transactions(
     '20202020-2020-4020-8020-20202020a001',
     'stripe',
     '[
       {"row_number":1,"transaction_id":null,"customer_email":"buyer@example.com","transaction_date":"2026-08-24","amount_collected":"100"},
-      {"row_number":2,"transaction_id":null,"customer_email":"buyer@example.com","transaction_date":"2026-08-24","amount_collected":"100.00"},
-      {"row_number":3,"transaction_id":"txn_123","customer_email":"second@example.com","transaction_date":"2026-08-24","amount_collected":"200"},
-      {"row_number":4,"transaction_id":"txn_123","customer_email":"changed@example.com","transaction_date":"2026-08-25","amount_collected":"999"}
+      {"row_number":3,"transaction_id":"txn_123","customer_email":"second@example.com","transaction_date":"2026-08-24","amount_collected":"200"}
     ]'::jsonb
   );
 
-  if (second_result ->> 'inserted_count')::integer <> 0
-    or (second_result ->> 'duplicate_count')::integer <> 4 then
-    raise exception 'second identical import was not fully deduplicated: %', second_result;
+  if (reimport_result ->> 'inserted_count')::integer <> 0
+    or (reimport_result ->> 'duplicate_count')::integer <> 1
+    or (reimport_result ->> 'candidate_count')::integer <> 1 then
+    raise exception 're-import did not hold fallback collision for resolution: %', reimport_result;
+  end if;
+
+  reimport_resolution_result := public.import_customer_transactions(
+    '20202020-2020-4020-8020-20202020a001',
+    'stripe',
+    '[{"row_number":1,"transaction_id":null,"customer_email":"buyer@example.com","transaction_date":"2026-08-24","amount_collected":"100","candidate_resolution":"duplicate"}]'::jsonb
+  );
+
+  if (reimport_resolution_result ->> 'duplicate_count')::integer <> 1 then
+    raise exception 're-import candidate could not be explicitly confirmed duplicate: %', reimport_resolution_result;
   end if;
 
   select coalesce(sum(amount_collected), 0)
@@ -76,8 +127,13 @@ begin
   where business_id = '20202020-2020-4020-8020-20202020a001'
     and source = 'stripe';
 
-  if total_amount <> 300 then
+  if total_amount <> 400 then
     raise exception 're-import doubled revenue/cash total: %', total_amount;
+  end if;
+
+  if (select count(*) from public.customer_transaction_duplicate_resolutions
+      where business_id = '20202020-2020-4020-8020-20202020a001') <> 3 then
+    raise exception 'candidate duplicate decisions were not preserved for audit';
   end if;
 
   other_source_result := public.import_customer_transactions(
@@ -90,9 +146,69 @@ begin
   );
 
   if (other_source_result ->> 'inserted_count')::integer <> 2
-    or (other_source_result ->> 'duplicate_count')::integer <> 0 then
-    raise exception 'duplicate identity leaked across transaction sources: %', other_source_result;
+    or (other_source_result ->> 'duplicate_count')::integer <> 0
+    or (other_source_result ->> 'candidate_count')::integer <> 0 then
+    raise exception 'candidate or definitive duplicate identity leaked across transaction sources: %', other_source_result;
   end if;
+end $$;
+
+do $$
+begin
+  begin
+    perform public.import_customer_transactions(
+      '20202020-2020-4020-8020-20202020a001',
+      repeat('x', 81),
+      '[{"row_number":1,"transaction_id":"source-boundary","customer_email":"source@example.com","transaction_date":"2026-08-24","amount_collected":"1"}]'::jsonb
+    );
+    raise exception 'oversized source passed guarded RPC validation';
+  exception when invalid_parameter_value then
+    null;
+  end;
+
+  begin
+    perform public.import_customer_transactions(
+      '20202020-2020-4020-8020-20202020a001',
+      'stripe',
+      jsonb_build_array(jsonb_build_object(
+        'row_number', 10,
+        'transaction_id', repeat('x', 513),
+        'customer_email', 'id-boundary@example.com',
+        'transaction_date', '2026-08-24',
+        'amount_collected', '1'
+      ))
+    );
+    raise exception 'oversized transaction ID passed guarded RPC validation';
+  exception when invalid_parameter_value then
+    null;
+  end;
+
+  begin
+    perform public.import_customer_transactions(
+      '20202020-2020-4020-8020-20202020a001',
+      'stripe',
+      jsonb_build_array(jsonb_build_object(
+        'row_number', 11,
+        'transaction_id', 'email-boundary',
+        'customer_email', repeat('a', 310) || '@' || repeat('b', 10),
+        'transaction_date', '2026-08-24',
+        'amount_collected', '1'
+      ))
+    );
+    raise exception 'oversized email passed guarded RPC validation';
+  exception when invalid_parameter_value then
+    null;
+  end;
+
+  begin
+    perform public.import_customer_transactions(
+      '20202020-2020-4020-8020-20202020a001',
+      'stripe',
+      '[{"transaction_id":"missing-row-number","customer_email":"row@example.com","transaction_date":"2026-08-24","amount_collected":"1"}]'::jsonb
+    );
+    raise exception 'missing row number passed guarded RPC validation';
+  exception when invalid_parameter_value then
+    null;
+  end;
 end $$;
 
 do $$
@@ -109,6 +225,19 @@ begin
   exception when insufficient_privilege then
     null;
   end;
+
+  begin
+    insert into public.customer_transaction_duplicate_resolutions (
+      business_id, source, customer_email, transaction_date, amount_collected,
+      source_row_number, decision, candidate_match_count, resolved_by_user_id
+    ) values (
+      '20202020-2020-4020-8020-20202020a001', 'stripe', 'bypass@example.com', '2026-08-24', 10,
+      99, 'duplicate', 1, '20202020-2020-4020-8020-202020202001'
+    );
+    raise exception 'authenticated owner bypassed guarded import RPC with direct resolution insert';
+  exception when insufficient_privilege then
+    null;
+  end;
 end $$;
 
 set local request.jwt.claims =
@@ -122,6 +251,14 @@ begin
     where business_id = '20202020-2020-4020-8020-20202020a001'
   ) then
     raise exception 'owner B read owner A customer transactions';
+  end if;
+
+  if exists (
+    select 1
+    from public.customer_transaction_duplicate_resolutions
+    where business_id = '20202020-2020-4020-8020-20202020a001'
+  ) then
+    raise exception 'owner B read owner A duplicate-resolution audit';
   end if;
 
   begin
@@ -141,8 +278,13 @@ set local request.jwt.claims =
 
 do $$
 begin
-  if (select count(*) from public.customer_transactions where business_id = '20202020-2020-4020-8020-20202020a001') <> 4 then
+  if (select count(*) from public.customer_transactions where business_id = '20202020-2020-4020-8020-20202020a001') <> 5 then
     raise exception 'read-only business member could not read permitted transaction history';
+  end if;
+
+  if (select count(*) from public.customer_transaction_duplicate_resolutions
+      where business_id = '20202020-2020-4020-8020-20202020a001') <> 3 then
+    raise exception 'read-only business member could not read permitted duplicate-resolution audit';
   end if;
 
   begin
@@ -174,8 +316,12 @@ begin
     raise exception 'admin could not import into managed business: %', admin_result;
   end if;
 
-  if (select count(*) from public.customer_transactions) <> 5 then
+  if (select count(*) from public.customer_transactions) <> 6 then
     raise exception 'admin could not read all protected transactions';
+  end if;
+
+  if (select count(*) from public.customer_transaction_duplicate_resolutions) <> 3 then
+    raise exception 'admin could not read duplicate-resolution audit';
   end if;
 end $$;
 
