@@ -1,10 +1,12 @@
 export const TRANSACTION_VALIDATION_ERROR_SAMPLE_LIMIT = 25;
 export const TRANSACTION_EMAIL_MAX_LENGTH = 320;
+export const TRANSACTION_ID_MAX_LENGTH = 512;
 
 export const TRANSACTION_VALIDATION_FIELDS = [
   "customerEmail",
   "transactionDate",
   "amountCollected",
+  "transactionId",
 ] as const;
 
 export type TransactionValidationField = (typeof TRANSACTION_VALIDATION_FIELDS)[number];
@@ -14,6 +16,7 @@ export type TransactionValidationInputRow = {
   customerEmail: string;
   transactionDate: string;
   amountCollected: string;
+  transactionId?: string;
 };
 
 export type TransactionValidationIssueCode =
@@ -22,7 +25,8 @@ export type TransactionValidationIssueCode =
   | "TRANSACTION_DATE_REQUIRED"
   | "TRANSACTION_DATE_INVALID"
   | "AMOUNT_REQUIRED"
-  | "AMOUNT_INVALID";
+  | "AMOUNT_INVALID"
+  | "TRANSACTION_ID_TOO_LONG";
 
 export type TransactionValidationIssue = {
   rowNumber: number;
@@ -49,6 +53,10 @@ const ISO_DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})[T ]\d{2}:\d{2}(?::\d{2}(
 const DECIMAL_AMOUNT_PATTERN =
   /^[+-]?(?:(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
 
+function unicodeCharacterLength(value: string) {
+  return Array.from(value).length;
+}
+
 export function normalizeTransactionEmail(value: string) {
   return value.trim().toLowerCase();
 }
@@ -57,7 +65,7 @@ export function isValidTransactionEmail(value: string) {
   const normalized = normalizeTransactionEmail(value);
   if (
     !normalized ||
-    normalized.length > TRANSACTION_EMAIL_MAX_LENGTH ||
+    unicodeCharacterLength(normalized) > TRANSACTION_EMAIL_MAX_LENGTH ||
     !BASIC_EMAIL_PATTERN.test(normalized)
   ) {
     return false;
@@ -105,6 +113,7 @@ function rowIssues(row: TransactionValidationInputRow): TransactionValidationIss
   const email = row.customerEmail.trim();
   const transactionDate = row.transactionDate.trim();
   const amountCollected = row.amountCollected.trim();
+  const transactionId = row.transactionId?.trim() ?? "";
 
   if (!email) {
     issues.push({
@@ -151,6 +160,15 @@ function rowIssues(row: TransactionValidationInputRow): TransactionValidationIss
       field: "amountCollected",
       code: "AMOUNT_INVALID",
       rawValue: row.amountCollected,
+    });
+  }
+
+  if (transactionId && unicodeCharacterLength(transactionId) > TRANSACTION_ID_MAX_LENGTH) {
+    issues.push({
+      rowNumber: row.rowNumber,
+      field: "transactionId",
+      code: "TRANSACTION_ID_TOO_LONG",
+      rawValue: row.transactionId ?? "",
     });
   }
 
