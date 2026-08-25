@@ -11,17 +11,6 @@ function env(name: string) {
   return process.env[name]?.trim() ?? "";
 }
 
-async function deleteByBusinessIds(
-  supabase: ReturnType<typeof createClient>,
-  table: string,
-  businessIds: string[],
-) {
-  const { error } = await supabase.from(table).delete().in("business_id", businessIds);
-  if (error) {
-    throw new Error(`E2E cleanup failed for ${table}: ${error.message}`);
-  }
-}
-
 export default async function globalTeardown() {
   let state: LiveE2eState;
   try {
@@ -82,6 +71,13 @@ export default async function globalTeardown() {
       },
     });
 
+    const deleteByBusinessIds = async (table: string) => {
+      const { error } = await adminClient.from(table).delete().in("business_id", createdBusinessIds);
+      if (error) {
+        throw new Error(`E2E cleanup failed for ${table}: ${error.message}`);
+      }
+    };
+
     for (const table of [
       "customer_transaction_duplicate_resolutions",
       "customer_transactions",
@@ -91,7 +87,7 @@ export default async function globalTeardown() {
       "funnels",
       "monthly_front_end_expense_allocations",
     ]) {
-      await deleteByBusinessIds(adminClient, table, createdBusinessIds);
+      await deleteByBusinessIds(table);
     }
 
     const { error: deleteBusinessError } = await adminClient
