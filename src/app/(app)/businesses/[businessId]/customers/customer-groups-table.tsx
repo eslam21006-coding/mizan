@@ -58,6 +58,7 @@ export function CustomerGroupsTable({
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -83,7 +84,7 @@ export function CustomerGroupsTable({
       if (loadError) {
         setRows([]);
         setTotalCount(null);
-        setError("تعذر تحميل بيانات العملاء. أعد تحميل الصفحة. إذا استمرت المشكلة، تحقق من تطبيق تحديثات قاعدة البيانات الخاصة بالعملاء.");
+        setError("تعذر تحميل بيانات العملاء. حاول مرة أخرى. إذا استمرت المشكلة، تحقق من تطبيق تحديثات قاعدة البيانات الخاصة بالعملاء.");
       } else {
         setRows((data ?? []) as CustomerTransactionGroup[]);
         setTotalCount(count ?? null);
@@ -95,7 +96,7 @@ export function CustomerGroupsTable({
     return () => {
       active = false;
     };
-  }, [businessId, page]);
+  }, [businessId, page, reloadToken]);
 
   const pageCount = useMemo(() => {
     if (totalCount === null) return null;
@@ -115,6 +116,9 @@ export function CustomerGroupsTable({
       <section className={styles.errorPanel} role="alert">
         <strong>تعذر تحميل العملاء</strong>
         <p>{error}</p>
+        <button className={styles.retryButton} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+          إعادة المحاولة
+        </button>
       </section>
     );
   }

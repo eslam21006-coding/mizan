@@ -13,7 +13,8 @@
 }
 
 .actionLink,
-.emptyAction {
+.emptyAction,
+.retryButton {
   min-height: 40px;
   display: inline-flex;
   align-items: center;
@@ -23,18 +24,26 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
+  font: inherit;
   font-size: 12px;
   font-weight: 800;
   text-decoration: none;
 }
 
+.retryButton {
+  margin-top: 12px;
+  cursor: pointer;
+}
+
 .actionLink:hover,
-.emptyAction:hover {
+.emptyAction:hover,
+.retryButton:hover {
   border-color: var(--brand);
 }
 
 .actionLink:focus-visible,
 .emptyAction:focus-visible,
+.retryButton:focus-visible,
 .pagination button:focus-visible,
 .tableShell:focus-visible {
   outline: 3px solid var(--brand-ring);
@@ -303,7 +312,8 @@
   .pageActions,
   .actionLink,
   .emptyActions,
-  .emptyAction {
+  .emptyAction,
+  .retryButton {
     width: 100%;
   }
 

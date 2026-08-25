@@ -54,6 +54,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -78,7 +79,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
       if (loadError) {
         setRows([]);
         setTotalCount(null);
-        setError("تعذر تحميل كوهورتات العملاء وقيمة العميل المحققة. أعد تحميل الصفحة. إذا استمرت المشكلة، تحقق من تطبيق تحديثات قاعدة البيانات الخاصة بالكوهورتات.");
+        setError("تعذر تحميل كوهورتات العملاء وقيمة العميل المحققة. حاول مرة أخرى. إذا استمرت المشكلة، تحقق من تطبيق تحديثات قاعدة البيانات الخاصة بالكوهورتات.");
       } else {
         setRows((data ?? []) as CustomerObservedLtv[]);
         setTotalCount(count ?? null);
@@ -90,7 +91,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
     return () => {
       active = false;
     };
-  }, [businessId, page]);
+  }, [businessId, page, reloadToken]);
 
   const pageCount = useMemo(() => {
     if (totalCount === null) return null;
@@ -110,6 +111,9 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
       <section className={styles.errorPanel} role="alert">
         <strong>تعذر تحميل قيمة العميل المحققة</strong>
         <p>{error}</p>
+        <button className={styles.retryButton} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+          إعادة المحاولة
+        </button>
       </section>
     );
   }

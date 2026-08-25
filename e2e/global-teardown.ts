@@ -1,6 +1,6 @@
 import { readFile, rm } from "node:fs/promises";
 import { createClient } from "@supabase/supabase-js";
-import { E2E_STATE_PATH } from "./global-setup";
+import { cleanupE2eBusinesses, E2E_STATE_PATH } from "./global-setup";
 
 type LiveE2eState = {
   userId: string;
@@ -62,54 +62,12 @@ export default async function globalTeardown() {
 
   await userClient.auth.signOut();
 
-  if (createdBusinessIds.length > 0) {
-    const adminClient = createClient(supabaseUrl, secretKey, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    });
-
-    const deleteByBusinessIds = async (table: string) => {
-      const { error } = await adminClient.from(table).delete().in("business_id", createdBusinessIds);
-      if (error) {
-        throw new Error(`E2E cleanup failed for ${table}: ${error.message}`);
-      }
-    };
-
-    for (const table of [
-      "customer_transaction_duplicate_resolutions",
-      "customer_transactions",
-      "customer_transaction_sources",
-      "funnel_monthly_entries",
-      "funnel_monthly_periods",
-      "funnels",
-      "monthly_front_end_expense_allocations",
-    ]) {
-      await deleteByBusinessIds(table);
-    }
-
-    const { error: deleteBusinessError } = await adminClient
-      .from("businesses")
-      .delete()
-      .eq("owner_user_id", state.userId)
-      .in("id", createdBusinessIds);
-    if (deleteBusinessError) {
-      throw new Error(`E2E cleanup failed for businesses: ${deleteBusinessError.message}`);
-    }
-
-    const { data: leftovers, error: verifyError } = await adminClient
-      .from("businesses")
-      .select("id")
-      .in("id", createdBusinessIds);
-    if (verifyError) {
-      throw new Error(`Could not verify E2E cleanup: ${verifyError.message}`);
-    }
-    if ((leftovers ?? []).length > 0) {
-      throw new Error("E2E cleanup verification found test businesses that were not removed.");
-    }
-  }
+  await cleanupE2eBusinesses({
+    supabaseUrl,
+    secretKey,
+    userId: state.userId,
+    businessIds: createdBusinessIds,
+  });
 
   await rm(E2E_STATE_PATH, { force: true });
 }
