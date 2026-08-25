@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import styles from "./customer-groups.module.css";
@@ -82,7 +83,7 @@ export function CustomerGroupsTable({
       if (loadError) {
         setRows([]);
         setTotalCount(null);
-        setError("تعذر تحميل تجميع العملاء. لم يتم تغيير أي بيانات. أعد تحميل الصفحة وحاول مرة أخرى.");
+        setError("تعذر تحميل بيانات العملاء. أعد تحميل الصفحة. إذا استمرت المشكلة، تحقق من تطبيق تحديثات قاعدة البيانات الخاصة بالعملاء.");
       } else {
         setRows((data ?? []) as CustomerTransactionGroup[]);
         setTotalCount(count ?? null);
@@ -104,7 +105,7 @@ export function CustomerGroupsTable({
   if (isLoading) {
     return (
       <section className={styles.statusPanel} role="status" aria-live="polite">
-        جاري تجميع معاملات العملاء…
+        جاري تحميل العملاء…
       </section>
     );
   }
@@ -121,12 +122,21 @@ export function CustomerGroupsTable({
   if (rows.length === 0 && page === 0) {
     return (
       <section className={styles.emptyPanel}>
-        <span>لا توجد معاملات محفوظة بعد</span>
-        <h2>ابدأ باستيراد معاملات العملاء</h2>
-        <p>
-          بعد حفظ معاملات ناجحة، سيجمع Mizan كل بريد عميل مُطبّع داخل هذا البزنس ويحدد أول Collection ناجحة
-          كتاريخ اكتساب.
-        </p>
+        <span>لا توجد معاملات عملاء بعد</span>
+        <h2>استورد معاملاتك لبدء تحليل العملاء</h2>
+        <p>بعد الاستيراد، سيجمع ميزان كل بريد إلكتروني كعميل واحد ويحدد أول تحصيل ناجح كتاريخ اكتساب.</p>
+        <div className={styles.emptyActions}>
+          <Link className={styles.emptyAction} href={`/businesses/${businessId}/customers/import`}>
+            استيراد معاملات
+          </Link>
+          <a
+            className={styles.emptyAction}
+            href="/mizan-transactions-template.csv"
+            download="mizan-transactions-template.csv"
+          >
+            تنزيل نموذج CSV
+          </a>
+        </div>
       </section>
     );
   }
@@ -135,29 +145,26 @@ export function CustomerGroupsTable({
     <section className={styles.groupPanel} aria-labelledby="customer-groups-title">
       <div className={styles.groupHeading}>
         <div>
-          <span className={styles.kicker}>Task 21 · Customer Identity</span>
-          <h2 id="customer-groups-title">تجميع العملاء من سجل المعاملات</h2>
-          <p>
-            كل بريد مُطبّع داخل هذا البزنس يمثل هوية عميل واحدة. الأرقام أدناه حقائق من سجل المعاملات وليست
-            LTV.
-          </p>
+          <span className={styles.kicker}>العملاء</span>
+          <h2 id="customer-groups-title">العملاء</h2>
+          <p>يُجمع كل بريد إلكتروني كعميل واحد داخل هذا البزنس، مع إبقاء التحصيلات والاسترجاعات منفصلة وواضحة.</p>
         </div>
         <div className={styles.identityCount}>
-          <span>هويات العملاء</span>
+          <span>عدد العملاء</span>
           <strong>{totalCount ?? rows.length}</strong>
         </div>
       </div>
 
       <div className={styles.tableShell}>
-        <table className={styles.groupsTable} aria-label="جدول تجميع معاملات العملاء">
+        <table className={styles.groupsTable} aria-label="جدول العملاء ومعاملاتهم">
           <thead>
             <tr>
               <th scope="col">العميل</th>
-              <th scope="col">الاكتساب</th>
+              <th scope="col">تاريخ الاكتساب</th>
               <th scope="col">المعاملات</th>
-              <th scope="col">Gross Cash</th>
-              <th scope="col">Refunds</th>
-              <th scope="col">Net Cash</th>
+              <th scope="col">إجمالي التحصيل</th>
+              <th scope="col">الاسترجاعات</th>
+              <th scope="col">صافي التحصيل</th>
               <th scope="col">آخر معاملة</th>
             </tr>
           </thead>
@@ -169,7 +176,7 @@ export function CustomerGroupsTable({
                   <td>
                     <strong dir="ltr">{row.customer_email}</strong>
                     <small>
-                      {exactDisplay(row.collection_count)} Collections · {exactDisplay(row.refund_count)} Refunds
+                      {exactDisplay(row.collection_count)} تحصيل · {exactDisplay(row.refund_count)} استرجاع
                     </small>
                   </td>
                   <td>

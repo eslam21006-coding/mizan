@@ -78,7 +78,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
       if (loadError) {
         setRows([]);
         setTotalCount(null);
-        setError("تعذر تحميل كوهورتات العملاء وObserved LTV. لم يتم تغيير أي بيانات.");
+        setError("تعذر تحميل كوهورتات العملاء وقيمة العميل المحققة. أعد تحميل الصفحة. إذا استمرت المشكلة، تحقق من تطبيق تحديثات قاعدة البيانات الخاصة بالكوهورتات.");
       } else {
         setRows((data ?? []) as CustomerObservedLtv[]);
         setTotalCount(count ?? null);
@@ -108,7 +108,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
   if (error) {
     return (
       <section className={styles.errorPanel} role="alert">
-        <strong>تعذر تحميل Observed LTV</strong>
+        <strong>تعذر تحميل قيمة العميل المحققة</strong>
         <p>{error}</p>
       </section>
     );
@@ -116,13 +116,9 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
 
   if (rows.length === 0 && page === 0) {
     return (
-      <section className={styles.emptyPanel}>
-        <span>لا توجد كوهورتات مكتسبة بعد</span>
-        <h2>Observed LTV يحتاج عملاء لديهم Collection ناجحة</h2>
-        <p>
-          بعد وجود أول Collection ناجحة للعميل، يثبت شهر اكتسابه داخل كوهورت ويبدأ Mizan في تتبع القيمة المحققة
-          حتى الآن من سجل المعاملات.
-        </p>
+      <section className={styles.compactEmptyPanel}>
+        <strong>لا توجد كوهورتات مكتسبة بعد.</strong>
+        <span>ستظهر هنا بعد وجود أول تحصيل ناجح لعميل واحد على الأقل.</span>
       </section>
     );
   }
@@ -131,12 +127,9 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
     <section className={styles.groupPanel} aria-labelledby="observed-ltv-title">
       <div className={styles.groupHeading}>
         <div>
-          <span className={styles.kicker}>Customer Economics</span>
-          <h2 id="observed-ltv-title">Observed LTV / قيمة العميل المحققة حتى الآن</h2>
-          <p>
-            قيمة محققة من سجل المعاملات حتى تاريخ الملاحظة، وليست توقعًا للقيمة النهائية للعميل. الكوهورت الصغير
-            في العمر لا يُعامل كأنه أكمل Lifetime كاملًا.
-          </p>
+          <span className={styles.kicker}>Observed LTV</span>
+          <h2 id="observed-ltv-title">قيمة العميل المحققة حتى الآن</h2>
+          <p>قيمة محققة فعلًا من سجل المعاملات حتى تاريخ الملاحظة، وليست توقعًا للقيمة النهائية للعميل.</p>
         </div>
         <div className={styles.identityCount}>
           <span>الكوهورتات</span>
@@ -145,17 +138,17 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
       </div>
 
       <div className={styles.tableShell}>
-        <table className={styles.groupsTable} aria-label="جدول الكوهورتات وObserved LTV">
+        <table className={styles.groupsTable} aria-label="جدول الكوهورتات وقيمة العميل المحققة">
           <thead>
             <tr>
               <th scope="col">الكوهورت</th>
               <th scope="col">العملاء الأصليون</th>
-              <th scope="col">Gross Cash تراكمي</th>
-              <th scope="col">Refunds تراكمية</th>
-              <th scope="col">Net Cash تراكمي</th>
-              <th scope="col">Observed LTV</th>
-              <th scope="col">النضج</th>
-              <th scope="col">حتى</th>
+              <th scope="col">إجمالي التحصيل التراكمي</th>
+              <th scope="col">الاسترجاعات التراكمية</th>
+              <th scope="col">صافي التحصيل التراكمي</th>
+              <th scope="col">قيمة العميل المحققة</th>
+              <th scope="col">عمر الكوهورت</th>
+              <th scope="col">حتى تاريخ</th>
             </tr>
           </thead>
           <tbody>

@@ -31,6 +31,14 @@ const ERROR_MESSAGES: Record<string, string> = {
   XLSX_SHEET_MISSING: "لم يتم العثور على Worksheet قابلة للمعاينة داخل ملف XLSX.",
 };
 
+const WORKFLOW_STEPS = [
+  "تنزيل النموذج",
+  "رفع الملف",
+  "مطابقة الأعمدة",
+  "مراجعة البيانات",
+  "حفظ المعاملات",
+] as const;
+
 function fileSizeLabel(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -122,19 +130,30 @@ export function TransactionPreviewUploader({
 
   return (
     <div className={styles.previewStack}>
+      <ol className={styles.workflowSteps} aria-label="خطوات استيراد معاملات العملاء">
+        {WORKFLOW_STEPS.map((step, index) => (
+          <li key={step}>
+            <span>{index + 1}</span>
+            {step}
+          </li>
+        ))}
+      </ol>
+
       <section className={styles.uploadPanel} aria-labelledby="transaction-upload-title">
         <div className={styles.uploadCopy}>
-          <span className={styles.kicker}>Task 20 · Duplicate Protection</span>
-          <h2 id="transaction-upload-title">اختر ملف معاملات العملاء</h2>
+          <span className={styles.kicker}>الخطوة 2</span>
+          <h2 id="transaction-upload-title">ارفع ملف المعاملات</h2>
           <p>
-            المعاينة والـ Mapping والـ Validation تتم داخل المتصفح. الحفظ يبدأ فقط بعد نجاح Validation وضغطك
-            على زر استيراد المعاملات.
+            اختر ملف CSV أو XLSX من بوابة الدفع. سنعرض لك معاينة أولًا، ولن يتم حفظ أي شيء تلقائيًا.
+          </p>
+          <p className={styles.uploadTip}>
+            إذا لم تكن متأكدًا من شكل الملف، استخدم نموذج ميزان الجاهز الموجود أعلى الصفحة.
           </p>
         </div>
 
         {canManage ? (
           <div className={styles.fileControl}>
-            <label htmlFor="transaction-file">CSV أو XLSX</label>
+            <label htmlFor="transaction-file">اختر ملف CSV أو XLSX</label>
             <input
               ref={inputRef}
               id="transaction-file"
@@ -145,13 +164,11 @@ export function TransactionPreviewUploader({
               onChange={(event) => void handleFile(event.currentTarget.files?.[0])}
             />
             <p id="transaction-file-help">
-              الحد الأقصى للملف {Math.round(TRANSACTION_PREVIEW_LIMITS.maxFileBytes / 1024 / 1024)} MB.
-              نعرض أول {TRANSACTION_PREVIEW_LIMITS.previewRows} صفًا وأول {TRANSACTION_PREVIEW_LIMITS.previewColumns}
-              عمودًا. Validation يفحص حتى {TRANSACTION_VALIDATION_SOURCE_LIMITS.maxRows.toLocaleString("en-US")} صف غير فارغ بعد اكتمال الـ Mapping، ويرفض الملف إذا تجاوز هذا الحد.
+              الحد الأقصى للملف {Math.round(TRANSACTION_PREVIEW_LIMITS.maxFileBytes / 1024 / 1024)} MB. يمكن فحص حتى {TRANSACTION_VALIDATION_SOURCE_LIMITS.maxRows.toLocaleString("en-US")} صف غير فارغ في الملف الواحد.
             </p>
             {importBusy && (
               <p className={styles.mappingHint} role="status" aria-live="polite">
-                تم قفل تغيير الملف والـ Mapping مؤقتًا حتى ينتهي الاستيراد أو تحسم تصادمات Duplicate Protection.
+                تم إيقاف تغيير الملف مؤقتًا حتى تنتهي عملية الاستيراد الحالية.
               </p>
             )}
           </div>
@@ -183,9 +200,9 @@ export function TransactionPreviewUploader({
           <section className={styles.resultPanel} aria-labelledby="transaction-preview-title">
             <div className={styles.resultHeading}>
               <div>
-                <span className={styles.kicker}>تمت القراءة محليًا</span>
-                <h2 id="transaction-preview-title">معاينة الملف</h2>
-                <p>أكمل الـ Mapping ثم Validation قبل تفعيل الاستيراد ومنع التكرار.</p>
+                <span className={styles.kicker}>الخطوة 3</span>
+                <h2 id="transaction-preview-title">راجع الملف</h2>
+                <p>تأكد أن الملف الصحيح تم اختياره، ثم طابق أعمدته مع معلومات ميزان.</p>
               </div>
               <button
                 type="button"
@@ -209,16 +226,16 @@ export function TransactionPreviewUploader({
                 </dd>
               </div>
               <div>
-                <dt>الصفوف المحللة</dt>
+                <dt>الصفوف</dt>
                 <dd>{preview.totalRows}</dd>
               </div>
               <div>
-                <dt>الأعمدة المكتشفة</dt>
+                <dt>الأعمدة</dt>
                 <dd>{preview.totalColumns}</dd>
               </div>
               {preview.fileType === "xlsx" ? (
                 <div>
-                  <dt>Worksheet</dt>
+                  <dt>ورقة العمل</dt>
                   <dd dir="ltr">{preview.sheetName ?? "—"}</dd>
                 </div>
               ) : (
@@ -267,8 +284,7 @@ export function TransactionPreviewUploader({
 
             {(preview.truncatedRows || preview.truncatedColumns) && (
               <p className={styles.truncationNote}>
-                هذه معاينة فقط. تم تحليل الملف كاملًا لإظهار الإجماليات، لكن الجدول يعرض نطاقًا محدودًا لحماية
-                أداء المتصفح.
+                هذه معاينة مختصرة لحماية أداء المتصفح. تتم مراجعة الصفوف الفعلية عند التحقق قبل الاستيراد.
               </p>
             )}
           </section>

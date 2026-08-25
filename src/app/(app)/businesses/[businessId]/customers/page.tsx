@@ -30,7 +30,7 @@ export default async function BusinessCustomersPage({ params }: BusinessCustomer
       <div className={styles.pageHeadingRow}>
         <PageHeading
           title={`عملاء ${business.name}`}
-          description="تجميع العملاء من سجل المعاملات، كوهورتات الاكتساب الشهرية، وObserved LTV المحقق حتى الآن."
+          description="راجع العملاء، كوهورتات الاكتساب، وقيمة العميل المحققة من سجل المعاملات الفعلي."
         />
         <div className={styles.pageActions}>
           <Link className={styles.actionLink} href={`/businesses/${business.id}/customers/import`}>

@@ -12,7 +12,8 @@
   flex: 0 0 auto;
 }
 
-.backLink {
+.backLink,
+.guideDownload {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -26,11 +27,107 @@
   text-decoration: none;
 }
 
+.templateLink,
+.guideDownload {
+  border-color: color-mix(in srgb, var(--accent-primary) 36%, var(--border-subtle));
+  background: color-mix(in srgb, var(--accent-primary) 8%, var(--surface-primary));
+  color: var(--accent-primary);
+}
+
+.importGuide {
+  display: grid;
+  gap: 16px;
+  padding: 22px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 20px;
+  background: var(--surface-primary);
+  box-shadow: var(--shadow-soft);
+}
+
+.guideHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.guideHeading h2 {
+  margin: 6px 0 0;
+  font-size: clamp(1.2rem, 2vw, 1.55rem);
+}
+
+.guideGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.guideCard {
+  padding: 16px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  background: var(--surface-secondary);
+}
+
+.requiredBadge,
+.optionalBadge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 5px 9px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.requiredBadge {
+  background: color-mix(in srgb, var(--accent-primary) 12%, var(--surface-primary));
+  color: var(--accent-primary);
+}
+
+.optionalBadge {
+  background: var(--surface-primary);
+  color: var(--text-secondary);
+}
+
+.guideCard ul {
+  display: grid;
+  gap: 12px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.guideCard li {
+  display: grid;
+  gap: 3px;
+}
+
+.guideCard small {
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.guideNote,
+.splitNote,
+.businessContextNote {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.75;
+}
+
+.splitNote {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: color-mix(in srgb, #b54708 7%, var(--surface-primary));
+  color: color-mix(in srgb, #b54708 82%, var(--text-primary));
+  font-weight: 650;
+}
+
 .businessContext {
   display: grid;
-  grid-template-columns: minmax(160px, 0.65fr) minmax(130px, 0.35fr) minmax(0, 2fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  padding: 16px 18px;
+  padding: 14px 16px;
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
   background: var(--surface-secondary);
@@ -40,6 +137,7 @@
 .businessContext > div {
   display: grid;
   gap: 4px;
+  min-width: 0;
 }
 
 .businessContext span,
@@ -47,14 +145,55 @@
   color: var(--text-secondary);
 }
 
-.businessContext p {
-  margin: 0;
-  line-height: 1.7;
+.businessContext strong {
+  overflow-wrap: anywhere;
+}
+
+.businessContextNote {
+  grid-column: 1 / -1;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.9rem;
 }
 
 .previewStack {
   display: grid;
-  gap: 20px;
+  gap: 16px;
+}
+
+.workflowSteps {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.workflowSteps li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-primary);
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.workflowSteps li span {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--surface-secondary);
+  color: var(--text-primary);
+  font-size: 0.76rem;
 }
 
 .uploadPanel,
@@ -69,10 +208,10 @@
 
 .uploadPanel {
   display: grid;
-  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
-  gap: 28px;
-  padding: 28px;
-  align-items: start;
+  grid-template-columns: minmax(0, 0.8fr) minmax(360px, 1.2fr);
+  gap: 24px;
+  padding: 24px;
+  align-items: center;
 }
 
 .uploadCopy h2,
@@ -96,6 +235,11 @@
   margin: 0;
   color: var(--text-secondary);
   line-height: 1.75;
+}
+
+.uploadTip {
+  margin-top: 10px !important;
+  font-size: 0.9rem;
 }
 
 .kicker {
@@ -135,6 +279,7 @@
 .secondaryButton:focus-visible,
 .errorBox button:focus-visible,
 .backLink:focus-visible,
+.guideDownload:focus-visible,
 .mappingField select:focus-visible,
 .mappingField input[type="number"]:focus-visible,
 .headerOption input:focus-visible,
@@ -211,7 +356,7 @@
 .resultPanel,
 .mappingPanel,
 .validationPanel {
-  padding: 24px;
+  padding: 22px;
   min-width: 0;
 }
 
@@ -222,7 +367,7 @@
   gap: 16px;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 }
 
 .secondaryButton {
@@ -234,12 +379,12 @@
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
-  margin: 0 0 20px;
+  margin: 0 0 18px;
 }
 
 .metaGrid > div {
   min-width: 0;
-  padding: 14px;
+  padding: 12px;
   border: 1px solid var(--border-subtle);
   border-radius: 14px;
   background: var(--surface-secondary);
@@ -350,14 +495,14 @@
 .mappingGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
 }
 
 .mappingField {
   display: grid;
   gap: 8px;
   min-width: 0;
-  padding: 16px;
+  padding: 14px;
   border: 1px solid var(--border-subtle);
   border-radius: 16px;
   background: var(--surface-secondary);
@@ -513,12 +658,8 @@
     grid-template-columns: 1fr;
   }
 
-  .businessContext {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .businessContext p {
-    grid-column: 1 / -1;
+  .workflowSteps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
   .metaGrid,
@@ -531,6 +672,7 @@
 
 @media (max-width: 720px) {
   .headingRow,
+  .guideHeading,
   .resultHeading,
   .mappingHeading,
   .validationHeading {
@@ -538,14 +680,22 @@
   }
 
   .headingLinks,
-  .backLink {
+  .backLink,
+  .guideDownload {
     width: 100%;
+  }
+
+  .guideGrid,
+  .businessContext,
+  .workflowSteps {
+    grid-template-columns: 1fr;
   }
 
   .uploadPanel,
   .resultPanel,
   .mappingPanel,
-  .validationPanel {
+  .validationPanel,
+  .importGuide {
     padding: 18px;
     border-radius: 16px;
   }
@@ -573,18 +723,11 @@
 
 @media (max-width: 430px) {
   .previewStack {
-    gap: 14px;
+    gap: 12px;
   }
 
-  .businessContext {
-    grid-template-columns: 1fr;
-    padding: 14px;
-  }
-
-  .businessContext p {
-    grid-column: auto;
-  }
-
+  .businessContext,
+  .importGuide,
   .uploadPanel,
   .resultPanel,
   .mappingPanel,
