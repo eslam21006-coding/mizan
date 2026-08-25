@@ -14,7 +14,7 @@ export default async function CustomersPage() {
     <div className="page-stack">
       <PageHeading
         title="العملاء و LTV"
-        description="ابدأ من ملف معاملات حقيقي. في هذه المهمة نعاين CSV/XLSX فقط داخل المتصفح قبل أي Mapping أو Import أو حساب LTV."
+        description="استورد معاملات العملاء ثم راجع هويات العملاء وتجميع المعاملات الفعلية. الـ Cohorts وObserved LTV تبدأ في المهام التالية."
       />
 
       {error ? (
@@ -32,13 +32,16 @@ export default async function CustomersPage() {
               </div>
               <h2>{business.name}</h2>
               <div className={styles.nextStep}>
-                <p>اختر تصدير بوابة الدفع واعرض الصفوف والأعمدة قبل بدء تجهيز الاستيراد.</p>
+                <p>استورد سجل المعاملات أو راجع تجميع العملاء المبني على البريد المُطبّع داخل هذا البزنس.</p>
                 <div className={styles.manageLinks}>
+                  <Link className={styles.manageLink} href={`/businesses/${business.id}/customers`}>
+                    تجميع العملاء
+                  </Link>
                   <Link
                     className={styles.manageLink}
                     href={`/businesses/${business.id}/customers/import`}
                   >
-                    معاينة CSV / XLSX
+                    استيراد CSV / XLSX
                   </Link>
                   <Link className={styles.manageLink} href={`/?business=${business.id}`}>
                     فتح الداشبورد

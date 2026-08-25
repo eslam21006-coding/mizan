@@ -51,6 +51,8 @@ export const sqlFiles = Object.freeze([
   "test/business/task-20-hardening-preexisting.fixture.sql",
   "supabase/migrations/20260825103000_task_20_import_semantics_hardening.sql",
   "test/business/task-20-import-semantics-hardening.test.sql",
+  "supabase/migrations/20260825114500_task_21_customer_identity_grouping.sql",
+  "test/business/task-21-customer-identity-grouping.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -108,7 +110,7 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     }
   }
 
-  console.log("Task 4-8, Task 14-16, and Task 20 database-backed security/business matrices passed.");
+  console.log("Task 4-8, Task 14-16, and Tasks 20-21 database-backed security/business matrices passed.");
   return 0;
 }
 
