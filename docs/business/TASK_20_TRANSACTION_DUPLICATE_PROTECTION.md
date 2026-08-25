@@ -76,7 +76,7 @@ Task 20 supports a file-level default because a source export may be known to co
 - Definitive Transaction ID duplicates are skipped and counted explicitly.
 - If a no-ID candidate collision is found, processing stops after the current chunk and the UI surfaces each collision for explicit resolution before continuing later chunks.
 - File selection, mapping, source, and classification controls are disabled while an RPC is running or candidate decisions are pending. This does not claim to block unrelated application navigation.
-- If candidate resolution succeeds but a later continuation request fails, the UI applies the server-confirmed counters and retains only the unresolved continuation rows as the next retry payload, so committed candidate decisions are not resubmitted as fresh unresolved rows.
+- If candidate resolution succeeds but a later continuation request fails, the UI keeps the confirmed totals that existed before continuation as the retry base and intentionally replays the full continuation payload with the same stable `import_row_token` values. Already-committed continuation chunks therefore replay idempotently while the final counters remain cumulative, and committed candidate decisions are not resubmitted as fresh unresolved rows.
 - If an import response is lost, retrying the same in-memory import uses the same per-row retry identities so already-committed rows are replayed rather than duplicated.
 
 ## Acceptance tests
