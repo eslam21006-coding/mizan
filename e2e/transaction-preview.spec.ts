@@ -100,10 +100,9 @@ test.describe("Transaction import UX and validation", () => {
     await page.getByRole("button", { name: "مراجعة الملف" }).click();
 
     await expect(page.getByText("تحتاج إلى تعديل", { exact: true })).toBeVisible();
-    const checkedRows = page.getByText("صفوف تم فحصها", { exact: true });
-    await expect(checkedRows.locator("xpath=following-sibling::strong[1]")).toHaveText("30");
-    const invalidRows = page.getByText("صفوف غير صالحة", { exact: true });
-    await expect(invalidRows.locator("xpath=following-sibling::strong[1]")).toHaveText("1");
+    const validationSummary = page.getByRole("status").filter({ hasText: "صفوف تم فحصها" });
+    await expect(validationSummary).toContainText(/صفوف تم فحصها\s*30/);
+    await expect(validationSummary).toContainText(/صفوف غير صالحة\s*1/);
 
     const issueTable = page.getByRole("table", { name: "جدول أخطاء معاملات العملاء" });
     await expect(issueTable).toContainText("31");
