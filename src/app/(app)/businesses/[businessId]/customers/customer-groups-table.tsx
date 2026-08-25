@@ -148,8 +148,8 @@ export function CustomerGroupsTable({
         </div>
       </div>
 
-      <div className={styles.tableShell} tabIndex={0} role="group" aria-label="جدول تجميع معاملات العملاء">
-        <table className={styles.groupsTable}>
+      <div className={styles.tableShell}>
+        <table className={styles.groupsTable} aria-label="جدول تجميع معاملات العملاء">
           <thead>
             <tr>
               <th scope="col">العميل</th>
@@ -196,7 +196,7 @@ export function CustomerGroupsTable({
         </table>
       </div>
 
-      <div className={styles.pagination} aria-label="التنقل بين صفحات العملاء">
+      <nav className={styles.pagination} aria-label="التنقل بين صفحات العملاء">
         <button
           type="button"
           disabled={page === 0}
@@ -215,7 +215,7 @@ export function CustomerGroupsTable({
         >
           الصفحة التالية
         </button>
-      </div>
+      </nav>
     </section>
   );
 }
