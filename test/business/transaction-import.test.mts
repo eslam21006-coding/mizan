@@ -24,6 +24,7 @@ function prepareOptions(
 ) {
   return {
     transactionType,
+    baseCurrency: "EGP",
     createImportRowToken: () => token,
   } as const;
 }
@@ -68,9 +69,11 @@ test("Task 20 prepares validated collection rows with stable retry identity", ()
       transaction_id: "txn_123",
       import_row_token: TOKEN_1,
       customer_email: "buyer@example.com",
-      transaction_date: "2026-08-24",
+      transaction_date: "2026-08-24T14:30:00Z",
       amount_collected: "1250.50",
       transaction_type: "collection",
+      normalized_outcome: "successful",
+      currency: "EGP",
     },
   ]);
 });
@@ -92,6 +95,8 @@ test("Task 20 normalizes refunds to positive magnitudes", () => {
   assert.equal(rows[0]?.transaction_id, null);
   assert.equal(rows[0]?.amount_collected, "25.50");
   assert.equal(rows[0]?.transaction_type, "refund");
+  assert.equal(rows[0]?.normalized_outcome, "successful");
+  assert.equal(rows[0]?.currency, "EGP");
 });
 
 test("Task 20 preserves non-zero decimals below JavaScript Number range", () => {

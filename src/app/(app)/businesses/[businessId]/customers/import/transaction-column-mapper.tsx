@@ -23,6 +23,7 @@ import styles from "./transaction-import.module.css";
 
 type TransactionColumnMapperProps = {
   businessId: string;
+  baseCurrency: string;
   preview: TransactionFilePreview;
   fileBuffer: ArrayBuffer;
   importBusy: boolean;
@@ -31,9 +32,18 @@ type TransactionColumnMapperProps = {
 
 function fieldDescription(field: TransactionMappingField) {
   if (field === "customerEmail") return "العمود الذي يحتوي على بريد العميل.";
-  if (field === "transactionDate") return "العمود الذي يحتوي على تاريخ المعاملة.";
+  if (field === "transactionDate") return "العمود الذي يحتوي على تاريخ أو توقيت المعاملة كما صدر من بوابة الدفع.";
   if (field === "amountCollected") return "العمود الذي يحتوي على المبلغ المحصل.";
-  return "اختياري. اربطه إذا كان تصدير بوابة الدفع يحتوي على Transaction ID ثابت.";
+  if (field === "transactionId") {
+    return "اختياري. اربطه إذا كان تصدير بوابة الدفع يحتوي على Transaction ID ثابت.";
+  }
+  return "اختياري. إذا كان الملف يحتوي Currency فاربطه حتى يرفض Mizan أي صف بعملة مختلفة عن عملة البزنس.";
+}
+
+function emptyOptionLabel(field: TransactionMappingField, required: boolean) {
+  if (required) return "اختر عمودًا";
+  if (field === "transactionId") return "بدون Transaction ID";
+  return "بدون Currency column";
 }
 
 function sampleValue(preview: TransactionFilePreview, column: number) {
@@ -47,6 +57,7 @@ function sampleValue(preview: TransactionFilePreview, column: number) {
 
 export function TransactionColumnMapper({
   businessId,
+  baseCurrency,
   preview,
   fileBuffer,
   importBusy,
@@ -101,7 +112,7 @@ export function TransactionColumnMapper({
   };
 
   const validationKey = mappingState.isComplete
-    ? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}`
+    ? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}`
     : "incomplete";
 
   return (
@@ -112,8 +123,8 @@ export function TransactionColumnMapper({
             <span className={styles.kicker}>Task 20 · Mapping + Duplicate Key</span>
             <h2 id="transaction-mapping-title">اربط أعمدة الملف بالحقول المطلوبة</h2>
             <p>
-              الحقول الثلاثة الأولى مطلوبة. Transaction ID اختياري، لكنه يكون مفتاح منع التكرار الأقوى عند
-              توفره في بوابة الدفع.
+              الحقول الثلاثة الأولى مطلوبة. Transaction ID وCurrency اختياريان؛ Currency المربوط يُفحص صفًا
+              بصف مقابل عملة البزنس الأساسية {baseCurrency}.
             </p>
           </div>
           <span className={mappingState.isComplete ? styles.mappingReady : styles.mappingPending}>
@@ -172,7 +183,7 @@ export function TransactionColumnMapper({
                       disabled={importBusy}
                       onChange={(event) => setSelectField(field, event.currentTarget.value)}
                     >
-                      <option value="">{required ? "اختر عمودًا" : "بدون Transaction ID"}</option>
+                      <option value="">{emptyOptionLabel(field, required)}</option>
                       {options.map((option) => (
                         <option key={option.column} value={option.column}>
                           {option.label}
@@ -218,6 +229,14 @@ export function TransactionColumnMapper({
                   : `Column ${transactionColumnLabel(mapping.transactionId)}`}
               </strong>
             </div>
+            <div>
+              <span>{TRANSACTION_FIELD_LABELS.currency}</span>
+              <strong dir="ltr">
+                {mapping.currency === null || mapping.currency === undefined
+                  ? `Import confirmation → ${baseCurrency}`
+                  : `Column ${transactionColumnLabel(mapping.currency)}`}
+              </strong>
+            </div>
           </div>
         )}
       </section>
@@ -226,6 +245,7 @@ export function TransactionColumnMapper({
         <TransactionImportValidator
           key={validationKey}
           businessId={businessId}
+          baseCurrency={baseCurrency}
           preview={preview}
           fileBuffer={fileBuffer}
           mapping={mapping}

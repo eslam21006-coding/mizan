@@ -30,7 +30,7 @@ export default async function TransactionImportPage({ params }: TransactionImpor
   const supabase = await createSupabaseServerClient();
   const { data: business, error } = await supabase
     .from("businesses")
-    .select("id,name,base_currency,owner_user_id")
+    .select("id,name,base_currency,timezone,owner_user_id")
     .eq("id", businessId)
     .maybeSingle();
 
@@ -63,13 +63,21 @@ export default async function TransactionImportPage({ params }: TransactionImpor
           <span>العملة الأساسية</span>
           <strong dir="ltr">{business.base_currency}</strong>
         </div>
+        <div>
+          <span>منطقة التقارير الزمنية</span>
+          <strong dir="ltr">{business.timezone}</strong>
+        </div>
         <p>
           المعاينة والـ Mapping والـ Validation تظل داخل المتصفح. لا تُحفظ المعاملات إلا بعد نجاح Validation
-          وضغطك على زر الاستيراد، وعندها يطبق Mizan Duplicate Protection داخل قاعدة البيانات.
+          وتأكيد حالة الملف وعملته، وعندها يحفظ Mizan التوقيت الأصلي ويطبق Duplicate Protection داخل قاعدة البيانات.
         </p>
       </section>
 
-      <TransactionPreviewUploader businessId={business.id} canManage={canManage} />
+      <TransactionPreviewUploader
+        businessId={business.id}
+        baseCurrency={business.base_currency}
+        canManage={canManage}
+      />
     </div>
   );
 }

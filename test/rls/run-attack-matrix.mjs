@@ -48,6 +48,9 @@ export const sqlFiles = Object.freeze([
   "test/business/task-16-self-liquidating-funnel.test.sql",
   "supabase/migrations/20260824180000_task_20_transaction_duplicate_protection.sql",
   "test/business/task-20-transaction-duplicate-protection.test.sql",
+  "test/business/task-20-hardening-preexisting.fixture.sql",
+  "supabase/migrations/20260825103000_task_20_import_semantics_hardening.sql",
+  "test/business/task-20-import-semantics-hardening.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));

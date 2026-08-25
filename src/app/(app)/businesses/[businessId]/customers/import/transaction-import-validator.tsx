@@ -36,6 +36,7 @@ import styles from "./transaction-import.module.css";
 
 type TransactionImportValidatorProps = {
   businessId: string;
+  baseCurrency: string;
   preview: TransactionFilePreview;
   fileBuffer: ArrayBuffer;
   mapping: TransactionColumnMapping;
@@ -87,16 +88,19 @@ const FIELD_LABELS = {
   transactionDate: "تاريخ المعاملة",
   amountCollected: "المبلغ المحصل",
   transactionId: "Transaction ID",
+  currency: "العملة",
 } as const satisfies Record<TransactionValidationField, string>;
 
 const ISSUE_MESSAGES = {
   EMAIL_REQUIRED: "بريد العميل مطلوب.",
   EMAIL_INVALID: "صيغة بريد العميل غير صالحة أو أطول من الحد المسموح.",
   TRANSACTION_DATE_REQUIRED: "تاريخ المعاملة مطلوب.",
-  TRANSACTION_DATE_INVALID: "استخدم تاريخ ISO صالحًا مثل 2026-08-23.",
+  TRANSACTION_DATE_INVALID: "استخدم تاريخ أو توقيت ISO صالحًا مثل 2026-08-23 أو 2026-08-23T14:30:00+03:00.",
   AMOUNT_REQUIRED: "المبلغ المحصل مطلوب.",
   AMOUNT_INVALID: "المبلغ يجب أن يكون رقمًا صالحًا بدون رمز عملة.",
   TRANSACTION_ID_TOO_LONG: "Transaction ID أطول من 512 حرفًا.",
+  CURRENCY_REQUIRED: "قيمة Currency مطلوبة في كل صف عندما تربط عمود العملة.",
+  CURRENCY_MISMATCH: "عملة الصف مختلفة عن العملة الأساسية للبزنس.",
 } as const satisfies Record<TransactionValidationIssueCode, string>;
 
 const SOURCE_ERROR_MESSAGES = {
@@ -128,11 +132,23 @@ function mappedColumns(mapping: TransactionColumnMapping) {
   const required = [mapping.customerEmail, mapping.transactionDate, mapping.amountCollected];
   if (!required.every((column): column is number => column !== null)) return null;
 
+  const columns = [...required];
+  let transactionIdValueIndex: number | null = null;
+  let currencyValueIndex: number | null = null;
+
   const transactionId = mapping.transactionId ?? null;
-  return {
-    columns: transactionId === null ? required : [...required, transactionId],
-    hasTransactionId: transactionId !== null,
-  };
+  if (transactionId !== null) {
+    transactionIdValueIndex = columns.length;
+    columns.push(transactionId);
+  }
+
+  const currency = mapping.currency ?? null;
+  if (currency !== null) {
+    currencyValueIndex = columns.length;
+    columns.push(currency);
+  }
+
+  return { columns, transactionIdValueIndex, currencyValueIndex };
 }
 
 function parseNonNegativeInteger(value: unknown) {
@@ -173,6 +189,7 @@ function zeroImportResult(): ImportResult {
 
 export function TransactionImportValidator({
   businessId,
+  baseCurrency,
   preview,
   fileBuffer,
   mapping,
@@ -190,6 +207,8 @@ export function TransactionImportValidator({
   const [isCreatingSource, setIsCreatingSource] = useState(false);
   const [sourceError, setSourceError] = useState<string | null>(null);
   const [transactionType, setTransactionType] = useState<NormalizedTransactionType | "">("");
+  const [successfulOnlyConfirmed, setSuccessfulOnlyConfirmed] = useState(false);
+  const [baseCurrencyConfirmed, setBaseCurrencyConfirmed] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
@@ -203,6 +222,8 @@ export function TransactionImportValidator({
 
   const hasPendingCandidates = pendingCandidates.length > 0;
   const workflowLocked = isImporting || hasPendingCandidates;
+  const currencyMapped = mapping.currency !== null && mapping.currency !== undefined;
+  const currencyReady = currencyMapped || baseCurrencyConfirmed;
 
   useEffect(() => {
     let active = true;
@@ -277,9 +298,16 @@ export function TransactionImportValidator({
         customerEmail: row.values[0] ?? "",
         transactionDate: row.values[1] ?? "",
         amountCollected: row.values[2] ?? "",
-        transactionId: selected.hasTransactionId ? (row.values[3] ?? "") : undefined,
+        transactionId:
+          selected.transactionIdValueIndex === null
+            ? undefined
+            : (row.values[selected.transactionIdValueIndex] ?? ""),
+        currency:
+          selected.currencyValueIndex === null
+            ? undefined
+            : (row.values[selected.currencyValueIndex] ?? ""),
       }));
-      const validationResult = validateTransactionImportRows(rows, { skipFirstRow });
+      const validationResult = validateTransactionImportRows(rows, { skipFirstRow, baseCurrency });
       setResult(validationResult);
       setValidatedRows(validationResult.isValid ? rows : null);
     } catch (caught) {
@@ -401,6 +429,14 @@ export function TransactionImportValidator({
       setImportError("اختر مصدر معاملات مسجلًا، أو أضف مصدرًا جديدًا مرة واحدة ثم اختره.");
       return;
     }
+    if (!successfulOnlyConfirmed) {
+      setImportError("أكّد أن الملف يحتوي على معاملات ناجحة فقط. الملفات ذات الحالات المختلطة يجب فصلها أولًا.");
+      return;
+    }
+    if (!currencyReady) {
+      setImportError(`اربط عمود Currency أو أكّد أن كل مبالغ الملف بعملة ${baseCurrency}.`);
+      return;
+    }
     if (!transactionType) {
       setImportError("حدد هل هذا الملف يحتوي Collections أم Refunds قبل الاستيراد.");
       return;
@@ -412,6 +448,7 @@ export function TransactionImportValidator({
         prepared = prepareTransactionImportRows(validatedRows, {
           skipFirstRow,
           transactionType,
+          baseCurrency,
           createImportRowToken: () => crypto.randomUUID(),
         });
         setRetryRows(prepared);
@@ -589,6 +626,9 @@ export function TransactionImportValidator({
         <span>
           {TRANSACTION_FIELD_LABELS.transactionId}: {mapping.transactionId == null ? "Candidate check" : "Mapped"}
         </span>
+        <span>
+          {TRANSACTION_FIELD_LABELS.currency}: {currencyMapped ? `Mapped → ${baseCurrency}` : `Confirm → ${baseCurrency}`}
+        </span>
       </div>
 
       {error && (
@@ -599,28 +639,11 @@ export function TransactionImportValidator({
 
       {result && (
         <>
-          <div
-            className={styles.validationSummary}
-            role="status"
-            aria-live="polite"
-            aria-atomic="true"
-          >
-            <div>
-              <span>صفوف تم فحصها</span>
-              <strong>{result.checkedRows}</strong>
-            </div>
-            <div>
-              <span>صفوف صالحة</span>
-              <strong>{result.validRows}</strong>
-            </div>
-            <div>
-              <span>صفوف غير صالحة</span>
-              <strong>{result.invalidRows}</strong>
-            </div>
-            <div>
-              <span>مشكلات مكتشفة</span>
-              <strong>{result.issueCount}</strong>
-            </div>
+          <div className={styles.validationSummary} role="status" aria-live="polite" aria-atomic="true">
+            <div><span>صفوف تم فحصها</span><strong>{result.checkedRows}</strong></div>
+            <div><span>صفوف صالحة</span><strong>{result.validRows}</strong></div>
+            <div><span>صفوف غير صالحة</span><strong>{result.invalidRows}</strong></div>
+            <div><span>مشكلات مكتشفة</span><strong>{result.issueCount}</strong></div>
           </div>
 
           {result.skippedHeaderRows > 0 && (
@@ -630,13 +653,13 @@ export function TransactionImportValidator({
           {result.isValid ? (
             <>
               <div className={styles.validationSuccess}>
-                كل الصفوف صالحة. أكمل مصدر المعاملات ونوعها قبل بدء الاستيراد مع Duplicate Protection.
+                كل الصفوف صالحة. أكمل مصدر المعاملات وتصنيف الملف وعملته قبل بدء الاستيراد مع Duplicate Protection.
               </div>
               <fieldset className={task20Styles.importPanel}>
                 <legend className={task20Styles.importLegend}>Duplicate Protection قبل الحفظ</legend>
                 <p>
                   إذا كان Transaction ID موجودًا نستخدمه كدليل Duplicate نهائي داخل نفس المصدر. عند غيابه،
-                  التطابق في البريد + التاريخ + المبلغ + المصدر + نوع المعاملة يعتبر Candidate فقط ولا يتم حذفه
+                  التطابق في البريد + التوقيت + المبلغ + المصدر + نوع المعاملة يعتبر Candidate فقط ولا يتم حذفه
                   أو إضافته حتى تحسمه أنت.
                 </p>
 
@@ -647,22 +670,12 @@ export function TransactionImportValidator({
                     className={task20Styles.sourceInput}
                     value={source}
                     disabled={workflowLocked || isLoadingSources || isCreatingSource}
-                    onChange={(event) => {
-                      setSource(event.currentTarget.value);
-                      resetImportProgress();
-                    }}
+                    onChange={(event) => { setSource(event.currentTarget.value); resetImportProgress(); }}
                   >
                     <option value="">اختر مصدرًا مسجلًا</option>
-                    {sources.map((sourceOption) => (
-                      <option value={sourceOption} key={sourceOption}>
-                        {sourceOption}
-                      </option>
-                    ))}
+                    {sources.map((sourceOption) => <option value={sourceOption} key={sourceOption}>{sourceOption}</option>)}
                   </select>
-                  <small>
-                    إعادة الاستيراد يجب أن تستخدم نفس المصدر المسجل. إنشاء مصدر جديد مخصص لبوابة مختلفة فعلًا،
-                    وليس لكتابة اسم مختلف لنفس البوابة.
-                  </small>
+                  <small>إعادة الاستيراد يجب أن تستخدم نفس المصدر المسجل. المصدر الجديد يعني نظام معاملات مختلفًا فعلًا.</small>
                 </div>
 
                 <div className={task20Styles.sourceField}>
@@ -674,20 +687,12 @@ export function TransactionImportValidator({
                     disabled={workflowLocked || isLoadingSources || isCreatingSource}
                     placeholder="مثال: Stripe"
                     autoComplete="off"
-                    onChange={(event) => {
-                      setNewSource(event.currentTarget.value);
-                      setSourceError(null);
-                    }}
+                    onChange={(event) => { setNewSource(event.currentTarget.value); setSourceError(null); }}
                   />
                   <button
                     type="button"
                     className={task20Styles.importButton}
-                    disabled={
-                      workflowLocked ||
-                      isLoadingSources ||
-                      isCreatingSource ||
-                      !isValidTransactionImportSource(newSource)
-                    }
+                    disabled={workflowLocked || isLoadingSources || isCreatingSource || !isValidTransactionImportSource(newSource)}
                     onClick={() => void createSource()}
                   >
                     {isCreatingSource ? "جاري الإضافة…" : "إضافة المصدر"}
@@ -696,6 +701,34 @@ export function TransactionImportValidator({
                   {sourceError && <div className={task20Styles.importError}>{sourceError}</div>}
                 </div>
 
+                <label className={styles.headerOption}>
+                  <input
+                    type="checkbox"
+                    checked={successfulOnlyConfirmed}
+                    disabled={workflowLocked}
+                    onChange={(event) => { setSuccessfulOnlyConfirmed(event.currentTarget.checked); resetImportProgress(); }}
+                  />
+                  <span>
+                    <strong>أؤكد أن هذا الملف يحتوي على معاملات ناجحة فقط</strong>
+                    <small>Failed / Pending / Cancelled لا تدخل الحسابات. إذا كان الملف Mixed، افصله أو صدّر Successful فقط قبل الاستيراد.</small>
+                  </span>
+                </label>
+
+                {!currencyMapped && (
+                  <label className={styles.headerOption}>
+                    <input
+                      type="checkbox"
+                      checked={baseCurrencyConfirmed}
+                      disabled={workflowLocked}
+                      onChange={(event) => { setBaseCurrencyConfirmed(event.currentTarget.checked); resetImportProgress(); }}
+                    />
+                    <span>
+                      <strong>أؤكد أن كل مبالغ الملف بعملة {baseCurrency}</strong>
+                      <small>لا يوجد Currency column مربوط. Mizan V1 لا يحول العملات تلقائيًا.</small>
+                    </span>
+                  </label>
+                )}
+
                 <div className={task20Styles.sourceField}>
                   <label htmlFor="transaction-import-type">نوع المعاملات في هذا الملف</label>
                   <select
@@ -703,25 +736,19 @@ export function TransactionImportValidator({
                     className={task20Styles.sourceInput}
                     value={transactionType}
                     disabled={workflowLocked}
-                    onChange={(event) => {
-                      setTransactionType(event.currentTarget.value as NormalizedTransactionType | "");
-                      resetImportProgress();
-                    }}
+                    onChange={(event) => { setTransactionType(event.currentTarget.value as NormalizedTransactionType | ""); resetImportProgress(); }}
                   >
                     <option value="">اختر النوع</option>
                     <option value="collection">Collections — مبالغ محصلة</option>
                     <option value="refund">Refunds — مبالغ مستردة</option>
                   </select>
-                  <small>
-                    هذا Default على مستوى الملف. Collections تُقبل كمبالغ موجبة فقط؛ Refunds تُحفظ كمقادير موجبة
-                    حتى لا تُحسب كمصروف.
-                  </small>
+                  <small>هذا Default لملف موحد النوع. Collections موجبة؛ Refunds تُحفظ كمقادير موجبة وتخصم من الإيراد.</small>
                 </div>
 
                 <button
                   type="button"
                   className={task20Styles.importButton}
-                  disabled={workflowLocked || !source || !transactionType || isLoadingSources || isCreatingSource}
+                  disabled={workflowLocked || !source || !transactionType || !successfulOnlyConfirmed || !currencyReady || isLoadingSources || isCreatingSource}
                   onClick={() => void importTransactions()}
                 >
                   {isImporting ? "جاري الاستيراد…" : "استيراد المعاملات"}
@@ -730,18 +757,9 @@ export function TransactionImportValidator({
                 {importResult && (
                   <div role="status" aria-live="polite" className={task20Styles.importSuccess}>
                     <div className={task20Styles.importSummary}>
-                      <div>
-                        <span>تمت إضافتها</span>
-                        <strong>{importResult.insertedCount}</strong>
-                      </div>
-                      <div>
-                        <span>مكررة مؤكدة</span>
-                        <strong>{importResult.duplicateCount}</strong>
-                      </div>
-                      <div>
-                        <span>تحتاج قرارًا</span>
-                        <strong>{importResult.candidateCount}</strong>
-                      </div>
+                      <div><span>تمت إضافتها</span><strong>{importResult.insertedCount}</strong></div>
+                      <div><span>مكررة مؤكدة</span><strong>{importResult.duplicateCount}</strong></div>
+                      <div><span>تحتاج قرارًا</span><strong>{importResult.candidateCount}</strong></div>
                     </div>
                     {importResult.candidateCount > 0
                       ? " تم إيقاف الاستيراد عند أول مجموعة تصادمات حتى لا نفقد شراءً حقيقيًا أو نضاعف صفًا بصمت."
@@ -755,35 +773,17 @@ export function TransactionImportValidator({
                   <div className={task20Styles.candidatePanel}>
                     <div>
                       <h3>تصادمات تحتاج قرارك</h3>
-                      <p>
-                        هذه الصفوف تشبه معاملات موجودة لكنها ليست Duplicate مؤكدة. اختر لكل صف: مكرر فعلًا أو
-                        احتفظ به كمعاملة مستقلة. يتم حفظ القرار في سجل تدقيق.
-                      </p>
+                      <p>هذه الصفوف تشبه معاملات موجودة لكنها ليست Duplicate مؤكدة. اختر لكل صف القرار واحفظه في سجل التدقيق.</p>
                     </div>
                     <div className={task20Styles.candidateTableShell}>
                       <table className={task20Styles.candidateTable} aria-label="تصادمات منع تكرار المعاملات">
-                        <thead>
-                          <tr>
-                            <th scope="col">الصف</th>
-                            <th scope="col">البريد</th>
-                            <th scope="col">التاريخ</th>
-                            <th scope="col">النوع</th>
-                            <th scope="col">المبلغ</th>
-                            <th scope="col">مطابقات موجودة</th>
-                            <th scope="col">القرار</th>
-                          </tr>
-                        </thead>
+                        <thead><tr><th scope="col">الصف</th><th scope="col">البريد</th><th scope="col">التاريخ/التوقيت</th><th scope="col">النوع</th><th scope="col">المبلغ</th><th scope="col">مطابقات موجودة</th><th scope="col">القرار</th></tr></thead>
                         <tbody>
                           {pendingCandidates.map((candidate) => {
                             const rowNumber = candidate.row.row_number;
                             return (
                               <tr key={`${rowNumber}:${candidate.resolutionId}`}>
-                                <td>{rowNumber}</td>
-                                <td dir="auto">{candidate.row.customer_email}</td>
-                                <td dir="ltr">{candidate.row.transaction_date}</td>
-                                <td dir="ltr">{candidate.row.transaction_type}</td>
-                                <td dir="ltr">{candidate.row.amount_collected}</td>
-                                <td>{candidate.existingCount}</td>
+                                <td>{rowNumber}</td><td dir="auto">{candidate.row.customer_email}</td><td dir="ltr">{candidate.row.transaction_date}</td><td dir="ltr">{candidate.row.transaction_type}</td><td dir="ltr">{candidate.row.amount_collected}</td><td>{candidate.existingCount}</td>
                                 <td>
                                   <select
                                     aria-label={`قرار التصادم للصف ${rowNumber}`}
@@ -791,16 +791,11 @@ export function TransactionImportValidator({
                                     disabled={isImporting}
                                     onChange={(event) => {
                                       const value = event.currentTarget.value as CandidateDuplicateResolution | "";
-                                      setCandidateDecisions((current) => ({
-                                        ...current,
-                                        [rowNumber]: value || undefined,
-                                      }));
+                                      setCandidateDecisions((current) => ({ ...current, [rowNumber]: value || undefined }));
                                       setImportError(null);
                                     }}
                                   >
-                                    <option value="">اختر</option>
-                                    <option value="duplicate">مكرر — لا تضفه</option>
-                                    <option value="keep_distinct">شراء مستقل — احتفظ به</option>
+                                    <option value="">اختر</option><option value="duplicate">مكرر — لا تضفه</option><option value="keep_distinct">شراء مستقل — احتفظ به</option>
                                   </select>
                                 </td>
                               </tr>
@@ -812,12 +807,7 @@ export function TransactionImportValidator({
                     <button
                       type="button"
                       className={task20Styles.importButton}
-                      disabled={
-                        isImporting ||
-                        pendingCandidates.some(
-                          (candidate) => candidateDecisions[candidate.row.row_number] === undefined,
-                        )
-                      }
+                      disabled={isImporting || pendingCandidates.some((candidate) => candidateDecisions[candidate.row.row_number] === undefined)}
                       onClick={() => void resolveCandidates()}
                     >
                       {isImporting ? "جاري تطبيق القرارات…" : "تطبيق القرارات والمتابعة"}
@@ -825,49 +815,27 @@ export function TransactionImportValidator({
                   </div>
                 )}
 
-                {importError && (
-                  <div role="alert" className={task20Styles.importError}>
-                    {importError}
-                  </div>
-                )}
+                {importError && <div role="alert" className={task20Styles.importError}>{importError}</div>}
               </fieldset>
             </>
           ) : result.checkedRows === 0 ? (
             <div className={styles.mappingError} role="alert">
-              {skipFirstRow
-                ? "لا توجد معاملات قابلة للتحقق بعد استبعاد أول صف باعتباره Header."
-                : "لا توجد صفوف معاملات قابلة للتحقق في الملف."}
+              {skipFirstRow ? "لا توجد معاملات قابلة للتحقق بعد استبعاد أول صف باعتباره Header." : "لا توجد صفوف معاملات قابلة للتحقق في الملف."}
             </div>
           ) : (
             <div className={styles.validationIssues}>
               <h3>أول المشكلات المكتشفة</h3>
               <div className={styles.tableShell}>
                 <table className={styles.issueTable} aria-label="جدول أخطاء التحقق من المعاملات">
-                  <thead>
-                    <tr>
-                      <th scope="col">الصف</th>
-                      <th scope="col">الحقل</th>
-                      <th scope="col">المشكلة</th>
-                      <th scope="col">القيمة</th>
-                    </tr>
-                  </thead>
+                  <thead><tr><th scope="col">الصف</th><th scope="col">الحقل</th><th scope="col">المشكلة</th><th scope="col">القيمة</th></tr></thead>
                   <tbody>
                     {result.issues.map((issue) => (
-                      <tr key={`${issue.rowNumber}:${issue.field}:${issue.code}`}>
-                        <td>{issue.rowNumber}</td>
-                        <td>{FIELD_LABELS[issue.field]}</td>
-                        <td>{ISSUE_MESSAGES[issue.code]}</td>
-                        <td dir="auto">{issueValue(issue)}</td>
-                      </tr>
+                      <tr key={`${issue.rowNumber}:${issue.field}:${issue.code}`}><td>{issue.rowNumber}</td><td>{FIELD_LABELS[issue.field]}</td><td>{ISSUE_MESSAGES[issue.code]}</td><td dir="auto">{issueValue(issue)}</td></tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-              {result.issuesTruncated && (
-                <p className={styles.validationNote}>
-                  تم عرض عينة من المشكلات فقط. إجمالي المشكلات المكتشفة: {result.issueCount}.
-                </p>
-              )}
+              {result.issuesTruncated && <p className={styles.validationNote}>تم عرض عينة من المشكلات فقط. إجمالي المشكلات المكتشفة: {result.issueCount}.</p>}
             </div>
           )}
         </>

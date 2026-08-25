@@ -6,7 +6,7 @@ export const REQUIRED_TRANSACTION_FIELDS = [
   "amountCollected",
 ] as const;
 
-export const OPTIONAL_TRANSACTION_FIELDS = ["transactionId"] as const;
+export const OPTIONAL_TRANSACTION_FIELDS = ["transactionId", "currency"] as const;
 export const TRANSACTION_MAPPING_FIELDS = [
   ...REQUIRED_TRANSACTION_FIELDS,
   ...OPTIONAL_TRANSACTION_FIELDS,
@@ -20,6 +20,7 @@ export type TransactionMappingField = (typeof TRANSACTION_MAPPING_FIELDS)[number
 
 export type TransactionColumnMapping = Record<RequiredTransactionField, number | null> & {
   transactionId?: number | null;
+  currency?: number | null;
 };
 
 export const EMPTY_TRANSACTION_COLUMN_MAPPING: TransactionColumnMapping = {
@@ -27,6 +28,7 @@ export const EMPTY_TRANSACTION_COLUMN_MAPPING: TransactionColumnMapping = {
   transactionDate: null,
   amountCollected: null,
   transactionId: null,
+  currency: null,
 };
 
 export const TRANSACTION_FIELD_LABELS: Record<TransactionMappingField, string> = {
@@ -34,6 +36,7 @@ export const TRANSACTION_FIELD_LABELS: Record<TransactionMappingField, string> =
   transactionDate: "Transaction Date",
   amountCollected: "Amount Collected",
   transactionId: "Transaction ID",
+  currency: "Currency",
 };
 
 export type TransactionColumnMappingState = {

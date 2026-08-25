@@ -14,6 +14,7 @@ import styles from "./transaction-import.module.css";
 
 type TransactionPreviewUploaderProps = {
   businessId: string;
+  baseCurrency: string;
   canManage: boolean;
 };
 
@@ -62,6 +63,7 @@ function errorMessage(error: unknown) {
 
 export function TransactionPreviewUploader({
   businessId,
+  baseCurrency,
   canManage,
 }: TransactionPreviewUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -275,6 +277,7 @@ export function TransactionPreviewUploader({
             <TransactionColumnMapper
               key={`${preview.fileName}:${preview.fileSize}:${preview.totalRows}:${preview.totalColumns}`}
               businessId={businessId}
+              baseCurrency={baseCurrency}
               preview={preview}
               fileBuffer={fileBuffer}
               importBusy={importBusy}

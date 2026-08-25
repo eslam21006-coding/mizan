@@ -24,6 +24,8 @@ export type PreparedTransactionImportRow = {
   transaction_date: string;
   amount_collected: string;
   transaction_type: NormalizedTransactionType;
+  normalized_outcome: "successful";
+  currency: string;
   candidate_resolution?: CandidateDuplicateResolution;
   candidate_resolution_id?: string;
 };
@@ -80,11 +82,14 @@ export function prepareTransactionImportRows(
   options: {
     skipFirstRow?: boolean;
     transactionType: NormalizedTransactionType;
+    baseCurrency: string;
     createImportRowToken: () => string;
   },
 ): PreparedTransactionImportRow[] {
   const prepared: PreparedTransactionImportRow[] = [];
   let firstSourceRowSeen = false;
+  const baseCurrency = options.baseCurrency.trim().toUpperCase();
+  if (!baseCurrency) throw new RangeError("Transaction import base currency is required.");
 
   for (const row of rows) {
     if (!firstSourceRowSeen) {
@@ -109,15 +114,17 @@ export function prepareTransactionImportRows(
       amount !== null &&
       amountSign !== 0 &&
       (options.transactionType === "refund" || amountSign > 0);
+    const rowCurrency = row.currency?.trim().toUpperCase();
     if (
       !isValidTransactionEmail(email) ||
       !isValidTransactionDate(transactionDate) ||
-      !amountHasValidSign
+      !amountHasValidSign ||
+      (rowCurrency !== undefined && rowCurrency !== baseCurrency)
     ) {
       throw new TransactionImportPreparationError(
         "ROW_NOT_VALIDATED",
         row.rowNumber,
-        "Only validated positive collections or non-zero refunds can be prepared for import.",
+        "Only validated successful transactions in the business base currency can be prepared for import.",
       );
     }
 
@@ -135,9 +142,11 @@ export function prepareTransactionImportRows(
       transaction_id: transactionId,
       import_row_token: importRowToken,
       customer_email: email,
-      transaction_date: transactionDate.slice(0, 10),
+      transaction_date: transactionDate,
       amount_collected: normalizedAmountText(row.amountCollected, options.transactionType),
       transaction_type: options.transactionType,
+      normalized_outcome: "successful",
+      currency: baseCurrency,
     });
   }
 
