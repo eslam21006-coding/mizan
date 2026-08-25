@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import styles from "./customer-groups.module.css";
 
@@ -58,12 +58,9 @@ export function CustomerGroupsTable({
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
 
-  useEffect(() => {
-    let active = true;
-
-    const load = async () => {
+  const loadRows = useCallback(
+    async (isActive: () => boolean = () => true) => {
       setIsLoading(true);
       setError(null);
       const supabase = createSupabaseBrowserClient();
@@ -80,7 +77,7 @@ export function CustomerGroupsTable({
         .order("customer_email", { ascending: true })
         .range(from, to);
 
-      if (!active) return;
+      if (!isActive()) return;
       if (loadError) {
         setRows([]);
         setTotalCount(null);
@@ -90,13 +87,17 @@ export function CustomerGroupsTable({
         setTotalCount(count ?? null);
       }
       setIsLoading(false);
-    };
+    },
+    [businessId, page],
+  );
 
-    void load();
+  useEffect(() => {
+    let active = true;
+    void loadRows(() => active);
     return () => {
       active = false;
     };
-  }, [businessId, page, reloadToken]);
+  }, [loadRows]);
 
   const pageCount = useMemo(() => {
     if (totalCount === null) return null;
@@ -116,7 +117,7 @@ export function CustomerGroupsTable({
       <section className={styles.errorPanel} role="alert">
         <strong>تعذر تحميل العملاء</strong>
         <p>{error}</p>
-        <button className={styles.retryButton} type="button" onClick={() => setReloadToken((current) => current + 1)}>
+        <button className={styles.retryButton} type="button" onClick={() => void loadRows()}>
           إعادة المحاولة
         </button>
       </section>
