@@ -199,6 +199,7 @@ export function TransactionImportValidator({
   >({});
   const [remainingRows, setRemainingRows] = useState<PreparedTransactionImportRow[]>([]);
   const [retryRows, setRetryRows] = useState<PreparedTransactionImportRow[] | null>(null);
+  const [retryBaseResult, setRetryBaseResult] = useState<ImportResult | null>(null);
 
   const hasPendingCandidates = pendingCandidates.length > 0;
   const workflowLocked = isImporting || hasPendingCandidates;
@@ -246,6 +247,7 @@ export function TransactionImportValidator({
     setCandidateDecisions({});
     setRemainingRows([]);
     setRetryRows(null);
+    setRetryBaseResult(null);
   };
 
   const validate = async () => {
@@ -383,6 +385,7 @@ export function TransactionImportValidator({
     setPendingCandidates(outcome.pendingCandidates);
     setCandidateDecisions({});
     setRemainingRows(outcome.remainingRows);
+    setRetryBaseResult(null);
     if (outcome.pendingCandidates.length === 0) {
       setRetryRows(null);
       onImportBusyChange(false);
@@ -412,6 +415,7 @@ export function TransactionImportValidator({
           createImportRowToken: () => crypto.randomUUID(),
         });
         setRetryRows(prepared);
+        setRetryBaseResult(null);
       } catch (caught) {
         if (caught instanceof TransactionImportPreparationError) {
           setImportError(
@@ -438,7 +442,7 @@ export function TransactionImportValidator({
     setRemainingRows([]);
 
     try {
-      const outcome = await processRows(prepared, zeroImportResult());
+      const outcome = await processRows(prepared, retryBaseResult ?? zeroImportResult());
       applyOutcome(outcome);
     } catch (caught) {
       const confirmed =
@@ -474,6 +478,7 @@ export function TransactionImportValidator({
     setIsImporting(true);
     setImportError(null);
     let resolutionsApplied = false;
+    let continuationBase = importResult;
     try {
       const resolutionOutcome = await processRows(resolvedRows, {
         ...importResult,
@@ -484,6 +489,7 @@ export function TransactionImportValidator({
       }
 
       resolutionsApplied = true;
+      continuationBase = resolutionOutcome.result;
       setImportResult(resolutionOutcome.result);
       setPendingCandidates([]);
       setCandidateDecisions({});
@@ -498,11 +504,18 @@ export function TransactionImportValidator({
     } catch (caught) {
       const confirmed =
         caught instanceof TransactionImportProcessError ? caught.confirmed : null;
-      if (confirmed) setImportResult(confirmed);
+      if (confirmed) {
+        setImportResult(
+          resolutionsApplied
+            ? confirmed
+            : { ...confirmed, candidateCount: pendingCandidates.length },
+        );
+      }
       if (resolutionsApplied) {
         setPendingCandidates([]);
         setCandidateDecisions({});
         setRetryRows(remainingRows);
+        setRetryBaseResult(continuationBase);
         setRemainingRows([]);
         onImportBusyChange(false);
       }
