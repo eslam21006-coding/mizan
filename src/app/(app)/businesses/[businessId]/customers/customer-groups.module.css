@@ -1,0 +1,265 @@
+.pageHeadingRow {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.pageActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.actionLink {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  color: var(--brand-strong);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.actionLink:hover {
+  border-color: var(--brand);
+}
+
+.actionLink:focus-visible,
+.pagination button:focus-visible,
+.tableShell:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.businessStrip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.businessStrip > div {
+  display: grid;
+  gap: 5px;
+}
+
+.businessStrip span,
+.identityCount span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.businessStrip strong {
+  font-size: 13px;
+}
+
+.groupPanel,
+.statusPanel,
+.errorPanel,
+.emptyPanel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+.groupPanel {
+  padding: 22px;
+}
+
+.groupHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.groupHeading h2,
+.emptyPanel h2 {
+  margin: 5px 0 0;
+  font-size: 20px;
+}
+
+.groupHeading p,
+.emptyPanel p,
+.errorPanel p {
+  margin: 8px 0 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.kicker {
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.identityCount {
+  min-width: 116px;
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  background: var(--brand-soft);
+  border-radius: 12px;
+  text-align: center;
+}
+
+.identityCount strong {
+  color: var(--brand-strong);
+  font-size: 23px;
+}
+
+.tableShell {
+  max-width: 100%;
+  margin-top: 18px;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.groupsTable {
+  width: 100%;
+  min-width: 980px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.groupsTable th,
+.groupsTable td {
+  padding: 12px 13px;
+  border-block-end: 1px solid var(--border);
+  text-align: start;
+  vertical-align: top;
+}
+
+.groupsTable thead th {
+  color: var(--text-soft);
+  background: var(--surface-soft);
+  font-size: 11px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.groupsTable tbody tr:last-child td {
+  border-block-end: 0;
+}
+
+.groupsTable td strong {
+  display: block;
+  font-size: 12px;
+}
+
+.groupsTable td small {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.notAcquired {
+  display: inline-flex;
+  padding: 5px 8px;
+  color: var(--text-soft);
+  background: var(--surface-soft);
+  border-radius: 8px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.pagination button {
+  min-height: 38px;
+  padding: 7px 11px;
+  color: var(--brand-strong);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pagination button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.pagination span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.statusPanel,
+.errorPanel,
+.emptyPanel {
+  padding: 24px;
+}
+
+.statusPanel {
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.errorPanel {
+  color: var(--danger);
+}
+
+.errorPanel strong {
+  font-size: 15px;
+}
+
+.emptyPanel span {
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+@media (max-width: 760px) {
+  .pageHeadingRow,
+  .groupHeading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .pageActions {
+    justify-content: flex-start;
+  }
+
+  .businessStrip {
+    grid-template-columns: 1fr;
+  }
+
+  .identityCount {
+    min-width: 0;
+    align-self: flex-start;
+  }
+
+  .groupPanel {
+    padding: 16px;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+  }
+}

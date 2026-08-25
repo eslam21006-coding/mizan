@@ -30,7 +30,7 @@ export default async function TransactionImportPage({ params }: TransactionImpor
   const supabase = await createSupabaseServerClient();
   const { data: business, error } = await supabase
     .from("businesses")
-    .select("id,name,base_currency,owner_user_id")
+    .select("id,name,base_currency,timezone,owner_user_id")
     .eq("id", businessId)
     .maybeSingle();
 
@@ -41,8 +41,8 @@ export default async function TransactionImportPage({ params }: TransactionImpor
     <div className="page-stack" style={IMPORT_THEME_ALIASES}>
       <div className={styles.headingRow}>
         <PageHeading
-          title="معاينة ملف معاملات العملاء"
-          description={`اختر تصدير CSV أو XLSX خاص بـ ${business.name} وتأكد من شكل البيانات قبل بدء الـ Mapping والاستيراد.`}
+          title="استيراد معاملات العملاء"
+          description={`اختر تصدير CSV أو XLSX خاص بـ ${business.name}، راجع الـ Mapping والـ Validation، ثم استورد المعاملات مع منع التكرار.`}
         />
         <div className={styles.headingLinks}>
           <Link className={styles.backLink} href="/customers">
@@ -63,13 +63,21 @@ export default async function TransactionImportPage({ params }: TransactionImpor
           <span>العملة الأساسية</span>
           <strong dir="ltr">{business.base_currency}</strong>
         </div>
+        <div>
+          <span>منطقة التقارير الزمنية</span>
+          <strong dir="ltr">{business.timezone}</strong>
+        </div>
         <p>
-          هذه الخطوة لا تربط الأعمدة ولا تحفظ معاملات. سيتم التعامل مع Customer Email وTransaction Date وAmount
-          Collected في المهام التالية بعد أن توافق على شكل الملف.
+          المعاينة والـ Mapping والـ Validation تظل داخل المتصفح. لا تُحفظ المعاملات إلا بعد نجاح Validation
+          وتأكيد حالة الملف وعملته، وعندها يحفظ Mizan التوقيت الأصلي ويطبق Duplicate Protection داخل قاعدة البيانات.
         </p>
       </section>
 
-      <TransactionPreviewUploader canManage={canManage} />
+      <TransactionPreviewUploader
+        businessId={business.id}
+        baseCurrency={business.base_currency}
+        canManage={canManage}
+      />
     </div>
   );
 }

@@ -6,22 +6,37 @@ export const REQUIRED_TRANSACTION_FIELDS = [
   "amountCollected",
 ] as const;
 
+export const OPTIONAL_TRANSACTION_FIELDS = ["transactionId", "currency"] as const;
+export const TRANSACTION_MAPPING_FIELDS = [
+  ...REQUIRED_TRANSACTION_FIELDS,
+  ...OPTIONAL_TRANSACTION_FIELDS,
+] as const;
+
 export const TRANSACTION_NATIVE_MAPPING_OPTION_LIMIT = 256;
 
 export type RequiredTransactionField = (typeof REQUIRED_TRANSACTION_FIELDS)[number];
+export type OptionalTransactionField = (typeof OPTIONAL_TRANSACTION_FIELDS)[number];
+export type TransactionMappingField = (typeof TRANSACTION_MAPPING_FIELDS)[number];
 
-export type TransactionColumnMapping = Record<RequiredTransactionField, number | null>;
+export type TransactionColumnMapping = Record<RequiredTransactionField, number | null> & {
+  transactionId?: number | null;
+  currency?: number | null;
+};
 
 export const EMPTY_TRANSACTION_COLUMN_MAPPING: TransactionColumnMapping = {
   customerEmail: null,
   transactionDate: null,
   amountCollected: null,
+  transactionId: null,
+  currency: null,
 };
 
-export const TRANSACTION_FIELD_LABELS: Record<RequiredTransactionField, string> = {
+export const TRANSACTION_FIELD_LABELS: Record<TransactionMappingField, string> = {
   customerEmail: "Customer Email",
   transactionDate: "Transaction Date",
   amountCollected: "Amount Collected",
+  transactionId: "Transaction ID",
+  currency: "Currency",
 };
 
 export type TransactionColumnMappingState = {
@@ -74,8 +89,8 @@ export function inspectTransactionColumnMapping(
   mapping: TransactionColumnMapping,
 ): TransactionColumnMappingState {
   const missingFields = REQUIRED_TRANSACTION_FIELDS.filter((field) => mapping[field] === null);
-  const selectedColumns = REQUIRED_TRANSACTION_FIELDS.flatMap((field) => {
-    const column = mapping[field];
+  const selectedColumns = TRANSACTION_MAPPING_FIELDS.flatMap((field) => {
+    const column = mapping[field] ?? null;
     return column === null ? [] : [column];
   });
   const hasDuplicateColumns = new Set(selectedColumns).size !== selectedColumns.length;
@@ -90,7 +105,7 @@ export function inspectTransactionColumnMapping(
 
 export function setTransactionFieldColumn(
   mapping: TransactionColumnMapping,
-  field: RequiredTransactionField,
+  field: TransactionMappingField,
   column: number | null,
 ): TransactionColumnMapping {
   if (column !== null && (!Number.isSafeInteger(column) || column < 0)) {

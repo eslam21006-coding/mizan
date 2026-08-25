@@ -1,9 +1,13 @@
 export const TRANSACTION_VALIDATION_ERROR_SAMPLE_LIMIT = 25;
+export const TRANSACTION_EMAIL_MAX_LENGTH = 320;
+export const TRANSACTION_ID_MAX_LENGTH = 512;
 
 export const TRANSACTION_VALIDATION_FIELDS = [
   "customerEmail",
   "transactionDate",
   "amountCollected",
+  "transactionId",
+  "currency",
 ] as const;
 
 export type TransactionValidationField = (typeof TRANSACTION_VALIDATION_FIELDS)[number];
@@ -13,6 +17,8 @@ export type TransactionValidationInputRow = {
   customerEmail: string;
   transactionDate: string;
   amountCollected: string;
+  transactionId?: string;
+  currency?: string;
 };
 
 export type TransactionValidationIssueCode =
@@ -21,7 +27,10 @@ export type TransactionValidationIssueCode =
   | "TRANSACTION_DATE_REQUIRED"
   | "TRANSACTION_DATE_INVALID"
   | "AMOUNT_REQUIRED"
-  | "AMOUNT_INVALID";
+  | "AMOUNT_INVALID"
+  | "TRANSACTION_ID_TOO_LONG"
+  | "CURRENCY_REQUIRED"
+  | "CURRENCY_MISMATCH";
 
 export type TransactionValidationIssue = {
   rowNumber: number;
@@ -44,9 +53,13 @@ export type TransactionImportValidationResult = {
 
 const BASIC_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
-const ISO_DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})[T ]\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?$/;
+const ISO_DATE_TIME_PATTERN = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?$/;
 const DECIMAL_AMOUNT_PATTERN =
   /^[+-]?(?:(?:\d+|\d{1,3}(?:,\d{3})+)(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/;
+
+function unicodeCharacterLength(value: string) {
+  return Array.from(value).length;
+}
 
 export function normalizeTransactionEmail(value: string) {
   return value.trim().toLowerCase();
@@ -54,12 +67,19 @@ export function normalizeTransactionEmail(value: string) {
 
 export function isValidTransactionEmail(value: string) {
   const normalized = normalizeTransactionEmail(value);
-  if (!normalized || !BASIC_EMAIL_PATTERN.test(normalized)) return false;
+  if (
+    !normalized ||
+    unicodeCharacterLength(normalized) > TRANSACTION_EMAIL_MAX_LENGTH ||
+    !BASIC_EMAIL_PATTERN.test(normalized)
+  ) {
+    return false;
+  }
   const firstAt = normalized.indexOf("@");
   return firstAt > 0 && firstAt === normalized.lastIndexOf("@") && firstAt < normalized.length - 1;
 }
 
 function isRealCalendarDate(year: number, month: number, day: number) {
+  if (year < 1) return false;
   const candidate = new Date(0);
   candidate.setUTCHours(0, 0, 0, 0);
   candidate.setUTCFullYear(year, month - 1, day);
@@ -82,7 +102,20 @@ export function isValidTransactionDate(value: string) {
   const dateTime = normalized.match(ISO_DATE_TIME_PATTERN);
   if (!dateTime) return false;
   if (!isRealCalendarDate(Number(dateTime[1]), Number(dateTime[2]), Number(dateTime[3]))) return false;
-  return Number.isFinite(Date.parse(normalized));
+
+  const hours = Number(dateTime[4]);
+  const minutes = Number(dateTime[5]);
+  const seconds = dateTime[6] === undefined ? 0 : Number(dateTime[6]);
+  if (hours > 23 || minutes > 59 || seconds > 59) return false;
+
+  const offsetMatch = normalized.match(/([+-])(\d{2}):(\d{2})$/);
+  if (offsetMatch) {
+    const offsetHours = Number(offsetMatch[2]);
+    const offsetMinutes = Number(offsetMatch[3]);
+    if (offsetHours > 23 || offsetMinutes > 59) return false;
+  }
+
+  return true;
 }
 
 export function parseTransactionAmount(value: string) {
@@ -92,11 +125,15 @@ export function parseTransactionAmount(value: string) {
   return Number.isFinite(amount) ? amount : null;
 }
 
-function rowIssues(row: TransactionValidationInputRow): TransactionValidationIssue[] {
+function rowIssues(
+  row: TransactionValidationInputRow,
+  baseCurrency: string | undefined,
+): TransactionValidationIssue[] {
   const issues: TransactionValidationIssue[] = [];
   const email = row.customerEmail.trim();
   const transactionDate = row.transactionDate.trim();
   const amountCollected = row.amountCollected.trim();
+  const transactionId = row.transactionId?.trim() ?? "";
 
   if (!email) {
     issues.push({
@@ -146,12 +183,40 @@ function rowIssues(row: TransactionValidationInputRow): TransactionValidationIss
     });
   }
 
+  if (transactionId && unicodeCharacterLength(transactionId) > TRANSACTION_ID_MAX_LENGTH) {
+    issues.push({
+      rowNumber: row.rowNumber,
+      field: "transactionId",
+      code: "TRANSACTION_ID_TOO_LONG",
+      rawValue: row.transactionId ?? "",
+    });
+  }
+
+  if (row.currency !== undefined) {
+    const currency = row.currency.trim().toUpperCase();
+    if (!currency) {
+      issues.push({
+        rowNumber: row.rowNumber,
+        field: "currency",
+        code: "CURRENCY_REQUIRED",
+        rawValue: row.currency,
+      });
+    } else if (!baseCurrency || currency !== baseCurrency.toUpperCase()) {
+      issues.push({
+        rowNumber: row.rowNumber,
+        field: "currency",
+        code: "CURRENCY_MISMATCH",
+        rawValue: row.currency,
+      });
+    }
+  }
+
   return issues;
 }
 
 export function validateTransactionImportRows(
   rows: readonly TransactionValidationInputRow[],
-  options: { skipFirstRow?: boolean; issueSampleLimit?: number } = {},
+  options: { skipFirstRow?: boolean; issueSampleLimit?: number; baseCurrency?: string } = {},
 ): TransactionImportValidationResult {
   const issueSampleLimit = options.issueSampleLimit ?? TRANSACTION_VALIDATION_ERROR_SAMPLE_LIMIT;
   if (!Number.isSafeInteger(issueSampleLimit) || issueSampleLimit < 0) {
@@ -180,7 +245,7 @@ export function validateTransactionImportRows(
     }
 
     checkedRows += 1;
-    const currentIssues = rowIssues(row);
+    const currentIssues = rowIssues(row, options.baseCurrency);
     if (currentIssues.length === 0) {
       validRows += 1;
       continue;
