@@ -27,9 +27,12 @@ test("authenticated E2E requires an isolated account and cleans businesses creat
   assert.match(playwrightConfig, /globalTeardown:\s*"\.\/e2e\/global-teardown\.ts"/);
   assert.match(globalSetup, /MIZAN_E2E_DEDICATED_ACCOUNT/);
   assert.match(globalSetup, /baselineBusinessIds/);
+  assert.match(globalSetup, /readPreviousState/);
+  assert.match(globalSetup, /pendingBusinessIds/);
+  assert.match(globalSetup, /customer_transactions/);
+  assert.match(globalSetup, /funnel_monthly_periods/);
+  assert.match(globalSetup, /\.from\("businesses"\)\s*\.delete\(\)/);
+  assert.match(globalSetup, /leftovers/);
   assert.match(globalTeardown, /createdBusinessIds/);
-  assert.match(globalTeardown, /customer_transactions/);
-  assert.match(globalTeardown, /funnel_monthly_periods/);
-  assert.match(globalTeardown, /\.from\("businesses"\)\s*\.delete\(\)/);
-  assert.match(globalTeardown, /leftovers/);
+  assert.match(globalTeardown, /cleanupE2eBusinesses/);
 });
