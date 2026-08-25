@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { CustomerCohortLtvTable } from "./customer-cohort-ltv-table";
 import { CustomerGroupsTable } from "./customer-groups-table";
 import styles from "./customer-groups.module.css";
 
@@ -29,7 +30,7 @@ export default async function BusinessCustomersPage({ params }: BusinessCustomer
       <div className={styles.pageHeadingRow}>
         <PageHeading
           title={`عملاء ${business.name}`}
-          description="هوية العميل في V1 = البزنس + البريد المُطبّع. أول Collection ناجحة تحدد الاكتساب، والـ Refund لا ينشئ اكتسابًا."
+          description="تجميع العملاء من سجل المعاملات، كوهورتات الاكتساب الشهرية، وObserved LTV المحقق حتى الآن."
         />
         <div className={styles.pageActions}>
           <Link className={styles.actionLink} href={`/businesses/${business.id}/customers/import`}>
@@ -55,6 +56,8 @@ export default async function BusinessCustomersPage({ params }: BusinessCustomer
           <strong dir="ltr">{business.timezone}</strong>
         </div>
       </section>
+
+      <CustomerCohortLtvTable businessId={business.id} baseCurrency={business.base_currency} />
 
       <CustomerGroupsTable
         businessId={business.id}
