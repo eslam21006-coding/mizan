@@ -127,8 +127,8 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
     <section className={styles.groupPanel} aria-labelledby="observed-ltv-title">
       <div className={styles.groupHeading}>
         <div>
-          <span className={styles.kicker}>Observed LTV</span>
-          <h2 id="observed-ltv-title">قيمة العميل المحققة حتى الآن</h2>
+          <span className={styles.kicker}>قيمة محققة من سجل المعاملات</span>
+          <h2 id="observed-ltv-title">Observed LTV / قيمة العميل المحققة حتى الآن</h2>
           <p>قيمة محققة فعلًا من سجل المعاملات حتى تاريخ الملاحظة، وليست توقعًا للقيمة النهائية للعميل.</p>
         </div>
         <div className={styles.identityCount}>
@@ -138,7 +138,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
       </div>
 
       <div className={styles.tableShell}>
-        <table className={styles.groupsTable} aria-label="جدول الكوهورتات وقيمة العميل المحققة">
+        <table className={styles.groupsTable} aria-label="جدول الكوهورتات وObserved LTV">
           <thead>
             <tr>
               <th scope="col">الكوهورت</th>

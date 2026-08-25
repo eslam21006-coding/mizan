@@ -24,7 +24,7 @@ async function login(page: import("@playwright/test").Page) {
 test.describe("Task 21 customer identity and transaction grouping", () => {
   test.skip(!hasLiveAuth, "Requires live Mizan Supabase credentials or a one-use invite token");
 
-  test("renders grouped customer facts in Arabic RTL without calling them LTV", async ({ page }) => {
+  test("renders grouped customer facts in Arabic RTL", async ({ page }) => {
     test.setTimeout(120_000);
     const browserErrors: string[] = [];
     page.on("console", (message) => {
@@ -92,6 +92,10 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByRole("heading", { name: `عملاء ${businessName}` })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "العملاء", level: 2 })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "إجمالي التحصيل" })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "الاسترجاعات" })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "صافي التحصيل" })).toBeVisible();
     await expect(page.getByText("buyer@example.com", { exact: true })).toBeVisible();
     await expect(page.getByText("refund-only@example.com", { exact: true })).toBeVisible();
     await expect(page.getByText("لم يتم اكتساب العميل بعد", { exact: true })).toBeVisible();
@@ -99,7 +103,7 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
     await expect(page.getByText("30 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("120 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("-5 EGP", { exact: true })).toBeVisible();
-    await expect(page.getByText(/الأرقام أدناه حقائق من سجل المعاملات وليست LTV/)).toBeVisible();
+    await expect(page.getByText(/يُجمع كل بريد إلكتروني كعميل واحد/)).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() =>
