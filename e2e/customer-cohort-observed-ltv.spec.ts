@@ -105,7 +105,8 @@ test.describe("Tasks 22-23 cohorts and Observed LTV", () => {
     await expect(
       page.getByRole("heading", { name: "Observed LTV / قيمة العميل المحققة حتى الآن" }),
     ).toBeVisible();
-    await expect(page.getByText("2026-01-01", { exact: true })).toBeVisible();
+    const cohortTable = page.getByRole("table", { name: "جدول الكوهورتات وObserved LTV" });
+    await expect(cohortTable.getByText("2026-01-01", { exact: true })).toBeVisible();
     await expect(page.getByText("500 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("80 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("420 EGP", { exact: true })).toBeVisible();

@@ -7,8 +7,10 @@ select
   customer_group.acquisition_at,
   customer_group.acquisition_date,
   pg_catalog.date_trunc('month', customer_group.acquisition_date::timestamp)::date as cohort_month,
-  customer_group.currency
+  business.base_currency as currency
 from public.customer_transaction_groups as customer_group
+join public.businesses as business
+  on business.id = customer_group.business_id
 where customer_group.acquisition_date is not null;
 
 revoke all on public.customer_acquisition_cohorts from public;
@@ -18,7 +20,7 @@ grant select on public.customer_acquisition_cohorts to authenticated;
 grant select on public.customer_acquisition_cohorts to service_role;
 
 comment on view public.customer_acquisition_cohorts is
-  'Task 22 business-scoped acquisition cohort membership. Each acquired customer belongs to the calendar month containing the earliest successful positive collection date. Refund-only identities are excluded because they have no acquisition date.';
+  'Task 22 business-scoped acquisition cohort membership. Each acquired customer belongs to the calendar month containing the earliest successful positive collection date. Refund-only identities are excluded because they have no acquisition date. Cohort currency is the enforced business base currency.';
 
 create or replace view public.customer_cohort_monthly_activity
 with (security_invoker = true, security_barrier = true)
@@ -27,10 +29,12 @@ with cohort_sizes as (
   select
     cohort.business_id,
     cohort.cohort_month,
-    cohort.currency,
-    count(*)::bigint as original_cohort_size
+    count(*)::bigint as original_cohort_size,
+    business.base_currency as currency
   from public.customer_acquisition_cohorts as cohort
-  group by cohort.business_id, cohort.cohort_month, cohort.currency
+  join public.businesses as business
+    on business.id = cohort.business_id
+  group by cohort.business_id, cohort.cohort_month, business.base_currency
 ),
 activity as (
   select
@@ -93,4 +97,4 @@ grant select on public.customer_cohort_monthly_activity to authenticated;
 grant select on public.customer_cohort_monthly_activity to service_role;
 
 comment on view public.customer_cohort_monthly_activity is
-  'Task 22 monthly transaction activity for each acquisition cohort. Original cohort size is fixed by unique acquired customer membership and does not shrink because of refunds, inactivity, or churn. Financial values use PostgreSQL numeric arithmetic and exact canonical text transport columns.';
+  'Task 22 monthly transaction activity for each acquisition cohort. Original cohort size is fixed by unique acquired customer membership and does not shrink because of refunds, inactivity, or churn. The business transaction reporting basis enforces one currency/calendar before cohort aggregation. Financial values use PostgreSQL numeric arithmetic and exact canonical text transport columns.';

@@ -53,6 +53,8 @@ export const sqlFiles = Object.freeze([
   "test/business/task-20-import-semantics-hardening.test.sql",
   "supabase/migrations/20260825114500_task_21_customer_identity_grouping.sql",
   "test/business/task-21-customer-identity-grouping.test.sql",
+  "supabase/migrations/20260825135900_task_22_lock_transaction_reporting_basis.sql",
+  "test/business/task-22-reporting-basis-lock.test.sql",
   "supabase/migrations/20260825140000_task_22_cohort_engine.sql",
   "test/business/task-22-cohort-engine.test.sql",
   "supabase/migrations/20260825143000_task_23_observed_ltv.sql",

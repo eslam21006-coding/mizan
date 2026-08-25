@@ -5,7 +5,7 @@ with cohort_context as (
   select
     cohort.business_id,
     cohort.cohort_month,
-    cohort.currency,
+    business.base_currency as currency,
     count(*)::bigint as original_cohort_size,
     business.timezone,
     (current_timestamp at time zone business.timezone)::date as current_local_date,
@@ -19,7 +19,7 @@ with cohort_context as (
   group by
     cohort.business_id,
     cohort.cohort_month,
-    cohort.currency,
+    business.base_currency,
     business.timezone
 ),
 observation_calendar as (
@@ -28,6 +28,7 @@ observation_calendar as (
     context.cohort_month,
     context.currency,
     context.original_cohort_size,
+    context.timezone,
     context.current_observation_month,
     generated.observation_month::date as observation_month,
     least(
@@ -70,7 +71,8 @@ aggregated as (
     on transaction.business_id = cohort_member.business_id
    and transaction.customer_email = cohort_member.customer_email
    and transaction.normalized_outcome = 'successful'
-   and transaction.transaction_date <= calendar.observation_cutoff_date
+   and (transaction.transaction_at at time zone calendar.timezone)::date
+      <= calendar.observation_cutoff_date
   group by
     calendar.business_id,
     calendar.cohort_month,
@@ -124,7 +126,7 @@ grant select on public.customer_cohort_observations to authenticated;
 grant select on public.customer_cohort_observations to service_role;
 
 comment on view public.customer_cohort_observations is
-  'Task 23 monthly Observed LTV observations. Observed LTV equals cumulative cohort Net Cash divided by the fixed original cohort size. Acquisition month is M0; cohort age is calendar-month difference and months observed equals age plus one. Current-month observations are partial through the business-local current date.';
+  'Task 23 monthly Observed LTV observations. Observed LTV equals cumulative cohort Net Cash divided by the fixed original cohort size. Acquisition month is M0; cohort age is calendar-month difference and months observed equals age plus one. Current-month observations are partial through the business-local current date. Currency/calendar are protected by the transaction reporting-basis invariant.';
 
 create or replace view public.customer_observed_ltv
 with (security_invoker = true, security_barrier = true)

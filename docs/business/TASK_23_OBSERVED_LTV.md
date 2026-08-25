@@ -39,7 +39,7 @@ For each observation it exposes:
 - exact canonical text values for financial display;
 - cohort age;
 - months observed;
-- base currency.
+- enforced business base currency.
 
 Maturity follows the locked rules:
 
@@ -48,7 +48,9 @@ Maturity follows the locked rules:
 - `cohort_age_months = calendar-month difference between cohort month and observation month`;
 - `months_observed = cohort_age_months + 1`.
 
-Past observation months use their calendar month-end cutoff. The current observation month is partial through the business-local current date, so future-dated transactions are not silently included in the current snapshot.
+Past observation months use their calendar month-end cutoff. The current observation month is partial through the business-local current date, so future reporting dates are not silently included in the current snapshot.
+
+Task 22 locks the business base currency and reporting timezone after transaction history exists and verifies existing history before cohort economics are enabled. Task 23 therefore never combines multiple currencies or reporting calendars inside one cohort denominator.
 
 `public.customer_observed_ltv` exposes only the current observation row for each cohort for the product UI.
 
@@ -91,7 +93,8 @@ Task 23 is complete only when:
 4. A later 500 refund can reduce the same cohort to cumulative Net Cash = -80 and Observed LTV = -20; negative values remain valid.
 5. Maturity uses calendar-month difference: acquisition month is M0 and months observed = age + 1.
 6. Current-month cutoff never extends beyond the business-local current date.
-7. Financial calculations use PostgreSQL `numeric` and exact canonical text display values.
-8. Unauthorized cross-business and anonymous reads are blocked; authorized member/admin reads are proven.
-9. Arabic RTL browser verification covers the required label, exact values, maturity, current-cutoff messaging, no lifetime-completion claim, desktop behavior, and 390px containment.
-10. Task 24 Lifetime Revenue Stream Analysis remains out of scope.
+7. Cohort currency/calendar remain singular because Task 22 enforces the business transaction reporting basis.
+8. Financial calculations use PostgreSQL `numeric` and exact canonical text display values.
+9. Unauthorized cross-business and anonymous reads are blocked; authorized member/admin reads are proven.
+10. Arabic RTL browser verification covers the required label, exact values, maturity, current-cutoff messaging, no lifetime-completion claim, desktop behavior, and 390px containment.
+11. Task 24 Lifetime Revenue Stream Analysis remains out of scope.
