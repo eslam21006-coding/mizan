@@ -579,7 +579,7 @@ export function TransactionImportValidator({
     >
       <div className={styles.validationHeading}>
         <div>
-          <span className={styles.kicker}>الخطوة 4</span>
+          <span className={styles.kicker}>الخطوة 5</span>
           <h2 id="transaction-validation-title">راجع البيانات قبل الحفظ</h2>
           <p>
             يفحص ميزان الملف كاملًا قبل الاستيراد ويوقف أي معاملة متشابهة لا يمكن الجزم بأنها مكررة حتى تقرر أنت.

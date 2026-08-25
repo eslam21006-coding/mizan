@@ -34,9 +34,9 @@ const ERROR_MESSAGES: Record<string, string> = {
 const WORKFLOW_STEPS = [
   "تنزيل النموذج",
   "رفع الملف",
+  "معاينة الملف",
   "مطابقة الأعمدة",
-  "مراجعة البيانات",
-  "حفظ المعاملات",
+  "مراجعة وحفظ",
 ] as const;
 
 function fileSizeLabel(bytes: number) {

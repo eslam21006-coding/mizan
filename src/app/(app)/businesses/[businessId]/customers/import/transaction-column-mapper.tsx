@@ -127,7 +127,7 @@ export function TransactionColumnMapper({
       <section className={styles.mappingPanel} aria-labelledby="transaction-mapping-title">
         <div className={styles.mappingHeading}>
           <div>
-            <span className={styles.kicker}>الخطوة 3</span>
+            <span className={styles.kicker}>الخطوة 4</span>
             <h2 id="transaction-mapping-title">طابق أعمدة ملفك</h2>
             <p>
               حدد العمود الذي يحتوي على كل معلومة. أول ثلاثة حقول مطلوبة، ورقم المعاملة والعملة اختياريان.
