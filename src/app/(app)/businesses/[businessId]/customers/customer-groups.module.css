@@ -12,7 +12,9 @@
   gap: 8px;
 }
 
-.actionLink {
+.actionLink,
+.emptyAction,
+.retryButton {
   min-height: 40px;
   display: inline-flex;
   align-items: center;
@@ -22,15 +24,26 @@
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
+  font: inherit;
   font-size: 12px;
   font-weight: 800;
+  text-decoration: none;
 }
 
-.actionLink:hover {
+.retryButton {
+  margin-top: 12px;
+  cursor: pointer;
+}
+
+.actionLink:hover,
+.emptyAction:hover,
+.retryButton:hover {
   border-color: var(--brand);
 }
 
 .actionLink:focus-visible,
+.emptyAction:focus-visible,
+.retryButton:focus-visible,
 .pagination button:focus-visible,
 .tableShell:focus-visible {
   outline: 3px solid var(--brand-ring);
@@ -40,8 +53,8 @@
 .businessStrip {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 13px 15px;
   background: var(--surface-soft);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -49,7 +62,7 @@
 
 .businessStrip > div {
   display: grid;
-  gap: 5px;
+  gap: 4px;
 }
 
 .businessStrip span,
@@ -66,7 +79,8 @@
 .groupPanel,
 .statusPanel,
 .errorPanel,
-.emptyPanel {
+.emptyPanel,
+.compactEmptyPanel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -74,7 +88,7 @@
 }
 
 .groupPanel {
-  padding: 22px;
+  padding: 20px;
 }
 
 .groupHeading {
@@ -93,10 +107,10 @@
 .groupHeading p,
 .emptyPanel p,
 .errorPanel p {
-  margin: 8px 0 0;
+  margin: 7px 0 0;
   color: var(--text-soft);
   font-size: 13px;
-  line-height: 1.8;
+  line-height: 1.75;
 }
 
 .kicker {
@@ -106,10 +120,10 @@
 }
 
 .identityCount {
-  min-width: 116px;
+  min-width: 108px;
   display: grid;
   gap: 3px;
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: var(--brand-soft);
   border-radius: 12px;
   text-align: center;
@@ -117,12 +131,12 @@
 
 .identityCount strong {
   color: var(--brand-strong);
-  font-size: 23px;
+  font-size: 22px;
 }
 
 .tableShell {
   max-width: 100%;
-  margin-top: 18px;
+  margin-top: 16px;
   overflow-x: auto;
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -183,7 +197,7 @@
   align-items: center;
   justify-content: center;
   gap: 12px;
-  margin-top: 16px;
+  margin-top: 14px;
 }
 
 .pagination button {
@@ -212,8 +226,9 @@
 
 .statusPanel,
 .errorPanel,
-.emptyPanel {
-  padding: 24px;
+.emptyPanel,
+.compactEmptyPanel {
+  padding: 20px;
 }
 
 .statusPanel {
@@ -233,6 +248,30 @@
   color: var(--brand);
   font-size: 11px;
   font-weight: 800;
+}
+
+.emptyActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.compactEmptyPanel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-soft);
+  box-shadow: none;
+}
+
+.compactEmptyPanel strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.compactEmptyPanel span {
+  font-size: 12px;
 }
 
 @media (max-width: 760px) {
@@ -259,7 +298,30 @@
     padding: 16px;
   }
 
+  .compactEmptyPanel {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
   .pagination {
     flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 430px) {
+  .pageActions,
+  .actionLink,
+  .emptyActions,
+  .emptyAction,
+  .retryButton {
+    width: 100%;
+  }
+
+  .groupPanel,
+  .statusPanel,
+  .errorPanel,
+  .emptyPanel,
+  .compactEmptyPanel {
+    padding: 14px;
   }
 }

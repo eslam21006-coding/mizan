@@ -7,7 +7,6 @@ import {
   inspectTransactionColumnMapping,
   REQUIRED_TRANSACTION_FIELDS,
   setTransactionFieldColumn,
-  TRANSACTION_FIELD_LABELS,
   TRANSACTION_MAPPING_FIELDS,
   TRANSACTION_NATIVE_MAPPING_OPTION_LIMIT,
   type TransactionColumnMapping,
@@ -30,20 +29,28 @@ type TransactionColumnMapperProps = {
   onImportBusyChange: (busy: boolean) => void;
 };
 
-function fieldDescription(field: TransactionMappingField) {
-  if (field === "customerEmail") return "العمود الذي يحتوي على بريد العميل.";
-  if (field === "transactionDate") return "العمود الذي يحتوي على تاريخ أو توقيت المعاملة كما صدر من بوابة الدفع.";
-  if (field === "amountCollected") return "العمود الذي يحتوي على المبلغ المحصل.";
+const FIELD_LABELS: Record<TransactionMappingField, string> = {
+  customerEmail: "البريد الإلكتروني للعميل",
+  transactionDate: "تاريخ المعاملة",
+  amountCollected: "المبلغ المحصل",
+  transactionId: "رقم المعاملة",
+  currency: "العملة",
+};
+
+function fieldDescription(field: TransactionMappingField, baseCurrency: string) {
+  if (field === "customerEmail") return "اختر العمود الذي يحتوي على بريد العميل.";
+  if (field === "transactionDate") return "اختر العمود الذي يحتوي على تاريخ أو توقيت المعاملة.";
+  if (field === "amountCollected") return "اختر العمود الذي يحتوي على قيمة المعاملة بدون رمز العملة.";
   if (field === "transactionId") {
-    return "اختياري. اربطه إذا كان تصدير بوابة الدفع يحتوي على Transaction ID ثابت.";
+    return "اختياري. يفضل استخدامه لأنه يجعل اكتشاف المعاملات المكررة أكثر دقة.";
   }
-  return "اختياري. إذا كان الملف يحتوي Currency فاربطه حتى يرفض Mizan أي صف بعملة مختلفة عن عملة البزنس.";
+  return `اختياري. إذا لم يوجد عمود للعملة، ستؤكد أن جميع المعاملات بعملة ${baseCurrency}.`;
 }
 
 function emptyOptionLabel(field: TransactionMappingField, required: boolean) {
-  if (required) return "اختر عمودًا";
-  if (field === "transactionId") return "بدون Transaction ID";
-  return "بدون Currency column";
+  if (required) return "اختر العمود";
+  if (field === "transactionId") return "لا يوجد رقم معاملة";
+  return "لا يوجد عمود للعملة";
 }
 
 function sampleValue(preview: TransactionFilePreview, column: number) {
@@ -120,21 +127,20 @@ export function TransactionColumnMapper({
       <section className={styles.mappingPanel} aria-labelledby="transaction-mapping-title">
         <div className={styles.mappingHeading}>
           <div>
-            <span className={styles.kicker}>Task 20 · Mapping + Duplicate Key</span>
-            <h2 id="transaction-mapping-title">اربط أعمدة الملف بالحقول المطلوبة</h2>
+            <span className={styles.kicker}>الخطوة 4</span>
+            <h2 id="transaction-mapping-title">طابق أعمدة ملفك</h2>
             <p>
-              الحقول الثلاثة الأولى مطلوبة. Transaction ID وCurrency اختياريان؛ Currency المربوط يُفحص صفًا
-              بصف مقابل عملة البزنس الأساسية {baseCurrency}.
+              حدد العمود الذي يحتوي على كل معلومة. أول ثلاثة حقول مطلوبة، ورقم المعاملة والعملة اختياريان.
             </p>
           </div>
           <span className={mappingState.isComplete ? styles.mappingReady : styles.mappingPending}>
-            {mappingState.isComplete ? "Mapping مكتمل" : "Mapping غير مكتمل"}
+            {mappingState.isComplete ? "الأعمدة مكتملة" : "أكمل الأعمدة المطلوبة"}
           </span>
         </div>
 
         {!hasValidColumnCount ? (
           <div className={styles.mappingError} role="alert">
-            عدد الأعمدة في الملف غير صالح للـ Mapping. اختر ملفًا آخر.
+            تعذر قراءة أعمدة الملف. اختر ملفًا آخر.
           </div>
         ) : (
           <div className={styles.mappingGrid}>
@@ -150,10 +156,10 @@ export function TransactionColumnMapper({
               return (
                 <div className={styles.mappingField} key={field}>
                   <label htmlFor={controlId}>
-                    {TRANSACTION_FIELD_LABELS[field]}
+                    {FIELD_LABELS[field]}
                     {!required && " · اختياري"}
                   </label>
-                  <p>{fieldDescription(field)}</p>
+                  <p>{fieldDescription(field, baseCurrency)}</p>
 
                   {usesDirectColumnEntry ? (
                     <>
@@ -172,13 +178,14 @@ export function TransactionColumnMapper({
                       <p id={helpId}>
                         اكتب رقم العمود من 1 إلى {preview.totalColumns}.
                         {selected !== null
-                          ? ` المحدد: Column ${transactionColumnLabel(selected)}${selectedSample ? ` — ${selectedSample.slice(0, 48)}` : ""}`
+                          ? ` المحدد: العمود ${transactionColumnLabel(selected)}${selectedSample ? ` — ${selectedSample.slice(0, 48)}` : ""}`
                           : ""}
                       </p>
                     </>
                   ) : (
                     <select
                       id={controlId}
+                      aria-label={FIELD_LABELS[field]}
                       value={selected ?? ""}
                       disabled={importBusy}
                       onChange={(event) => setSelectField(field, event.currentTarget.value)}
@@ -186,7 +193,7 @@ export function TransactionColumnMapper({
                       <option value="">{emptyOptionLabel(field, required)}</option>
                       {options.map((option) => (
                         <option key={option.column} value={option.column}>
-                          {option.label}
+                          العمود {option.label}
                           {option.sample ? ` — ${option.sample.slice(0, 48)}` : ""}
                         </option>
                       ))}
@@ -200,7 +207,7 @@ export function TransactionColumnMapper({
 
         {hasValidColumnCount && mappingState.hasDuplicateColumns && (
           <div className={styles.mappingError} role="alert">
-            لا يمكن استخدام نفس العمود لأكثر من حقل. اختر عمودًا مختلفًا لكل Mapping.
+            لا يمكن استخدام نفس العمود لأكثر من معلومة. اختر عمودًا مختلفًا لكل حقل.
           </div>
         )}
 
@@ -208,8 +215,7 @@ export function TransactionColumnMapper({
           !mappingState.hasDuplicateColumns &&
           mappingState.missingFields.length > 0 && (
             <p className={styles.mappingHint}>
-              الحقول المطلوبة المتبقية:{" "}
-              {mappingState.missingFields.map((field) => TRANSACTION_FIELD_LABELS[field]).join("، ")}.
+              الحقول المطلوبة المتبقية: {mappingState.missingFields.map((field) => FIELD_LABELS[field]).join("، ")}.
             </p>
           )}
 
@@ -217,24 +223,24 @@ export function TransactionColumnMapper({
           <div className={styles.mappingSummary}>
             {REQUIRED_TRANSACTION_FIELDS.map((field) => (
               <div key={field}>
-                <span>{TRANSACTION_FIELD_LABELS[field]}</span>
-                <strong dir="ltr">Column {transactionColumnLabel(mapping[field] as number)}</strong>
+                <span>{FIELD_LABELS[field]}</span>
+                <strong>العمود {transactionColumnLabel(mapping[field] as number)}</strong>
               </div>
             ))}
             <div>
-              <span>{TRANSACTION_FIELD_LABELS.transactionId}</span>
-              <strong dir="ltr">
+              <span>{FIELD_LABELS.transactionId}</span>
+              <strong>
                 {mapping.transactionId === null || mapping.transactionId === undefined
-                  ? "Candidate duplicate check"
-                  : `Column ${transactionColumnLabel(mapping.transactionId)}`}
+                  ? "سيتم التحقق من التكرار من البيانات المتاحة"
+                  : `العمود ${transactionColumnLabel(mapping.transactionId)}`}
               </strong>
             </div>
             <div>
-              <span>{TRANSACTION_FIELD_LABELS.currency}</span>
-              <strong dir="ltr">
+              <span>{FIELD_LABELS.currency}</span>
+              <strong>
                 {mapping.currency === null || mapping.currency === undefined
-                  ? `Import confirmation → ${baseCurrency}`
-                  : `Column ${transactionColumnLabel(mapping.currency)}`}
+                  ? `ستؤكد عملة الملف: ${baseCurrency}`
+                  : `العمود ${transactionColumnLabel(mapping.currency)}`}
               </strong>
             </div>
           </div>

@@ -1,0 +1,3 @@
+Customer Email,Transaction Date,Amount Collected,Transaction ID,Currency
+ahmed@example.com,2026-08-01T14:30:00+03:00,1500,TXN-1001,EGP
+sara@example.com,2026-08-05T11:00:00+03:00,750,TXN-1002,EGP

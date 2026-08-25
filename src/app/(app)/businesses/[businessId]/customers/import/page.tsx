@@ -42,9 +42,16 @@ export default async function TransactionImportPage({ params }: TransactionImpor
       <div className={styles.headingRow}>
         <PageHeading
           title="استيراد معاملات العملاء"
-          description={`اختر تصدير CSV أو XLSX خاص بـ ${business.name}، راجع الـ Mapping والـ Validation، ثم استورد المعاملات مع منع التكرار.`}
+          description="ارفع ملف CSV أو XLSX من بوابة الدفع، ثم راجع البيانات قبل حفظها في ميزان."
         />
         <div className={styles.headingLinks}>
+          <a
+            className={`${styles.backLink} ${styles.templateLink}`}
+            href="/mizan-transactions-template.csv"
+            download="mizan-transactions-template.csv"
+          >
+            تنزيل نموذج CSV
+          </a>
           <Link className={styles.backLink} href="/customers">
             العملاء و LTV
           </Link>
@@ -53,6 +60,66 @@ export default async function TransactionImportPage({ params }: TransactionImpor
           </Link>
         </div>
       </div>
+
+      <section className={styles.importGuide} aria-labelledby="import-guide-title">
+        <div className={styles.guideHeading}>
+          <div>
+            <span className={styles.kicker}>قبل رفع الملف</span>
+            <h2 id="import-guide-title">ماذا يجب أن يحتوي الملف؟</h2>
+          </div>
+          <a
+            className={styles.guideDownload}
+            href="/mizan-transactions-template.csv"
+            download="mizan-transactions-template.csv"
+          >
+            تنزيل النموذج الجاهز
+          </a>
+        </div>
+
+        <div className={styles.guideGrid}>
+          <article className={styles.guideCard}>
+            <span className={styles.requiredBadge}>مطلوب</span>
+            <ul>
+              <li>
+                <strong>البريد الإلكتروني للعميل</strong>
+                <small dir="ltr">Customer Email</small>
+              </li>
+              <li>
+                <strong>تاريخ المعاملة</strong>
+                <small dir="ltr">Transaction Date</small>
+                <small dir="ltr">مثال: 2026-08-23 أو 2026-08-23T14:30:00+03:00</small>
+              </li>
+              <li>
+                <strong>المبلغ المحصل</strong>
+                <small dir="ltr">Amount Collected</small>
+              </li>
+            </ul>
+          </article>
+
+          <article className={styles.guideCard}>
+            <span className={styles.optionalBadge}>اختياري</span>
+            <ul>
+              <li>
+                <strong>رقم المعاملة</strong>
+                <small dir="ltr">Transaction ID</small>
+                <small>يفضل وجوده لأنه يجعل اكتشاف التكرار أكثر دقة.</small>
+              </li>
+              <li>
+                <strong>العملة</strong>
+                <small dir="ltr">Currency</small>
+                <small>إذا لم توجد في الملف، ستؤكد أن جميع المعاملات بعملة البزنس.</small>
+              </li>
+            </ul>
+          </article>
+        </div>
+
+        <p className={styles.guideNote}>
+          يمكن أن تكون أسماء أعمدة ملفك مختلفة؛ بعد رفع الملف ستحدد لميزان أي عمود يمثل كل معلومة.
+        </p>
+        <p className={styles.splitNote}>
+          يجب أن يحتوي الملف الواحد على تحصيلات أو استرجاعات فقط. إذا كان التصدير يحتوي على النوعين، افصلهما إلى ملفين ثم ارفع كل ملف على حدة.
+        </p>
+      </section>
 
       <section className={styles.businessContext} aria-label="البزنس المحدد">
         <div>
@@ -64,12 +131,11 @@ export default async function TransactionImportPage({ params }: TransactionImpor
           <strong dir="ltr">{business.base_currency}</strong>
         </div>
         <div>
-          <span>منطقة التقارير الزمنية</span>
+          <span>المنطقة الزمنية</span>
           <strong dir="ltr">{business.timezone}</strong>
         </div>
-        <p>
-          المعاينة والـ Mapping والـ Validation تظل داخل المتصفح. لا تُحفظ المعاملات إلا بعد نجاح Validation
-          وتأكيد حالة الملف وعملته، وعندها يحفظ Mizan التوقيت الأصلي ويطبق Duplicate Protection داخل قاعدة البيانات.
+        <p className={styles.businessContextNote}>
+          لن تُحفظ أي معاملة قبل مراجعة الملف وتأكيد الاستيراد.
         </p>
       </section>
 

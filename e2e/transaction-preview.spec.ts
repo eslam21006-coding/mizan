@@ -23,10 +23,10 @@ async function login(page: import("@playwright/test").Page) {
   await expect(page).toHaveURL(/\/$/);
 }
 
-test.describe("Task 19 transaction import validation", () => {
+test.describe("Transaction import UX and validation", () => {
   test.skip(!hasLiveAuth, "Requires live Mizan Supabase credentials or a one-use invite token");
 
-  test("validates mapped CSV rows beyond the preview without importing transactions", async ({ page }) => {
+  test("shows the template contract and validates mapped CSV rows", async ({ page }) => {
     test.setTimeout(150_000);
 
     const browserErrors: string[] = [];
@@ -56,8 +56,24 @@ test.describe("Task 19 transaction import validation", () => {
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 
     const businessCard = page.locator("article").filter({ hasText: businessName });
-    await businessCard.getByRole("link", { name: "معاينة CSV / XLSX" }).click();
+    await businessCard.getByRole("link", { name: "استيراد CSV / XLSX" }).click();
     await expect(page).toHaveURL(/\/businesses\/[^/]+\/customers\/import$/);
+
+    await expect(page.getByRole("heading", { name: "ماذا يجب أن يحتوي الملف؟" })).toBeVisible();
+    await expect(page.getByText("Customer Email", { exact: true })).toBeVisible();
+    await expect(page.getByText("Transaction Date", { exact: true })).toBeVisible();
+    await expect(page.getByText("Amount Collected", { exact: true })).toBeVisible();
+    await expect(page.getByText("Transaction ID", { exact: true })).toBeVisible();
+    await expect(page.getByText("Currency", { exact: true })).toBeVisible();
+    await expect(page.getByText(/افصلهما إلى ملفين/)).toBeVisible();
+
+    const templateLink = page.getByRole("link", { name: "تنزيل نموذج CSV" });
+    await expect(templateLink).toHaveAttribute("href", "/mizan-transactions-template.csv");
+    await expect(templateLink).toHaveAttribute("download", "mizan-transactions-template.csv");
+    const templateResponse = await page.request.get("/mizan-transactions-template.csv");
+    expect(templateResponse.ok()).toBe(true);
+    const templateText = await templateResponse.text();
+    expect(templateText).toContain("Customer Email,Transaction Date,Amount Collected,Transaction ID,Currency");
 
     const lines = ["Customer Email,Transaction Date,Amount Collected,Status"];
     for (let index = 1; index <= 29; index += 1) {
@@ -65,37 +81,35 @@ test.describe("Task 19 transaction import validation", () => {
     }
     lines.push("not-an-email,2026-08-23,30,paid");
 
-    await page.getByLabel("CSV أو XLSX").setInputFiles({
+    await page.getByLabel("اختر ملف CSV أو XLSX").setInputFiles({
       name: "gateway-export.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(lines.join("\n"), "utf8"),
     });
 
-    await expect(page.getByRole("heading", { name: "معاينة الملف", level: 2 })).toBeVisible();
-    const rowsTerm = page.getByText("الصفوف المحللة", { exact: true });
+    await expect(page.getByRole("heading", { name: "راجع الملف", level: 2 })).toBeVisible();
+    const rowsTerm = page.getByText("الصفوف", { exact: true });
     await expect(rowsTerm.locator("xpath=following-sibling::dd[1]")).toHaveText("31");
 
-    await page.getByLabel("Customer Email").selectOption("0");
-    await page.getByLabel("Transaction Date").selectOption("1");
-    await page.getByLabel("Amount Collected").selectOption("2");
-    await expect(page.getByText("Mapping مكتمل", { exact: true })).toBeVisible();
+    await page.getByLabel("البريد الإلكتروني للعميل").selectOption("0");
+    await page.getByLabel("تاريخ المعاملة").selectOption("1");
+    await page.getByLabel("المبلغ المحصل").selectOption("2");
+    await expect(page.getByText("الأعمدة مكتملة", { exact: true })).toBeVisible();
 
     await page.getByRole("checkbox", { name: /أول صف غير فارغ يحتوي على عناوين الأعمدة/ }).check();
-    await page.getByRole("button", { name: "تشغيل Validation" }).click();
+    await page.getByRole("button", { name: "مراجعة الملف" }).click();
 
-    await expect(page.getByText("Validation يحتاج تعديل", { exact: true })).toBeVisible();
-    const checkedRows = page.getByText("صفوف تم فحصها", { exact: true });
-    await expect(checkedRows.locator("xpath=following-sibling::strong[1]")).toHaveText("30");
-    const invalidRows = page.getByText("صفوف غير صالحة", { exact: true });
-    await expect(invalidRows.locator("xpath=following-sibling::strong[1]")).toHaveText("1");
+    await expect(page.getByText("تحتاج إلى تعديل", { exact: true })).toBeVisible();
+    const validationSummary = page.getByRole("status").filter({ hasText: "صفوف تم فحصها" });
+    await expect(validationSummary).toContainText(/صفوف تم فحصها\s*30/);
+    await expect(validationSummary).toContainText(/صفوف غير صالحة\s*1/);
 
-    const issueTable = page.getByRole("table", { name: "جدول أخطاء التحقق من المعاملات" });
+    const issueTable = page.getByRole("table", { name: "جدول أخطاء معاملات العملاء" });
     await expect(issueTable).toContainText("31");
     await expect(issueTable).toContainText("صيغة بريد العميل غير صالحة");
     await expect(issueTable).toContainText("not-an-email");
 
     await expect(page.getByRole("button", { name: "استيراد المعاملات" })).toHaveCount(0);
-    await expect(page.getByText(/Duplicate Protection/)).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect
