@@ -14,9 +14,9 @@ type CustomerTransactionGroup = {
   transaction_count: number | string;
   collection_count: number | string;
   refund_count: number | string;
-  gross_cash_collected: number | string;
-  refunds: number | string;
-  net_cash_collected: number | string;
+  gross_cash_collected_text: string;
+  refunds_text: string;
+  net_cash_collected_text: string;
   last_transaction_at: string | null;
   currency: string | null;
 };
@@ -32,8 +32,8 @@ function exactDisplay(value: number | string | null | undefined) {
   return String(value);
 }
 
-function moneyDisplay(value: number | string, currency: string) {
-  return `${exactDisplay(value)} ${currency}`;
+function moneyDisplay(value: string, currency: string) {
+  return `${value} ${currency}`;
 }
 
 function timestampDisplay(value: string | null, timezone: string) {
@@ -70,7 +70,7 @@ export function CustomerGroupsTable({
       const { data, error: loadError, count } = await supabase
         .from("customer_transaction_groups")
         .select(
-          "business_id,customer_email,acquisition_at,acquisition_date,transaction_count,collection_count,refund_count,gross_cash_collected,refunds,net_cash_collected,last_transaction_at,currency",
+          "business_id,customer_email,acquisition_at,acquisition_date,transaction_count,collection_count,refund_count,gross_cash_collected_text,refunds_text,net_cash_collected_text,last_transaction_at,currency",
           { count: "exact" },
         )
         .eq("business_id", businessId)
@@ -183,10 +183,10 @@ export function CustomerGroupsTable({
                     )}
                   </td>
                   <td dir="ltr">{exactDisplay(row.transaction_count)}</td>
-                  <td dir="ltr">{moneyDisplay(row.gross_cash_collected, currency)}</td>
-                  <td dir="ltr">{moneyDisplay(row.refunds, currency)}</td>
+                  <td dir="ltr">{moneyDisplay(row.gross_cash_collected_text, currency)}</td>
+                  <td dir="ltr">{moneyDisplay(row.refunds_text, currency)}</td>
                   <td dir="ltr">
-                    <strong>{moneyDisplay(row.net_cash_collected, currency)}</strong>
+                    <strong>{moneyDisplay(row.net_cash_collected_text, currency)}</strong>
                   </td>
                   <td>{timestampDisplay(row.last_transaction_at, timezone)}</td>
                 </tr>

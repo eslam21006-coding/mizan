@@ -27,6 +27,7 @@ For each `business_id + customer_email` identity it exposes:
 - Gross Cash Collected;
 - Refunds;
 - Net Cash Collected;
+- exact canonical text forms of the three financial totals for JSON/UI transport;
 - last successful transaction timestamp;
 - business base currency.
 
@@ -53,7 +54,7 @@ For one customer identity:
 
 Refunds remain contra-revenue and are never treated as expenses.
 
-The authoritative aggregation is PostgreSQL `numeric`; the UI renders returned decimal values and does not recompute customer cash totals with JavaScript floating point.
+The authoritative aggregation remains PostgreSQL `numeric`. The same view also emits `gross_cash_collected_text`, `refunds_text`, and `net_cash_collected_text` using PostgreSQL's canonical trimmed decimal representation. The browser renders those text fields rather than transporting the totals through a JavaScript `Number`, so display cannot introduce binary floating-point precision loss. Future calculations must continue using the numeric columns, not the display text columns.
 
 ## Security
 
@@ -87,7 +88,7 @@ Task 21 is complete only when all of the following are true:
 6. Refunds never establish acquisition.
 7. Refund-only identities remain grouped with null acquisition.
 8. Known-input SQL tests prove exact transaction counts, Gross Cash, Refunds, and Net Cash.
-9. Grouped financial values use PostgreSQL numeric arithmetic; the UI does not recompute them with binary floating point.
+9. Grouped financial values use PostgreSQL numeric arithmetic and exact PostgreSQL-generated text for browser display; the UI never routes those totals through binary floating-point formatting.
 10. RLS/privilege tests prove unrelated mentees and anonymous users cannot read protected groups while authorized members/admins can.
 11. Arabic RTL browser verification covers grouped identities, refund-only acquisition state, exact displayed grouped amounts, and 390px mobile containment.
 12. Task 22 cohorts and Task 23 Observed LTV remain out of scope.

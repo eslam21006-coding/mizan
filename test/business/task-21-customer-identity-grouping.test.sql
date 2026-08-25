@@ -69,6 +69,12 @@ begin
     raise exception 'grouped cash totals are wrong: gross %, refunds %, net %', buyer.gross_cash_collected, buyer.refunds, buyer.net_cash_collected;
   end if;
 
+  if buyer.gross_cash_collected_text <> '150'
+    or buyer.refunds_text <> '30'
+    or buyer.net_cash_collected_text <> '120' then
+    raise exception 'exact financial transport text is wrong: gross %, refunds %, net %', buyer.gross_cash_collected_text, buyer.refunds_text, buyer.net_cash_collected_text;
+  end if;
+
   if buyer.currency <> 'EGP' then
     raise exception 'group currency did not preserve the business base currency: %', buyer.currency;
   end if;
@@ -90,6 +96,12 @@ begin
     or refund_only.refunds <> 5
     or refund_only.net_cash_collected <> -5 then
     raise exception 'refund-only financial totals are wrong';
+  end if;
+
+  if refund_only.gross_cash_collected_text <> '0'
+    or refund_only.refunds_text <> '5'
+    or refund_only.net_cash_collected_text <> '-5' then
+    raise exception 'refund-only exact financial transport text is wrong';
   end if;
 end;
 $$;
