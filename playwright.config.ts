@@ -5,6 +5,8 @@ export default defineConfig({
   fullyParallel: false,
   retries: 0,
   reporter: [["list"], ["html", { outputFolder: "playwright-report", open: "never" }]],
+  globalSetup: "./e2e/global-setup.ts",
+  globalTeardown: "./e2e/global-teardown.ts",
   use: {
     baseURL: "http://127.0.0.1:3000",
     trace: "retain-on-failure",
