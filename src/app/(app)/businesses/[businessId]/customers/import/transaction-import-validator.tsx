@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
-import {
-  TRANSACTION_FIELD_LABELS,
-  type TransactionColumnMapping,
-} from "@/lib/business/transaction-column-mapping";
+import type { TransactionColumnMapping } from "@/lib/business/transaction-column-mapping";
 import {
   type CandidateDuplicateResolution,
   isValidTransactionImportSource,
@@ -87,7 +84,7 @@ const FIELD_LABELS = {
   customerEmail: "بريد العميل",
   transactionDate: "تاريخ المعاملة",
   amountCollected: "المبلغ المحصل",
-  transactionId: "Transaction ID",
+  transactionId: "رقم المعاملة",
   currency: "العملة",
 } as const satisfies Record<TransactionValidationField, string>;
 
@@ -95,16 +92,16 @@ const ISSUE_MESSAGES = {
   EMAIL_REQUIRED: "بريد العميل مطلوب.",
   EMAIL_INVALID: "صيغة بريد العميل غير صالحة أو أطول من الحد المسموح.",
   TRANSACTION_DATE_REQUIRED: "تاريخ المعاملة مطلوب.",
-  TRANSACTION_DATE_INVALID: "استخدم تاريخ أو توقيت ISO صالحًا مثل 2026-08-23 أو 2026-08-23T14:30:00+03:00.",
+  TRANSACTION_DATE_INVALID: "استخدم تاريخًا أو توقيتًا صالحًا مثل 2026-08-23 أو 2026-08-23T14:30:00+03:00.",
   AMOUNT_REQUIRED: "المبلغ المحصل مطلوب.",
   AMOUNT_INVALID: "المبلغ يجب أن يكون رقمًا صالحًا بدون رمز عملة.",
-  TRANSACTION_ID_TOO_LONG: "Transaction ID أطول من 512 حرفًا.",
-  CURRENCY_REQUIRED: "قيمة Currency مطلوبة في كل صف عندما تربط عمود العملة.",
+  TRANSACTION_ID_TOO_LONG: "رقم المعاملة أطول من 512 حرفًا.",
+  CURRENCY_REQUIRED: "قيمة العملة مطلوبة في كل صف عندما تختار عمود العملة.",
   CURRENCY_MISMATCH: "عملة الصف مختلفة عن العملة الأساسية للبزنس.",
 } as const satisfies Record<TransactionValidationIssueCode, string>;
 
 const SOURCE_ERROR_MESSAGES = {
-  INVALID_MAPPING: "الـ Mapping غير صالح. راجع الأعمدة المطلوبة ثم أعد المحاولة.",
+  INVALID_MAPPING: "مطابقة الأعمدة غير صالحة. راجع الأعمدة المطلوبة ثم أعد المحاولة.",
   SOURCE_BYTES_MISMATCH: "تعذر مطابقة الملف الحالي مع المعاينة. اختر الملف من جديد.",
   SOURCE_ENCODING_UNSUPPORTED: "ترميز ملف CSV غير مدعوم للتحقق.",
   SOURCE_CSV_MALFORMED: "ملف CSV غير صالح للتحقق.",
@@ -276,7 +273,7 @@ export function TransactionImportValidator({
     if (!selected) {
       setResult(null);
       setValidatedRows(null);
-      setError("أكمل Mapping الحقول المطلوبة أولًا.");
+      setError("أكمل مطابقة الأعمدة المطلوبة أولًا.");
       return;
     }
 
@@ -314,7 +311,7 @@ export function TransactionImportValidator({
       if (caught instanceof TransactionValidationSourceError) {
         setError(SOURCE_ERROR_MESSAGES[caught.code]);
       } else {
-        setError("حدث خطأ غير متوقع أثناء التحقق. لم يتم رفع أو حفظ أي بيانات.");
+        setError("حدث خطأ غير متوقع أثناء مراجعة الملف. لم يتم رفع أو حفظ أي بيانات.");
       }
     } finally {
       setIsValidating(false);
@@ -422,7 +419,7 @@ export function TransactionImportValidator({
 
   const importTransactions = async () => {
     if (!result?.isValid || !validatedRows) {
-      setImportError("شغّل Validation ناجحًا قبل الاستيراد.");
+      setImportError("راجع الملف بنجاح قبل الاستيراد.");
       return;
     }
     if (!source || !sources.includes(source)) {
@@ -434,11 +431,11 @@ export function TransactionImportValidator({
       return;
     }
     if (!currencyReady) {
-      setImportError(`اربط عمود Currency أو أكّد أن كل مبالغ الملف بعملة ${baseCurrency}.`);
+      setImportError(`اختر عمود العملة أو أكّد أن كل مبالغ الملف بعملة ${baseCurrency}.`);
       return;
     }
     if (!transactionType) {
-      setImportError("حدد هل هذا الملف يحتوي Collections أم Refunds قبل الاستيراد.");
+      setImportError("حدد هل هذا الملف يحتوي على تحصيلات أم استرجاعات قبل الاستيراد.");
       return;
     }
 
@@ -456,7 +453,7 @@ export function TransactionImportValidator({
       } catch (caught) {
         if (caught instanceof TransactionImportPreparationError) {
           setImportError(
-            `تعذر تجهيز الصف ${caught.rowNumber} للاستيراد. Collections يجب أن تكون موجبة، وRefunds يجب أن تكون غير صفرية.`,
+            `تعذر تجهيز الصف ${caught.rowNumber} للاستيراد. التحصيلات يجب أن تكون موجبة، والاسترجاعات يجب ألا تكون صفرًا.`,
           );
         } else {
           setImportError("تعذر تجهيز الصفوف للاستيراد. لم يتم إرسال أي بيانات.");
@@ -487,7 +484,7 @@ export function TransactionImportValidator({
       if (confirmed.insertedCount + confirmed.duplicateCount > 0) setImportResult(confirmed);
       setImportError(
         confirmed.insertedCount + confirmed.duplicateCount > 0
-          ? `توقف الاستيراد بعد تأكيد معالجة ${confirmed.insertedCount + confirmed.duplicateCount} صف. تمت إضافة ${confirmed.insertedCount} وتأكيد ${confirmed.duplicateCount} مكرر. أعد المحاولة؛ هوية إعادة المحاولة لكل صف تمنع مضاعفة صف تم حفظه قبل انقطاع الرد.`
+          ? `توقف الاستيراد بعد تأكيد معالجة ${confirmed.insertedCount + confirmed.duplicateCount} صف. تمت إضافة ${confirmed.insertedCount} وتأكيد ${confirmed.duplicateCount} مكرر. أعد المحاولة؛ لن يضيف ميزان صفًا تم حفظه بالفعل مرة ثانية.`
           : "تعذر استيراد المعاملات. لم يؤكد السيرفر حفظ أي صفوف. أعد المحاولة بعد التحقق من الاتصال.",
       );
       onImportBusyChange(false);
@@ -502,7 +499,7 @@ export function TransactionImportValidator({
       (candidate) => candidateDecisions[candidate.row.row_number] !== undefined,
     );
     if (!allResolved) {
-      setImportError("اختر قرارًا لكل صف متصادم قبل المتابعة.");
+      setImportError("اختر قرارًا لكل معاملة متشابهة قبل المتابعة.");
       return;
     }
 
@@ -559,7 +556,7 @@ export function TransactionImportValidator({
       setImportError(
         confirmed
           ? `تم تأكيد التقدم حتى الآن: ${confirmed.insertedCount} مضافة و${confirmed.duplicateCount} مكررة. تعذر إكمال الطلب التالي؛ أعد الاستيراد بأمان لإكمال الصفوف المتبقية.`
-          : "تعذر تطبيق قرارات التصادم أو متابعة الاستيراد. أعد المحاولة؛ معرفات القرار تمنع تكرار قرار تم حفظه بالفعل.",
+          : "تعذر تطبيق القرارات أو متابعة الاستيراد. أعد المحاولة؛ لن يكرر ميزان قرارًا تم حفظه بالفعل.",
       );
     } finally {
       setIsImporting(false);
@@ -582,16 +579,15 @@ export function TransactionImportValidator({
     >
       <div className={styles.validationHeading}>
         <div>
-          <span className={styles.kicker}>Task 20 · Validation + Duplicate Protection</span>
-          <h2 id="transaction-validation-title">تحقق من الصفوف ثم استوردها بدون تكرار صامت</h2>
+          <span className={styles.kicker}>الخطوة 4</span>
+          <h2 id="transaction-validation-title">راجع البيانات قبل الحفظ</h2>
           <p>
-            Validation يفحص الملف كاملًا أولًا. Transaction ID يعطي Duplicate مؤكدة؛ أما التطابق بدون ID فيتوقف
-            حتى تختار بنفسك هل الصف مكرر أم شراء مستقل.
+            يفحص ميزان الملف كاملًا قبل الاستيراد ويوقف أي معاملة متشابهة لا يمكن الجزم بأنها مكررة حتى تقرر أنت.
           </p>
         </div>
         {result && (
           <span className={result.isValid ? styles.validationReady : styles.validationBlocked}>
-            {result.isValid ? "Validation ناجح" : "Validation يحتاج تعديل"}
+            {result.isValid ? "المراجعة ناجحة" : "تحتاج إلى تعديل"}
           </span>
         )}
       </div>
@@ -606,7 +602,7 @@ export function TransactionImportValidator({
           />
           <span>
             <strong>أول صف غير فارغ يحتوي على عناوين الأعمدة</strong>
-            <small>فعّل هذا الاختيار فقط إذا كان أول صف Header وليس معاملة فعلية.</small>
+            <small>فعّل هذا الاختيار فقط إذا كان أول صف أسماء الأعمدة وليس معاملة فعلية.</small>
           </span>
         </label>
         <button
@@ -615,19 +611,19 @@ export function TransactionImportValidator({
           disabled={isValidating || workflowLocked}
           onClick={() => void validate()}
         >
-          {isValidating ? "جاري التحقق…" : "تشغيل Validation"}
+          {isValidating ? "جاري المراجعة…" : "مراجعة الملف"}
         </button>
       </div>
 
       <div className={styles.validationMappingNote}>
-        <span>{TRANSACTION_FIELD_LABELS.customerEmail}</span>
-        <span>{TRANSACTION_FIELD_LABELS.transactionDate}</span>
-        <span>{TRANSACTION_FIELD_LABELS.amountCollected}</span>
+        <span>{FIELD_LABELS.customerEmail}</span>
+        <span>{FIELD_LABELS.transactionDate}</span>
+        <span>{FIELD_LABELS.amountCollected}</span>
         <span>
-          {TRANSACTION_FIELD_LABELS.transactionId}: {mapping.transactionId == null ? "Candidate check" : "Mapped"}
+          {FIELD_LABELS.transactionId}: {mapping.transactionId == null ? "غير موجود — سنراجع التكرار بالبيانات المتاحة" : "تم اختياره"}
         </span>
         <span>
-          {TRANSACTION_FIELD_LABELS.currency}: {currencyMapped ? `Mapped → ${baseCurrency}` : `Confirm → ${baseCurrency}`}
+          {FIELD_LABELS.currency}: {currencyMapped ? `تم اختيارها — ${baseCurrency}` : `ستؤكد عملة الملف — ${baseCurrency}`}
         </span>
       </div>
 
@@ -647,24 +643,22 @@ export function TransactionImportValidator({
           </div>
 
           {result.skippedHeaderRows > 0 && (
-            <p className={styles.validationNote}>تم استبعاد أول صف غير فارغ باعتباره Header بناءً على اختيارك.</p>
+            <p className={styles.validationNote}>تم استبعاد أول صف غير فارغ باعتباره عناوين الأعمدة بناءً على اختيارك.</p>
           )}
 
           {result.isValid ? (
             <>
               <div className={styles.validationSuccess}>
-                كل الصفوف صالحة. أكمل مصدر المعاملات وتصنيف الملف وعملته قبل بدء الاستيراد مع Duplicate Protection.
+                كل الصفوف صالحة. أكمل مصدر المعاملات ونوع الملف وعملته، ثم أكد الاستيراد.
               </div>
               <fieldset className={task20Styles.importPanel}>
-                <legend className={task20Styles.importLegend}>Duplicate Protection قبل الحفظ</legend>
+                <legend className={task20Styles.importLegend}>تأكيد الاستيراد</legend>
                 <p>
-                  إذا كان Transaction ID موجودًا نستخدمه كدليل Duplicate نهائي داخل نفس المصدر. عند غيابه،
-                  التطابق في البريد + التوقيت + المبلغ + المصدر + نوع المعاملة يعتبر Candidate فقط ولا يتم حذفه
-                  أو إضافته حتى تحسمه أنت.
+                  إذا توفر رقم المعاملة، يستخدمه ميزان لاكتشاف التكرار بدقة. وإذا لم يتوفر، يقارن البريد والتوقيت والمبلغ والمصدر ونوع المعاملة، ويطلب قرارك عندما لا يكون التكرار مؤكدًا.
                 </p>
 
                 <div className={task20Styles.sourceField}>
-                  <label htmlFor="transaction-import-source">مصدر المعاملات المسجل</label>
+                  <label htmlFor="transaction-import-source">مصدر المعاملات</label>
                   <select
                     id="transaction-import-source"
                     className={task20Styles.sourceInput}
@@ -672,10 +666,10 @@ export function TransactionImportValidator({
                     disabled={workflowLocked || isLoadingSources || isCreatingSource}
                     onChange={(event) => { setSource(event.currentTarget.value); resetImportProgress(); }}
                   >
-                    <option value="">اختر مصدرًا مسجلًا</option>
+                    <option value="">اختر مصدرًا</option>
                     {sources.map((sourceOption) => <option value={sourceOption} key={sourceOption}>{sourceOption}</option>)}
                   </select>
-                  <small>إعادة الاستيراد يجب أن تستخدم نفس المصدر المسجل. المصدر الجديد يعني نظام معاملات مختلفًا فعلًا.</small>
+                  <small>عند إعادة استيراد ملف من نفس بوابة الدفع، استخدم المصدر نفسه حتى يستطيع ميزان اكتشاف التكرار بشكل صحيح.</small>
                 </div>
 
                 <div className={task20Styles.sourceField}>
@@ -710,7 +704,7 @@ export function TransactionImportValidator({
                   />
                   <span>
                     <strong>أؤكد أن هذا الملف يحتوي على معاملات ناجحة فقط</strong>
-                    <small>Failed / Pending / Cancelled لا تدخل الحسابات. إذا كان الملف Mixed، افصله أو صدّر Successful فقط قبل الاستيراد.</small>
+                    <small>إذا كان الملف يحتوي على معاملات فاشلة أو معلقة أو ملغاة، استبعدها أولًا ثم أعد رفع الملف.</small>
                   </span>
                 </label>
 
@@ -724,7 +718,7 @@ export function TransactionImportValidator({
                     />
                     <span>
                       <strong>أؤكد أن كل مبالغ الملف بعملة {baseCurrency}</strong>
-                      <small>لا يوجد Currency column مربوط. Mizan V1 لا يحول العملات تلقائيًا.</small>
+                      <small>لم يتم اختيار عمود للعملة. ميزان لا يحول العملات تلقائيًا في الإصدار الحالي.</small>
                     </span>
                   </label>
                 )}
@@ -739,10 +733,10 @@ export function TransactionImportValidator({
                     onChange={(event) => { setTransactionType(event.currentTarget.value as NormalizedTransactionType | ""); resetImportProgress(); }}
                   >
                     <option value="">اختر النوع</option>
-                    <option value="collection">Collections — مبالغ محصلة</option>
-                    <option value="refund">Refunds — مبالغ مستردة</option>
+                    <option value="collection">تحصيلات — مبالغ محصلة</option>
+                    <option value="refund">استرجاعات — مبالغ مستردة</option>
                   </select>
-                  <small>هذا Default لملف موحد النوع. Collections موجبة؛ Refunds تُحفظ كمقادير موجبة وتخصم من الإيراد.</small>
+                  <small>يجب أن يحتوي الملف الواحد على نوع واحد فقط. إذا كان الملف يحتوي على تحصيلات واسترجاعات، افصلهما إلى ملفين.</small>
                 </div>
 
                 <button
@@ -762,22 +756,22 @@ export function TransactionImportValidator({
                       <div><span>تحتاج قرارًا</span><strong>{importResult.candidateCount}</strong></div>
                     </div>
                     {importResult.candidateCount > 0
-                      ? " تم إيقاف الاستيراد عند أول مجموعة تصادمات حتى لا نفقد شراءً حقيقيًا أو نضاعف صفًا بصمت."
+                      ? " تم إيقاف الاستيراد عند أول معاملات متشابهة تحتاج قرارك، حتى لا نحذف شراءً حقيقيًا أو نكرر معاملة موجودة."
                       : importResult.insertedCount === 0 && importResult.duplicateCount > 0
                         ? " لم تتم مضاعفة أي معاملات؛ كل الصفوف كانت مكررة مؤكدة أو تم تأكيدها كمكررة."
-                        : " تم حفظ الصفوف الجديدة فقط مع تطبيق قرارات التصادم بشكل قابل للتدقيق."}
+                        : " تم حفظ الصفوف الجديدة فقط، مع الاحتفاظ بسجل واضح لأي قرار متعلق بالتكرار."}
                   </div>
                 )}
 
                 {pendingCandidates.length > 0 && (
                   <div className={task20Styles.candidatePanel}>
                     <div>
-                      <h3>تصادمات تحتاج قرارك</h3>
-                      <p>هذه الصفوف تشبه معاملات موجودة لكنها ليست Duplicate مؤكدة. اختر لكل صف القرار واحفظه في سجل التدقيق.</p>
+                      <h3>معاملات متشابهة تحتاج قرارك</h3>
+                      <p>هذه الصفوف تشبه معاملات موجودة، لكن لا يمكن الجزم بأنها مكررة. راجع كل صف وحدد هل هو مكرر أم معاملة مستقلة.</p>
                     </div>
                     <div className={task20Styles.candidateTableShell}>
-                      <table className={task20Styles.candidateTable} aria-label="تصادمات منع تكرار المعاملات">
-                        <thead><tr><th scope="col">الصف</th><th scope="col">البريد</th><th scope="col">التاريخ/التوقيت</th><th scope="col">النوع</th><th scope="col">المبلغ</th><th scope="col">مطابقات موجودة</th><th scope="col">القرار</th></tr></thead>
+                      <table className={task20Styles.candidateTable} aria-label="معاملات متشابهة تحتاج مراجعة">
+                        <thead><tr><th scope="col">الصف</th><th scope="col">البريد</th><th scope="col">التاريخ والتوقيت</th><th scope="col">النوع</th><th scope="col">المبلغ</th><th scope="col">مطابقات موجودة</th><th scope="col">القرار</th></tr></thead>
                         <tbody>
                           {pendingCandidates.map((candidate) => {
                             const rowNumber = candidate.row.row_number;
@@ -786,7 +780,7 @@ export function TransactionImportValidator({
                                 <td>{rowNumber}</td><td dir="auto">{candidate.row.customer_email}</td><td dir="ltr">{candidate.row.transaction_date}</td><td dir="ltr">{candidate.row.transaction_type}</td><td dir="ltr">{candidate.row.amount_collected}</td><td>{candidate.existingCount}</td>
                                 <td>
                                   <select
-                                    aria-label={`قرار التصادم للصف ${rowNumber}`}
+                                    aria-label={`قرار المعاملة في الصف ${rowNumber}`}
                                     value={candidateDecisions[rowNumber] ?? ""}
                                     disabled={isImporting}
                                     onChange={(event) => {
@@ -795,7 +789,7 @@ export function TransactionImportValidator({
                                       setImportError(null);
                                     }}
                                   >
-                                    <option value="">اختر</option><option value="duplicate">مكرر — لا تضفه</option><option value="keep_distinct">شراء مستقل — احتفظ به</option>
+                                    <option value="">اختر</option><option value="duplicate">مكرر — لا تضفه</option><option value="keep_distinct">معاملة مستقلة — احتفظ بها</option>
                                   </select>
                                 </td>
                               </tr>
@@ -820,13 +814,13 @@ export function TransactionImportValidator({
             </>
           ) : result.checkedRows === 0 ? (
             <div className={styles.mappingError} role="alert">
-              {skipFirstRow ? "لا توجد معاملات قابلة للتحقق بعد استبعاد أول صف باعتباره Header." : "لا توجد صفوف معاملات قابلة للتحقق في الملف."}
+              {skipFirstRow ? "لا توجد معاملات قابلة للمراجعة بعد استبعاد أول صف باعتباره عناوين الأعمدة." : "لا توجد صفوف معاملات قابلة للمراجعة في الملف."}
             </div>
           ) : (
             <div className={styles.validationIssues}>
               <h3>أول المشكلات المكتشفة</h3>
               <div className={styles.tableShell}>
-                <table className={styles.issueTable} aria-label="جدول أخطاء التحقق من المعاملات">
+                <table className={styles.issueTable} aria-label="جدول أخطاء معاملات العملاء">
                   <thead><tr><th scope="col">الصف</th><th scope="col">الحقل</th><th scope="col">المشكلة</th><th scope="col">القيمة</th></tr></thead>
                   <tbody>
                     {result.issues.map((issue) => (

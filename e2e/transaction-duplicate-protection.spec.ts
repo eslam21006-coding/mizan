@@ -58,7 +58,7 @@ test.describe("Task 20 transaction duplicate protection", () => {
 
     await page.goto("/customers");
     const businessCard = page.locator("article").filter({ hasText: businessName });
-    await businessCard.getByRole("link", { name: "معاينة CSV / XLSX" }).click();
+    await businessCard.getByRole("link", { name: "استيراد CSV / XLSX" }).click();
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 
@@ -69,24 +69,24 @@ test.describe("Task 20 transaction duplicate protection", () => {
       "second@example.com,2026-08-25T02:30:00+03:00,200,txn_2,EGP",
     ].join("\n");
 
-    await page.getByLabel("CSV أو XLSX").setInputFiles({
+    await page.getByLabel("اختر ملف CSV أو XLSX").setInputFiles({
       name: "stripe-export.csv",
       mimeType: "text/csv",
       buffer: Buffer.from(csv, "utf8"),
     });
 
-    await page.getByLabel("Customer Email").selectOption("0");
-    await page.getByLabel("Transaction Date").selectOption("1");
-    await page.getByLabel("Amount Collected").selectOption("2");
-    await page.getByLabel(/Transaction ID/).selectOption("3");
-    await page.getByLabel(/Currency/).selectOption("4");
+    await page.getByLabel("البريد الإلكتروني للعميل").selectOption("0");
+    await page.getByLabel("تاريخ المعاملة").selectOption("1");
+    await page.getByLabel("المبلغ المحصل").selectOption("2");
+    await page.getByLabel("رقم المعاملة").selectOption("3");
+    await page.getByLabel("العملة").selectOption("4");
     await page.getByRole("checkbox", { name: /أول صف غير فارغ يحتوي على عناوين الأعمدة/ }).check();
-    await page.getByRole("button", { name: "تشغيل Validation" }).click();
-    await expect(page.getByText("Validation ناجح", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "مراجعة الملف" }).click();
+    await expect(page.getByText("المراجعة ناجحة", { exact: true })).toBeVisible();
 
     await page.getByLabel("إضافة مصدر جديد").fill("Stripe");
     await page.getByRole("button", { name: "إضافة المصدر" }).click();
-    await expect(page.getByLabel("مصدر المعاملات المسجل")).toHaveValue("stripe");
+    await expect(page.getByLabel("مصدر المعاملات")).toHaveValue("stripe");
     await page.getByRole("checkbox", { name: /أؤكد أن هذا الملف يحتوي على معاملات ناجحة فقط/ }).check();
     await page.getByLabel("نوع المعاملات في هذا الملف").selectOption("collection");
 

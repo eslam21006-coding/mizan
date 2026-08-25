@@ -97,15 +97,15 @@ test.describe("Transaction import UX and validation", () => {
     await expect(page.getByText("الأعمدة مكتملة", { exact: true })).toBeVisible();
 
     await page.getByRole("checkbox", { name: /أول صف غير فارغ يحتوي على عناوين الأعمدة/ }).check();
-    await page.getByRole("button", { name: "تشغيل Validation" }).click();
+    await page.getByRole("button", { name: "مراجعة الملف" }).click();
 
-    await expect(page.getByText("Validation يحتاج تعديل", { exact: true })).toBeVisible();
+    await expect(page.getByText("تحتاج إلى تعديل", { exact: true })).toBeVisible();
     const checkedRows = page.getByText("صفوف تم فحصها", { exact: true });
     await expect(checkedRows.locator("xpath=following-sibling::strong[1]")).toHaveText("30");
     const invalidRows = page.getByText("صفوف غير صالحة", { exact: true });
     await expect(invalidRows.locator("xpath=following-sibling::strong[1]")).toHaveText("1");
 
-    const issueTable = page.getByRole("table", { name: "جدول أخطاء التحقق من المعاملات" });
+    const issueTable = page.getByRole("table", { name: "جدول أخطاء معاملات العملاء" });
     await expect(issueTable).toContainText("31");
     await expect(issueTable).toContainText("صيغة بريد العميل غير صالحة");
     await expect(issueTable).toContainText("not-an-email");
