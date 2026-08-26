@@ -59,8 +59,6 @@ export const sqlFiles = Object.freeze([
   "test/business/task-22-cohort-engine.test.sql",
   "supabase/migrations/20260825143000_task_23_observed_ltv.sql",
   "test/business/task-23-observed-ltv.test.sql",
-  "supabase/migrations/20260826092800_task_24_revenue_stream_composite_key_index.sql",
-  "supabase/migrations/20260826092900_task_24_attach_revenue_stream_composite_key.sql",
   "supabase/migrations/20260826093000_task_24_lifetime_revenue_stream_analysis.sql",
   "supabase/migrations/20260826093100_task_24_support_other_revenue_stream.sql",
   "supabase/migrations/20260826093200_task_24_attribution_display.sql",
