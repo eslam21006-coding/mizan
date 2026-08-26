@@ -14,6 +14,7 @@ declare
   resolved_scenario_id uuid;
   override_pair record;
   override_numeric numeric;
+  override_text text;
   allowed_keys constant text[] := array[
     'customer_value',
     'cpl',
@@ -58,12 +59,17 @@ begin
       raise invalid_parameter_value using message = 'Unsupported simulator override key.';
     end if;
 
-    if pg_catalog.jsonb_typeof(override_pair.value) <> 'number' then
-      raise invalid_parameter_value using message = 'Simulator override values must be numeric.';
+    if pg_catalog.jsonb_typeof(override_pair.value) not in ('number', 'string') then
+      raise invalid_parameter_value using message = 'Simulator override values must be numeric decimals.';
+    end if;
+
+    override_text := override_pair.value #>> '{}';
+    if override_text !~ '^\d{1,16}(\.\d{1,8})?$' then
+      raise invalid_parameter_value using message = 'Simulator override value must use up to 16 integer and 8 decimal digits.';
     end if;
 
     begin
-      override_numeric := (override_pair.value #>> '{}')::numeric;
+      override_numeric := override_text::numeric;
     exception when others then
       raise invalid_parameter_value using message = 'Simulator override value is not a valid numeric.';
     end;
@@ -216,7 +222,7 @@ grant execute on function public.duplicate_simulator_scenario(uuid, uuid, text, 
 grant execute on function public.duplicate_simulator_scenario(uuid, uuid, text, uuid) to service_role;
 
 comment on function public.save_simulator_scenario(uuid, uuid, text, uuid, jsonb) is
-  'Task 33 atomic save/update for sparse simulator overrides. The function authorizes the business explicitly and writes only Task 32 scenario tables; historical actual tables are never modified.';
+  'Task 33 atomic save/update for sparse exact-decimal simulator overrides. The function authorizes the business explicitly and writes only Task 32 scenario tables; historical actual tables are never modified.';
 
 comment on function public.duplicate_simulator_scenario(uuid, uuid, text, uuid) is
   'Task 33 atomic scenario duplication with a new identity and copied sparse overrides. Historical actual tables are never modified.';
