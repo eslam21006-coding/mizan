@@ -59,6 +59,10 @@ export const sqlFiles = Object.freeze([
   "test/business/task-22-cohort-engine.test.sql",
   "supabase/migrations/20260825143000_task_23_observed_ltv.sql",
   "test/business/task-23-observed-ltv.test.sql",
+  "supabase/migrations/20260826093000_task_24_lifetime_revenue_stream_analysis.sql",
+  "test/business/task-24-lifetime-revenue-stream-analysis.test.sql",
+  "supabase/migrations/20260826094500_task_25_lifetime_contribution_profit.sql",
+  "test/business/task-25-lifetime-contribution-profit.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -116,7 +120,7 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     }
   }
 
-  console.log("Task 4-8, Task 14-16, and Tasks 20-23 database-backed security/business matrices passed.");
+  console.log("Task 4-8, Task 14-16, and Tasks 20-25 database-backed security/business matrices passed.");
   return 0;
 }
 
