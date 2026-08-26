@@ -78,6 +78,7 @@ const connectionTargetOverrideParameters = Object.freeze([
   "service",
   "servicefile",
 ]);
+const approvedTestDatabasePort = "5432";
 
 function validateDatabaseUrl(databaseUrl) {
   if (!databaseUrl) {
@@ -93,6 +94,12 @@ function validateDatabaseUrl(databaseUrl) {
   if (overrideParameter) {
     throw new Error(
       `Refusing RLS database URL with connection target override parameter: ${overrideParameter}.`,
+    );
+  }
+
+  if (parsedDatabaseUrl.port && parsedDatabaseUrl.port !== approvedTestDatabasePort) {
+    throw new Error(
+      `Refusing RLS database URL unless it uses PostgreSQL test port ${approvedTestDatabasePort}.`,
     );
   }
 
