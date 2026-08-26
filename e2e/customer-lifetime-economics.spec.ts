@@ -53,16 +53,24 @@ test.describe("Tasks 24-25 lifetime customer economics", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByRole("heading", { name: "تحليل مصادر الإيراد مدى الحياة" })).toBeVisible();
-    await expect(page.getByText("1700 EGP", { exact: true })).toBeVisible();
-    await expect(page.getByText("500 EGP", { exact: true })).toBeVisible();
-    await expect(page.getByText("150 EGP", { exact: true })).toBeVisible();
-    await expect(page.getByText("أخرى", { exact: true })).toBeVisible();
-    await expect(page.getByText("غير منسوب", { exact: true }).first()).toBeVisible();
+
+    const revenueStreamTable = page.getByRole("table", {
+      name: "جدول تحليل مصادر الإيراد مدى الحياة",
+    });
+    await expect(revenueStreamTable.getByText("1700 EGP", { exact: true })).toBeVisible();
+    await expect(revenueStreamTable.getByText("500 EGP", { exact: true })).toBeVisible();
+    await expect(revenueStreamTable.getByText("150 EGP", { exact: true })).toBeVisible();
+    await expect(revenueStreamTable.getByText("أخرى", { exact: true })).toBeVisible();
+    await expect(revenueStreamTable.getByText("غير منسوب", { exact: true }).first()).toBeVisible();
+
     await expect(
       page.getByRole("heading", { name: "Lifetime Contribution Profit / ربح المساهمة مدى الحياة" }),
     ).toBeVisible();
-    await expect(page.getByText("5700 EGP", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText("يتضمن توزيعًا يدويًا", { exact: true })).toBeVisible();
+    const contributionTable = page.getByRole("table", {
+      name: "جدول ربح المساهمة مدى الحياة",
+    });
+    await expect(contributionTable.getByText("5700 EGP", { exact: true }).first()).toBeVisible();
+    await expect(contributionTable.getByText("يتضمن توزيعًا يدويًا", { exact: true })).toBeVisible();
     await expect(page.getByText(/المصاريف العامة الثابتة غير داخلة/)).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
