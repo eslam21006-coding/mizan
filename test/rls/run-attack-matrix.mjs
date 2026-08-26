@@ -78,6 +78,14 @@ const connectionTargetOverrideParameters = Object.freeze([
   "service",
   "servicefile",
 ]);
+const connectionTargetEnvironmentVariables = Object.freeze([
+  "PGHOST",
+  "PGHOSTADDR",
+  "PGPORT",
+  "PGDATABASE",
+  "PGSERVICE",
+  "PGSERVICEFILE",
+]);
 const approvedTestDatabasePort = "5432";
 
 function validateDatabaseUrl(databaseUrl) {
@@ -97,15 +105,21 @@ function validateDatabaseUrl(databaseUrl) {
     );
   }
 
-  if (parsedDatabaseUrl.port && parsedDatabaseUrl.port !== approvedTestDatabasePort) {
+  if (parsedDatabaseUrl.port !== approvedTestDatabasePort) {
     throw new Error(
-      `Refusing RLS database URL unless it uses PostgreSQL test port ${approvedTestDatabasePort}.`,
+      `Refusing RLS database URL unless it explicitly uses PostgreSQL test port ${approvedTestDatabasePort}.`,
     );
   }
 
   if (parsedDatabaseUrl.hostname !== "127.0.0.1" || !databaseName.endsWith("_test")) {
     throw new Error("Refusing to run destructive RLS setup unless RLS_TEST_DATABASE_URL uses the literal loopback address 127.0.0.1 and a database name ending in _test.");
   }
+}
+
+function buildPsqlEnvironment() {
+  const childEnvironment = { ...process.env, PGCONNECT_TIMEOUT: "5" };
+  for (const variable of connectionTargetEnvironmentVariables) delete childEnvironment[variable];
+  return childEnvironment;
 }
 
 export function buildExecutionPlan(databaseUrl) {
@@ -118,10 +132,11 @@ export function buildExecutionPlan(databaseUrl) {
 }
 
 export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL, spawn = spawnSync) {
+  const childEnvironment = buildPsqlEnvironment();
   for (const execution of buildExecutionPlan(databaseUrl)) {
     const result = spawn(execution.command, execution.args, {
       cwd: repositoryRoot,
-      env: { ...process.env, PGCONNECT_TIMEOUT: "5" },
+      env: childEnvironment,
       stdio: "inherit",
     });
     if (result.error) throw new Error(`Failed to execute psql for ${execution.sqlFile}: ${result.error.message}`);
