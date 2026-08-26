@@ -169,7 +169,7 @@ test("Task 29 rounds each upstream funnel stage upward so the target is never un
   assert.equal(result.requiredShows, 238);
   assert.equal(result.requiredBookings, 298);
   assert.equal(result.requiredLeads, 596);
-  assert.ok(result.projectedNetProfit.numerator !== "20500" || result.projectedNetProfit.denominator !== "1");
+  assert.deepEqual(result.projectedNetProfit, ratio(20500));
 });
 
 test("Task 29 fails closed when a target margin cannot be reached under the assumed variable economics", () => {
