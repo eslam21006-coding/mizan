@@ -30,6 +30,10 @@ test("RLS execution plan fails closed for unsafe database URLs", () => {
     () => buildExecutionPlan("postgresql://postgres:postgres@example.com:5432/mizan_test"),
     /literal loopback address 127\.0\.0\.1/,
   );
+  assert.throws(
+    () => buildExecutionPlan("postgresql://postgres:postgres@127.0.0.1:6543/mizan_test"),
+    /PostgreSQL test port 5432/,
+  );
 
   const safeUrl = new URL("postgresql://postgres:postgres@127.0.0.1:5432/mizan_test");
   for (const [parameter, value] of [
