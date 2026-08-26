@@ -29,7 +29,8 @@ export type DataQualityReasonCode =
   | "AD_SPEND_RECONCILIATION_MISMATCH"
   | "AD_SPEND_RECONCILIATION_INCOMPLETE"
   | "CUSTOMER_ECONOMICS_INCOMPLETE"
-  | "SIGNAL_NOT_PROVIDED";
+  | "SIGNAL_NOT_PROVIDED"
+  | "INVALID_DEPENDENCY";
 
 export type DataQualitySource =
   | "business_current"
@@ -286,6 +287,16 @@ function missingSignal(key: string, source: DataQualitySource): DataQualitySigna
   };
 }
 
+function invalidDependencySignal(key: string): DataQualitySignal {
+  return {
+    key,
+    state: "incomplete",
+    source: "dependency",
+    reasonCode: "INVALID_DEPENDENCY",
+    sourceReason: "requiredAny group must contain at least one signal key.",
+  };
+}
+
 function addBusinessSignals(
   target: Record<string, DataQualitySignal>,
   period: "current" | "previous",
@@ -430,7 +441,14 @@ export function evaluateDataQualityDependency(
     if (signal.state !== "ready") blockers.push(signal);
   }
 
-  for (const group of dependency.requiredAny ?? []) {
+  for (const [groupIndex, group] of (dependency.requiredAny ?? []).entries()) {
+    if (group.length === 0) {
+      blockers.push(
+        invalidDependencySignal(`dependency.${dependency.id}.requiredAny.${groupIndex}`),
+      );
+      continue;
+    }
+
     const signals = group.map((key) => dependencySignal(profile, key));
     if (!signals.some((signal) => signal.state === "ready")) {
       blockers.push(...signals.filter((signal) => signal.state !== "ready"));
