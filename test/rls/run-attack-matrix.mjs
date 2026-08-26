@@ -67,6 +67,8 @@ export const sqlFiles = Object.freeze([
   "supabase/migrations/20260826094500_task_25_lifetime_contribution_profit.sql",
   "supabase/migrations/20260826094700_task_25_exact_allocation_display.sql",
   "test/business/task-25-lifetime-contribution-profit.test.sql",
+  "supabase/migrations/20260826202500_task_32_scenario_data_model.sql",
+  "test/business/task-32-scenario-data-model.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -142,7 +144,7 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     if (result.error) throw new Error(`Failed to execute psql for ${execution.sqlFile}: ${result.error.message}`);
     if (result.status !== 0) return result.status ?? 1;
   }
-  console.log("Task 4-8, Task 14-16, and Tasks 20-25 database-backed security/business matrices passed.");
+  console.log("Task 4-8, Task 14-16, Tasks 20-25, and Task 32 database-backed security/business matrices passed.");
   return 0;
 }
 
