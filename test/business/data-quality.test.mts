@@ -321,3 +321,22 @@ test("Task 26 reports partial readiness when only some deterministic dependencie
   assert.equal(summary.results[1]?.ready, false);
   assert.equal(summary.results[1]?.messageAr, DATA_QUALITY_INSUFFICIENT_MESSAGE_AR);
 });
+
+test("Task 26 fails closed when a requiredAny group declares no alternatives", () => {
+  const profile = buildDataQualityProfile({
+    currentBusiness: calculateCoreFinancials(coreInput()),
+    previousBusiness: calculateCoreFinancials(coreInput()),
+  });
+
+  const result = evaluateDataQualityDependency(profile, {
+    id: "invalid-any-of",
+    requiredAny: [[]],
+  });
+
+  assert.equal(result.ready, false);
+  assert.equal(result.messageAr, DATA_QUALITY_INSUFFICIENT_MESSAGE_AR);
+  assert.equal(result.blockers.length, 1);
+  assert.equal(result.blockers[0]?.state, "incomplete");
+  assert.equal(result.blockers[0]?.source, "dependency");
+  assert.equal(result.blockers[0]?.reasonCode, "INVALID_DEPENDENCY");
+});
