@@ -103,14 +103,17 @@ begin
 end;
 $$;
 
+do $$
 begin
-  perform public.assign_customer_transaction_revenue_stream(
-    '24242424-2424-4242-8242-24242424a001',
-    (select id from public.customer_transactions where business_id = '24242424-2424-4242-8242-24242424a001' and source_transaction_id = 'core-1'),
-    '24242424-2424-4242-8242-24242424d003'
-  );
-  raise exception 'Cross-business revenue stream attribution unexpectedly succeeded';
-exception when invalid_parameter_value then null;
+  begin
+    perform public.assign_customer_transaction_revenue_stream(
+      '24242424-2424-4242-8242-24242424a001',
+      (select id from public.customer_transactions where business_id = '24242424-2424-4242-8242-24242424a001' and source_transaction_id = 'core-1'),
+      '24242424-2424-4242-8242-24242424d003'
+    );
+    raise exception 'Cross-business revenue stream attribution unexpectedly succeeded';
+  exception when invalid_parameter_value then null;
+  end;
 end;
 $$;
 
@@ -122,7 +125,9 @@ begin
   if not exists (
     select 1 from public.customer_lifetime_revenue_stream_analysis
     where business_id = '24242424-2424-4242-8242-24242424a001'
-  ) then raise exception 'Authorized member cannot read Task 24 analysis'; end if;
+  ) then
+    raise exception 'Authorized member cannot read Task 24 analysis';
+  end if;
 
   begin
     perform public.assign_customer_transaction_revenue_stream(
@@ -144,7 +149,9 @@ begin
   if exists (
     select 1 from public.customer_lifetime_revenue_stream_analysis
     where business_id = '24242424-2424-4242-8242-24242424a001'
-  ) then raise exception 'Owner B can read Business A Task 24 analysis'; end if;
+  ) then
+    raise exception 'Owner B can read Business A Task 24 analysis';
+  end if;
 end;
 $$;
 
