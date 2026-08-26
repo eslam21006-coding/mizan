@@ -78,19 +78,22 @@ begin
 end;
 $$;
 
+do $$
 begin
-  perform public.save_customer_cohort_cost_allocations(
-    '25252525-2525-4252-8252-25252525a001',
-    '2026-01-01'::date,
-    '[
-      {"cost_type":"acquisition","amount":"1","attribution_method":"direct_actual"},
-      {"cost_type":"variable_fulfillment","amount":"1","attribution_method":"direct_actual"},
-      {"cost_type":"other_variable","amount":"1","attribution_method":"direct_actual"},
-      {"cost_type":"overhead","amount":"4000","attribution_method":"direct_actual"}
-    ]'::jsonb
-  );
-  raise exception 'Fixed overhead unexpectedly entered Lifetime Contribution Profit allocation';
-exception when invalid_parameter_value then null;
+  begin
+    perform public.save_customer_cohort_cost_allocations(
+      '25252525-2525-4252-8252-25252525a001',
+      '2026-01-01'::date,
+      '[
+        {"cost_type":"acquisition","amount":"1","attribution_method":"direct_actual"},
+        {"cost_type":"variable_fulfillment","amount":"1","attribution_method":"direct_actual"},
+        {"cost_type":"other_variable","amount":"1","attribution_method":"direct_actual"},
+        {"cost_type":"overhead","amount":"4000","attribution_method":"direct_actual"}
+      ]'::jsonb
+    );
+    raise exception 'Fixed overhead unexpectedly entered Lifetime Contribution Profit allocation';
+  exception when invalid_parameter_value then null;
+  end;
 end;
 $$;
 
@@ -102,7 +105,9 @@ begin
   if not exists (
     select 1 from public.customer_lifetime_contribution_profit
     where business_id = '25252525-2525-4252-8252-25252525a001'
-  ) then raise exception 'Authorized member cannot read Task 25 result'; end if;
+  ) then
+    raise exception 'Authorized member cannot read Task 25 result';
+  end if;
 
   begin
     perform public.save_customer_cohort_cost_allocations(
@@ -129,7 +134,9 @@ begin
   if exists (
     select 1 from public.customer_lifetime_contribution_profit
     where business_id = '25252525-2525-4252-8252-25252525a001'
-  ) then raise exception 'Owner B can read Business A Task 25 result'; end if;
+  ) then
+    raise exception 'Owner B can read Business A Task 25 result';
+  end if;
 end;
 $$;
 
