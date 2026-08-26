@@ -399,7 +399,7 @@ export function planTarget(goal: TargetGoal, assumptions: TargetPlannerAssumptio
   }
 
   const requiredCustomers = requiredCustomersResult;
-  let funnelPlan;
+  let funnelPlan: ReturnType<typeof reverseEngineerFunnel>;
   try {
     funnelPlan = reverseEngineerFunnel({
       requiredCustomers,
@@ -451,7 +451,7 @@ export function planTarget(goal: TargetGoal, assumptions: TargetPlannerAssumptio
     };
   })();
 
-  let sustainableEconomics;
+  let sustainableEconomics: ReturnType<typeof calculateSustainableAcquisitionEconomics>;
   try {
     sustainableEconomics = calculateSustainableAcquisitionEconomics({
       requiredRevenue: toExactRatio(requiredRevenue),
