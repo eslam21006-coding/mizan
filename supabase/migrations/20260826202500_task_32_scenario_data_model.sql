@@ -10,6 +10,8 @@ create table public.simulator_scenarios (
       name = btrim(name)
       and char_length(name) between 1 and 120
       and name ~ '[^[:space:]]'
+      and name !~ '^[[:space:]]'
+      and name !~ '[[:space:]]$'
     ),
   constraint simulator_scenarios_business_creation_request_unique
     unique (business_id, creation_request_id),
