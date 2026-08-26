@@ -42,6 +42,8 @@
     "test/business/funnel-reverse-engineering.test.mts",
     "test/business/sustainable-acquisition.test.mts",
     "test/business/self-liquidating.test.mts",
+    "test/business/scenario-engine.test.mts",
+    "test/business/scenario-comparison.test.mts",
     "test/business/transaction-preview.test.mts",
     "test/business/transaction-preview-bounds.test.mts",
     "test/business/transaction-import-validation.test.mts",
