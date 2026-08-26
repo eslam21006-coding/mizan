@@ -1,0 +1,191 @@
+.headingRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.backLink {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.managerPanel {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 22px;
+  padding: 24px;
+  box-shadow: 0 16px 40px rgba(15, 43, 38, 0.06);
+}
+
+.managerHeader,
+.cohortHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+
+.managerHeader h2,
+.cohortHeader h3 {
+  margin: 0 0 8px;
+}
+
+.managerHeader p,
+.cohortHeader span {
+  color: var(--text-soft);
+  margin: 0;
+}
+
+.notice,
+.error {
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-block: 14px;
+}
+
+.notice {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+}
+
+.error {
+  background: #fff2f0;
+  border: 1px solid #efb8b0;
+  color: #9c2f28;
+}
+
+.tableShell {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 14px 16px;
+  text-align: right;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.table th {
+  background: var(--surface-soft);
+  color: var(--text-soft);
+  font-size: 0.9rem;
+}
+
+.table select,
+.allocationRow select,
+.allocationRow input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 10px;
+}
+
+.table button,
+.managerPanel button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--brand);
+  color: white;
+  padding: 8px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.table button:disabled,
+.managerPanel button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.pagination button {
+  background: var(--surface-soft);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.cohortCard {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 20px;
+  margin-top: 18px;
+  background: var(--surface-soft);
+}
+
+.cohortHeader > div {
+  display: grid;
+  gap: 4px;
+}
+
+.allocationGrid {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.allocationRow {
+  display: grid;
+  grid-template-columns: minmax(210px, 1fr) minmax(210px, 1fr) minmax(260px, 1.4fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.allocationRow label {
+  display: grid;
+  gap: 6px;
+  font-weight: 700;
+}
+
+.allocationRow label span {
+  color: var(--text-soft);
+  font-size: 0.88rem;
+}
+
+.noteField {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .managerPanel {
+    padding: 16px;
+    border-radius: 18px;
+  }
+
+  .allocationRow {
+    grid-template-columns: 1fr;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+  }
+}
