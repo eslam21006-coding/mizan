@@ -102,6 +102,32 @@ test("Task 29 revenue target reverse-engineers the full funnel and uses an expli
   assert.deepEqual(result.maximumCpl, { available: true, value: ratio(52) });
 });
 
+test("Task 29 revenue target readiness is based on the revenue goal while sustainability metrics fail closed below break-even", () => {
+  const result = planTarget({ type: "revenue", amount: "5000" }, manualAssumptions());
+
+  assert.equal(result.status, "ready");
+  if (result.status !== "ready") return;
+
+  assert.deepEqual(result.profitConstraint, { kind: "break_even", amount: ratio(0) });
+  assert.equal(result.requiredCustomers, 5);
+  assert.deepEqual(result.requiredRevenue, ratio(5000));
+  assert.deepEqual(result.requiredAdSpend, ratio(1000));
+  assert.deepEqual(result.projectedNetProfit, ratio(-6500));
+  assert.deepEqual(result.projectedMargin, ratio(-13, 10));
+  assert.deepEqual(result.maximumSustainableAcquisitionCac, {
+    available: false,
+    reason: "NO_ACQUISITION_HEADROOM",
+  });
+  assert.deepEqual(result.maximumMediaCac, {
+    available: false,
+    reason: "NO_MEDIA_HEADROOM",
+  });
+  assert.deepEqual(result.maximumCpl, {
+    available: false,
+    reason: "MAX_MEDIA_CAC_UNAVAILABLE",
+  });
+});
+
 test("Task 29 net profit target solves the minimum customer count with exact fixed-cost economics", () => {
   const result = planTarget({ type: "net_profit", amount: "20000" }, manualAssumptions());
 
