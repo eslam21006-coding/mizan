@@ -59,71 +59,92 @@ export const sqlFiles = Object.freeze([
   "test/business/task-22-cohort-engine.test.sql",
   "supabase/migrations/20260825143000_task_23_observed_ltv.sql",
   "test/business/task-23-observed-ltv.test.sql",
+  "supabase/migrations/20260826093000_task_24_lifetime_revenue_stream_analysis.sql",
+  "supabase/migrations/20260826093100_task_24_support_other_revenue_stream.sql",
+  "supabase/migrations/20260826093200_task_24_attribution_display.sql",
+  "test/business/task-24-lifetime-revenue-stream-analysis.test.sql",
+  "test/business/task-24-other-revenue-stream-regression.test.sql",
+  "supabase/migrations/20260826094500_task_25_lifetime_contribution_profit.sql",
+  "supabase/migrations/20260826094700_task_25_exact_allocation_display.sql",
+  "test/business/task-25-lifetime-contribution-profit.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
+const connectionTargetOverrideParameters = Object.freeze([
+  "host",
+  "hostaddr",
+  "port",
+  "dbname",
+  "service",
+  "servicefile",
+]);
+const connectionTargetEnvironmentVariables = Object.freeze([
+  "PGHOST",
+  "PGHOSTADDR",
+  "PGPORT",
+  "PGDATABASE",
+  "PGSERVICE",
+  "PGSERVICEFILE",
+]);
+const approvedTestDatabasePort = "5432";
 
 function validateDatabaseUrl(databaseUrl) {
   if (!databaseUrl) {
-    throw new Error(
-      "RLS_TEST_DATABASE_URL is required. Point it only at a disposable local database whose name ends in _test.",
-    );
+    throw new Error("RLS_TEST_DATABASE_URL is required. Point it only at a disposable local database whose name ends in _test.");
   }
 
   const parsedDatabaseUrl = new URL(databaseUrl);
   const databaseName = decodeURIComponent(parsedDatabaseUrl.pathname.replace(/^\//, ""));
-  const loopbackHosts = new Set(["127.0.0.1"]);
+  const overrideParameter = connectionTargetOverrideParameters.find((parameter) =>
+    parsedDatabaseUrl.searchParams.has(parameter),
+  );
 
-  if (!loopbackHosts.has(parsedDatabaseUrl.hostname) || !databaseName.endsWith("_test")) {
+  if (overrideParameter) {
     throw new Error(
-      "Refusing to run destructive RLS setup unless RLS_TEST_DATABASE_URL uses the literal loopback address 127.0.0.1 and a database name ending in _test.",
+      `Refusing RLS database URL with connection target override parameter: ${overrideParameter}.`,
     );
   }
+
+  if (parsedDatabaseUrl.port !== approvedTestDatabasePort) {
+    throw new Error(
+      `Refusing RLS database URL unless it explicitly uses PostgreSQL test port ${approvedTestDatabasePort}.`,
+    );
+  }
+
+  if (parsedDatabaseUrl.hostname !== "127.0.0.1" || !databaseName.endsWith("_test")) {
+    throw new Error("Refusing to run destructive RLS setup unless RLS_TEST_DATABASE_URL uses the literal loopback address 127.0.0.1 and a database name ending in _test.");
+  }
+}
+
+function buildPsqlEnvironment() {
+  const childEnvironment = { ...process.env, PGCONNECT_TIMEOUT: "5" };
+  for (const variable of connectionTargetEnvironmentVariables) delete childEnvironment[variable];
+  return childEnvironment;
 }
 
 export function buildExecutionPlan(databaseUrl) {
   validateDatabaseUrl(databaseUrl);
-
   return sqlFiles.map((sqlFile) => ({
     command: "psql",
     sqlFile,
-    args: [
-      "--no-psqlrc",
-      "--set",
-      "ON_ERROR_STOP=1",
-      "--dbname",
-      databaseUrl,
-      "--file",
-      sqlFile,
-    ],
+    args: ["--no-psqlrc", "--set", "ON_ERROR_STOP=1", "--dbname", databaseUrl, "--file", sqlFile],
   }));
 }
 
 export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL, spawn = spawnSync) {
+  const childEnvironment = buildPsqlEnvironment();
   for (const execution of buildExecutionPlan(databaseUrl)) {
     const result = spawn(execution.command, execution.args, {
       cwd: repositoryRoot,
-      env: { ...process.env, PGCONNECT_TIMEOUT: "5" },
+      env: childEnvironment,
       stdio: "inherit",
     });
-
-    if (result.error) {
-      throw new Error(`Failed to execute psql for ${execution.sqlFile}: ${result.error.message}`);
-    }
-
-    if (result.status !== 0) {
-      return result.status ?? 1;
-    }
+    if (result.error) throw new Error(`Failed to execute psql for ${execution.sqlFile}: ${result.error.message}`);
+    if (result.status !== 0) return result.status ?? 1;
   }
-
-  console.log("Task 4-8, Task 14-16, and Tasks 20-23 database-backed security/business matrices passed.");
+  console.log("Task 4-8, Task 14-16, and Tasks 20-25 database-backed security/business matrices passed.");
   return 0;
 }
 
-const isMainModule = Boolean(
-  process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]),
-);
-
-if (isMainModule) {
-  process.exitCode = runAttackMatrix();
-}
+const isMainModule = Boolean(process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]));
+if (isMainModule) process.exitCode = runAttackMatrix();

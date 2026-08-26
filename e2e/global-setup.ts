@@ -17,6 +17,7 @@ type CleanupInput = {
 };
 
 const BUSINESS_DEPENDENT_TABLES = [
+  "customer_cohort_cost_allocations",
   "customer_transaction_duplicate_resolutions",
   "customer_transactions",
   "customer_transaction_sources",
@@ -123,10 +124,7 @@ export default async function globalSetup() {
     },
   });
 
-  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
   if (authError || !authData.user) {
     throw new Error(`Could not authenticate the dedicated E2E account: ${authError?.message ?? "missing user"}`);
   }
@@ -134,9 +132,7 @@ export default async function globalSetup() {
   const previousState = await readPreviousState();
   if (previousState) {
     if (previousState.userId !== authData.user.id) {
-      throw new Error(
-        "Pending E2E cleanup belongs to a different user. Refusing to overwrite cleanup ownership.",
-      );
+      throw new Error("Pending E2E cleanup belongs to a different user. Refusing to overwrite cleanup ownership.");
     }
 
     const { data: currentBusinesses, error: currentBusinessError } = await supabase
@@ -152,12 +148,7 @@ export default async function globalSetup() {
       .map((business) => String(business.id))
       .filter((businessId) => !previousBaseline.has(businessId));
 
-    await cleanupE2eBusinesses({
-      supabaseUrl,
-      secretKey,
-      userId: authData.user.id,
-      businessIds: pendingBusinessIds,
-    });
+    await cleanupE2eBusinesses({ supabaseUrl, secretKey, userId: authData.user.id, businessIds: pendingBusinessIds });
     await rm(E2E_STATE_PATH, { force: true });
   }
 
