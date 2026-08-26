@@ -6,7 +6,11 @@ create table public.simulator_scenarios (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint simulator_scenarios_name_check
-    check (name = btrim(name) and char_length(name) between 1 and 120),
+    check (
+      name = btrim(name)
+      and char_length(name) between 1 and 120
+      and name ~ '[^[:space:]]'
+    ),
   constraint simulator_scenarios_business_creation_request_unique
     unique (business_id, creation_request_id),
   constraint simulator_scenarios_business_id_id_unique
@@ -44,6 +48,8 @@ create table public.simulator_scenario_overrides (
         'backend_revenue'
       )
     ),
+  constraint simulator_scenario_overrides_finite_check
+    check (override_value <> 'NaN'::numeric),
   constraint simulator_scenario_overrides_non_negative_check
     check (override_value >= 0),
   constraint simulator_scenario_overrides_rate_check
