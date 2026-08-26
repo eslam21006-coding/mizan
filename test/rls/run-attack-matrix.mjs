@@ -69,6 +69,7 @@ export const sqlFiles = Object.freeze([
   "test/business/task-25-lifetime-contribution-profit.test.sql",
   "supabase/migrations/20260826202500_task_32_scenario_data_model.sql",
   "test/business/task-32-scenario-data-model.test.sql",
+  "test/business/task-32-scenario-input-hardening.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
