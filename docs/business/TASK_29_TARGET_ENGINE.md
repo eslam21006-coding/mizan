@@ -34,7 +34,16 @@ When enough data exists, the default assumption source is **Rolling 3 Months act
 
 Task 29 never hides assumptions. Every ready plan returns the complete assumption object and its source.
 
-Rolling 3 Month defaults require exactly three consecutive calendar months. The resolver aggregates the three actual months and derives:
+Rolling 3 Month defaults require exactly three consecutive **complete** calendar months ending at an explicit `lastCompleteMonth` supplied by the caller. The resolver does not infer completeness from the current clock. This keeps the calculation deterministic and prevents a current, incomplete, or future month from being treated as historical actual performance.
+
+Before any aggregation, the resolver verifies that:
+
+- exactly three months were supplied,
+- the months are consecutive,
+- no supplied month is after `lastCompleteMonth`, and
+- the newest supplied month is exactly `lastCompleteMonth`.
+
+The resolver then aggregates the three actual months and derives:
 
 - Revenue Per New Customer = total Net Cash Collected / total New Customers
 - Assumed Media CAC = total Ad Spend / total New Customers
@@ -98,11 +107,13 @@ Let:
 
 `Total Fixed Costs = Fixed Acquisition Costs + Fixed Non-Acquisition Costs`
 
-Then:
+Then, when Unit Profit Before Fixed Costs is positive:
 
 `Required New Customers = ceil((Target Real Net Profit + Total Fixed Costs) / Unit Profit Before Fixed Costs)`
 
-If Unit Profit Before Fixed Costs is non-positive while positive contribution is required, the target is unattainable under the current assumptions.
+A negative Unit Profit Before Fixed Costs is always unattainable for a non-negative Net Profit target, including a target of exactly zero. Adding a customer would reduce profit, so the engine must not return a ready plan that misses the target.
+
+If Unit Profit Before Fixed Costs is exactly zero, a one-customer zero-profit plan is allowed only when the required contribution is also exactly zero, meaning both the Net Profit target and total fixed costs are zero. Otherwise the target is unattainable.
 
 ## Real Net Profit Margin target
 
@@ -194,7 +205,7 @@ The default assumption resolver fails closed when required actual data is missin
 - no Sales
 - non-positive aggregate Net Cash
 
-It also rejects impossible aggregate funnel sequences where a downstream count exceeds its upstream count.
+It rejects current/incomplete or future months relative to the supplied `lastCompleteMonth`, rejects stale three-month windows that do not end at that boundary, and rejects impossible aggregate funnel sequences where a downstream count exceeds its upstream count.
 
 No missing value is converted to zero and no conversion rate is invented.
 
@@ -278,18 +289,20 @@ Expected:
 ## Acceptance criteria
 
 1. Revenue, Real Net Profit, and Real Net Profit Margin targets are supported.
-2. Rolling 3 Month actuals can create the default assumption set only from exactly three consecutive complete months.
-3. Every ready plan exposes all assumptions and their source.
-4. Required Revenue, Customers, Sales, Qualified Calls, Shows, Bookings, Leads, and Ad Spend are returned.
-5. Funnel counts round upward stage-by-stage.
-6. Maximum Sustainable CAC is explicitly Acquisition CAC, never Ultimate CAC.
-7. Maximum Media CAC deducts fixed and variable non-media acquisition costs.
-8. Maximum CPL uses the sustainable media budget and required Leads.
-9. Revenue targets disclose the break-even sustainability guardrail.
-10. Net Profit and Margin targets use the entered profitability constraint.
-11. Impossible unit economics or margin targets fail closed.
-12. Missing/zero Rolling 3 Month denominators never produce invented assumptions.
-13. Exact rational arithmetic is used for all financial calculations.
-14. Numerical tests lock known inputs and expected outputs for all three target types.
-15. The Task 29 `.mts` regression test is included in TypeScript checking.
-16. No UI, persistence, simulator, database/RLS, or historical actual mutation is included.
+2. Rolling 3 Month actuals create the default assumption set only from exactly three consecutive complete months ending at the supplied `lastCompleteMonth`.
+3. Incomplete, future, or stale Rolling 3 windows are rejected before aggregation.
+4. Every ready plan exposes all assumptions and their source.
+5. Required Revenue, Customers, Sales, Qualified Calls, Shows, Bookings, Leads, and Ad Spend are returned.
+6. Funnel counts round upward stage-by-stage.
+7. Maximum Sustainable CAC is explicitly Acquisition CAC, never Ultimate CAC.
+8. Maximum Media CAC deducts fixed and variable non-media acquisition costs.
+9. Maximum CPL uses the sustainable media budget and required Leads.
+10. Revenue targets disclose the break-even sustainability guardrail.
+11. Net Profit and Margin targets use the entered profitability constraint.
+12. Negative unit economics never return a ready non-negative Net Profit plan; the exact-zero boundary is allowed only when it truly meets zero profit.
+13. Impossible unit economics or margin targets fail closed.
+14. Missing/zero Rolling 3 Month denominators never produce invented assumptions.
+15. Exact rational arithmetic is used for all financial calculations.
+16. Numerical tests lock known inputs and expected outputs for all three target types and the zero/negative-profit boundaries.
+17. The Task 29 `.mts` regression test is included in TypeScript checking.
+18. No UI, persistence, simulator, database/RLS, or historical actual mutation is included.
