@@ -345,7 +345,9 @@ function resolveRequiredCustomers(
   if (goal.type === "net_profit") {
     const targetProfit = fromDecimal(goal.amount, "target net profit");
     const requiredContribution = add(targetProfit, fixedTotal);
-    if (compare(unitProfitBeforeFixed, ZERO) <= 0) {
+    const unitProfitComparison = compare(unitProfitBeforeFixed, ZERO);
+    if (unitProfitComparison < 0) return "NON_POSITIVE_UNIT_PROFIT";
+    if (unitProfitComparison === 0) {
       return requiredContribution.numerator === 0n ? 1 : "NON_POSITIVE_UNIT_PROFIT";
     }
     return Math.max(1, ceilPositive(divide(requiredContribution, unitProfitBeforeFixed), "requiredCustomers"));
@@ -598,20 +600,28 @@ function collectActualCount(
 }
 
 /**
- * Builds Task 29's default monthly assumptions from exactly three consecutive months of actual performance.
+ * Builds Task 29's default monthly assumptions from the three consecutive months ending at lastCompleteMonth.
  * Ratios use aggregated numerators/denominators; fixed costs use the exact three-month monthly average.
  */
 export function resolveRolling3TargetAssumptions(
   actualMonths: readonly Rolling3TargetActualMonth[],
+  lastCompleteMonth: string,
 ): Rolling3TargetAssumptionResult {
   if (actualMonths.length !== 3) {
     throw new TargetEngineInputError("Rolling 3 Month assumptions require exactly three months.");
   }
 
+  const lastCompleteMonthIndex = monthIndex(lastCompleteMonth);
   const months = [...actualMonths].sort((left, right) => monthIndex(left.month) - monthIndex(right.month));
   const indexes = months.map((month) => monthIndex(month.month));
   if (indexes[1] !== indexes[0] + 1 || indexes[2] !== indexes[1] + 1) {
     throw new TargetEngineInputError("Rolling 3 Month assumptions require consecutive calendar months.");
+  }
+  if (indexes.some((index) => index > lastCompleteMonthIndex)) {
+    throw new TargetEngineInputError("Rolling 3 Month assumptions cannot include an incomplete or future month.");
+  }
+  if (indexes[2] !== lastCompleteMonthIndex) {
+    throw new TargetEngineInputError("Rolling 3 Month assumptions must end at the last complete month.");
   }
 
   const blockers: Rolling3AssumptionBlocker[] = [];
