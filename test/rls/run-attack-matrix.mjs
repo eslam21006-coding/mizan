@@ -59,6 +59,8 @@ export const sqlFiles = Object.freeze([
   "test/business/task-22-cohort-engine.test.sql",
   "supabase/migrations/20260825143000_task_23_observed_ltv.sql",
   "test/business/task-23-observed-ltv.test.sql",
+  "supabase/migrations/20260826092800_task_24_revenue_stream_composite_key_index.sql",
+  "supabase/migrations/20260826092900_task_24_attach_revenue_stream_composite_key.sql",
   "supabase/migrations/20260826093000_task_24_lifetime_revenue_stream_analysis.sql",
   "supabase/migrations/20260826093100_task_24_support_other_revenue_stream.sql",
   "supabase/migrations/20260826093200_task_24_attribution_display.sql",
@@ -70,13 +72,32 @@ export const sqlFiles = Object.freeze([
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
+const connectionTargetOverrideParameters = Object.freeze([
+  "host",
+  "hostaddr",
+  "port",
+  "dbname",
+  "service",
+  "servicefile",
+]);
 
 function validateDatabaseUrl(databaseUrl) {
   if (!databaseUrl) {
     throw new Error("RLS_TEST_DATABASE_URL is required. Point it only at a disposable local database whose name ends in _test.");
   }
+
   const parsedDatabaseUrl = new URL(databaseUrl);
   const databaseName = decodeURIComponent(parsedDatabaseUrl.pathname.replace(/^\//, ""));
+  const overrideParameter = connectionTargetOverrideParameters.find((parameter) =>
+    parsedDatabaseUrl.searchParams.has(parameter),
+  );
+
+  if (overrideParameter) {
+    throw new Error(
+      `Refusing RLS database URL with connection target override parameter: ${overrideParameter}.`,
+    );
+  }
+
   if (parsedDatabaseUrl.hostname !== "127.0.0.1" || !databaseName.endsWith("_test")) {
     throw new Error("Refusing to run destructive RLS setup unless RLS_TEST_DATABASE_URL uses the literal loopback address 127.0.0.1 and a database name ending in _test.");
   }

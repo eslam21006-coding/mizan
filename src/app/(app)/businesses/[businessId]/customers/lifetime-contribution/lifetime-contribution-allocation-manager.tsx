@@ -123,6 +123,16 @@ export function LifetimeContributionAllocationManager({ businessId, baseCurrency
     [drafts],
   );
 
+  const touchedCohorts = useMemo(
+    () =>
+      new Set(
+        Object.entries(drafts)
+          .filter(([, draft]) => COST_TYPES.some(([type]) => draft[type].amount !== ""))
+          .map(([cohortMonth]) => cohortMonth),
+      ),
+    [drafts],
+  );
+
   const updateDraft = (
     cohortMonth: string,
     costType: CostType,
@@ -249,7 +259,7 @@ export function LifetimeContributionAllocationManager({ businessId, baseCurrency
               ))}
             </div>
 
-            {invalidCohorts.has(cohort.cohort_month) && (
+            {invalidCohorts.has(cohort.cohort_month) && touchedCohorts.has(cohort.cohort_month) && (
               <div className={styles.error}>أدخل قيمة رقمية غير سالبة في الخانات الأربع. الصفر مسموح.</div>
             )}
             <button

@@ -32,6 +32,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
       SUPABASE_SECRET_KEY: sb_secret_ci_placeholder
       MIZAN_SITE_URL: http://127.0.0.1:3000
+      MIZAN_E2E_UI_FIXTURE: "true"
       RLS_TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/mizan_test
 
     steps:

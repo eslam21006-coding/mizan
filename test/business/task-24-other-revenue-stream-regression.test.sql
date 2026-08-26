@@ -77,30 +77,47 @@ select public.assign_customer_transaction_revenue_stream(
   '26262626-2626-4262-8262-26262626d001'
 );
 
+update public.revenue_streams
+set
+  name = 'Renamed Other Revenue',
+  stream_type = 'backend'
+where business_id = '26262626-2626-4262-8262-26262626a001'
+  and id = '26262626-2626-4262-8262-26262626d001';
+
 do $$
 declare
+  snapshot_name text;
   snapshot_type text;
+  analysis_name text;
   analysis_type text;
   analysis_net numeric;
 begin
-  select transaction.revenue_stream_type_snapshot
-  into snapshot_type
+  select
+    transaction.revenue_stream_name_snapshot,
+    transaction.revenue_stream_type_snapshot
+  into snapshot_name, snapshot_type
   from public.customer_transactions as transaction
   where transaction.business_id = '26262626-2626-4262-8262-26262626a001'
     and transaction.source_transaction_id = 'other-1';
 
-  select analysis.revenue_stream_type, analysis.net_cash_collected
-  into analysis_type, analysis_net
+  select
+    analysis.revenue_stream_name,
+    analysis.revenue_stream_type,
+    analysis.net_cash_collected
+  into analysis_name, analysis_type, analysis_net
   from public.customer_lifetime_revenue_stream_analysis as analysis
   where analysis.business_id = '26262626-2626-4262-8262-26262626a001'
     and analysis.revenue_stream_id = '26262626-2626-4262-8262-26262626d001';
 
-  if snapshot_type <> 'other' then
-    raise exception 'Task 24 did not preserve the supported other stream snapshot';
+  if snapshot_name is distinct from 'Other Revenue'
+    or snapshot_type is distinct from 'other' then
+    raise exception 'Task 24 did not preserve the original attributed stream snapshot';
   end if;
 
-  if analysis_type <> 'other' or analysis_net <> 150 then
-    raise exception 'Task 24 lifetime analysis did not support the other stream type';
+  if analysis_name is distinct from 'Other Revenue'
+    or analysis_type is distinct from 'other'
+    or analysis_net is distinct from 150::numeric then
+    raise exception 'Task 24 lifetime analysis did not preserve historical attribution snapshots';
   end if;
 end;
 $$;

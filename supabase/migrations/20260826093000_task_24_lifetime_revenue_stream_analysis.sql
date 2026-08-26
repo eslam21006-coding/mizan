@@ -7,7 +7,8 @@ alter table public.customer_transactions
   add constraint customer_transactions_revenue_stream_business_fk
     foreign key (business_id, revenue_stream_id)
     references public.revenue_streams (business_id, id)
-    on delete restrict,
+    on delete restrict
+    not valid,
   add constraint customer_transactions_revenue_stream_snapshot_check
     check (
       (
@@ -19,9 +20,10 @@ alter table public.customer_transactions
         revenue_stream_id is not null
         and revenue_stream_name_snapshot is not null
         and char_length(btrim(revenue_stream_name_snapshot)) between 1 and 120
-        and revenue_stream_type_snapshot in ('front_end', 'backend')
+        and revenue_stream_type_snapshot in ('front_end', 'backend', 'other')
       )
-    );
+    )
+    not valid;
 
 create index customer_transactions_business_revenue_stream_time_idx
   on public.customer_transactions (business_id, revenue_stream_id, transaction_at, id);
@@ -98,8 +100,8 @@ with eligible_transactions as (
     cohort.customer_email,
     transaction.id,
     transaction.revenue_stream_id,
-    stream.name as revenue_stream_name,
-    stream.stream_type as revenue_stream_type,
+    transaction.revenue_stream_name_snapshot as revenue_stream_name,
+    transaction.revenue_stream_type_snapshot as revenue_stream_type,
     transaction.transaction_type,
     transaction.amount_collected,
     transaction.currency
@@ -109,9 +111,6 @@ with eligible_transactions as (
   join public.customer_transactions as transaction
     on transaction.business_id = cohort.business_id
    and transaction.customer_email = cohort.customer_email
-  left join public.revenue_streams as stream
-    on stream.business_id = transaction.business_id
-   and stream.id = transaction.revenue_stream_id
   where transaction.normalized_outcome = 'successful'
     and (transaction.transaction_at at time zone business.timezone)::date
       <= (current_timestamp at time zone business.timezone)::date
@@ -203,7 +202,7 @@ grant select on public.customer_lifetime_revenue_stream_analysis to authenticate
 grant select on public.customer_lifetime_revenue_stream_analysis to service_role;
 
 comment on view public.customer_cohort_revenue_stream_analysis is
-  'Task 24 cohort-level lifetime realized cash grouped by explicitly attributed revenue stream. Unattributed transactions remain visible as a separate group; Mizan never infers stream attribution from source, amount, or timing.';
+  'Task 24 cohort-level lifetime realized cash grouped by explicitly attributed revenue-stream snapshots. Unattributed transactions remain visible as a separate group; Mizan never infers stream attribution from source, amount, or timing.';
 
 comment on view public.customer_lifetime_revenue_stream_analysis is
-  'Task 24 business-level lifetime realized customer cash grouped by explicitly attributed revenue stream across acquisition cohorts. Refunds are contra-revenue and unattributed cash remains explicit.';
+  'Task 24 business-level lifetime realized customer cash grouped by persisted revenue-stream attribution snapshots across acquisition cohorts. Refunds are contra-revenue and unattributed cash remains explicit.';

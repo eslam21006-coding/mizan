@@ -30,6 +30,23 @@ test("RLS execution plan fails closed for unsafe database URLs", () => {
     () => buildExecutionPlan("postgresql://postgres:postgres@example.com:5432/mizan_test"),
     /literal loopback address 127\.0\.0\.1/,
   );
+
+  const safeUrl = new URL("postgresql://postgres:postgres@127.0.0.1:5432/mizan_test");
+  for (const [parameter, value] of [
+    ["host", "example.com"],
+    ["hostaddr", "192.0.2.1"],
+    ["port", "6543"],
+    ["dbname", "production"],
+    ["service", "production"],
+    ["servicefile", "/tmp/production.conf"],
+  ]) {
+    const unsafeUrl = new URL(safeUrl);
+    unsafeUrl.searchParams.set(parameter, value);
+    assert.throws(
+      () => buildExecutionPlan(unsafeUrl.toString()),
+      new RegExp(`connection target override parameter: ${parameter}`),
+    );
+  }
 });
 
 test("RLS execution plan invokes every SQL file through fail-fast psql in staged migration order", () => {
