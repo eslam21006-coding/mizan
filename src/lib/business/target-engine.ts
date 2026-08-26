@@ -1,4 +1,14 @@
 import type { ExactRatio } from "./calculations.ts";
+import {
+  FunnelReverseEngineeringInputError,
+  reverseEngineerFunnel,
+} from "./funnel-reverse-engineering.ts";
+import {
+  calculateSustainableAcquisitionEconomics,
+  SustainableAcquisitionInputError,
+  type SustainableAcquisitionMetric,
+  type SustainableAcquisitionMetricUnavailableReason,
+} from "./sustainable-acquisition.ts";
 
 export const TARGET_GOAL_TYPES = ["revenue", "net_profit", "net_profit_margin"] as const;
 
@@ -28,14 +38,8 @@ export type TargetPlannerAssumptions = {
   saleToNewCustomerRate: ExactRatio;
 };
 
-export type TargetMetricUnavailableReason =
-  | "NO_ACQUISITION_HEADROOM"
-  | "NO_MEDIA_HEADROOM"
-  | "MAX_MEDIA_CAC_UNAVAILABLE";
-
-export type TargetMetric<T> =
-  | { available: true; value: T }
-  | { available: false; reason: TargetMetricUnavailableReason };
+export type TargetMetricUnavailableReason = SustainableAcquisitionMetricUnavailableReason;
+export type TargetMetric<T> = SustainableAcquisitionMetric<T>;
 
 export type TargetPlanUnattainableReason =
   | "NON_POSITIVE_UNIT_PROFIT"
@@ -290,7 +294,7 @@ function requireRate(value: ExactRatio, fieldName: string) {
 }
 
 function validateAssumptions(assumptions: TargetPlannerAssumptions) {
-  return {
+  const values = {
     revenuePerNewCustomer: requirePositiveRatio(
       assumptions.revenuePerNewCustomer,
       "revenuePerNewCustomer",
@@ -312,15 +316,14 @@ function validateAssumptions(assumptions: TargetPlannerAssumptions) {
       "variableNonAcquisitionCostPerNewCustomer",
     ),
     assumedMediaCac: requireNonNegativeRatio(assumptions.assumedMediaCac, "assumedMediaCac"),
-    bookingRate: requireRate(assumptions.bookingRate, "bookingRate"),
-    showRate: requireRate(assumptions.showRate, "showRate"),
-    qualificationRate: requireRate(assumptions.qualificationRate, "qualificationRate"),
-    closeRate: requireRate(assumptions.closeRate, "closeRate"),
-    saleToNewCustomerRate: requireRate(
-      assumptions.saleToNewCustomerRate,
-      "saleToNewCustomerRate",
-    ),
   };
+
+  requireRate(assumptions.bookingRate, "bookingRate");
+  requireRate(assumptions.showRate, "showRate");
+  requireRate(assumptions.qualificationRate, "qualificationRate");
+  requireRate(assumptions.closeRate, "closeRate");
+  requireRate(assumptions.saleToNewCustomerRate, "saleToNewCustomerRate");
+  return values;
 }
 
 function resolveRequiredCustomers(
@@ -329,7 +332,10 @@ function resolveRequiredCustomers(
 ): number | TargetPlanUnattainableReason {
   const fixedTotal = add(values.monthlyFixedAcquisitionCosts, values.monthlyFixedNonAcquisitionCosts);
   const variableCostPerCustomer = add(
-    add(values.variableNonMediaAcquisitionCostPerNewCustomer, values.variableNonAcquisitionCostPerNewCustomer),
+    add(
+      values.variableNonMediaAcquisitionCostPerNewCustomer,
+      values.variableNonAcquisitionCostPerNewCustomer,
+    ),
     values.assumedMediaCac,
   );
   const unitProfitBeforeFixed = subtract(values.revenuePerNewCustomer, variableCostPerCustomer);
@@ -339,7 +345,10 @@ function resolveRequiredCustomers(
     if (targetRevenue.numerator === 0n) {
       throw new TargetEngineInputError("Revenue target must be greater than zero.");
     }
-    return Math.max(1, ceilPositive(divide(targetRevenue, values.revenuePerNewCustomer), "requiredCustomers"));
+    return Math.max(
+      1,
+      ceilPositive(divide(targetRevenue, values.revenuePerNewCustomer), "requiredCustomers"),
+    );
   }
 
   if (goal.type === "net_profit") {
@@ -350,7 +359,10 @@ function resolveRequiredCustomers(
     if (unitProfitComparison === 0) {
       return requiredContribution.numerator === 0n ? 1 : "NON_POSITIVE_UNIT_PROFIT";
     }
-    return Math.max(1, ceilPositive(divide(requiredContribution, unitProfitBeforeFixed), "requiredCustomers"));
+    return Math.max(
+      1,
+      ceilPositive(divide(requiredContribution, unitProfitBeforeFixed), "requiredCustomers"),
+    );
   }
 
   const targetMargin = fromExactRatio(goal.margin, "target net profit margin");
@@ -364,27 +376,15 @@ function resolveRequiredCustomers(
   if (compare(marginHeadroomPerCustomer, ZERO) === 0) {
     return fixedTotal.numerator === 0n ? 1 : "MARGIN_TARGET_UNATTAINABLE";
   }
-  return Math.max(1, ceilPositive(divide(fixedTotal, marginHeadroomPerCustomer), "requiredCustomers"));
-}
-
-function upstreamCount(downstreamCount: number, conversionRate: Rational, fieldName: string) {
-  return ceilPositive(
-    divide({ numerator: BigInt(downstreamCount), denominator: 1n }, conversionRate),
-    fieldName,
+  return Math.max(
+    1,
+    ceilPositive(divide(fixedTotal, marginHeadroomPerCustomer), "requiredCustomers"),
   );
-}
-
-function available<T>(value: T): TargetMetric<T> {
-  return { available: true, value };
-}
-
-function unavailable<T>(reason: TargetMetricUnavailableReason): TargetMetric<T> {
-  return { available: false, reason };
 }
 
 /**
  * Reverse-engineers a monthly operating plan from one explicit target and one explicit assumption set.
- * Revenue targets use break-even as the disclosed sustainability guardrail for maximum CAC/CPL only.
+ * Task 30 owns the funnel-volume path; Task 31 owns sustainable Acquisition CAC / Media CAC / CPL.
  */
 export function planTarget(goal: TargetGoal, assumptions: TargetPlannerAssumptions): TargetPlanResult {
   const values = validateAssumptions(assumptions);
@@ -399,23 +399,22 @@ export function planTarget(goal: TargetGoal, assumptions: TargetPlannerAssumptio
   }
 
   const requiredCustomers = requiredCustomersResult;
-  const requiredSales = upstreamCount(
-    requiredCustomers,
-    values.saleToNewCustomerRate,
-    "requiredSales",
-  );
-  const requiredQualifiedCalls = upstreamCount(
-    requiredSales,
-    values.closeRate,
-    "requiredQualifiedCalls",
-  );
-  const requiredShows = upstreamCount(
-    requiredQualifiedCalls,
-    values.qualificationRate,
-    "requiredShows",
-  );
-  const requiredBookings = upstreamCount(requiredShows, values.showRate, "requiredBookings");
-  const requiredLeads = upstreamCount(requiredBookings, values.bookingRate, "requiredLeads");
+  let funnelPlan: ReturnType<typeof reverseEngineerFunnel>;
+  try {
+    funnelPlan = reverseEngineerFunnel({
+      requiredCustomers,
+      bookingRate: assumptions.bookingRate,
+      showRate: assumptions.showRate,
+      qualificationRate: assumptions.qualificationRate,
+      closeRate: assumptions.closeRate,
+      saleToNewCustomerRate: assumptions.saleToNewCustomerRate,
+    });
+  } catch (error) {
+    if (error instanceof FunnelReverseEngineeringInputError) {
+      throw new TargetEngineInputError(error.message);
+    }
+    throw error;
+  }
 
   const requiredRevenue = multiplyCount(values.revenuePerNewCustomer, requiredCustomers);
   const requiredAdSpend = multiplyCount(values.assumedMediaCac, requiredCustomers);
@@ -446,73 +445,32 @@ export function planTarget(goal: TargetGoal, assumptions: TargetPlannerAssumptio
     }
     return {
       kind: "target_margin",
-      amount: toExactRatio(multiply(requiredRevenue, fromExactRatio(goal.margin, "target net profit margin"))),
+      amount: toExactRatio(
+        multiply(requiredRevenue, fromExactRatio(goal.margin, "target net profit margin")),
+      ),
     };
   })();
 
-  const profitConstraintAmount = fromExactRatio(profitConstraint.amount, "profitConstraint.amount");
-  const projectedNonAcquisitionCosts = add(
-    values.monthlyFixedNonAcquisitionCosts,
-    variableNonAcquisitionCosts,
-  );
-  const maximumAcquisitionBudget = subtract(
-    subtract(requiredRevenue, projectedNonAcquisitionCosts),
-    profitConstraintAmount,
-  );
-
-  const maximumSustainableAcquisitionCac = (() => {
-    if (compare(maximumAcquisitionBudget, ZERO) < 0) {
-      return unavailable<ExactRatio>("NO_ACQUISITION_HEADROOM");
-    }
-    return available(
-      toExactRatio(
-        divide(maximumAcquisitionBudget, {
-          numerator: BigInt(requiredCustomers),
-          denominator: 1n,
-        }),
-      ),
-    );
-  })();
-
-  const maximumMediaCac = (() => {
-    if (!maximumSustainableAcquisitionCac.available) {
-      return unavailable<ExactRatio>("NO_MEDIA_HEADROOM");
-    }
-    const maximumAcquisitionCac = fromExactRatio(
-      maximumSustainableAcquisitionCac.value,
-      "maximumSustainableAcquisitionCac",
-    );
-    const fixedAcquisitionCostPerCustomer = divide(values.monthlyFixedAcquisitionCosts, {
-      numerator: BigInt(requiredCustomers),
-      denominator: 1n,
-    });
-    const mandatoryNonMediaAcquisitionCac = add(
-      fixedAcquisitionCostPerCustomer,
-      values.variableNonMediaAcquisitionCostPerNewCustomer,
-    );
-    const mediaHeadroom = subtract(maximumAcquisitionCac, mandatoryNonMediaAcquisitionCac);
-    return compare(mediaHeadroom, ZERO) < 0
-      ? unavailable<ExactRatio>("NO_MEDIA_HEADROOM")
-      : available(toExactRatio(mediaHeadroom));
-  })();
-
-  const maximumCpl = (() => {
-    if (!maximumMediaCac.available) {
-      return unavailable<ExactRatio>("MAX_MEDIA_CAC_UNAVAILABLE");
-    }
-    const maximumMediaBudget = multiplyCount(
-      fromExactRatio(maximumMediaCac.value, "maximumMediaCac"),
+  let sustainableEconomics: ReturnType<typeof calculateSustainableAcquisitionEconomics>;
+  try {
+    sustainableEconomics = calculateSustainableAcquisitionEconomics({
+      requiredRevenue: toExactRatio(requiredRevenue),
       requiredCustomers,
-    );
-    return available(
-      toExactRatio(
-        divide(maximumMediaBudget, {
-          numerator: BigInt(requiredLeads),
-          denominator: 1n,
-        }),
-      ),
-    );
-  })();
+      requiredLeads: funnelPlan.requiredLeads,
+      profitConstraintAmount: profitConstraint.amount,
+      monthlyFixedAcquisitionCosts: assumptions.monthlyFixedAcquisitionCosts,
+      monthlyFixedNonAcquisitionCosts: assumptions.monthlyFixedNonAcquisitionCosts,
+      variableNonMediaAcquisitionCostPerNewCustomer:
+        assumptions.variableNonMediaAcquisitionCostPerNewCustomer,
+      variableNonAcquisitionCostPerNewCustomer:
+        assumptions.variableNonAcquisitionCostPerNewCustomer,
+    });
+  } catch (error) {
+    if (error instanceof SustainableAcquisitionInputError) {
+      throw new TargetEngineInputError(error.message);
+    }
+    throw error;
+  }
 
   return {
     status: "ready",
@@ -521,15 +479,16 @@ export function planTarget(goal: TargetGoal, assumptions: TargetPlannerAssumptio
     profitConstraint,
     requiredRevenue: toExactRatio(requiredRevenue),
     requiredCustomers,
-    requiredSales,
-    requiredQualifiedCalls,
-    requiredShows,
-    requiredBookings,
-    requiredLeads,
+    requiredSales: funnelPlan.requiredSales,
+    requiredQualifiedCalls: funnelPlan.requiredQualifiedCalls,
+    requiredShows: funnelPlan.requiredShows,
+    requiredBookings: funnelPlan.requiredBookings,
+    requiredLeads: funnelPlan.requiredLeads,
     requiredAdSpend: toExactRatio(requiredAdSpend),
-    maximumSustainableAcquisitionCac,
-    maximumMediaCac,
-    maximumCpl,
+    maximumSustainableAcquisitionCac:
+      sustainableEconomics.maximumSustainableAcquisitionCac,
+    maximumMediaCac: sustainableEconomics.maximumMediaCac,
+    maximumCpl: sustainableEconomics.maximumCpl,
     projectedNetProfit: toExactRatio(projectedNetProfit),
     projectedMargin: toExactRatio(projectedMargin),
   };
@@ -612,23 +571,33 @@ export function resolveRolling3TargetAssumptions(
   }
 
   const lastCompleteMonthIndex = monthIndex(lastCompleteMonth);
-  const months = [...actualMonths].sort((left, right) => monthIndex(left.month) - monthIndex(right.month));
+  const months = [...actualMonths].sort(
+    (left, right) => monthIndex(left.month) - monthIndex(right.month),
+  );
   const indexes = months.map((month) => monthIndex(month.month));
   if (indexes[1] !== indexes[0] + 1 || indexes[2] !== indexes[1] + 1) {
     throw new TargetEngineInputError("Rolling 3 Month assumptions require consecutive calendar months.");
   }
   if (indexes.some((index) => index > lastCompleteMonthIndex)) {
-    throw new TargetEngineInputError("Rolling 3 Month assumptions cannot include an incomplete or future month.");
+    throw new TargetEngineInputError(
+      "Rolling 3 Month assumptions cannot include an incomplete or future month.",
+    );
   }
   if (indexes[2] !== lastCompleteMonthIndex) {
-    throw new TargetEngineInputError("Rolling 3 Month assumptions must end at the last complete month.");
+    throw new TargetEngineInputError(
+      "Rolling 3 Month assumptions must end at the last complete month.",
+    );
   }
 
   const blockers: Rolling3AssumptionBlocker[] = [];
   const netCashCollected = collectActualDecimal(months, "netCashCollected", blockers, true);
   const adSpend = collectActualDecimal(months, "adSpend", blockers);
   const fixedAcquisitionCosts = collectActualDecimal(months, "fixedAcquisitionCosts", blockers);
-  const fixedNonAcquisitionCosts = collectActualDecimal(months, "fixedNonAcquisitionCosts", blockers);
+  const fixedNonAcquisitionCosts = collectActualDecimal(
+    months,
+    "fixedNonAcquisitionCosts",
+    blockers,
+  );
   const variableNonMediaAcquisitionCosts = collectActualDecimal(
     months,
     "variableNonMediaAcquisitionCosts",
@@ -690,13 +659,22 @@ export function resolveRolling3TargetAssumptions(
         divide(variableNonAcquisitionCosts, newCustomerDenominator),
       ),
       assumedMediaCac: toExactRatio(divide(adSpend, newCustomerDenominator)),
-      bookingRate: toExactRatio({ numerator: BigInt(bookedCalls), denominator: BigInt(leads) }),
-      showRate: toExactRatio({ numerator: BigInt(showedCalls), denominator: BigInt(bookedCalls) }),
+      bookingRate: toExactRatio({
+        numerator: BigInt(bookedCalls),
+        denominator: BigInt(leads),
+      }),
+      showRate: toExactRatio({
+        numerator: BigInt(showedCalls),
+        denominator: BigInt(bookedCalls),
+      }),
       qualificationRate: toExactRatio({
         numerator: BigInt(qualifiedCalls),
         denominator: BigInt(showedCalls),
       }),
-      closeRate: toExactRatio({ numerator: BigInt(sales), denominator: BigInt(qualifiedCalls) }),
+      closeRate: toExactRatio({
+        numerator: BigInt(sales),
+        denominator: BigInt(qualifiedCalls),
+      }),
       saleToNewCustomerRate: toExactRatio({
         numerator: BigInt(newCustomers),
         denominator: BigInt(sales),
