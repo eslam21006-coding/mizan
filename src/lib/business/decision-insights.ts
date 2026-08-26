@@ -1,17 +1,17 @@
-import type { CoreCalculationResult, ExactRatio } from "./calculations";
+import type { CoreCalculationResult, ExactRatio } from "./calculations.ts";
 import {
   compareDecimalMetrics,
   compareRatioMetrics,
   type MetricComparison,
-} from "./comparison";
+} from "./comparison.ts";
 import {
   DATA_QUALITY_INSUFFICIENT_MESSAGE_AR,
   dataQualitySignalKey,
   evaluateDataQualityDependency,
   type DataQualityProfile,
   type DataQualitySignal,
-} from "./data-quality";
-import type { FunnelCalculationResult } from "./funnel-calculations";
+} from "./data-quality.ts";
+import type { FunnelCalculationResult } from "./funnel-calculations.ts";
 
 export const DECISION_INSIGHT_RULE_IDS = [
   "unhealthy_growth",
