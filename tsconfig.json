@@ -47,7 +47,9 @@
     "test/business/transaction-import.test.mts",
     "test/business/task-17-boundary.test.mts",
     "test/business/data-quality.test.mts",
-    "test/business/data-quality-customer-conflict.test.mts"
+    "test/business/data-quality-customer-conflict.test.mts",
+    "test/business/decision-insights.test.mts",
+    "test/business/insight-prioritization.test.mts"
   ],
   "exclude": [
     "node_modules"
