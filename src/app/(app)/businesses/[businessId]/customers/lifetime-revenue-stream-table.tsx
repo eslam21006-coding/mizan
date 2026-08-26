@@ -9,7 +9,7 @@ type LifetimeRevenueStreamRow = {
   business_id: string;
   revenue_stream_id: string | null;
   revenue_stream_name: string | null;
-  revenue_stream_type: "front_end" | "backend" | null;
+  revenue_stream_type: "front_end" | "backend" | "other" | null;
   is_unattributed: boolean;
   cohort_count: number | string;
   transaction_count: number | string;
@@ -28,6 +28,7 @@ type Props = {
 function streamTypeLabel(value: LifetimeRevenueStreamRow["revenue_stream_type"]) {
   if (value === "front_end") return "Front-End";
   if (value === "backend") return "Backend";
+  if (value === "other") return "أخرى";
   return "غير منسوب";
 }
 
@@ -139,7 +140,7 @@ export function LifetimeRevenueStreamTable({ businessId, baseCurrency }: Props) 
                     <strong>{row.revenue_stream_name ?? "غير منسوب"}</strong>
                     {row.is_unattributed && <small>يحتاج ربطًا يدويًا</small>}
                   </td>
-                  <td dir="ltr">{streamTypeLabel(row.revenue_stream_type)}</td>
+                  <td>{streamTypeLabel(row.revenue_stream_type)}</td>
                   <td dir="ltr">{String(row.customers_with_activity)}</td>
                   <td dir="ltr">{String(row.transaction_count)}</td>
                   <td dir="ltr">{money(row.gross_cash_collected_text, currency)}</td>

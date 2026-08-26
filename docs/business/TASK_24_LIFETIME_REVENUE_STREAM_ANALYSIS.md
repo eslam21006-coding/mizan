@@ -6,7 +6,8 @@ Task 24 extends the transaction-history customer economics model with explicit r
 
 - A persisted customer transaction may be assigned to one existing business revenue stream.
 - Attribution is explicit. Mizan does not infer a stream from payment source, amount, timing, customer email, or funnel.
-- Unattributed transactions remain valid and are shown separately as **غير منسوب**.
+- All revenue-stream types already supported by Mizan remain valid: `front_end`, `backend`, and `other`.
+- Unattributed transactions remain valid and are shown separately as **غير منسوب**; unattributed is not the same as the `other` stream type.
 - Revenue-stream analysis uses only successful persisted transaction history for customers that belong to an acquisition cohort.
 - Refunds reduce the attributed stream's revenue and are never counted as expenses.
 - Current lifetime analysis is cumulative through the business-local current date, consistent with Observed LTV.
@@ -37,13 +38,14 @@ Rolls cohort rows into the current business-level lifetime revenue-stream mix.
 5. Admin may manage any business.
 6. Anonymous access is denied.
 7. Unattributed cash remains visible rather than silently excluded.
-8. Sum of Task 24 lifetime stream Net Cash must reconcile to current cohort Net Cash for the same acquired-customer history.
+8. `other` remains a real attributed stream type and is never mislabeled as unattributed.
+9. Sum of Task 24 lifetime stream Net Cash must reconcile to current cohort Net Cash for the same acquired-customer history.
 
 ## Acceptance criteria
 
 - Explicit transaction-to-stream attribution works and is auditable.
-- Front-End and Backend stream types remain distinguishable.
-- Unattributed transaction cash is visible.
+- Front-End, Backend, and Other stream types remain distinguishable.
+- Unattributed transaction cash is visible as a separate state.
 - Refunds reduce the same attributed stream.
 - Exact PostgreSQL numeric transport is preserved.
 - RLS/unauthorized tests pass.

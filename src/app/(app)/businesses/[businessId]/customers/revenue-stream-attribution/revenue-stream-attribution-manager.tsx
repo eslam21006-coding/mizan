@@ -9,7 +9,7 @@ const PAGE_SIZE = 50;
 type Stream = {
   id: string;
   name: string;
-  stream_type: "front_end" | "backend";
+  stream_type: "front_end" | "backend" | "other";
   is_active: boolean;
 };
 

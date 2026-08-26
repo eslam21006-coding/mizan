@@ -50,6 +50,7 @@ test.describe("Tasks 24-25 lifetime customer economics", () => {
         body: JSON.stringify([
           { business_id: "mock", revenue_stream_id: "stream-core", revenue_stream_name: "Core Offer", revenue_stream_type: "front_end", is_unattributed: false, cohort_count: 1, transaction_count: 3, customers_with_activity: 2, gross_cash_collected_text: "1800", refunds_text: "100", net_cash_collected_text: "1700", currency: "EGP" },
           { business_id: "mock", revenue_stream_id: "stream-backend", revenue_stream_name: "Backend", revenue_stream_type: "backend", is_unattributed: false, cohort_count: 1, transaction_count: 1, customers_with_activity: 1, gross_cash_collected_text: "500", refunds_text: "0", net_cash_collected_text: "500", currency: "EGP" },
+          { business_id: "mock", revenue_stream_id: "stream-other", revenue_stream_name: "Other Revenue", revenue_stream_type: "other", is_unattributed: false, cohort_count: 1, transaction_count: 1, customers_with_activity: 1, gross_cash_collected_text: "150", refunds_text: "0", net_cash_collected_text: "150", currency: "EGP" },
           { business_id: "mock", revenue_stream_id: null, revenue_stream_name: null, revenue_stream_type: null, is_unattributed: true, cohort_count: 1, transaction_count: 1, customers_with_activity: 1, gross_cash_collected_text: "200", refunds_text: "0", net_cash_collected_text: "200", currency: "EGP" },
         ]),
       }),
@@ -73,6 +74,8 @@ test.describe("Tasks 24-25 lifetime customer economics", () => {
     await expect(page.getByRole("heading", { name: "تحليل مصادر الإيراد مدى الحياة" })).toBeVisible();
     await expect(page.getByText("1700 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("500 EGP", { exact: true })).toBeVisible();
+    await expect(page.getByText("150 EGP", { exact: true })).toBeVisible();
+    await expect(page.getByText("أخرى", { exact: true })).toBeVisible();
     await expect(page.getByText("غير منسوب", { exact: true }).first()).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Lifetime Contribution Profit / ربح المساهمة مدى الحياة" }),
