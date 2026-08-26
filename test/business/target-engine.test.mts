@@ -48,12 +48,11 @@ function actualMonth(month: string): Rolling3TargetActualMonth {
   };
 }
 
-test("Task 29 derives exact default assumptions from three consecutive Rolling 3 Month actuals", () => {
-  const result = resolveRolling3TargetAssumptions([
-    actualMonth("2026-03"),
-    actualMonth("2026-01"),
-    actualMonth("2026-02"),
-  ]);
+test("Task 29 derives exact default assumptions from the three months ending at the last complete month", () => {
+  const result = resolveRolling3TargetAssumptions(
+    [actualMonth("2026-03"), actualMonth("2026-01"), actualMonth("2026-02")],
+    "2026-03",
+  );
 
   assert.equal(result.status, "ready");
   if (result.status !== "ready") return;
@@ -172,6 +171,40 @@ test("Task 29 rounds each upstream funnel stage upward so the target is never un
   assert.deepEqual(result.projectedNetProfit, ratio(20500));
 });
 
+test("Task 29 never reports a zero-profit target ready when unit economics are negative", () => {
+  const assumptions: TargetPlannerAssumptions = {
+    ...manualAssumptions(),
+    revenuePerNewCustomer: ratio(400),
+    monthlyFixedAcquisitionCosts: ratio(0),
+    monthlyFixedNonAcquisitionCosts: ratio(0),
+  };
+
+  const result = planTarget({ type: "net_profit", amount: "0" }, assumptions);
+
+  assert.deepEqual(result, {
+    status: "unattainable",
+    reason: "NON_POSITIVE_UNIT_PROFIT",
+    goal: { type: "net_profit", amount: "0" },
+    assumptions,
+  });
+});
+
+test("Task 29 permits the zero-profit boundary when unit profit and fixed costs are exactly zero", () => {
+  const assumptions: TargetPlannerAssumptions = {
+    ...manualAssumptions(),
+    revenuePerNewCustomer: ratio(500),
+    monthlyFixedAcquisitionCosts: ratio(0),
+    monthlyFixedNonAcquisitionCosts: ratio(0),
+  };
+
+  const result = planTarget({ type: "net_profit", amount: "0" }, assumptions);
+
+  assert.equal(result.status, "ready");
+  if (result.status !== "ready") return;
+  assert.equal(result.requiredCustomers, 1);
+  assert.deepEqual(result.projectedNetProfit, ratio(0));
+});
+
 test("Task 29 fails closed when a target margin cannot be reached under the assumed variable economics", () => {
   const result = planTarget(
     { type: "net_profit_margin", margin: ratio(3, 5) },
@@ -209,7 +242,7 @@ test("Task 29 Rolling 3 Month defaults report insufficient data instead of inven
   february.newCustomers = 0;
   march.newCustomers = 0;
 
-  const result = resolveRolling3TargetAssumptions([january, february, march]);
+  const result = resolveRolling3TargetAssumptions([january, february, march], "2026-03");
 
   assert.equal(result.status, "insufficient");
   if (result.status !== "insufficient") return;
@@ -221,11 +254,32 @@ test("Task 29 Rolling 3 Month defaults report insufficient data instead of inven
 test("Task 29 rejects non-consecutive months rather than labelling them Rolling 3 Months", () => {
   assert.throws(
     () =>
-      resolveRolling3TargetAssumptions([
-        actualMonth("2026-01"),
-        actualMonth("2026-03"),
-        actualMonth("2026-04"),
-      ]),
+      resolveRolling3TargetAssumptions(
+        [actualMonth("2026-01"), actualMonth("2026-03"), actualMonth("2026-04")],
+        "2026-04",
+      ),
     /consecutive calendar months/,
+  );
+});
+
+test("Task 29 rejects an in-progress or future month before deriving Rolling 3 assumptions", () => {
+  assert.throws(
+    () =>
+      resolveRolling3TargetAssumptions(
+        [actualMonth("2026-06"), actualMonth("2026-07"), actualMonth("2026-08")],
+        "2026-07",
+      ),
+    /incomplete or future month/,
+  );
+});
+
+test("Task 29 Rolling 3 defaults must end at the supplied last complete month", () => {
+  assert.throws(
+    () =>
+      resolveRolling3TargetAssumptions(
+        [actualMonth("2026-01"), actualMonth("2026-02"), actualMonth("2026-03")],
+        "2026-04",
+      ),
+    /must end at the last complete month/,
   );
 });
