@@ -97,7 +97,18 @@ A Revenue target by itself defines no profit requirement. Therefore, for **maxim
 
 `Minimum Profit Constraint = 0`
 
-This assumption is never hidden.
+This break-even value is a **sustainability constraint for the maximum CAC/CPL metrics only**. It is not a second hidden goal and does not change the customer count required to hit the selected Revenue target.
+
+For a Revenue goal, `status: "ready"` means the selected revenue goal can be reverse-engineered under the supplied assumptions. It does **not** mean the resulting plan is profitable or sustainable. Projected Real Net Profit and Projected Margin remain visible and may be negative.
+
+If the requested Revenue can be achieved but the resulting economics are below break-even, the engine does not silently increase Required Customers until fixed costs are diluted. Doing that would replace the selected Revenue goal with an unstated profitability goal. Instead:
+
+- the Revenue plan remains the plan for the selected Revenue target,
+- Projected Real Net Profit / Margin expose the loss directly,
+- Maximum Sustainable Acquisition CAC is unavailable when there is no acquisition headroom,
+- Maximum Media CAC and Maximum CPL fail closed when their sustainable budget cannot be derived.
+
+This separation is intentional: the Target Engine answers both **what is required to hit the selected goal** and **whether the resulting acquisition economics are sustainable**, without changing one question into the other.
 
 ## Real Net Profit target
 
@@ -163,7 +174,7 @@ For the chosen target and required customer count:
 
 The minimum profit constraint is:
 
-- Revenue target → break-even (`0`)
+- Revenue target → break-even (`0`) for the sustainability metrics only
 - Net Profit target → entered target Net Profit
 - Net Profit Margin target → Required Revenue × target margin
 
@@ -251,6 +262,21 @@ Expected:
 - Maximum Media CAC = 520
 - Maximum CPL = 52
 
+### Revenue target below break-even = 5,000
+
+The selected Revenue target still requires 5 customers because Revenue Per New Customer is 1,000. Task 29 does not replace the selected goal with a break-even revenue goal.
+
+Expected:
+
+- Required Customers = 5
+- Required Revenue = 5,000
+- Required Ad Spend = 1,000
+- Projected Net Profit = -6,500
+- Projected Margin = -130%
+- Maximum Sustainable Acquisition CAC = unavailable (`NO_ACQUISITION_HEADROOM`)
+- Maximum Media CAC = unavailable
+- Maximum CPL = unavailable
+
 ### Net Profit target = 20,000
 
 Expected:
@@ -297,12 +323,13 @@ Expected:
 7. Maximum Sustainable CAC is explicitly Acquisition CAC, never Ultimate CAC.
 8. Maximum Media CAC deducts fixed and variable non-media acquisition costs.
 9. Maximum CPL uses the sustainable media budget and required Leads.
-10. Revenue targets disclose the break-even sustainability guardrail.
-11. Net Profit and Margin targets use the entered profitability constraint.
-12. Negative unit economics never return a ready non-negative Net Profit plan; the exact-zero boundary is allowed only when it truly meets zero profit.
-13. Impossible unit economics or margin targets fail closed.
-14. Missing/zero Rolling 3 Month denominators never produce invented assumptions.
-15. Exact rational arithmetic is used for all financial calculations.
-16. Numerical tests lock known inputs and expected outputs for all three target types and the zero/negative-profit boundaries.
-17. The Task 29 `.mts` regression test is included in TypeScript checking.
-18. No UI, persistence, simulator, database/RLS, or historical actual mutation is included.
+10. Revenue target readiness is based on the selected Revenue goal; break-even is a sustainability guardrail for maximum CAC/CPL only and must not silently increase Required Customers.
+11. A below-break-even Revenue plan exposes negative Projected Net Profit/Margin and returns unavailable sustainability metrics when there is no headroom.
+12. Net Profit and Margin targets use the entered profitability constraint.
+13. Negative unit economics never return a ready non-negative Net Profit plan; the exact-zero boundary is allowed only when it truly meets zero profit.
+14. Impossible unit economics or margin targets fail closed.
+15. Missing/zero Rolling 3 Month denominators never produce invented assumptions.
+16. Exact rational arithmetic is used for all financial calculations.
+17. Numerical tests lock known inputs and expected outputs for all three target types, below-break-even Revenue behavior, and the zero/negative-profit boundaries.
+18. The Task 29 `.mts` regression test is included in TypeScript checking.
+19. No UI, persistence, simulator, database/RLS, or historical actual mutation is included.
