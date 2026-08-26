@@ -29,6 +29,7 @@ export type DataQualityReasonCode =
   | "AD_SPEND_RECONCILIATION_MISMATCH"
   | "AD_SPEND_RECONCILIATION_INCOMPLETE"
   | "CUSTOMER_ECONOMICS_INCOMPLETE"
+  | "CUSTOMER_ECONOMICS_CONFLICT"
   | "SIGNAL_NOT_PROVIDED"
   | "INVALID_DEPENDENCY";
 
@@ -397,9 +398,9 @@ function addCustomerSignals(
           ? "ATTRIBUTION_UNAVAILABLE"
           : external.state === "incomplete"
             ? "CUSTOMER_ECONOMICS_INCOMPLETE"
-            : external.state === "missing"
-              ? "INPUT_UNAVAILABLE"
-              : "CUSTOMER_ECONOMICS_INCOMPLETE",
+            : external.state === "conflict"
+              ? "CUSTOMER_ECONOMICS_CONFLICT"
+              : "INPUT_UNAVAILABLE",
       ...(external.sourceReason ? { sourceReason: external.sourceReason } : {}),
     };
   }
