@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
-import { buildExecutionPlan, sqlFiles } from "./run-attack-matrix.mjs";
+import { buildExecutionPlan, runAttackMatrix, sqlFiles } from "./run-attack-matrix.mjs";
 
 const packageJson = JSON.parse(
   await readFile(new URL("../../package.json", import.meta.url), "utf8"),
@@ -32,7 +32,11 @@ test("RLS execution plan fails closed for unsafe database URLs", () => {
   );
   assert.throws(
     () => buildExecutionPlan("postgresql://postgres:postgres@127.0.0.1:6543/mizan_test"),
-    /PostgreSQL test port 5432/,
+    /explicitly uses PostgreSQL test port 5432/,
+  );
+  assert.throws(
+    () => buildExecutionPlan("postgresql://postgres:postgres@127.0.0.1/mizan_test"),
+    /explicitly uses PostgreSQL test port 5432/,
   );
 
   const safeUrl = new URL("postgresql://postgres:postgres@127.0.0.1:5432/mizan_test");
@@ -50,6 +54,40 @@ test("RLS execution plan fails closed for unsafe database URLs", () => {
       () => buildExecutionPlan(unsafeUrl.toString()),
       new RegExp(`connection target override parameter: ${parameter}`),
     );
+  }
+});
+
+test("RLS runner strips libpq connection-target environment overrides", () => {
+  const databaseUrl = "postgresql://postgres:postgres@127.0.0.1:5432/mizan_test";
+  const originalValues = new Map(
+    ["PGHOST", "PGHOSTADDR", "PGPORT", "PGDATABASE", "PGSERVICE", "PGSERVICEFILE"].map(
+      (name) => [name, process.env[name]],
+    ),
+  );
+  let capturedEnvironment;
+
+  try {
+    process.env.PGHOST = "example.com";
+    process.env.PGHOSTADDR = "192.0.2.1";
+    process.env.PGPORT = "6543";
+    process.env.PGDATABASE = "production";
+    process.env.PGSERVICE = "production";
+    process.env.PGSERVICEFILE = "/tmp/production.conf";
+
+    const status = runAttackMatrix(databaseUrl, (_command, _args, options) => {
+      capturedEnvironment = options.env;
+      return { status: 1 };
+    });
+
+    assert.equal(status, 1);
+    assert.ok(capturedEnvironment);
+    assert.equal(capturedEnvironment.PGCONNECT_TIMEOUT, "5");
+    for (const name of originalValues.keys()) assert.equal(capturedEnvironment[name], undefined);
+  } finally {
+    for (const [name, value] of originalValues) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
   }
 });
 
