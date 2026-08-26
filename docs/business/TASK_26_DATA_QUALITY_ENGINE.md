@@ -102,7 +102,9 @@ Task 26 provides a generic dependency evaluator.
 A future deterministic rule declares:
 
 - `requiredAll`: every named signal must be ready,
-- `requiredAny`: at least one signal in each alternative group must be ready.
+- `requiredAny`: at least one signal in each non-empty alternative group must be ready.
+
+An empty `requiredAny` group is an invalid dependency declaration. The engine fails closed with an `INVALID_DEPENDENCY` blocker rather than accidentally marking the rule ready.
 
 If any required dependency cannot support the rule, the evaluator returns the exact fallback:
 
@@ -147,7 +149,7 @@ Those belong to later roadmap tasks.
 6. Current and previous business periods can be assessed independently.
 7. Funnel readiness is isolated per funnel.
 8. Customer-economics readiness can represent Observed LTV, backend revenue, attribution completeness, and Lifetime Contribution Profit.
-9. Dependency evaluation supports both all-required and any-of requirements.
+9. Dependency evaluation supports both all-required and any-of requirements and fails closed on an empty any-of group.
 10. Unsupported dependencies return **البيانات غير كافية للحكم**.
-11. Automated tests cover complete, partial, missing, known-zero, attribution-missing, non-positive-Net-Cash, and ad-spend-conflict cases.
+11. Automated tests cover complete, partial, missing, known-zero, attribution-missing, non-positive-Net-Cash, ad-spend-conflict, and invalid-dependency cases.
 12. Task 27/28 behavior is not implemented in this PR.
