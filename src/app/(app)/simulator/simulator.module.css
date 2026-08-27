@@ -1,0 +1,415 @@
+.pageHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.headerActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.headerActions a {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 700;
+}
+
+.selectorPanel,
+.controlPanel,
+.comparisonPanel,
+.funnelPanel,
+.insufficientPanel {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  padding: 22px;
+}
+
+.selectorPanel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.selectorPanel form,
+.selectorPanel label {
+  display: grid;
+  gap: 7px;
+}
+
+.selectorPanel span,
+.savePanel label > span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.selectorPanel select,
+.selectorPanel input,
+.savePanel input,
+.control input {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 12px;
+  font: inherit;
+}
+
+.selectorPanel button,
+.saveActions button {
+  min-height: 44px;
+  border: 0;
+  border-radius: 11px;
+  padding: 0 16px;
+  background: var(--primary);
+  color: white;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.selectorPanel button {
+  align-self: end;
+}
+
+.statusPanel {
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border));
+  border-radius: 14px;
+  padding: 13px 16px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
+}
+
+.statusPanel strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.workspace {
+  display: grid;
+  gap: 20px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.sectionHeading span {
+  display: block;
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 800;
+  margin-bottom: 5px;
+}
+
+.sectionHeading h2 {
+  margin: 0;
+  font-size: 1.18rem;
+}
+
+.sectionHeading p {
+  margin: 0;
+  max-width: 580px;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.notice,
+.errorPanel,
+.readOnlyNote {
+  border-radius: 12px;
+  padding: 13px 15px;
+  margin-bottom: 16px;
+  line-height: 1.7;
+}
+
+.notice {
+  background: color-mix(in srgb, #b7791f 9%, var(--surface));
+  border: 1px solid color-mix(in srgb, #b7791f 28%, var(--border));
+}
+
+.errorPanel {
+  background: color-mix(in srgb, #c53030 8%, var(--surface));
+  border: 1px solid color-mix(in srgb, #c53030 28%, var(--border));
+}
+
+.controlsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.control,
+.controlDisabled {
+  display: grid;
+  gap: 8px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 96%, var(--primary));
+}
+
+.controlDisabled {
+  opacity: 0.58;
+}
+
+.controlTitle {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.controlTitle > span {
+  font-weight: 800;
+}
+
+.controlTitle button {
+  border: 0;
+  background: transparent;
+  color: var(--primary);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.inputWrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inputWrap input {
+  flex: 1;
+  text-align: left;
+}
+
+.inputWrap > span {
+  min-width: 36px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.control small,
+.controlDisabled small {
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.savePanel {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.savePanel > label {
+  display: grid;
+  gap: 7px;
+  flex: 1;
+  max-width: 430px;
+}
+
+.saveActions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.saveActions form {
+  margin: 0;
+}
+
+.saveActions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.saveActions .secondaryButton {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.saveActions .dangerButton {
+  background: transparent;
+  color: #b42318;
+  border: 1px solid color-mix(in srgb, #b42318 28%, var(--border));
+}
+
+.readOnlyNote {
+  margin: 0;
+  color: var(--muted);
+  border: 1px solid var(--border);
+}
+
+.comparisonHeader,
+.comparisonRow {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.45fr) repeat(3, minmax(120px, 1fr));
+  gap: 12px;
+  align-items: center;
+}
+
+.comparisonHeader {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+  padding: 0 14px 9px;
+}
+
+.comparisonTable {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+
+.comparisonRow {
+  min-height: 58px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.comparisonRow:last-child {
+  border-bottom: 0;
+}
+
+.comparisonRow strong {
+  font-size: 0.9rem;
+}
+
+.comparisonRow span {
+  font-variant-numeric: tabular-nums;
+}
+
+.funnelGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.funnelGrid article {
+  display: grid;
+  gap: 4px;
+  padding: 15px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+}
+
+.funnelGrid article span,
+.funnelGrid article small {
+  color: var(--muted);
+}
+
+.funnelGrid article strong {
+  font-size: 1.35rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.historyBoundary {
+  margin: 0;
+  padding: 13px 16px;
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.insufficientPanel h2 {
+  margin-top: 0;
+}
+
+.insufficientPanel p {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.insufficientPanel a {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  padding: 0 15px;
+  border-radius: 11px;
+  background: var(--primary);
+  color: white;
+  font-weight: 800;
+}
+
+@media (max-width: 1100px) {
+  .controlsGrid,
+  .funnelGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .selectorPanel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .pageHeader,
+  .sectionHeading,
+  .savePanel {
+    flex-direction: column;
+  }
+
+  .selectorPanel,
+  .controlsGrid,
+  .funnelGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .comparisonHeader {
+    display: none;
+  }
+
+  .comparisonRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .comparisonRow strong {
+    grid-column: 1 / -1;
+  }
+
+  .comparisonRow span::before {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--muted);
+    font-size: 0.72rem;
+  }
+
+  .comparisonRow span:nth-of-type(1)::before {
+    content: "الحالي";
+  }
+
+  .comparisonRow span:nth-of-type(2)::before {
+    content: "السيناريو";
+  }
+
+  .comparisonRow span:nth-of-type(3) {
+    grid-column: 1 / -1;
+  }
+
+  .comparisonRow span:nth-of-type(3)::before {
+    content: "التغير";
+  }
+}
