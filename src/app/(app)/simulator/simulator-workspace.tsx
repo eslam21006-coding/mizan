@@ -120,6 +120,13 @@ const CONTROL_DEFINITIONS: readonly ControlDefinition[] = [
 const numberFormatter = new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 });
 const percentFormatter = new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 1 });
 
+function normalizeLocalizedDigits(value: string) {
+  return value
+    .replace(/[٠-٩]/g, (digit) => String(digit.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/g, (digit) => String(digit.charCodeAt(0) - 0x06f0))
+    .replace(/٫/g, ".");
+}
+
 function ratioNumber(value: ExactRatio) {
   const numerator = Number(value.numerator);
   const denominator = Number(value.denominator);
@@ -314,14 +321,15 @@ export function SimulatorWorkspace({
                     value={value}
                     disabled={disabled}
                     aria-label={definition.label}
-                    onChange={(event) =>
+                    onChange={(event) => {
+                      const normalized = normalizeLocalizedDigits(event.target.value);
                       setOverride(
                         definition.key,
                         definition.kind === "rate"
-                          ? percentToRateOverride(event.target.value)
-                          : event.target.value,
-                      )
-                    }
+                          ? percentToRateOverride(normalized)
+                          : normalized,
+                      );
+                    }}
                   />
                   <span>{definition.kind === "rate" ? "%" : currency}</span>
                 </div>
