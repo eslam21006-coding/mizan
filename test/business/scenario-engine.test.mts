@@ -157,6 +157,26 @@ test("Task 33 keeps actual new customers fixed when a trustworthy funnel baselin
   assert.deepEqual(result.financial.realNetProfit, ratio(18000));
 });
 
+test("Task 33 treats zero actual ad spend as unavailable funnel economics and unavailable MER", () => {
+  const input = baseline();
+  input.financial.adSpend = "0";
+
+  const result = calculateScenario(input);
+
+  assert.deepEqual(result.funnel, {
+    available: false,
+    reason: "FUNNEL_BASELINE_UNAVAILABLE",
+    newCustomers: 50,
+  });
+  assert.deepEqual(result.financial.mer, {
+    available: false,
+    reason: "NO_AD_SPEND",
+  });
+  assert.deepEqual(result.controls.cpl.value, ratio(0));
+  assert.deepEqual(result.financial.netCashCollected, ratio(50000));
+  assert.deepEqual(result.financial.allBusinessCosts, ratio(30000));
+});
+
 test("Task 33 preserves exact baseline economics when per-customer value is a repeating fraction", () => {
   const result = calculateScenario({
     financial: {
