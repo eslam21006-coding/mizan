@@ -149,6 +149,7 @@ set search_path = ''
 as $$
 declare
   duplicate_id uuid;
+  source_creation_request_id uuid;
 begin
   if (select auth.uid()) is null then
     raise insufficient_privilege using message = 'Authentication is required to duplicate a simulator scenario.';
@@ -170,13 +171,18 @@ begin
     raise invalid_parameter_value using message = 'Scenario name must be 1-120 characters with no leading or trailing whitespace.';
   end if;
 
-  if not exists (
-    select 1
-    from public.simulator_scenarios as source
-    where source.id = p_source_scenario_id
-      and source.business_id = p_business_id
-  ) then
+  select source.creation_request_id
+  into source_creation_request_id
+  from public.simulator_scenarios as source
+  where source.id = p_source_scenario_id
+    and source.business_id = p_business_id;
+
+  if not found then
     raise invalid_parameter_value using message = 'Source scenario does not belong to this business.';
+  end if;
+
+  if source_creation_request_id = p_creation_request_id then
+    raise invalid_parameter_value using message = 'Duplicate creation request must be different from the source scenario creation request.';
   end if;
 
   insert into public.simulator_scenarios (
@@ -191,6 +197,10 @@ begin
   on conflict (business_id, creation_request_id) do update set
     name = excluded.name
   returning id into duplicate_id;
+
+  if duplicate_id = p_source_scenario_id then
+    raise invalid_parameter_value using message = 'Duplicate scenario must have a distinct identity from its source.';
+  end if;
 
   delete from public.simulator_scenario_overrides
   where business_id = p_business_id
@@ -225,4 +235,4 @@ comment on function public.save_simulator_scenario(uuid, uuid, text, uuid, jsonb
   'Task 33 atomic save/update for sparse exact-decimal simulator overrides. The function authorizes the business explicitly and writes only Task 32 scenario tables; historical actual tables are never modified.';
 
 comment on function public.duplicate_simulator_scenario(uuid, uuid, text, uuid) is
-  'Task 33 atomic scenario duplication with a new identity and copied sparse overrides. Historical actual tables are never modified.';
+  'Task 33 atomic scenario duplication with a distinct identity and copied sparse overrides. Historical actual tables are never modified.';
