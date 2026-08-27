@@ -79,8 +79,10 @@ export function divideRationals(left: Rational, right: Rational): Rational {
 }
 
 export function compareRationals(left: Rational, right: Rational) {
-  const scaledLeft = left.numerator * right.denominator;
-  const scaledRight = right.numerator * left.denominator;
+  const normalizedLeft = normalizeRational(left);
+  const normalizedRight = normalizeRational(right);
+  const scaledLeft = normalizedLeft.numerator * normalizedRight.denominator;
+  const scaledRight = normalizedRight.numerator * normalizedLeft.denominator;
   return scaledLeft === scaledRight ? 0 : scaledLeft > scaledRight ? 1 : -1;
 }
 
