@@ -36,7 +36,7 @@ begin
     on business_row.owner_user_id = user_row.id
   where user_row.raw_app_meta_data ->> 'role' = 'mentee'
   order by
-    pg_catalog.lower(pg_catalog.coalesce(user_row.email, '')),
+    pg_catalog.lower(coalesce(user_row.email, '')),
     business_row.created_at asc nulls last,
     business_row.id asc nulls last;
 end;
