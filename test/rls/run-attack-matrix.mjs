@@ -71,6 +71,7 @@ export const sqlFiles = Object.freeze([
   "test/business/task-32-scenario-data-model.test.sql",
   "test/business/task-32-scenario-input-hardening.test.sql",
   "supabase/migrations/20260826213000_task_33_scenario_persistence_rpcs.sql",
+  "supabase/migrations/20260826213100_task_33_scenario_override_display.sql",
   "test/business/task-33-scenario-persistence.test.sql",
 ]);
 
