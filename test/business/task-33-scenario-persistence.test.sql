@@ -66,11 +66,11 @@ set local request.jwt.claims =
 
 do $$
 declare
-  scenario_id uuid;
+  saved_scenario_id uuid;
   repeated_id uuid;
   duplicate_id uuid;
 begin
-  scenario_id := public.save_simulator_scenario(
+  saved_scenario_id := public.save_simulator_scenario(
     'a0330000-0000-4000-8000-000000000001',
     null,
     'سيناريو النمو',
@@ -78,14 +78,14 @@ begin
     '{"ad_spend":"12000.125","show_rate":"0.7","backend_revenue":"2500.25"}'::jsonb
   );
 
-  if scenario_id is null then
+  if saved_scenario_id is null then
     raise exception 'scenario RPC did not return an id';
   end if;
 
   if (
     select count(*)
     from public.simulator_scenario_overrides as override_row
-    where override_row.scenario_id = scenario_id
+    where override_row.scenario_id = saved_scenario_id
   ) <> 3 then
     raise exception 'scenario RPC did not persist the sparse override set';
   end if;
@@ -93,7 +93,7 @@ begin
   if not exists (
     select 1
     from public.simulator_scenario_overrides as override_row
-    where override_row.scenario_id = scenario_id
+    where override_row.scenario_id = saved_scenario_id
       and override_row.override_key = 'ad_spend'
       and override_row.override_value = 12000.125
   ) then
@@ -108,21 +108,21 @@ begin
     '{"ad_spend":"13000","close_rate":"0.31"}'::jsonb
   );
 
-  if repeated_id <> scenario_id then
+  if repeated_id <> saved_scenario_id then
     raise exception 'creation request idempotency returned a different scenario';
   end if;
 
   if (
     select count(*)
     from public.simulator_scenario_overrides as override_row
-    where override_row.scenario_id = scenario_id
+    where override_row.scenario_id = saved_scenario_id
   ) <> 2 then
     raise exception 'idempotent save did not atomically replace sparse overrides';
   end if;
 
   perform public.save_simulator_scenario(
     'a0330000-0000-4000-8000-000000000001',
-    scenario_id,
+    saved_scenario_id,
     'سيناريو النمو المعدل',
     '3333d000-0000-4000-8000-000000000001',
     '{"customer_value":"1750.125","ad_spend":"14000"}'::jsonb
@@ -130,21 +130,21 @@ begin
 
   if not exists (
     select 1
-    from public.simulator_scenarios
-    where id = scenario_id
-      and name = 'سيناريو النمو المعدل'
+    from public.simulator_scenarios as scenario_row
+    where scenario_row.id = saved_scenario_id
+      and scenario_row.name = 'سيناريو النمو المعدل'
   ) then
     raise exception 'scenario update did not persist the name';
   end if;
 
   duplicate_id := public.duplicate_simulator_scenario(
     'a0330000-0000-4000-8000-000000000001',
-    scenario_id,
+    saved_scenario_id,
     'سيناريو النمو المعدل - نسخة',
     '3333d000-0000-4000-8000-000000000002'
   );
 
-  if duplicate_id = scenario_id then
+  if duplicate_id = saved_scenario_id then
     raise exception 'duplicate reused the source scenario identity';
   end if;
 
@@ -159,7 +159,7 @@ begin
   begin
     perform public.save_simulator_scenario(
       'a0330000-0000-4000-8000-000000000001',
-      scenario_id,
+      saved_scenario_id,
       E'\tاسم غير صالح',
       '3333d000-0000-4000-8000-000000000001',
       '{}'::jsonb
@@ -172,7 +172,7 @@ begin
   begin
     perform public.save_simulator_scenario(
       'a0330000-0000-4000-8000-000000000001',
-      scenario_id,
+      saved_scenario_id,
       'سيناريو النمو المعدل',
       '3333d000-0000-4000-8000-000000000001',
       '{"cpl":"NaN"}'::jsonb
@@ -185,7 +185,7 @@ begin
   begin
     perform public.save_simulator_scenario(
       'a0330000-0000-4000-8000-000000000001',
-      scenario_id,
+      saved_scenario_id,
       'سيناريو النمو المعدل',
       '3333d000-0000-4000-8000-000000000001',
       '{"show_rate":"1.01"}'::jsonb
@@ -218,10 +218,10 @@ do $$
 declare
   source_id uuid;
 begin
-  select id into source_id
-  from public.simulator_scenarios
-  where business_id = 'a0330000-0000-4000-8000-000000000001'
-  order by created_at
+  select scenario_row.id into source_id
+  from public.simulator_scenarios as scenario_row
+  where scenario_row.business_id = 'a0330000-0000-4000-8000-000000000001'
+  order by scenario_row.created_at
   limit 1;
 
   begin
