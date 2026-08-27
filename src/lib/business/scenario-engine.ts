@@ -69,7 +69,11 @@ export type ScenarioMetric<T> =
   | { available: true; value: T }
   | {
       available: false;
-      reason: "NO_NEW_CUSTOMERS" | "NON_POSITIVE_NET_CASH" | "NO_AD_SPEND";
+      reason:
+        | "NO_NEW_CUSTOMERS"
+        | "NON_POSITIVE_NET_CASH"
+        | "NO_AD_SPEND"
+        | "FUNNEL_BASELINE_UNAVAILABLE";
     };
 
 export type ScenarioFinancialProjection = {
@@ -329,17 +333,6 @@ function resolveFunnelBaselines(
     closeRate: countRatio(sales, qualifiedCalls, "closeRate"),
     saleToNewCustomerRate: countRatio(newCustomers, sales, "saleToNewCustomerRate"),
   };
-}
-
-function metricRatio(
-  numerator: Rational,
-  denominator: Rational,
-  zeroReason: ScenarioMetric<ExactRatio> extends infer _ ? never : never,
-): never {
-  void numerator;
-  void denominator;
-  void zeroReason;
-  throw new Error("unreachable");
 }
 
 function ratioMetric(
