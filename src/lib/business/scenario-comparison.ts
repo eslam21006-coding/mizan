@@ -131,10 +131,10 @@ export function compareCurrentToScenario(input: ScenarioEngineInput): CurrentSce
 
   const currentCpl: ScenarioMetric<ExactRatio> = current.funnel.available
     ? { available: true, value: current.controls.cpl.value }
-    : { available: false, reason: "NO_NEW_CUSTOMERS" };
+    : { available: false, reason: "FUNNEL_BASELINE_UNAVAILABLE" };
   const scenarioCpl: ScenarioMetric<ExactRatio> = scenario.funnel.available
     ? { available: true, value: scenario.controls.cpl.value }
-    : { available: false, reason: "NO_NEW_CUSTOMERS" };
+    : { available: false, reason: "FUNNEL_BASELINE_UNAVAILABLE" };
 
   const funnel =
     current.funnel.available && scenario.funnel.available
