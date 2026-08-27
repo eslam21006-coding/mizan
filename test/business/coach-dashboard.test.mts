@@ -264,6 +264,15 @@ test("Task 36 skips unavailable month comparisons instead of inventing account c
   assert.equal(feed.insufficientBusinesses, 1);
 });
 
+test("Task 36 does not call complete flat data insufficient just because it has no signal", () => {
+  const feed = buildCoachDashboardFeed([snapshot("flat")]);
+
+  assert.deepEqual(feed.attention, []);
+  assert.deepEqual(feed.improvements, []);
+  assert.equal(feed.evaluatedBusinesses, 1);
+  assert.equal(feed.insufficientBusinesses, 0);
+});
+
 test("Task 36 emits at most one strongest signal per business and caps each section at six", () => {
   const snapshots = Array.from({ length: 8 }, (_, index) =>
     snapshot(String(index), {
