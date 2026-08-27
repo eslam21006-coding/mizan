@@ -70,7 +70,7 @@ test.describe("Tasks 33-34 Simulator", () => {
     await expect(newCustomersRow.locator("span").nth(1)).toHaveText("٥٠");
 
     const adSpendInput = page.getByLabel("الإنفاق الإعلاني", { exact: true });
-    await adSpendInput.fill("١٢٠٠٠");
+    await adSpendInput.fill("١٢٬٠٠٠");
     await expect(adSpendInput).toHaveValue("12000");
 
     await expect(netCashRow.locator("span").nth(1)).toHaveText("٦٠٬٠٠٠ EGP");
