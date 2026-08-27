@@ -40,7 +40,7 @@ type ScenarioRow = {
 type OverrideRow = {
   scenario_id: string;
   override_key: string;
-  override_value: string | number;
+  override_value_text: string;
 };
 
 const BLOCKER_COPY: Record<SimulatorMonthBlocker, string> = {
@@ -130,8 +130,8 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
     scenarioIds.length === 0
       ? { data: [] as OverrideRow[], error: null }
       : await supabase
-          .from("simulator_scenario_overrides")
-          .select("scenario_id,override_key,override_value")
+          .from("simulator_scenario_override_display")
+          .select("scenario_id,override_key,override_value_text")
           .eq("business_id", selectedBusiness.id)
           .in("scenario_id", scenarioIds);
 
@@ -140,7 +140,7 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
   for (const row of (overridesData ?? []) as OverrideRow[]) {
     if (!isScenarioOverrideKey(row.override_key)) continue;
     const current = overridesByScenario.get(row.scenario_id) ?? {};
-    current[row.override_key] = String(row.override_value);
+    current[row.override_key] = row.override_value_text;
     overridesByScenario.set(row.scenario_id, current);
   }
 
