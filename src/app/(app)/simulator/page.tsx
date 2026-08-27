@@ -145,14 +145,16 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
   }
 
   const selectedScenarioRow = scenarios.find((scenario) => scenario.id === query.scenario) ?? null;
-  const selectedScenario = selectedScenarioRow
-    ? {
-        id: selectedScenarioRow.id,
-        name: selectedScenarioRow.name,
-        creationRequestId: selectedScenarioRow.creation_request_id,
-        overrides: overridesByScenario.get(selectedScenarioRow.id) ?? {},
-      }
-    : null;
+  const selectedScenarioOverridesUnavailable = Boolean(selectedScenarioRow && overridesError);
+  const selectedScenario =
+    selectedScenarioRow && !selectedScenarioOverridesUnavailable
+      ? {
+          id: selectedScenarioRow.id,
+          name: selectedScenarioRow.name,
+          creationRequestId: selectedScenarioRow.creation_request_id,
+          overrides: overridesByScenario.get(selectedScenarioRow.id) ?? {},
+        }
+      : null;
   const canManage = auth.role === "admin" || selectedBusiness.owner_user_id === auth.userId;
   const statusCopy = query.status ? STATUS_COPY[query.status] : null;
   const workspaceKey = `${selectedBusiness.id}:${selectedMonth.monthKey}:${selectedScenario?.id ?? "new"}`;
@@ -204,7 +206,7 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
           <input type="hidden" name="month" value={selectedMonth.monthKey} />
           <label>
             <span>السيناريو المحفوظ</span>
-            <select name="scenario" defaultValue={selectedScenario?.id ?? ""}>
+            <select name="scenario" defaultValue={selectedScenarioRow?.id ?? ""}>
               <option value="">سيناريو جديد غير محفوظ</option>
               {scenarios.map((scenario) => (
                 <option key={scenario.id} value={scenario.id}>
@@ -226,7 +228,18 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
         </section>
       )}
 
-      {simulatorMonth.status === "insufficient" ? (
+      {selectedScenarioOverridesUnavailable ? (
+        <section className={styles.insufficientPanel} role="alert">
+          <h2>تعذر فتح السيناريو المحفوظ</h2>
+          <p>
+            لم يتم تحميل تعديلات هذا السيناريو بالكامل، لذلك لن نعرضه بقيم الشهر الحالية أو نفترض أن
+            تعديلاته فارغة. أعد فتح الصفحة أو اختر سيناريو جديدًا.
+          </p>
+          <Link href={`/simulator?business=${selectedBusiness.id}&month=${selectedMonth.monthKey}`}>
+            فتح سيناريو جديد
+          </Link>
+        </section>
+      ) : simulatorMonth.status === "insufficient" ? (
         <section className={styles.insufficientPanel}>
           <h2>لا توجد نقطة بداية كافية للمحاكي</h2>
           <p>{BLOCKER_COPY[simulatorMonth.blocker]}</p>
