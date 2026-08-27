@@ -1,9 +1,6 @@
 import type { CalculatedMetric, ExactRatio } from "./calculations";
 import { compareDecimalMetrics, compareRatioMetrics } from "./comparison";
-import {
-  compareRationals,
-  rationalFromExactRatio,
-} from "./exact-rational";
+import { compareRationals, rationalFromExactRatio } from "./exact-rational";
 import type { FunnelHealth, FunnelMetric } from "./funnel-calculations";
 
 export type CoachFinancialSnapshot = {
@@ -160,6 +157,44 @@ function firstImprovedFunnel(snapshot: CoachBusinessSnapshot) {
   }
 
   return null;
+}
+
+function hasComparableFinancialData(snapshot: CoachBusinessSnapshot) {
+  const current = snapshot.currentFinancial;
+  const previous = snapshot.previousFinancial;
+  if (!current || !previous) return false;
+
+  return (
+    compareDecimalMetrics(current.netCashCollected, previous.netCashCollected).available ||
+    compareDecimalMetrics(current.realNetProfit, previous.realNetProfit).available ||
+    compareRatioMetrics(current.realNetProfitMargin, previous.realNetProfitMargin).available ||
+    compareRatioMetrics(current.ultimateCac, previous.ultimateCac).available
+  );
+}
+
+function hasComparableFunnelData(snapshot: CoachBusinessSnapshot) {
+  if (
+    snapshot.currentFunnels.some(
+      (funnel) =>
+        funnel.showRateHealth !== "unavailable" || funnel.closeRateHealth !== "unavailable",
+    )
+  ) {
+    return true;
+  }
+
+  const previousById = new Map(snapshot.previousFunnels.map((funnel) => [funnel.funnelId, funnel]));
+  return snapshot.currentFunnels.some((current) => {
+    const previous = previousById.get(current.funnelId);
+    if (!previous) return false;
+    return (
+      compareFunnelRatio(current.showRate, previous.showRate) !== null ||
+      compareFunnelRatio(current.closeRate, previous.closeRate) !== null
+    );
+  });
+}
+
+function hasComparableData(snapshot: CoachBusinessSnapshot) {
+  return hasComparableFinancialData(snapshot) || hasComparableFunnelData(snapshot);
 }
 
 function evaluateAttention(snapshot: CoachBusinessSnapshot) {
@@ -347,7 +382,7 @@ export function buildCoachDashboardFeed(
 
     if (attentionSignalForBusiness) attention.push(attentionSignalForBusiness);
     if (improvementSignalForBusiness) improvements.push(improvementSignalForBusiness);
-    if (!attentionSignalForBusiness && !improvementSignalForBusiness) insufficientBusinesses += 1;
+    if (!hasComparableData(snapshot)) insufficientBusinesses += 1;
   }
 
   return {
