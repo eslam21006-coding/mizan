@@ -157,6 +157,26 @@ begin
   end if;
 
   begin
+    perform public.duplicate_simulator_scenario(
+      'a0330000-0000-4000-8000-000000000001',
+      saved_scenario_id,
+      'Invalid self duplicate',
+      '3333d000-0000-4000-8000-000000000001'
+    );
+    raise exception 'duplicate accepted the source creation request id';
+  exception when invalid_parameter_value then
+    null;
+  end;
+
+  if (
+    select count(*)
+    from public.simulator_scenario_overrides as override_row
+    where override_row.scenario_id = saved_scenario_id
+  ) <> 2 then
+    raise exception 'rejected self-duplicate request modified source overrides';
+  end if;
+
+  begin
     perform public.save_simulator_scenario(
       'a0330000-0000-4000-8000-000000000001',
       saved_scenario_id,
