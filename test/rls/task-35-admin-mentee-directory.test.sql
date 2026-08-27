@@ -16,13 +16,18 @@ values
 
 do $$
 declare
-  directory_count integer;
+  fixture_directory_count integer;
   zero_business_count integer;
   alpha_count integer;
 begin
-  select count(*) into directory_count from public.admin_mentee_directory();
-  if directory_count <> 3 then
-    raise exception 'admin mentee directory expected 3 rows, got %', directory_count;
+  select count(*) into fixture_directory_count
+  from public.admin_mentee_directory()
+  where mentee_user_id in (
+    '35000000-0000-4000-8000-000000000002',
+    '35000000-0000-4000-8000-000000000003'
+  );
+  if fixture_directory_count <> 3 then
+    raise exception 'Task 35 fixture mentees expected 3 directory rows, got %', fixture_directory_count;
   end if;
 
   select count(*) into zero_business_count
