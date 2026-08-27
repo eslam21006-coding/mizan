@@ -70,7 +70,7 @@ export default async function SimulatorE2eFixturePage({
         selectedScenario={selectedScenario}
         newCreationRequestId="00000000-0000-4000-8000-000000000345"
         duplicateCreationRequestId="00000000-0000-4000-8000-000000000346"
-        canManage={false}
+        canManage
       />
     </main>
   );
