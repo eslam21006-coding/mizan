@@ -69,7 +69,9 @@ test.describe("Tasks 33-34 Simulator", () => {
     await expect(newCustomersRow.locator("span").nth(0)).toHaveText("٥٠");
     await expect(newCustomersRow.locator("span").nth(1)).toHaveText("٥٠");
 
-    await page.getByLabel("الإنفاق الإعلاني", { exact: true }).fill("12000");
+    const adSpendInput = page.getByLabel("الإنفاق الإعلاني", { exact: true });
+    await adSpendInput.fill("١٢٠٠٠");
+    await expect(adSpendInput).toHaveValue("12000");
 
     await expect(netCashRow.locator("span").nth(1)).toHaveText("٦٠٬٠٠٠ EGP");
     await expect(newCustomersRow.locator("span").nth(1)).toHaveText("٦٠");
