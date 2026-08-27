@@ -1,4 +1,5 @@
 import type { ExactRatio } from "./calculations.ts";
+import { subtractExactRatios } from "./exact-rational.ts";
 import {
   calculateScenario,
   type ScenarioEngineInput,
@@ -49,52 +50,8 @@ export type CurrentScenarioComparison = {
     | { available: false; reason: "FUNNEL_BASELINE_UNAVAILABLE" };
 };
 
-type Rational = { numerator: bigint; denominator: bigint };
-
-function gcd(left: bigint, right: bigint) {
-  let a = left < 0n ? -left : left;
-  let b = right < 0n ? -right : right;
-  while (b !== 0n) {
-    const remainder = a % b;
-    a = b;
-    b = remainder;
-  }
-  return a;
-}
-
-function normalize(value: Rational): Rational {
-  if (value.denominator === 0n) throw new Error("Comparison ratio denominator cannot be zero.");
-  if (value.numerator === 0n) return { numerator: 0n, denominator: 1n };
-  const sign = value.denominator < 0n ? -1n : 1n;
-  const numerator = value.numerator * sign;
-  const denominator = value.denominator * sign;
-  const divisor = gcd(numerator, denominator);
-  return { numerator: numerator / divisor, denominator: denominator / divisor };
-}
-
-function rational(value: ExactRatio): Rational {
-  return normalize({ numerator: BigInt(value.numerator), denominator: BigInt(value.denominator) });
-}
-
-function exact(value: Rational): ExactRatio {
-  const normalized = normalize(value);
-  return {
-    numerator: normalized.numerator.toString(),
-    denominator: normalized.denominator.toString(),
-  };
-}
-
-function subtract(left: ExactRatio, right: ExactRatio): ExactRatio {
-  const a = rational(left);
-  const b = rational(right);
-  return exact({
-    numerator: a.numerator * b.denominator - b.numerator * a.denominator,
-    denominator: a.denominator * b.denominator,
-  });
-}
-
 function exactChange(current: ExactRatio, scenario: ExactRatio): ScenarioExactChange {
-  return { current, scenario, delta: subtract(scenario, current) };
+  return { current, scenario, delta: subtractExactRatios(scenario, current) };
 }
 
 function metricChange(
@@ -103,7 +60,7 @@ function metricChange(
 ): ScenarioMetricChange {
   const delta: ScenarioMetric<ExactRatio> =
     current.available && scenario.available
-      ? { available: true, value: subtract(scenario.value, current.value) }
+      ? { available: true, value: subtractExactRatios(scenario.value, current.value) }
       : scenario.available
         ? current
         : scenario;
