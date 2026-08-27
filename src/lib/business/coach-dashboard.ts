@@ -1,7 +1,7 @@
-import type { CalculatedMetric, ExactRatio } from "./calculations";
-import { compareDecimalMetrics, compareRatioMetrics } from "./comparison";
-import { compareRationals, rationalFromExactRatio } from "./exact-rational";
-import type { FunnelHealth, FunnelMetric } from "./funnel-calculations";
+import type { CalculatedMetric, ExactRatio } from "./calculations.ts";
+import { compareDecimalMetrics, compareRatioMetrics } from "./comparison.ts";
+import { compareRationals, rationalFromExactRatio } from "./exact-rational.ts";
+import type { FunnelHealth, FunnelMetric } from "./funnel-calculations.ts";
 
 export type CoachFinancialSnapshot = {
   netCashCollected: CalculatedMetric<string>;
