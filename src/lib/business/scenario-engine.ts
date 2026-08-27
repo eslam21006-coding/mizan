@@ -1,4 +1,17 @@
 import type { ExactRatio } from "./calculations.ts";
+import {
+  addRationals,
+  compareRationals,
+  divideRationals,
+  exactRatioFromRational,
+  multiplyRationals,
+  normalizeRational,
+  ONE_RATIONAL,
+  rationalFromExactRatio,
+  subtractRationals,
+  type Rational,
+  ZERO_RATIONAL,
+} from "./exact-rational.ts";
 
 export const SCENARIO_OVERRIDE_KEYS = [
   "customer_value",
@@ -92,44 +105,13 @@ export type ScenarioEngineResult = {
   financial: ScenarioFinancialProjection;
 };
 
-type Rational = {
-  numerator: bigint;
-  denominator: bigint;
-};
-
 const DECIMAL_PATTERN = /^\d+(?:\.\d+)?$/;
-const ZERO: Rational = { numerator: 0n, denominator: 1n };
-const ONE: Rational = { numerator: 1n, denominator: 1n };
 
 export class ScenarioEngineInputError extends Error {
   constructor(message: string) {
     super(message);
     this.name = "ScenarioEngineInputError";
   }
-}
-
-function gcd(left: bigint, right: bigint) {
-  let a = left < 0n ? -left : left;
-  let b = right < 0n ? -right : right;
-  while (b !== 0n) {
-    const remainder = a % b;
-    a = b;
-    b = remainder;
-  }
-  return a;
-}
-
-function normalize(value: Rational): Rational {
-  if (value.denominator === 0n) {
-    throw new ScenarioEngineInputError("Scenario ratio denominator cannot be zero.");
-  }
-  if (value.numerator === 0n) return ZERO;
-
-  const sign = value.denominator < 0n ? -1n : 1n;
-  const numerator = value.numerator * sign;
-  const denominator = value.denominator * sign;
-  const divisor = gcd(numerator, denominator);
-  return { numerator: numerator / divisor, denominator: denominator / divisor };
 }
 
 function parseNonNegativeDecimal(value: string, fieldName: string): Rational {
@@ -139,7 +121,7 @@ function parseNonNegativeDecimal(value: string, fieldName: string): Rational {
   }
   const [whole, fraction = ""] = raw.split(".");
   const denominator = 10n ** BigInt(fraction.length);
-  return normalize({
+  return normalizeRational({
     numerator: BigInt(`${whole}${fraction}` || "0"),
     denominator,
   });
@@ -152,61 +134,12 @@ function requireNonNegativeSafeInteger(value: number, fieldName: string) {
   return value;
 }
 
-function toExactRatio(value: Rational): ExactRatio {
-  const normalized = normalize(value);
-  return {
-    numerator: normalized.numerator.toString(),
-    denominator: normalized.denominator.toString(),
-  };
-}
-
-function fromExactRatio(value: ExactRatio): Rational {
-  return normalize({ numerator: BigInt(value.numerator), denominator: BigInt(value.denominator) });
-}
-
-function add(left: Rational, right: Rational): Rational {
-  return normalize({
-    numerator: left.numerator * right.denominator + right.numerator * left.denominator,
-    denominator: left.denominator * right.denominator,
-  });
-}
-
-function subtract(left: Rational, right: Rational): Rational {
-  return normalize({
-    numerator: left.numerator * right.denominator - right.numerator * left.denominator,
-    denominator: left.denominator * right.denominator,
-  });
-}
-
-function multiply(left: Rational, right: Rational): Rational {
-  return normalize({
-    numerator: left.numerator * right.numerator,
-    denominator: left.denominator * right.denominator,
-  });
-}
-
-function divide(left: Rational, right: Rational): Rational {
-  if (right.numerator === 0n) {
-    throw new ScenarioEngineInputError("Scenario calculation cannot divide by zero.");
-  }
-  return normalize({
-    numerator: left.numerator * right.denominator,
-    denominator: left.denominator * right.numerator,
-  });
-}
-
-function compare(left: Rational, right: Rational) {
-  const scaledLeft = left.numerator * right.denominator;
-  const scaledRight = right.numerator * left.denominator;
-  return scaledLeft === scaledRight ? 0 : scaledLeft > scaledRight ? 1 : -1;
-}
-
 function multiplyCount(value: Rational, count: number): Rational {
-  return multiply(value, { numerator: BigInt(count), denominator: 1n });
+  return multiplyRationals(value, { numerator: BigInt(count), denominator: 1n });
 }
 
 function floorNonNegative(value: Rational, fieldName: string) {
-  const normalized = normalize(value);
+  const normalized = normalizeRational(value);
   if (normalized.numerator < 0n) {
     throw new ScenarioEngineInputError(`${fieldName} cannot be negative.`);
   }
@@ -223,11 +156,11 @@ function countRatio(numerator: number, denominator: number, fieldName: string) {
   if (denominator === 0) {
     throw new ScenarioEngineInputError(`${fieldName} denominator must be greater than zero.`);
   }
-  return normalize({ numerator: BigInt(numerator), denominator: BigInt(denominator) });
+  return normalizeRational({ numerator: BigInt(numerator), denominator: BigInt(denominator) });
 }
 
 function requireRate(value: Rational, fieldName: string) {
-  if (compare(value, ZERO) < 0 || compare(value, ONE) > 0) {
+  if (compareRationals(value, ZERO_RATIONAL) < 0 || compareRationals(value, ONE_RATIONAL) > 0) {
     throw new ScenarioEngineInputError(`${fieldName} must be between 0% and 100%.`);
   }
   return value;
@@ -243,7 +176,7 @@ function control(
   if (key === "show_rate" || key === "qualification_rate" || key === "close_rate") {
     requireRate(resolved, key);
   }
-  return { value: toExactRatio(resolved), overridden: rawOverride !== undefined };
+  return { value: exactRatioFromRational(resolved), overridden: rawOverride !== undefined };
 }
 
 function resolveFinancialBaselines(financial: ScenarioFinancialBaseline) {
@@ -256,12 +189,15 @@ function resolveFinancialBaselines(financial: ScenarioFinancialBaseline) {
   if (newCustomers === 0) {
     throw new ScenarioEngineInputError("Scenario baseline requires at least one actual new customer.");
   }
-  if (compare(variableCosts, allCosts) > 0) {
+  if (compareRationals(variableCosts, allCosts) > 0) {
     throw new ScenarioEngineInputError("Variable costs cannot exceed all business costs.");
   }
 
-  const fixedNonMediaCosts = subtract(subtract(allCosts, variableCosts), adSpend);
-  if (compare(fixedNonMediaCosts, ZERO) < 0) {
+  const fixedNonMediaCosts = subtractRationals(
+    subtractRationals(allCosts, variableCosts),
+    adSpend,
+  );
+  if (compareRationals(fixedNonMediaCosts, ZERO_RATIONAL) < 0) {
     throw new ScenarioEngineInputError(
       "Current ad spend and variable costs exceed all business costs; scenario cost basis is inconsistent.",
     );
@@ -273,8 +209,11 @@ function resolveFinancialBaselines(financial: ScenarioFinancialBaseline) {
     variableCosts,
     adSpend,
     newCustomers,
-    customerValue: divide(netCash, { numerator: BigInt(newCustomers), denominator: 1n }),
-    variableCostPerCustomer: divide(variableCosts, {
+    customerValue: divideRationals(netCash, {
+      numerator: BigInt(newCustomers),
+      denominator: 1n,
+    }),
+    variableCostPerCustomer: divideRationals(variableCosts, {
       numerator: BigInt(newCustomers),
       denominator: 1n,
     }),
@@ -323,10 +262,10 @@ function resolveFunnelBaselines(
       "Funnel new-customer total must match the business monthly new-customer actual.",
     );
   }
-  if (compare(currentAdSpend, ZERO) <= 0) return null;
+  if (compareRationals(currentAdSpend, ZERO_RATIONAL) <= 0) return null;
 
   return {
-    cpl: divide(currentAdSpend, { numerator: BigInt(leads), denominator: 1n }),
+    cpl: divideRationals(currentAdSpend, { numerator: BigInt(leads), denominator: 1n }),
     bookingRate: countRatio(bookedCalls, leads, "bookingRate"),
     showRate: countRatio(showedCalls, bookedCalls, "showRate"),
     qualificationRate: countRatio(qualifiedCalls, showedCalls, "qualificationRate"),
@@ -340,8 +279,10 @@ function ratioMetric(
   denominator: Rational,
   zeroReason: "NO_NEW_CUSTOMERS" | "NON_POSITIVE_NET_CASH" | "NO_AD_SPEND",
 ): ScenarioMetric<ExactRatio> {
-  if (compare(denominator, ZERO) <= 0) return { available: false, reason: zeroReason };
-  return { available: true, value: toExactRatio(divide(numerator, denominator)) };
+  if (compareRationals(denominator, ZERO_RATIONAL) <= 0) {
+    return { available: false, reason: zeroReason };
+  }
+  return { available: true, value: exactRatioFromRational(divideRationals(numerator, denominator)) };
 }
 
 /**
@@ -361,47 +302,49 @@ export function calculateScenario(input: ScenarioEngineInput): ScenarioEngineRes
 
   const controls: ScenarioResolvedControls = {
     customer_value: control("customer_value", financial.customerValue, overrides),
-    cpl: control("cpl", funnel?.cpl ?? ZERO, overrides),
+    cpl: control("cpl", funnel?.cpl ?? ZERO_RATIONAL, overrides),
     ad_spend: control("ad_spend", financial.adSpend, overrides),
-    show_rate: control("show_rate", funnel?.showRate ?? ZERO, overrides),
+    show_rate: control("show_rate", funnel?.showRate ?? ZERO_RATIONAL, overrides),
     qualification_rate: control(
       "qualification_rate",
-      funnel?.qualificationRate ?? ZERO,
+      funnel?.qualificationRate ?? ZERO_RATIONAL,
       overrides,
     ),
-    close_rate: control("close_rate", funnel?.closeRate ?? ZERO, overrides),
+    close_rate: control("close_rate", funnel?.closeRate ?? ZERO_RATIONAL, overrides),
     fixed_costs: control("fixed_costs", financial.fixedNonMediaCosts, overrides),
     variable_costs: control("variable_costs", financial.variableCostPerCustomer, overrides),
-    upsells: control("upsells", ZERO, overrides),
-    renewals: control("renewals", ZERO, overrides),
-    backend_revenue: control("backend_revenue", ZERO, overrides),
+    upsells: control("upsells", ZERO_RATIONAL, overrides),
+    renewals: control("renewals", ZERO_RATIONAL, overrides),
+    backend_revenue: control("backend_revenue", ZERO_RATIONAL, overrides),
   };
 
-  const adSpend = fromExactRatio(controls.ad_spend.value);
+  const adSpend = rationalFromExactRatio(controls.ad_spend.value);
   let funnelProjection: ScenarioFunnelProjection;
   let scenarioNewCustomers = financial.newCustomers;
 
   if (funnel) {
-    const cpl = fromExactRatio(controls.cpl.value);
-    if (compare(cpl, ZERO) <= 0) {
-      throw new ScenarioEngineInputError("CPL must be greater than zero when funnel projection is available.");
+    const cpl = rationalFromExactRatio(controls.cpl.value);
+    if (compareRationals(cpl, ZERO_RATIONAL) <= 0) {
+      throw new ScenarioEngineInputError(
+        "CPL must be greater than zero when funnel projection is available.",
+      );
     }
 
-    const leads = floorNonNegative(divide(adSpend, cpl), "scenario leads");
+    const leads = floorNonNegative(divideRationals(adSpend, cpl), "scenario leads");
     const bookedCalls = floorNonNegative(
       multiplyCount(funnel.bookingRate, leads),
       "scenario bookings",
     );
     const showedCalls = floorNonNegative(
-      multiplyCount(fromExactRatio(controls.show_rate.value), bookedCalls),
+      multiplyCount(rationalFromExactRatio(controls.show_rate.value), bookedCalls),
       "scenario shows",
     );
     const qualifiedCalls = floorNonNegative(
-      multiplyCount(fromExactRatio(controls.qualification_rate.value), showedCalls),
+      multiplyCount(rationalFromExactRatio(controls.qualification_rate.value), showedCalls),
       "scenario qualified calls",
     );
     const sales = floorNonNegative(
-      multiplyCount(fromExactRatio(controls.close_rate.value), qualifiedCalls),
+      multiplyCount(rationalFromExactRatio(controls.close_rate.value), qualifiedCalls),
       "scenario sales",
     );
     scenarioNewCustomers = floorNonNegative(
@@ -417,8 +360,8 @@ export function calculateScenario(input: ScenarioEngineInput): ScenarioEngineRes
       qualifiedCalls,
       sales,
       newCustomers: scenarioNewCustomers,
-      heldBookingRate: toExactRatio(funnel.bookingRate),
-      heldSaleToNewCustomerRate: toExactRatio(funnel.saleToNewCustomerRate),
+      heldBookingRate: exactRatioFromRational(funnel.bookingRate),
+      heldSaleToNewCustomerRate: exactRatioFromRational(funnel.saleToNewCustomerRate),
     };
   } else {
     funnelProjection = {
@@ -429,25 +372,25 @@ export function calculateScenario(input: ScenarioEngineInput): ScenarioEngineRes
   }
 
   const customerRevenue = multiplyCount(
-    fromExactRatio(controls.customer_value.value),
+    rationalFromExactRatio(controls.customer_value.value),
     scenarioNewCustomers,
   );
-  const netCashCollected = add(
-    add(
-      add(customerRevenue, fromExactRatio(controls.upsells.value)),
-      fromExactRatio(controls.renewals.value),
+  const netCashCollected = addRationals(
+    addRationals(
+      addRationals(customerRevenue, rationalFromExactRatio(controls.upsells.value)),
+      rationalFromExactRatio(controls.renewals.value),
     ),
-    fromExactRatio(controls.backend_revenue.value),
+    rationalFromExactRatio(controls.backend_revenue.value),
   );
   const variableCosts = multiplyCount(
-    fromExactRatio(controls.variable_costs.value),
+    rationalFromExactRatio(controls.variable_costs.value),
     scenarioNewCustomers,
   );
-  const allBusinessCosts = add(
-    add(fromExactRatio(controls.fixed_costs.value), variableCosts),
+  const allBusinessCosts = addRationals(
+    addRationals(rationalFromExactRatio(controls.fixed_costs.value), variableCosts),
     adSpend,
   );
-  const realNetProfit = subtract(netCashCollected, allBusinessCosts);
+  const realNetProfit = subtractRationals(netCashCollected, allBusinessCosts);
 
   const customerCount = { numerator: BigInt(scenarioNewCustomers), denominator: 1n };
 
@@ -455,9 +398,9 @@ export function calculateScenario(input: ScenarioEngineInput): ScenarioEngineRes
     controls,
     funnel: funnelProjection,
     financial: {
-      netCashCollected: toExactRatio(netCashCollected),
-      allBusinessCosts: toExactRatio(allBusinessCosts),
-      realNetProfit: toExactRatio(realNetProfit),
+      netCashCollected: exactRatioFromRational(netCashCollected),
+      allBusinessCosts: exactRatioFromRational(allBusinessCosts),
+      realNetProfit: exactRatioFromRational(realNetProfit),
       realNetProfitMargin: ratioMetric(
         realNetProfit,
         netCashCollected,
