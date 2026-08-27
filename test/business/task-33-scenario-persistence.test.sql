@@ -82,14 +82,6 @@ begin
     raise exception 'scenario RPC did not return an id';
   end if;
 
-  if not exists (
-    select 1
-    from public.simulator_scenario_overrides
-    where scenario_id = scenario_id
-  ) then
-    null;
-  end if;
-
   if (
     select count(*)
     from public.simulator_scenario_overrides as override_row
