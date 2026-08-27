@@ -237,6 +237,7 @@ set local request.jwt.claims =
 do $$
 declare
   source_id uuid;
+  affected integer;
 begin
   select scenario_row.id into source_id
   from public.simulator_scenarios as scenario_row
@@ -268,6 +269,14 @@ begin
   exception when insufficient_privilege then
     null;
   end;
+
+  delete from public.simulator_scenarios
+  where business_id = 'a0330000-0000-4000-8000-000000000001'
+    and id = source_id;
+  get diagnostics affected = row_count;
+  if affected <> 0 then
+    raise exception 'read-only business member deleted a simulator scenario';
+  end if;
 end $$;
 
 reset role;
