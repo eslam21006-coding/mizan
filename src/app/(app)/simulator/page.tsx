@@ -53,6 +53,8 @@ const BLOCKER_COPY: Record<SimulatorMonthBlocker, string> = {
   NEW_CUSTOMERS_UNAVAILABLE: "عدد العملاء الجدد غير متاح لهذا الشهر.",
   NO_NEW_CUSTOMERS: "لا يوجد عملاء جدد في الشهر الحالي، لذلك لا يمكن اشتقاق قيمة عميل أو تكلفة متغيرة لكل عميل دون تخمين.",
   AD_SPEND_UNAVAILABLE: "الإنفاق الإعلاني الفعلي غير متاح أو غير متصالح لهذا الشهر. احفظ إنفاقًا إعلانيًا واضحًا أولًا.",
+  SCENARIO_BASELINE_INCONSISTENT:
+    "هيكل تكاليف الشهر لا يسمح بفصل الإنفاق الإعلاني والتكاليف المتغيرة عن بقية التكاليف بأمان. راجع مصروفات الشهر والإنفاق الإعلاني قبل استخدام المحاكي.",
 };
 
 const STATUS_COPY: Record<string, string> = {
@@ -153,6 +155,7 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
     : null;
   const canManage = auth.role === "admin" || selectedBusiness.owner_user_id === auth.userId;
   const statusCopy = query.status ? STATUS_COPY[query.status] : null;
+  const workspaceKey = `${selectedBusiness.id}:${selectedMonth.monthKey}:${selectedScenario?.id ?? "new"}`;
 
   return (
     <div className="page-stack">
@@ -242,6 +245,7 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
         </section>
       ) : (
         <SimulatorWorkspace
+          key={workspaceKey}
           businessId={selectedBusiness.id}
           month={selectedMonth.monthKey}
           currency={selectedBusiness.base_currency}
