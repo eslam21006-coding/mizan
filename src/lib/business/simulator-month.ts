@@ -2,10 +2,12 @@ import type { createSupabaseServerClient } from "../supabase/server";
 import type { CoreCalculationResult } from "./calculations.ts";
 import { loadDashboardMonth } from "./dashboard-month.ts";
 import { loadFunnelMonth, type FunnelMonthlyEntrySnapshot } from "./funnel-month.ts";
-import type {
-  ScenarioEngineInput,
-  ScenarioFinancialBaseline,
-  ScenarioFunnelBaseline,
+import {
+  calculateScenario,
+  ScenarioEngineInputError,
+  type ScenarioEngineInput,
+  type ScenarioFinancialBaseline,
+  type ScenarioFunnelBaseline,
 } from "./scenario-engine.ts";
 
 type ServerSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
@@ -19,7 +21,8 @@ export type SimulatorMonthBlocker =
   | "VARIABLE_COSTS_UNAVAILABLE"
   | "NEW_CUSTOMERS_UNAVAILABLE"
   | "NO_NEW_CUSTOMERS"
-  | "AD_SPEND_UNAVAILABLE";
+  | "AD_SPEND_UNAVAILABLE"
+  | "SCENARIO_BASELINE_INCONSISTENT";
 
 export type SimulatorMonthLoadResult =
   | {
@@ -120,6 +123,19 @@ function aggregateFunnelEntries(
   return totals;
 }
 
+function baselineIsScenarioSafe(
+  financial: ScenarioFinancialBaseline,
+  funnel: ScenarioFunnelBaseline | null,
+) {
+  try {
+    calculateScenario({ financial, funnel, overrides: {} });
+    return true;
+  } catch (error) {
+    if (error instanceof ScenarioEngineInputError) return false;
+    throw error;
+  }
+}
+
 /**
  * Loads only historical actuals. Scenario data is applied later by the pure engine and never written here.
  */
@@ -180,6 +196,10 @@ export async function loadSimulatorMonth(
     adSpend,
   };
   const funnel = aggregateFunnelEntries(funnelMonth.entries, result.newCustomers.value);
+
+  if (!baselineIsScenarioSafe(financial, funnel)) {
+    return { status: "insufficient", blocker: "SCENARIO_BASELINE_INCONSISTENT" };
+  }
 
   return {
     status: "ready",
