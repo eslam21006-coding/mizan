@@ -41,9 +41,10 @@ These checks supplement—rather than replace—the detailed feature-specific RL
 
 Automated source-boundary tests verify:
 
-- the server Supabase client remains `server-only`;
-- runtime application configuration contains only the public Supabase URL and publishable key;
-- no application source references a Supabase service-role/secret credential;
+- the request-scoped Supabase client remains `server-only` and uses only the public URL/publishable key;
+- browser-safe runtime configuration contains only the public Supabase URL and publishable key;
+- the intentional privileged Supabase client and secret-key configuration remain explicitly `server-only`, non-client modules with session persistence/refresh disabled;
+- any future source file that references an elevated Supabase credential must also be protected by `server-only` and must not be a `use client` module;
 - the route gate verifies claims with `auth.getClaims()` rather than using `auth.getSession()` as an authorization decision;
 - no source file introduces a `getSession()` authorization path.
 
@@ -58,14 +59,15 @@ Automated source-boundary tests verify:
 - definer-function search-path hijacking;
 - security-definer views bypassing underlying RLS;
 - direct client access to `auth.users`;
-- accidentally shipping service-role credentials into application source;
+- accidentally exposing an elevated Supabase credential to browser/client code;
 - external/open redirect and role metadata issues already covered by the existing auth contract suite.
 
 ## Explicit non-goals
 
 - Task 39 does not create a new role model.
 - It does not move authorization from the database into middleware.
-- It does not expose service-role credentials to the Next.js runtime.
+- It does not remove the intentional server-only privileged Supabase client used for trusted administrative operations.
+- It does not expose elevated Supabase credentials to client/browser runtime code.
 - It does not change financial calculations or historical business data.
 - It does not perform Task 40 production/final-verification work.
 
