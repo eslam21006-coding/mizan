@@ -152,7 +152,7 @@ export default async function AdminMenteesPage() {
                           >
                             <div>
                               <strong>{business.name}</strong>
-                              <span>{business.baseCurrency}</span>
+                              <span>{business.baseCurrency} · {business.timezone}</span>
                             </div>
                             <small>فتح البزنس ←</small>
                           </Link>
