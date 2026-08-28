@@ -6,7 +6,10 @@ import {
   type CoreCalculationInput,
   type ExactRatio,
 } from "../../src/lib/business/calculations.ts";
-import { createCoreMetricAudits, type MetricAuditValue } from "../../src/lib/business/metric-audit.ts";
+import {
+  createCoreMetricAudits,
+  type MetricAuditValue,
+} from "../../src/lib/business/metric-audit.ts";
 
 function value<T>(metric: CalculatedMetric<T>) {
   assert.equal(metric.available, true);
@@ -129,5 +132,4 @@ test("period customer-value audits remain explicitly distinct from LTV", () => {
   const expected: ExactRatio = { numerator: "5000", denominator: "3" };
   assert.deepEqual(value(result.revenuePerNewCustomer), expected);
   assert.equal(audits.revenuePerNewCustomer.result.metric, result.revenuePerNewCustomer);
-}
-);
+});
