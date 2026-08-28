@@ -1,13 +1,18 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 
+const fixtureShellProps = {
+  role: "admin" as const,
+  email: "admin.fixture@example.test",
+};
+
 export default function AppShellE2eFixturePage() {
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
     notFound();
   }
 
   return (
-    <AppShell role="admin" email="admin.fixture@example.test">
+    <AppShell {...fixtureShellProps}>
       <section className="page-stack" aria-label="محتوى اختبار واجهة ميزان">
         <div>
           <span className="eyebrow">اختبار الواجهة</span>
