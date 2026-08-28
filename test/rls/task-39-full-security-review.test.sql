@@ -101,11 +101,16 @@ begin
       select 1
       from unnest(coalesce(procedure.proconfig, array[]::text[])) as setting
       where setting like 'search_path=%'
-        and btrim(substr(setting, length('search_path=') + 1)) in ('', '""', 'pg_catalog')
+        and regexp_replace(
+          lower(btrim(substr(setting, length('search_path=') + 1))),
+          '[[:space:]]+',
+          '',
+          'g'
+        ) = 'pg_catalog,pg_temp'
     );
 
   if unsafe_functions is not null then
-    raise exception 'Task 39: SECURITY DEFINER functions must pin search_path to empty or pg_catalog only: %', unsafe_functions;
+    raise exception 'Task 39: SECURITY DEFINER functions must pin search_path to pg_catalog, pg_temp: %', unsafe_functions;
   end if;
 end $$;
 
@@ -145,7 +150,13 @@ begin
      or has_table_privilege('anon', 'auth.users', 'UPDATE')
      or has_table_privilege('authenticated', 'auth.users', 'UPDATE')
      or has_table_privilege('anon', 'auth.users', 'DELETE')
-     or has_table_privilege('authenticated', 'auth.users', 'DELETE') then
+     or has_table_privilege('authenticated', 'auth.users', 'DELETE')
+     or has_table_privilege('anon', 'auth.users', 'TRUNCATE')
+     or has_table_privilege('authenticated', 'auth.users', 'TRUNCATE')
+     or has_table_privilege('anon', 'auth.users', 'REFERENCES')
+     or has_table_privilege('authenticated', 'auth.users', 'REFERENCES')
+     or has_table_privilege('anon', 'auth.users', 'TRIGGER')
+     or has_table_privilege('authenticated', 'auth.users', 'TRIGGER') then
     raise exception 'Task 39: auth.users must not be directly accessible to client roles';
   end if;
 end $$;
