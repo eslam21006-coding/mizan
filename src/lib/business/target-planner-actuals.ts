@@ -6,7 +6,7 @@ export type TargetPlannerActualMonthBlocker =
   | "CORE_METRIC_UNAVAILABLE"
   | "EXPENSE_AMOUNT_UNAVAILABLE"
   | "AD_SPEND_UNAVAILABLE"
-  | "MEDIA_EXPENSE_UNRESOLVED"
+  | "MEDIA_EXCEEDS_FIXED_ACQUISITION"
   | "FUNNEL_DATA_UNAVAILABLE"
   | "FUNNEL_CUSTOMER_MISMATCH"
   | "FUNNEL_SEQUENCE_INVALID";
@@ -155,7 +155,7 @@ export function buildTargetPlannerActualMonth(input: {
       matchingAcquisitionExpenses[0].variable ||
       matchingAcquisitionExpenses[0].behavior !== "fixed_monthly"
     ) {
-      return { status: "insufficient", blocker: "MEDIA_EXPENSE_UNRESOLVED" };
+      return { status: "insufficient", blocker: "MEDIA_EXCEEDS_FIXED_ACQUISITION" };
     }
     mediaExpenseId = matchingAcquisitionExpenses[0].id;
   }
