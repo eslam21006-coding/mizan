@@ -38,6 +38,12 @@ test.describe("authenticated application shell", () => {
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.locator(".desktop-sidebar")).toBeVisible();
     await expect(page.getByRole("heading", { name: "الرئيسية", level: 1 })).toBeVisible();
+    await expect(
+      page.locator(".desktop-sidebar").getByText(/^(مدير|متدرب)$/),
+    ).toBeVisible();
+    await expect(page.getByText("Admin", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Mentee", { exact: true })).toHaveCount(0);
+    await expect(page.locator('.desktop-sidebar small[dir="ltr"]')).toHaveText(liveEmail);
 
     await page.screenshot({ path: "test-results/screenshots/home-desktop.png", fullPage: true });
 
@@ -102,6 +108,88 @@ test.describe("authenticated application shell", () => {
     await expect(page.getByRole("heading", { name: "العملاء و LTV", level: 1 })).toBeVisible();
     await expect(page.locator(".mobile-drawer-layer")).not.toHaveClass(/mobile-drawer-layer-open/);
     await page.screenshot({ path: "test-results/screenshots/customers-mobile.png", fullPage: true });
+    expect(errors).toEqual([]);
+  });
+
+  test("mobile shell keeps primary controls touch-safe", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/");
+
+    const menuButton = page.locator(".menu-button");
+    const menuBox = await menuButton.boundingBox();
+    expect(menuBox?.width ?? 0).toBeGreaterThanOrEqual(44);
+    expect(menuBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+
+    await menuButton.click();
+    const closeButton = page.locator(".mobile-drawer .close-button");
+    const signOutButton = page.locator(".mobile-drawer").getByRole("button", {
+      name: "تسجيل الخروج",
+    });
+    await signOutButton.scrollIntoViewIfNeeded();
+
+    for (const control of [closeButton, signOutButton]) {
+      const box = await control.boundingBox();
+      expect(box?.width ?? 0).toBeGreaterThanOrEqual(44);
+      expect(box?.height ?? 0).toBeGreaterThanOrEqual(44);
+    }
+    expect(errors).toEqual([]);
+  });
+
+  test("mobile drawer stays scrollable and usable in a short viewport", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 420 });
+    await page.goto("/");
+
+    await page.locator(".menu-button").click();
+    const drawer = page.locator(".mobile-drawer");
+    await expect(drawer).toHaveCSS("overflow-y", "auto");
+
+    const dimensions = await drawer.evaluate((element) => ({
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+    }));
+    expect(dimensions.scrollHeight).toBeGreaterThan(dimensions.clientHeight);
+
+    const settingsLink = drawer.getByRole("link", { name: "الإعدادات" });
+    const signOutButton = drawer.getByRole("button", { name: "تسجيل الخروج" });
+    await settingsLink.scrollIntoViewIfNeeded();
+    await expect(settingsLink).toBeVisible();
+    await signOutButton.scrollIntoViewIfNeeded();
+    await expect(signOutButton).toBeVisible();
+
+    await page.screenshot({
+      path: "test-results/screenshots/home-mobile-short-drawer.png",
+      fullPage: true,
+    });
+    expect(errors).toEqual([]);
+  });
+
+  test("top-level mobile pages do not create whole-page horizontal overflow", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    const routes = [
+      "/",
+      "/monthly",
+      "/customers",
+      "/funnels",
+      "/simulator",
+      "/target-plan",
+      "/analytics",
+      "/settings",
+    ];
+
+    for (const route of routes) {
+      await page.goto(route);
+      const dimensions = await page.locator("html").evaluate((element) => ({
+        clientWidth: element.clientWidth,
+        scrollWidth: element.scrollWidth,
+      }));
+      expect(dimensions.scrollWidth, `horizontal overflow on ${route}`).toBeLessThanOrEqual(
+        dimensions.clientWidth + 1,
+      );
+    }
     expect(errors).toEqual([]);
   });
 
