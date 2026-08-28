@@ -18,6 +18,7 @@ import {
   TargetEngineInputError,
   planTarget,
   resolveRolling3TargetAssumptions,
+  type Rolling3TargetActualMonth,
   type TargetGoalType,
   type TargetPlanResult,
   type TargetPlannerAssumptions,
@@ -90,8 +91,15 @@ function goalLabel(goal: TargetGoalType) {
 }
 
 function unavailableMetricCopy(reason: string) {
-  if (reason === "NEGATIVE_ACQUISITION_HEADROOM") return "غير متاح: الهدف لا يترك ميزانية اكتساب مستدامة.";
-  if (reason === "NEGATIVE_MEDIA_HEADROOM") return "غير متاح: تكاليف الاكتساب غير الإعلانية تستهلك الميزانية المتاحة.";
+  if (reason === "NO_ACQUISITION_HEADROOM") {
+    return "غير متاح: الهدف لا يترك ميزانية اكتساب مستدامة.";
+  }
+  if (reason === "NO_MEDIA_HEADROOM") {
+    return "غير متاح: تكاليف الاكتساب غير الإعلانية تستهلك الميزانية المتاحة للإعلانات.";
+  }
+  if (reason === "MAX_MEDIA_CAC_UNAVAILABLE") {
+    return "غير متاح: لا يمكن اشتقاق Media CAC مستدام من هذه الخطة.";
+  }
   return "غير متاح لهذا الهدف.";
 }
 
@@ -147,7 +155,7 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
     : [];
 
   const issues: PlannerMonthIssue[] = [];
-  const actualMonths = [];
+  const actualMonths: Rolling3TargetActualMonth[] = [];
 
   if (rollingMonths.length !== 3 || rollingMonths.some((month) => month === null)) {
     issues.push({ month: currentMonth, message: "تعذر تحديد آخر ثلاثة أشهر مكتملة بأمان." });
