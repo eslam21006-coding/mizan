@@ -313,11 +313,11 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
           <strong>البيانات غير كافية لبناء خطة الهدف</strong>
           <p>ميزان لن يخترع افتراضات. أكمل الأشهر التالية ثم أعد المحاولة:</p>
           <div className={dashboardStyles.headerActions}>
-            {issues.map((issue, index) => (
+            {issues.map((issue) => (
               <Link
                 className={dashboardStyles.secondaryAction}
                 href={`/businesses/${selectedBusiness.id}/monthly?month=${issue.month}`}
-                key={`${issue.month}-${issue.message}-${index}`}
+                key={`${issue.month}-${issue.message}`}
               >
                 {monthLabel(issue.month)} — {issue.message}
               </Link>
