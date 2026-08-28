@@ -32,22 +32,48 @@ Static checks:
 npm run check
 ```
 
-Full unit/business/auth/database-security suite:
+### Full automated test suite
+
+`npm test` includes the database-backed RLS/security attack matrix. In addition to Node/npm, it requires:
+
+- PostgreSQL available on the literal loopback host `127.0.0.1` and port `5432`;
+- a disposable database whose name ends in `_test` (the CI database is `mizan_test`);
+- the `psql` client available on `PATH`;
+- `RLS_TEST_DATABASE_URL` pointing only at that disposable local test database.
+
+Example local test database with PostgreSQL credentials matching CI:
 
 ```bash
+docker run --name mizan-postgres-test --rm \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=mizan_test \
+  -p 5432:5432 \
+  postgres:17-alpine
+```
+
+In another shell, with `psql` installed:
+
+```bash
+export RLS_TEST_DATABASE_URL='postgresql://postgres:postgres@127.0.0.1:5432/mizan_test'
 npm test
 ```
 
-Production build:
+The RLS runner intentionally refuses remote/non-loopback targets, non-5432 ports, and database names that do not end in `_test` because its setup is destructive and must only run against a disposable local database.
+
+### Production build
 
 ```bash
 npm run build
 ```
 
-Browser verification after a production build:
+### Browser verification
+
+Install the Chromium browser used by Playwright, then run browser verification after the production build:
 
 ```bash
+npx playwright install --with-deps chromium
 npm run test:e2e
 ```
 
-The GitHub `Task verification` workflow runs the complete release sequence on pull requests and again on pushes to `main`, including production dependency audit, static checks, tests/security matrices, production build, mutation check, and Chromium browser verification.
+The GitHub `Task verification` workflow provisions PostgreSQL and Chromium automatically and runs the complete release sequence on pull requests and again on pushes to `main`, including production dependency audit, static checks, tests/security matrices, production build, mutation check, and Chromium browser verification.
