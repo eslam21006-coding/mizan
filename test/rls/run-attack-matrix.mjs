@@ -75,6 +75,8 @@ export const sqlFiles = Object.freeze([
   "test/business/task-33-scenario-persistence.test.sql",
   "supabase/migrations/20260827193000_task_35_admin_mentee_directory.sql",
   "test/rls/task-35-admin-mentee-directory.test.sql",
+  "supabase/migrations/20260828145500_task_39_harden_security_definer_search_path.sql",
+  "test/rls/task-39-full-security-review.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -150,7 +152,7 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     if (result.error) throw new Error(`Failed to execute psql for ${execution.sqlFile}: ${result.error.message}`);
     if (result.status !== 0) return result.status ?? 1;
   }
-  console.log("Task 4-8, Task 14-16, Tasks 20-25, Tasks 32-33, and Task 35 database-backed security/business matrices passed.");
+  console.log("Task 4-8, Task 14-16, Tasks 20-25, Tasks 32-33, Task 35, and Task 39 database-backed security/business matrices passed.");
   return 0;
 }
 
