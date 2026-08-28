@@ -101,12 +101,11 @@ begin
       select 1
       from unnest(coalesce(procedure.proconfig, array[]::text[])) as setting
       where setting like 'search_path=%'
-        and lower(setting) not like '%public%'
-        and lower(setting) not like '%$user%'
+        and btrim(substr(setting, length('search_path=') + 1)) in ('', '""', 'pg_catalog')
     );
 
   if unsafe_functions is not null then
-    raise exception 'Task 39: SECURITY DEFINER functions without a pinned safe search_path: %', unsafe_functions;
+    raise exception 'Task 39: SECURITY DEFINER functions must pin search_path to empty or pg_catalog only: %', unsafe_functions;
   end if;
 end $$;
 
