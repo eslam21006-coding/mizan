@@ -28,11 +28,11 @@ The final catalog-level test runs after every migration and verifies:
 1. Every application base/partitioned table in `public` has RLS enabled.
 2. `anon` does not inherit direct privileges on application tables, views, materialized views, or sequences.
 3. Every public application view uses `security_invoker=true`, so underlying RLS remains authoritative.
-4. Every `SECURITY DEFINER` function in `public` or `private` pins `search_path` to the strict trusted allowlist: an empty path or `pg_catalog` only.
+4. Every `SECURITY DEFINER` routine in `public` or `private` pins `search_path` to exactly `pg_catalog, pg_temp`, keeping built-ins trusted and forcing the temporary schema to the final position.
 5. `anon` cannot execute application functions, including privileges inherited from PostgreSQL's `PUBLIC` pseudo-role.
 6. Client roles cannot create objects in the `public` or `private` schemas.
 7. `anon` has no `private` schema usage.
-8. `auth.users` is not directly selectable or mutable by `anon` or `authenticated`.
+8. `auth.users` is not directly selectable or mutable by `anon` or `authenticated`, including whole-table privileges such as `TRUNCATE`.
 9. A consolidated role/tenant smoke test proves owner, member, outsider, forged/stale-JWT Admin, and authoritative Admin behavior on the final schema.
 
 These checks supplement—rather than replace—the detailed feature-specific RLS/RPC tests for monthly actuals, funnels, transaction imports, cohorts/LTV, lifetime economics, scenarios, and Admin mentee management.
@@ -44,7 +44,8 @@ Automated source-boundary tests verify:
 - the request-scoped Supabase client remains `server-only` and uses only the public URL/publishable key;
 - browser-safe runtime configuration contains only the public Supabase URL and publishable key;
 - the intentional privileged Supabase client and secret-key configuration remain explicitly `server-only`, non-client modules with session persistence/refresh disabled;
-- any future source file that references an elevated Supabase credential must also be protected by `server-only` and must not be a `use client` module;
+- any future source file that references an elevated Supabase credential must also be protected by a real `server-only` import declaration and must not contain a `use client` directive prologue;
+- those module boundaries are parsed from TypeScript/JavaScript syntax rather than inferred from comments or semicolon-sensitive text matching;
 - the route gate verifies claims with `auth.getClaims()` rather than using `auth.getSession()` as an authorization decision;
 - no source file introduces a `getSession()` authorization path.
 
@@ -56,10 +57,10 @@ Automated source-boundary tests verify:
 - owner-rights escalation by a read-only member;
 - unintended anonymous relation/function grants;
 - default PostgreSQL `PUBLIC EXECUTE` leakage on a new function;
-- definer-function search-path hijacking through `public`, `$user`, or any future attacker-writable custom schema;
+- definer-function search-path hijacking through user-writable schemas or the implicit temporary schema;
 - security-definer views bypassing underlying RLS;
-- direct client access to `auth.users`;
-- accidentally exposing an elevated Supabase credential to browser/client code;
+- direct client access to `auth.users`, including `TRUNCATE` bypasses that RLS cannot constrain;
+- accidentally exposing an elevated Supabase credential to browser/client code through source-formatting tricks;
 - external/open redirect and role metadata issues already covered by the existing auth contract suite.
 
 ## Explicit non-goals
