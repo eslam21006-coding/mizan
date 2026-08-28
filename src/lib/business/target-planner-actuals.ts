@@ -83,36 +83,58 @@ function decimalToString(value: ExactDecimal) {
   return `${negative ? "-" : ""}${padded.slice(0, splitAt)}.${padded.slice(splitAt)}`;
 }
 
-function safeAddCount(total: number, value: number) {
+function addSafeCount(total: number, value: number) {
   if (!Number.isSafeInteger(value) || value < 0 || total > Number.MAX_SAFE_INTEGER - value) {
-    throw new Error("Target planner funnel count is outside the safe integer boundary.");
+    return null;
   }
   return total + value;
 }
 
 function aggregateFunnel(entries: readonly FunnelMonthlyEntrySnapshot[]) {
   if (entries.length === 0) return null;
-  const requiredFields = [
-    "leads",
-    "booked_calls",
-    "showed_calls",
-    "qualified_calls",
-    "sales",
-    "new_customers",
-  ] as const;
-  if (entries.some((entry) => requiredFields.some((field) => entry[field] === null))) return null;
 
-  return entries.reduce(
-    (total, entry) => ({
-      leads: safeAddCount(total.leads, entry.leads as number),
-      bookedCalls: safeAddCount(total.bookedCalls, entry.booked_calls as number),
-      showedCalls: safeAddCount(total.showedCalls, entry.showed_calls as number),
-      qualifiedCalls: safeAddCount(total.qualifiedCalls, entry.qualified_calls as number),
-      sales: safeAddCount(total.sales, entry.sales as number),
-      newCustomers: safeAddCount(total.newCustomers, entry.new_customers as number),
-    }),
-    { leads: 0, bookedCalls: 0, showedCalls: 0, qualifiedCalls: 0, sales: 0, newCustomers: 0 },
-  );
+  let totals = {
+    leads: 0,
+    bookedCalls: 0,
+    showedCalls: 0,
+    qualifiedCalls: 0,
+    sales: 0,
+    newCustomers: 0,
+  };
+
+  for (const entry of entries) {
+    if (
+      entry.leads === null ||
+      entry.booked_calls === null ||
+      entry.showed_calls === null ||
+      entry.qualified_calls === null ||
+      entry.sales === null ||
+      entry.new_customers === null
+    ) {
+      return null;
+    }
+
+    const leads = addSafeCount(totals.leads, entry.leads);
+    const bookedCalls = addSafeCount(totals.bookedCalls, entry.booked_calls);
+    const showedCalls = addSafeCount(totals.showedCalls, entry.showed_calls);
+    const qualifiedCalls = addSafeCount(totals.qualifiedCalls, entry.qualified_calls);
+    const sales = addSafeCount(totals.sales, entry.sales);
+    const newCustomers = addSafeCount(totals.newCustomers, entry.new_customers);
+    if (
+      leads === null ||
+      bookedCalls === null ||
+      showedCalls === null ||
+      qualifiedCalls === null ||
+      sales === null ||
+      newCustomers === null
+    ) {
+      return null;
+    }
+
+    totals = { leads, bookedCalls, showedCalls, qualifiedCalls, sales, newCustomers };
+  }
+
+  return totals;
 }
 
 /**
