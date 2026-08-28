@@ -125,6 +125,54 @@ test("fails closed when canonical media spend cannot be separated from fixed acq
   });
 });
 
+test("fails closed when matching media spend is modeled as a variable acquisition cost", () => {
+  const variableMediaCore = calculateCoreFinancials({
+    revenueStreams: [
+      {
+        id: "front-end",
+        name: "Front End",
+        streamType: "front_end",
+        grossCashCollected: "10000",
+        refunds: "0",
+      },
+    ],
+    expenses: [
+      {
+        id: "media-variable",
+        name: "Variable media",
+        category: "acquisition",
+        behavior: "per_customer",
+        inputValue: "200",
+        customerCountBasis: "new_customers",
+      },
+      {
+        id: "sales-tools",
+        name: "Sales tools",
+        category: "acquisition",
+        behavior: "fixed_monthly",
+        inputValue: "500",
+      },
+    ],
+    unallocatedGrossCashCollected: "0",
+    unallocatedRefunds: "0",
+    newCustomers: 10,
+    totalPayingCustomers: 10,
+    canonicalAdSpend: "2000",
+  });
+
+  const result = buildTargetPlannerActualMonth({
+    month: "2026-07",
+    core: variableMediaCore,
+    canonicalAdSpend: "2000",
+    funnelEntries: [funnelEntry],
+  });
+
+  assert.deepEqual(result, {
+    status: "insufficient",
+    blocker: "MEDIA_EXCEEDS_FIXED_ACQUISITION",
+  });
+});
+
 test("fails closed when funnel new customers do not reconcile to the business month", () => {
   const result = buildTargetPlannerActualMonth({
     month: "2026-07",
