@@ -1,4 +1,9 @@
-import type { CalculationUnavailableReason, ExactRatio } from "@/lib/business/calculations";
+import type { CalculationUnavailableReason } from "@/lib/business/calculations";
+import {
+  formatArabicExactDecimal,
+  formatArabicExactPercent,
+  formatArabicExactRatio,
+} from "@/lib/business/format-exact";
 import type { MetricAudit, MetricAuditValue } from "@/lib/business/metric-audit";
 import styles from "./metric-audit.module.css";
 
@@ -11,38 +16,28 @@ const UNAVAILABLE_LABELS: Record<CalculationUnavailableReason, string> = {
   ATTRIBUTION_UNAVAILABLE: "بيانات الإسناد غير متاحة",
 };
 
-const numberFormatter = new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 2 });
-const percentFormatter = new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 1 });
-
-function exactRatioNumber(ratio: ExactRatio) {
-  const numerator = Number(ratio.numerator);
-  const denominator = Number(ratio.denominator);
-  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) {
-    return null;
-  }
-  return numerator / denominator;
-}
+const countFormatter = new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 0 });
 
 function formatAuditValue(value: MetricAuditValue, currency: string) {
   if (!value.metric.available) return UNAVAILABLE_LABELS[value.metric.reason];
 
   if (value.kind === "money") {
-    const numeric = Number(value.metric.value);
-    return `${Number.isFinite(numeric) ? numberFormatter.format(numeric) : value.metric.value} ${currency}`;
+    return `${formatArabicExactDecimal(value.metric.value, 2)} ${currency}`;
   }
 
   if (value.kind === "count") {
-    return numberFormatter.format(value.metric.value);
+    return countFormatter.format(value.metric.value);
   }
 
-  const numeric = exactRatioNumber(value.metric.value);
-  if (numeric === null) {
-    return `${value.metric.value.numerator}/${value.metric.value.denominator}`;
+  if (value.kind === "percent_ratio") {
+    return `${formatArabicExactPercent(value.metric.value, 1)}%`;
   }
 
-  if (value.kind === "percent_ratio") return `${percentFormatter.format(numeric * 100)}%`;
-  if (value.kind === "multiple_ratio") return `${numberFormatter.format(numeric)}×`;
-  return `${numberFormatter.format(numeric)} ${currency}`;
+  if (value.kind === "multiple_ratio") {
+    return `${formatArabicExactRatio(value.metric.value, 2)}×`;
+  }
+
+  return `${formatArabicExactRatio(value.metric.value, 2)} ${currency}`;
 }
 
 /** Renders a progressively disclosed, read-only explanation of one calculated metric. */
