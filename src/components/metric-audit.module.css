@@ -1,0 +1,165 @@
+.audit {
+  margin-top: 2px;
+  border-top: 1px solid #edf0ee;
+  padding-top: 8px;
+}
+
+.audit summary {
+  width: fit-content;
+  color: #2d5e47;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.audit summary:hover {
+  color: #173d2b;
+}
+
+.audit summary:focus-visible {
+  border-radius: 6px;
+  outline: 3px solid rgb(45 94 71 / 18%);
+  outline-offset: 3px;
+}
+
+.body {
+  display: grid;
+  gap: 12px;
+  margin-top: 10px;
+  border: 1px solid #e0e8e3;
+  border-radius: 14px;
+  background: #f8faf9;
+  padding: 13px;
+}
+
+.heading {
+  display: grid;
+  gap: 8px;
+}
+
+.heading > div {
+  display: grid;
+  gap: 2px;
+}
+
+.heading span {
+  color: #79857e;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.heading strong {
+  color: #203329;
+  font-size: 0.9rem;
+}
+
+.heading code {
+  display: block;
+  overflow-wrap: anywhere;
+  border-radius: 9px;
+  background: #edf3ef;
+  padding: 8px 10px;
+  color: #355344;
+  font-family: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: normal;
+}
+
+.lines {
+  display: grid;
+  gap: 0;
+}
+
+.lines > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #e8eeea;
+  padding: 7px 0;
+}
+
+.lines > div:last-child {
+  border-bottom: 0;
+}
+
+.lines span {
+  min-width: 0;
+  color: #66756d;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.lines strong {
+  flex: 0 0 auto;
+  color: #22382c;
+  font-size: 0.8rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.subtotal {
+  background: rgb(236 242 238 / 55%);
+  padding-inline: 6px !important;
+}
+
+.resultRow {
+  margin-top: 3px;
+  border-top: 1px solid #cbd8d0;
+  background: #edf5f0;
+  padding: 9px 7px !important;
+}
+
+.resultRow span,
+.resultRow strong {
+  color: #194d33;
+  font-weight: 850;
+}
+
+.source,
+.note {
+  margin: 0;
+  color: #68766e;
+  font-size: 0.75rem;
+  line-height: 1.7;
+}
+
+.source strong {
+  color: #3d5146;
+}
+
+.note {
+  border-radius: 9px;
+  background: #fff8e8;
+  padding: 8px 10px;
+  color: #725d27;
+}
+
+.compact {
+  width: 100%;
+  margin-top: 5px;
+}
+
+.compact .body {
+  max-width: 560px;
+}
+
+@media (max-width: 560px) {
+  .body {
+    padding: 11px;
+  }
+
+  .lines > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .lines strong {
+    text-align: right;
+    white-space: normal;
+  }
+}
