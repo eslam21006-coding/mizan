@@ -1,4 +1,4 @@
-import type { CalculatedMetric, CalculationUnavailableReason, ExactRatio } from "@/lib/business/calculations";
+import type { CalculationUnavailableReason, ExactRatio } from "@/lib/business/calculations";
 import type { MetricAudit, MetricAuditValue } from "@/lib/business/metric-audit";
 import styles from "./metric-audit.module.css";
 
@@ -17,19 +17,14 @@ const percentFormatter = new Intl.NumberFormat("ar-EG", { maximumFractionDigits:
 function exactRatioNumber(ratio: ExactRatio) {
   const numerator = Number(ratio.numerator);
   const denominator = Number(ratio.denominator);
-  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) return null;
+  if (!Number.isFinite(numerator) || !Number.isFinite(denominator) || denominator === 0) {
+    return null;
+  }
   return numerator / denominator;
 }
 
-function unavailableLabel<T>(metric: CalculatedMetric<T>) {
-  return metric.available ? null : UNAVAILABLE_LABELS[metric.reason];
-}
-
 function formatAuditValue(value: MetricAuditValue, currency: string) {
-  const unavailable = unavailableLabel(value.metric);
-  if (unavailable) return unavailable;
-
-  if (!value.metric.available) return "—";
+  if (!value.metric.available) return UNAVAILABLE_LABELS[value.metric.reason];
 
   if (value.kind === "money") {
     const numeric = Number(value.metric.value);
@@ -74,7 +69,10 @@ export function MetricAuditDetails({
 
         <div className={styles.lines}>
           {audit.lines.map((line) => (
-            <div key={line.id} className={line.lineType === "subtotal" ? styles.subtotal : undefined}>
+            <div
+              key={line.id}
+              className={line.lineType === "subtotal" ? styles.subtotal : undefined}
+            >
               <span>{line.label}</span>
               <strong>{formatAuditValue(line.value, currency)}</strong>
             </div>
