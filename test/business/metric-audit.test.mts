@@ -7,6 +7,11 @@ import {
   type ExactRatio,
 } from "../../src/lib/business/calculations.ts";
 import {
+  formatArabicExactDecimal,
+  formatArabicExactPercent,
+  formatArabicExactRatio,
+} from "../../src/lib/business/format-exact.ts";
+import {
   createCoreMetricAudits,
   type MetricAuditValue,
 } from "../../src/lib/business/metric-audit.ts";
@@ -132,4 +137,16 @@ test("period customer-value audits remain explicitly distinct from LTV", () => {
   const expected: ExactRatio = { numerator: "5000", denominator: "3" };
   assert.deepEqual(value(result.revenuePerNewCustomer), expected);
   assert.equal(audits.revenuePerNewCustomer.result.metric, result.revenuePerNewCustomer);
+});
+
+test("audit display helpers preserve exact values beyond JavaScript safe integers", () => {
+  assert.equal(formatArabicExactDecimal("9007199254740993", 2), "٩٬٠٠٧٬١٩٩٬٢٥٤٬٧٤٠٬٩٩٣");
+  assert.equal(
+    formatArabicExactRatio({ numerator: "9007199254740993", denominator: "3" }, 2),
+    "٣٬٠٠٢٬٣٩٩٬٧٥١٬٥٨٠٬٣٣١",
+  );
+  assert.equal(
+    formatArabicExactPercent({ numerator: "9007199254740993", denominator: "10000000000000000" }, 1),
+    "٩٠٫١",
+  );
 });
