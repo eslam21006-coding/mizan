@@ -208,6 +208,29 @@ test("Task 36 reports Ultimate CAC improvement when it is the strongest supporte
   assert.equal(feed.improvements[0]?.code, "ULTIMATE_CAC_IMPROVING");
 });
 
+test("Task 36 selects one strongest signal across attention and improvement sections", () => {
+  const feed = buildCoachDashboardFeed([
+    snapshot("mixed", {
+      currentFinancial: financial({
+        netCash: "1000",
+        profit: "150",
+        margin: ["1", "6"],
+        ultimateCac: ["80", "1"],
+      }),
+      previousFinancial: financial({
+        netCash: "1000",
+        profit: "200",
+        margin: ["1", "5"],
+        ultimateCac: ["100", "1"],
+      }),
+    }),
+  ]);
+
+  assert.equal(feed.attention.length, 1);
+  assert.equal(feed.attention[0]?.code, "PROFIT_FALLING");
+  assert.equal(feed.improvements.length, 0);
+});
+
 test("Task 36 recognizes funnel improvement only from the same funnel identity", () => {
   const current = funnel("same", "فانل المبيعات", {
     booked: 100,
