@@ -81,7 +81,6 @@
     flex-direction: column;
     overflow-y: auto;
     overscroll-behavior: contain;
-    padding-block-end: env(safe-area-inset-bottom);
   }
 
   :global(.drawer-header),
