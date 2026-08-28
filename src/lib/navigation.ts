@@ -30,7 +30,8 @@ export const menteeNavigation: NavigationItem[] = [
 ];
 
 const adminNavigation: NavigationItem[] = [
-  { label: "دعوة المتدربين", href: "/admin/invites", icon: "customers" },
+  { label: "المتدربون", href: "/admin/mentees", icon: "customers" },
+  { label: "الدعوات", href: "/admin/invites", icon: "customers" },
 ];
 
 export function getNavigation(role: MizanRole) {

@@ -1,0 +1,226 @@
+.headingRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.inviteButton,
+.primaryAction {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: #17261f;
+  color: #fff;
+  padding: 10px 18px;
+  text-decoration: none;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.summaryGrid article,
+.menteeCard,
+.emptyState,
+.errorPanel {
+  border: 1px solid #e3e7e4;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 10px 30px rgb(30 45 37 / 4%);
+}
+
+.summaryGrid article {
+  display: grid;
+  gap: 8px;
+  padding: 20px;
+}
+
+.summaryGrid span,
+.joinedAt span,
+.sectionTitle span,
+.menteeHeader > div:first-child > span {
+  color: #68756e;
+  font-size: 0.86rem;
+}
+
+.summaryGrid strong {
+  color: #16251e;
+  font-size: 1.75rem;
+}
+
+.menteeList {
+  display: grid;
+  gap: 16px;
+}
+
+.menteeCard {
+  padding: 22px;
+}
+
+.menteeHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid #edf0ee;
+}
+
+.menteeHeader h2 {
+  margin: 6px 0 0;
+  color: #17261f;
+  font-size: 1.08rem;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
+.joinedAt {
+  display: grid;
+  gap: 5px;
+  text-align: left;
+}
+
+.joinedAt strong {
+  color: #33433b;
+  font-size: 0.92rem;
+}
+
+.businessSection {
+  padding-top: 18px;
+}
+
+.sectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.sectionTitle strong {
+  color: #26372f;
+}
+
+.sectionTitle span {
+  display: inline-flex;
+  min-width: 26px;
+  height: 26px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: #f0f5f2;
+}
+
+.businessGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.businessCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid #e4eae6;
+  border-radius: 14px;
+  background: #fbfcfb;
+  padding: 14px 16px;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.businessCard:hover {
+  border-color: #aebcb4;
+  transform: translateY(-1px);
+}
+
+.businessCard div {
+  display: grid;
+  gap: 4px;
+}
+
+.businessCard strong {
+  color: #17261f;
+}
+
+.businessCard span,
+.businessCard small,
+.noBusiness,
+.emptyState p,
+.errorPanel p {
+  color: #68756e;
+}
+
+.businessCard small {
+  white-space: nowrap;
+}
+
+.noBusiness {
+  margin: 0;
+  border-radius: 12px;
+  background: #f7f9f8;
+  padding: 14px;
+}
+
+.emptyState,
+.errorPanel {
+  padding: 28px;
+}
+
+.emptyState {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+}
+
+.emptyState h2,
+.emptyState p,
+.errorPanel p {
+  margin: 0;
+}
+
+.errorPanel {
+  border-color: #efd2d2;
+  background: #fffafa;
+}
+
+.errorPanel strong {
+  color: #8a3030;
+}
+
+@media (max-width: 760px) {
+  .headingRow,
+  .menteeHeader {
+    flex-direction: column;
+  }
+
+  .inviteButton {
+    width: 100%;
+  }
+
+  .summaryGrid,
+  .businessGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .joinedAt {
+    text-align: right;
+  }
+
+  .menteeCard {
+    padding: 18px;
+  }
+
+  .businessCard {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
