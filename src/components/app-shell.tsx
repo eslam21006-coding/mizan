@@ -25,8 +25,10 @@ function AccountPanel({ role, email }: { role: MizanRole; email: string | null }
   return (
     <div className={styles.accountPanel}>
       <div className={styles.accountCopy}>
-        <strong>{role === "admin" ? "Admin" : "Mentee"}</strong>
-        <small title={email ?? undefined}>{email ?? "حساب ميزان"}</small>
+        <strong>{role === "admin" ? "مدير" : "متدرب"}</strong>
+        <small dir={email ? "ltr" : undefined} title={email ?? undefined}>
+          {email ?? "حساب ميزان"}
+        </small>
       </div>
       <form action="/auth/signout" method="post">
         <button className={styles.signOutButton} type="submit">
