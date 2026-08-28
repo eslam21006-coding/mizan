@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import { extname, join } from "node:path";
 import test from "node:test";
+import ts from "typescript";
 
 const sourceRoot = new URL("../../src/", import.meta.url);
 const serverClientUrl = new URL("../../src/lib/supabase/server.ts", import.meta.url);
@@ -10,8 +11,8 @@ const serverConfigUrl = new URL("../../src/lib/supabase/server-config.ts", impor
 const configUrl = new URL("../../src/lib/supabase/config.ts", import.meta.url);
 const proxyUrl = new URL("../../src/lib/supabase/proxy.ts", import.meta.url);
 const sourceExtensions = new Set([".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
-const serverOnlyImportPattern = /import\s+["']server-only["'];/;
 
+/** Collects executable source modules under one source directory. */
 async function collectSourceFiles(directoryUrl) {
   const directoryPath = directoryUrl.pathname;
   const entries = await readdir(directoryPath, { withFileTypes: true });
@@ -29,6 +30,52 @@ async function collectSourceFiles(directoryUrl) {
   return files;
 }
 
+/** Parses actual import declarations and directive prologues instead of trusting source text. */
+function parseModuleBoundary(sourceFilePath, source) {
+  const extension = extname(sourceFilePath);
+  const scriptKind =
+    extension === ".tsx"
+      ? ts.ScriptKind.TSX
+      : extension === ".jsx"
+        ? ts.ScriptKind.JSX
+        : extension === ".js" || extension === ".mjs"
+          ? ts.ScriptKind.JS
+          : ts.ScriptKind.TS;
+  const sourceFile = ts.createSourceFile(
+    sourceFilePath,
+    source,
+    ts.ScriptTarget.Latest,
+    false,
+    scriptKind,
+  );
+
+  const importsServerOnly = sourceFile.statements.some(
+    (statement) =>
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      statement.moduleSpecifier.text === "server-only",
+  );
+
+  let usesClientDirective = false;
+  for (const statement of sourceFile.statements) {
+    if (!ts.isExpressionStatement(statement) || !ts.isStringLiteral(statement.expression)) break;
+    if (statement.expression.text === "use client") usesClientDirective = true;
+  }
+
+  return { importsServerOnly, usesClientDirective };
+}
+
+test("module boundary parser ignores comments and recognizes semicolonless client directives", () => {
+  assert.deepEqual(
+    parseModuleBoundary("comment-only.ts", '// import "server-only";\nexport const value = 1;'),
+    { importsServerOnly: false, usesClientDirective: false },
+  );
+  assert.deepEqual(
+    parseModuleBoundary("client.tsx", '"use client"\nimport "server-only"\nexport const value = 1;'),
+    { importsServerOnly: true, usesClientDirective: true },
+  );
+});
+
 test("elevated Supabase credential references are confined to server-only modules", async () => {
   const sourceFiles = await collectSourceFiles(sourceRoot);
   const elevatedCredentialPatterns = [
@@ -41,14 +88,15 @@ test("elevated Supabase credential references are confined to server-only module
     const source = await readFile(sourceFile, "utf8");
     if (!elevatedCredentialPatterns.some((pattern) => pattern.test(source))) continue;
 
-    assert.match(
-      source,
-      serverOnlyImportPattern,
-      `Elevated Supabase credential reference is not guarded by server-only in ${sourceFile}`,
+    const boundary = parseModuleBoundary(sourceFile, source);
+    assert.equal(
+      boundary.importsServerOnly,
+      true,
+      `Elevated Supabase credential reference is not guarded by a real server-only import in ${sourceFile}`,
     );
-    assert.doesNotMatch(
-      source,
-      /^[\s\S]*?["']use client["'];/m,
+    assert.equal(
+      boundary.usesClientDirective,
+      false,
       `Elevated Supabase credential reference appears in a client module: ${sourceFile}`,
     );
   }
@@ -57,8 +105,9 @@ test("elevated Supabase credential references are confined to server-only module
 test("privileged Supabase client and secret config remain explicitly server-only", async () => {
   for (const moduleUrl of [adminClientUrl, serverConfigUrl]) {
     const source = await readFile(moduleUrl, "utf8");
-    assert.match(source, serverOnlyImportPattern);
-    assert.doesNotMatch(source, /["']use client["'];/);
+    const boundary = parseModuleBoundary(moduleUrl.pathname, source);
+    assert.equal(boundary.importsServerOnly, true);
+    assert.equal(boundary.usesClientDirective, false);
   }
 
   const adminSource = await readFile(adminClientUrl, "utf8");
@@ -69,7 +118,9 @@ test("privileged Supabase client and secret config remain explicitly server-only
 
 test("request-scoped server Supabase client remains server-only and uses public configuration", async () => {
   const source = await readFile(serverClientUrl, "utf8");
-  assert.match(source, serverOnlyImportPattern);
+  const boundary = parseModuleBoundary(serverClientUrl.pathname, source);
+  assert.equal(boundary.importsServerOnly, true);
+  assert.equal(boundary.usesClientDirective, false);
   assert.match(source, /getSupabasePublicConfig/);
   assert.doesNotMatch(source, /process\.env/);
   assert.doesNotMatch(source, /service[_-]?role/i);
