@@ -75,6 +75,7 @@ export const sqlFiles = Object.freeze([
   "test/business/task-33-scenario-persistence.test.sql",
   "supabase/migrations/20260827193000_task_35_admin_mentee_directory.sql",
   "test/rls/task-35-admin-mentee-directory.test.sql",
+  "supabase/migrations/20260828145500_task_39_harden_security_definer_search_path.sql",
   "test/rls/task-39-full-security-review.test.sql",
 ]);
 
