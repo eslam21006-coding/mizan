@@ -55,7 +55,8 @@
     "test/business/decision-insights.test.mts",
     "test/business/insight-prioritization.test.mts",
     "test/business/target-engine.test.mts",
-    "test/business/target-planner-actuals.test.mts"
+    "test/business/target-planner-actuals.test.mts",
+    "test/business/sidebar-destinations.test.mts"
   ],
   "exclude": [
     "node_modules"
