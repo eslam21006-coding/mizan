@@ -2,6 +2,7 @@ import type { createSupabaseServerClient } from "../supabase/server";
 import {
   calculateCoreFinancials,
   CalculationInputError,
+  type CoreCalculationInput,
   type CoreCalculationResult,
 } from "./calculations";
 import { buildDashboardCalculationInput } from "./dashboard";
@@ -10,6 +11,7 @@ import { loadFunnelMonth } from "./funnel-month";
 export type DashboardMonthLoadResult = {
   periodExists: boolean;
   result: CoreCalculationResult | null;
+  calculationInput: CoreCalculationInput | null;
   dataLoadError: boolean;
   calculationError: boolean;
 };
@@ -34,6 +36,7 @@ export async function loadDashboardMonth(
     return {
       periodExists: false,
       result: null,
+      calculationInput: null,
       dataLoadError: true,
       calculationError: false,
     };
@@ -43,6 +46,7 @@ export async function loadDashboardMonth(
     return {
       periodExists: false,
       result: null,
+      calculationInput: null,
       dataLoadError: false,
       calculationError: false,
     };
@@ -70,6 +74,7 @@ export async function loadDashboardMonth(
     return {
       periodExists: true,
       result: null,
+      calculationInput: null,
       dataLoadError: true,
       calculationError: false,
     };
@@ -88,6 +93,7 @@ export async function loadDashboardMonth(
     return {
       periodExists: true,
       result: calculateCoreFinancials(input),
+      calculationInput: input,
       dataLoadError: false,
       calculationError: false,
     };
@@ -96,6 +102,7 @@ export async function loadDashboardMonth(
       return {
         periodExists: true,
         result: null,
+        calculationInput: null,
         dataLoadError: false,
         calculationError: true,
       };
