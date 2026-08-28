@@ -15,9 +15,9 @@ This cleanup converts the three remaining placeholder sidebar destinations into 
 - `/target-plan` now uses the existing deterministic Target Engine.
 - Default assumptions come only from the last three complete months.
 - Historical months are converted to the engine's existing assumption shape without double-counting media spend.
-- Canonical media spend is separated from fixed acquisition costs before the existing engine calculates required Ad Spend.
-- Funnel counts must reconcile to business new-customer counts.
-- Missing, conflicting, or unreconcilable data fails closed instead of creating a plan.
+- Positive canonical media spend is separated only when exactly one fixed acquisition expense line has the same calculated amount; variable or ambiguous media representations fail closed instead of reclassifying another acquisition cost.
+- Funnel counts must be non-negative safe integers, follow the funnel sequence, and reconcile to business new-customer counts.
+- Missing, conflicting, unsafe, or unreconcilable data fails closed instead of creating a plan or returning an unhandled route error.
 - The UI exposes the assumptions used, required financial outputs, reverse-engineered funnel volumes, and sustainable Acquisition CAC / Media CAC / CPL.
 - Maximum Sustainable CAC remains explicitly Acquisition CAC and is never presented as Ultimate CAC.
 
@@ -29,9 +29,11 @@ This cleanup converts the three remaining placeholder sidebar destinations into 
 ## Verification
 
 - Added known-input numerical tests for the Target Planner historical adapter.
-- Added fail-closed tests for media-cost separation and funnel/customer reconciliation.
-- Added authenticated Arabic RTL browser coverage proving the three routes no longer render placeholder copy and do not create 390px horizontal overflow.
-- Full repository CI, production build, browser verification, Vercel preview, and review findings remain merge gates.
+- Added fail-closed tests for media-cost separation, variable-media ambiguity, unsafe funnel counts, and funnel/customer reconciliation.
+- Added a deterministic source-contract test that fails if `/monthly`, `/target-plan`, or `/settings` regresses to the legacy `EmptyModule` placeholder or loses its required workflow bindings.
+- Added a live authenticated Arabic RTL Playwright scenario for the three routes, including 390px horizontal-overflow checks. This scenario runs when dedicated E2E Supabase credentials are supplied; CI intentionally uses its isolated UI fixture and therefore does not claim live-route authentication.
+- CI's fixture-mode Playwright suite continues to verify the shared Arabic RTL shell, mobile drawer, touch targets, focus behavior, and responsive containment without connecting to a production Supabase account.
+- Full repository CI, production build, Vercel preview, review findings, and final authenticated founder/browser verification remain merge gates.
 
 ## Deliberately unchanged
 
