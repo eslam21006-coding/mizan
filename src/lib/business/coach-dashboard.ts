@@ -360,6 +360,16 @@ function evaluateImprovement(snapshot: CoachBusinessSnapshot) {
   return candidates.sort((left, right) => right.priority - left.priority)[0] ?? null;
 }
 
+function selectStrongestSignal(
+  attention: CoachDashboardSignal | null,
+  improvement: CoachDashboardSignal | null,
+) {
+  if (!attention) return improvement;
+  if (!improvement) return attention;
+  if (attention.priority >= improvement.priority) return attention;
+  return improvement;
+}
+
 function stableSignalSort(left: CoachDashboardSignal, right: CoachDashboardSignal) {
   if (left.priority !== right.priority) return right.priority - left.priority;
   const emailOrder = (left.menteeEmail ?? "").localeCompare(right.menteeEmail ?? "", "en");
@@ -377,11 +387,13 @@ export function buildCoachDashboardFeed(
   let insufficientBusinesses = 0;
 
   for (const snapshot of snapshots) {
-    const attentionSignalForBusiness = evaluateAttention(snapshot);
-    const improvementSignalForBusiness = evaluateImprovement(snapshot);
+    const strongestSignal = selectStrongestSignal(
+      evaluateAttention(snapshot),
+      evaluateImprovement(snapshot),
+    );
 
-    if (attentionSignalForBusiness) attention.push(attentionSignalForBusiness);
-    if (improvementSignalForBusiness) improvements.push(improvementSignalForBusiness);
+    if (strongestSignal?.kind === "attention") attention.push(strongestSignal);
+    if (strongestSignal?.kind === "improvement") improvements.push(strongestSignal);
     if (!hasComparableData(snapshot)) insufficientBusinesses += 1;
   }
 
