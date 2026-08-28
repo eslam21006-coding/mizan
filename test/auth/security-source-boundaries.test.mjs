@@ -5,9 +5,12 @@ import test from "node:test";
 
 const sourceRoot = new URL("../../src/", import.meta.url);
 const serverClientUrl = new URL("../../src/lib/supabase/server.ts", import.meta.url);
+const adminClientUrl = new URL("../../src/lib/supabase/admin.ts", import.meta.url);
+const serverConfigUrl = new URL("../../src/lib/supabase/server-config.ts", import.meta.url);
 const configUrl = new URL("../../src/lib/supabase/config.ts", import.meta.url);
 const proxyUrl = new URL("../../src/lib/supabase/proxy.ts", import.meta.url);
 const sourceExtensions = new Set([".js", ".jsx", ".mjs", ".mts", ".ts", ".tsx"]);
+const serverOnlyImportPattern = /import\s+["']server-only["'];/;
 
 async function collectSourceFiles(directoryUrl) {
   const directoryPath = directoryUrl.pathname;
@@ -26,9 +29,9 @@ async function collectSourceFiles(directoryUrl) {
   return files;
 }
 
-test("application source never embeds or references a Supabase elevated secret", async () => {
+test("elevated Supabase credential references are confined to server-only modules", async () => {
   const sourceFiles = await collectSourceFiles(sourceRoot);
-  const forbidden = [
+  const elevatedCredentialPatterns = [
     /SUPABASE_SERVICE_ROLE_KEY/,
     /SUPABASE_SECRET_KEY/,
     /NEXT_PUBLIC_[A-Z0-9_]*(?:SERVICE_ROLE|SECRET_KEY)/,
@@ -36,21 +39,44 @@ test("application source never embeds or references a Supabase elevated secret",
 
   for (const sourceFile of sourceFiles) {
     const source = await readFile(sourceFile, "utf8");
-    for (const pattern of forbidden) {
-      assert.doesNotMatch(source, pattern, `Forbidden elevated Supabase credential reference in ${sourceFile}`);
-    }
+    if (!elevatedCredentialPatterns.some((pattern) => pattern.test(source))) continue;
+
+    assert.match(
+      source,
+      serverOnlyImportPattern,
+      `Elevated Supabase credential reference is not guarded by server-only in ${sourceFile}`,
+    );
+    assert.doesNotMatch(
+      source,
+      /^[\s\S]*?["']use client["'];/m,
+      `Elevated Supabase credential reference appears in a client module: ${sourceFile}`,
+    );
   }
 });
 
-test("server Supabase client remains server-only and uses public configuration", async () => {
+test("privileged Supabase client and secret config remain explicitly server-only", async () => {
+  for (const moduleUrl of [adminClientUrl, serverConfigUrl]) {
+    const source = await readFile(moduleUrl, "utf8");
+    assert.match(source, serverOnlyImportPattern);
+    assert.doesNotMatch(source, /["']use client["'];/);
+  }
+
+  const adminSource = await readFile(adminClientUrl, "utf8");
+  assert.match(adminSource, /getSupabaseSecretKey/);
+  assert.match(adminSource, /persistSession:\s*false/);
+  assert.match(adminSource, /autoRefreshToken:\s*false/);
+});
+
+test("request-scoped server Supabase client remains server-only and uses public configuration", async () => {
   const source = await readFile(serverClientUrl, "utf8");
-  assert.match(source, /import\s+["']server-only["'];/);
+  assert.match(source, serverOnlyImportPattern);
   assert.match(source, /getSupabasePublicConfig/);
   assert.doesNotMatch(source, /process\.env/);
   assert.doesNotMatch(source, /service[_-]?role/i);
+  assert.doesNotMatch(source, /getSupabaseSecretKey/);
 });
 
-test("Supabase runtime config exposes only the approved public URL and publishable key", async () => {
+test("browser-safe Supabase runtime config exposes only the public URL and publishable key", async () => {
   const source = await readFile(configUrl, "utf8");
   const environmentVariables = [
     ...source.matchAll(/process\.env\.([A-Z0-9_]+)/g),
@@ -60,6 +86,7 @@ test("Supabase runtime config exposes only the approved public URL and publishab
     [...new Set(environmentVariables)].sort(),
     ["NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "NEXT_PUBLIC_SUPABASE_URL"].sort(),
   );
+  assert.doesNotMatch(source, /SUPABASE_(?:SERVICE_ROLE_KEY|SECRET_KEY)/);
 });
 
 test("server route gate verifies Supabase claims instead of trusting a local session payload", async () => {
