@@ -1,12 +1,15 @@
 import Link from "next/link";
+import { MetricAuditDetails } from "@/components/metric-audit";
 import { PageHeading } from "@/components/page-heading";
 import type {
   CalculatedMetric,
   CalculationUnavailableReason,
+  CoreCalculationInput,
   CoreCalculationResult,
   ExactRatio,
 } from "@/lib/business/calculations";
 import { loadDashboardMonth } from "@/lib/business/dashboard-month";
+import { createCoreMetricAudits, type MetricAudit } from "@/lib/business/metric-audit";
 import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import styles from "./dashboard.module.css";
@@ -96,7 +99,10 @@ function formattedMultiple(metric: CalculatedMetric<ExactRatio>) {
 
   const number = ratioNumber(metric.value);
   return {
-    value: number === null ? `${metric.value.numerator}/${metric.value.denominator}` : `${numberFormatter.format(number)}×`,
+    value:
+      number === null
+        ? `${metric.value.numerator}/${metric.value.denominator}`
+        : `${numberFormatter.format(number)}×`,
     unavailable: false as const,
   };
 }
@@ -105,12 +111,16 @@ function MetricCard({
   label,
   value,
   note,
+  audit,
+  currency,
   featured = false,
   unavailable = false,
 }: {
   label: string;
   value: string;
   note?: string;
+  audit: MetricAudit;
+  currency: string;
   featured?: boolean;
   unavailable?: boolean;
 }) {
@@ -119,7 +129,30 @@ function MetricCard({
       <span>{label}</span>
       <strong className={unavailable ? styles.unavailableValue : undefined}>{value}</strong>
       {note && <p>{note}</p>}
+      <MetricAuditDetails audit={audit} currency={currency} />
     </article>
+  );
+}
+
+function DetailMetric({
+  label,
+  value,
+  unavailable,
+  audit,
+  currency,
+}: {
+  label: string;
+  value: string;
+  unavailable: boolean;
+  audit: MetricAudit;
+  currency: string;
+}) {
+  return (
+    <div>
+      <dt>{label}</dt>
+      <dd className={unavailable ? styles.unavailableValue : undefined}>{value}</dd>
+      <MetricAuditDetails compact audit={audit} currency={currency} />
+    </div>
   );
 }
 
@@ -142,7 +175,16 @@ function EmptyDashboard({ business, monthKey }: { business: BusinessRow; monthKe
   );
 }
 
-function DashboardMetrics({ result, currency }: { result: CoreCalculationResult; currency: string }) {
+function DashboardMetrics({
+  result,
+  calculationInput,
+  currency,
+}: {
+  result: CoreCalculationResult;
+  calculationInput: CoreCalculationInput;
+  currency: string;
+}) {
+  const audits = createCoreMetricAudits(result, calculationInput);
   const margin = formattedRatio(result.realNetProfitMargin, "percent", currency);
   const profit = formattedMoney(result.realNetProfit, currency);
   const ultimateCac = formattedRatio(result.ultimateCac, "money", currency);
@@ -162,10 +204,14 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
   const returningCustomers = formattedCount(result.returningCustomers);
 
   const expenseRows = [
-    ["تكاليف الاكتساب", result.expensesByCategory.acquisition],
-    ["تكاليف التنفيذ وخدمة العملاء", result.expensesByCategory.fulfillment],
-    ["المصاريف التشغيلية العامة", result.expensesByCategory.overhead],
-    ["المصاريف المالية", result.expensesByCategory.financial],
+    ["تكاليف الاكتساب", result.expensesByCategory.acquisition, audits.acquisitionCosts],
+    [
+      "تكاليف التنفيذ وخدمة العملاء",
+      result.expensesByCategory.fulfillment,
+      audits.fulfillmentCosts,
+    ],
+    ["المصاريف التشغيلية العامة", result.expensesByCategory.overhead, audits.overheadCosts],
+    ["المصاريف المالية", result.expensesByCategory.financial, audits.financialCosts],
   ] as const;
 
   return (
@@ -177,6 +223,8 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
           value={margin.value}
           unavailable={margin.unavailable}
           note="صافي الربح الحقيقي ÷ صافي الكاش المحصل"
+          audit={audits.realNetProfitMargin}
+          currency={currency}
         />
         <MetricCard
           featured
@@ -184,6 +232,8 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
           value={profit.value}
           unavailable={profit.unavailable}
           note="بعد كل تكاليف البزنس"
+          audit={audits.realNetProfit}
+          currency={currency}
         />
         <MetricCard
           featured
@@ -191,6 +241,8 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
           value={ultimateCac.value}
           unavailable={ultimateCac.unavailable}
           note="التكلفة الكاملة للبزنس لكل عميل جديد — مقياس ميزان وليس CAC التقليدي"
+          audit={audits.ultimateCac}
+          currency={currency}
         />
         <MetricCard
           featured
@@ -198,6 +250,8 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
           value={netCash.value}
           unavailable={netCash.unavailable}
           note="الإيراد المحصل فعليًا بعد المرتجعات"
+          audit={audits.netCashCollected}
+          currency={currency}
         />
       </section>
 
@@ -207,7 +261,7 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
             <span className={styles.eyebrow}>اقتصاديات الشهر</span>
             <h2>الربحية والتكلفة</h2>
           </div>
-          <p>كل القيم هنا ناتجة مباشرة من محرك الحساب المركزي.</p>
+          <p>كل القيم هنا ناتجة مباشرة من محرك الحساب المركزي ويمكن فتح تفاصيل مصدر كل رقم.</p>
         </div>
         <div className={styles.secondaryMetrics}>
           <MetricCard
@@ -215,33 +269,45 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
             value={acquisitionCac.value}
             unavailable={acquisitionCac.unavailable}
             note="كل تكاليف الاكتساب والمبيعات والتسويق ÷ العملاء الجدد"
+            audit={audits.acquisitionCac}
+            currency={currency}
           />
           <MetricCard
             label="Media CAC"
             value={mediaCac.value}
             unavailable={mediaCac.unavailable}
             note="إجمالي الإنفاق الإعلاني المعتمد ÷ العملاء الجدد"
+            audit={audits.mediaCac}
+            currency={currency}
           />
           <MetricCard
             label="MER"
             value={mer.value}
             unavailable={mer.unavailable}
             note="صافي الكاش المحصل ÷ إجمالي الإنفاق الإعلاني المعتمد"
+            audit={audits.mer}
+            currency={currency}
           />
           <MetricCard
             label="هامش المساهمة"
             value={contributionMargin.value}
             unavailable={contributionMargin.unavailable}
+            audit={audits.contributionMargin}
+            currency={currency}
           />
           <MetricCard
             label="ربح المساهمة"
             value={contributionProfit.value}
             unavailable={contributionProfit.unavailable}
+            audit={audits.contributionProfit}
+            currency={currency}
           />
           <MetricCard
             label="إجمالي تكاليف البزنس"
             value={allCosts.value}
             unavailable={allCosts.unavailable}
+            audit={audits.allBusinessCosts}
+            currency={currency}
           />
         </div>
       </section>
@@ -255,50 +321,59 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
             </div>
           </div>
           <dl className={styles.detailList}>
-            <div>
-              <dt>إجمالي الكاش المحصل قبل المرتجعات</dt>
-              <dd className={grossCash.unavailable ? styles.unavailableValue : undefined}>
-                {grossCash.value}
-              </dd>
-            </div>
-            <div>
-              <dt>المرتجعات</dt>
-              <dd className={refunds.unavailable ? styles.unavailableValue : undefined}>{refunds.value}</dd>
-            </div>
-            <div>
-              <dt>العملاء الجدد</dt>
-              <dd className={newCustomers.unavailable ? styles.unavailableValue : undefined}>
-                {newCustomers.value}
-              </dd>
-            </div>
-            <div>
-              <dt>إجمالي العملاء الدافعين</dt>
-              <dd className={payingCustomers.unavailable ? styles.unavailableValue : undefined}>
-                {payingCustomers.value}
-              </dd>
-            </div>
-            <div>
-              <dt>العملاء العائدون</dt>
-              <dd className={returningCustomers.unavailable ? styles.unavailableValue : undefined}>
-                {returningCustomers.value}
-              </dd>
-            </div>
-            <div>
-              <dt>الإيراد لكل عميل دافع</dt>
-              <dd className={revenuePerPaying.unavailable ? styles.unavailableValue : undefined}>
-                {revenuePerPaying.value}
-              </dd>
-            </div>
-            <div>
-              <dt>الإيراد لكل عميل جديد</dt>
-              <dd className={revenuePerNew.unavailable ? styles.unavailableValue : undefined}>
-                {revenuePerNew.value}
-              </dd>
-            </div>
+            <DetailMetric
+              label="إجمالي الكاش المحصل قبل المرتجعات"
+              value={grossCash.value}
+              unavailable={grossCash.unavailable}
+              audit={audits.grossCashCollected}
+              currency={currency}
+            />
+            <DetailMetric
+              label="المرتجعات"
+              value={refunds.value}
+              unavailable={refunds.unavailable}
+              audit={audits.refunds}
+              currency={currency}
+            />
+            <DetailMetric
+              label="العملاء الجدد"
+              value={newCustomers.value}
+              unavailable={newCustomers.unavailable}
+              audit={audits.newCustomers}
+              currency={currency}
+            />
+            <DetailMetric
+              label="إجمالي العملاء الدافعين"
+              value={payingCustomers.value}
+              unavailable={payingCustomers.unavailable}
+              audit={audits.totalPayingCustomers}
+              currency={currency}
+            />
+            <DetailMetric
+              label="العملاء العائدون"
+              value={returningCustomers.value}
+              unavailable={returningCustomers.unavailable}
+              audit={audits.returningCustomers}
+              currency={currency}
+            />
+            <DetailMetric
+              label="الإيراد لكل عميل دافع"
+              value={revenuePerPaying.value}
+              unavailable={revenuePerPaying.unavailable}
+              audit={audits.revenuePerPayingCustomer}
+              currency={currency}
+            />
+            <DetailMetric
+              label="الإيراد لكل عميل جديد"
+              value={revenuePerNew.value}
+              unavailable={revenuePerNew.unavailable}
+              audit={audits.revenuePerNewCustomer}
+              currency={currency}
+            />
           </dl>
           <p className={styles.definitionNote}>
-            القيمتان الأخيرتان مؤشرا إيراد لكل عميل وليستا LTV. قيمة العميل الحقيقية ستأتي من
-            تاريخ المعاملات في مرحلة LTV.
+            القيمتان الأخيرتان مؤشرا إيراد لكل عميل وليستا LTV. قيمة العميل الحقيقية تأتي من تاريخ
+            المعاملات والكوهورتات.
           </p>
         </section>
 
@@ -310,7 +385,7 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
             </div>
           </div>
           <div className={styles.expenseBreakdown}>
-            {expenseRows.map(([label, metric]) => {
+            {expenseRows.map(([label, metric, audit]) => {
               const formatted = formattedMoney(metric, currency);
               return (
                 <div key={label}>
@@ -318,6 +393,7 @@ function DashboardMetrics({ result, currency }: { result: CoreCalculationResult;
                   <strong className={formatted.unavailable ? styles.unavailableValue : undefined}>
                     {formatted.value}
                   </strong>
+                  <MetricAuditDetails compact audit={audit} currency={currency} />
                 </div>
               );
             })}
@@ -392,7 +468,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     selectedBusiness.id,
     selectedMonth.monthStart,
   );
-  const { periodExists, result, dataLoadError, calculationError } = dashboardMonth;
+  const { periodExists, result, calculationInput, dataLoadError, calculationError } = dashboardMonth;
 
   const monthLabel = new Intl.DateTimeFormat("ar-EG", {
     month: "long",
@@ -478,8 +554,12 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         <EmptyDashboard business={selectedBusiness} monthKey={selectedMonth.monthKey} />
       )}
 
-      {!dataLoadError && !calculationError && result && (
-        <DashboardMetrics result={result} currency={selectedBusiness.base_currency} />
+      {!dataLoadError && !calculationError && result && calculationInput && (
+        <DashboardMetrics
+          result={result}
+          calculationInput={calculationInput}
+          currency={selectedBusiness.base_currency}
+        />
       )}
     </div>
   );
