@@ -28,7 +28,7 @@ The final catalog-level test runs after every migration and verifies:
 1. Every application base/partitioned table in `public` has RLS enabled.
 2. `anon` does not inherit direct privileges on application tables, views, materialized views, or sequences.
 3. Every public application view uses `security_invoker=true`, so underlying RLS remains authoritative.
-4. Every `SECURITY DEFINER` function in `public` or `private` pins a safe `search_path` that does not include `public` or `$user`.
+4. Every `SECURITY DEFINER` function in `public` or `private` pins `search_path` to the strict trusted allowlist: an empty path or `pg_catalog` only.
 5. `anon` cannot execute application functions, including privileges inherited from PostgreSQL's `PUBLIC` pseudo-role.
 6. Client roles cannot create objects in the `public` or `private` schemas.
 7. `anon` has no `private` schema usage.
@@ -56,7 +56,7 @@ Automated source-boundary tests verify:
 - owner-rights escalation by a read-only member;
 - unintended anonymous relation/function grants;
 - default PostgreSQL `PUBLIC EXECUTE` leakage on a new function;
-- definer-function search-path hijacking;
+- definer-function search-path hijacking through `public`, `$user`, or any future attacker-writable custom schema;
 - security-definer views bypassing underlying RLS;
 - direct client access to `auth.users`;
 - accidentally exposing an elevated Supabase credential to browser/client code;
