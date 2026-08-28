@@ -6,7 +6,7 @@ export type TargetPlannerActualMonthBlocker =
   | "CORE_METRIC_UNAVAILABLE"
   | "EXPENSE_AMOUNT_UNAVAILABLE"
   | "AD_SPEND_UNAVAILABLE"
-  | "MEDIA_EXCEEDS_FIXED_ACQUISITION"
+  | "MEDIA_EXPENSE_UNRESOLVED"
   | "FUNNEL_DATA_UNAVAILABLE"
   | "FUNNEL_CUSTOMER_MISMATCH"
   | "FUNNEL_SEQUENCE_INVALID";
@@ -18,6 +18,10 @@ export type TargetPlannerActualMonthResult =
 type ExactDecimal = {
   coefficient: bigint;
   scale: number;
+};
+
+type CalculatedExpense = CoreCalculationResult["expensesByItem"][number] & {
+  parsedAmount: ExactDecimal;
 };
 
 const DECIMAL_PATTERN = /^-?\d+(?:\.\d+)?$/;
@@ -62,11 +66,6 @@ function align(left: ExactDecimal, right: ExactDecimal) {
 function add(left: ExactDecimal, right: ExactDecimal) {
   const aligned = align(left, right);
   return normalizeDecimal({ coefficient: aligned.left + aligned.right, scale: aligned.scale });
-}
-
-function subtract(left: ExactDecimal, right: ExactDecimal) {
-  const aligned = align(left, right);
-  return normalizeDecimal({ coefficient: aligned.left - aligned.right, scale: aligned.scale });
 }
 
 function compare(left: ExactDecimal, right: ExactDecimal) {
@@ -118,8 +117,10 @@ function aggregateFunnel(entries: readonly FunnelMonthlyEntrySnapshot[]) {
 
 /**
  * Converts one fully calculated historical month into the exact actual-month shape used by
- * the existing Rolling-3 Target Engine. Media spend is kept separate from non-media acquisition
- * costs so the planner does not double-count advertising when it projects required Ad Spend.
+ * the existing Rolling-3 Target Engine. Because expense items do not currently carry a semantic
+ * media-spend marker, a positive canonical Ad Spend is separated only when exactly one acquisition
+ * expense line has the same calculated amount and that line is fixed-monthly. Any ambiguous or
+ * variable-media representation fails closed rather than guessing which acquisition cost is media.
  */
 export function buildTargetPlannerActualMonth(input: {
   month: string;
@@ -135,34 +136,45 @@ export function buildTargetPlannerActualMonth(input: {
     return { status: "insufficient", blocker: "AD_SPEND_UNAVAILABLE" };
   }
 
-  let totalAcquisition = ZERO;
-  let variableAcquisition = ZERO;
-  let totalNonAcquisition = ZERO;
-  let variableNonAcquisition = ZERO;
-
+  const calculatedExpenses: CalculatedExpense[] = [];
   for (const item of core.expensesByItem) {
     if (!item.amount.available) {
       return { status: "insufficient", blocker: "EXPENSE_AMOUNT_UNAVAILABLE" };
     }
-    const amount = parseDecimal(item.amount.value);
-    if (item.category === "acquisition") {
-      totalAcquisition = add(totalAcquisition, amount);
-      if (item.variable) variableAcquisition = add(variableAcquisition, amount);
-    } else {
-      totalNonAcquisition = add(totalNonAcquisition, amount);
-      if (item.variable) variableNonAcquisition = add(variableNonAcquisition, amount);
-    }
+    calculatedExpenses.push({ ...item, parsedAmount: parseDecimal(item.amount.value) });
   }
 
   const adSpend = parseDecimal(canonicalAdSpend);
-  const fixedAcquisitionBeforeMedia = subtract(totalAcquisition, variableAcquisition);
-  const fixedNonMediaAcquisition = subtract(fixedAcquisitionBeforeMedia, adSpend);
-  if (compare(fixedNonMediaAcquisition, ZERO) < 0) {
-    return { status: "insufficient", blocker: "MEDIA_EXCEEDS_FIXED_ACQUISITION" };
+  let mediaExpenseId: string | null = null;
+  if (compare(adSpend, ZERO) > 0) {
+    const matchingAcquisitionExpenses = calculatedExpenses.filter(
+      (item) => item.category === "acquisition" && compare(item.parsedAmount, adSpend) === 0,
+    );
+    if (
+      matchingAcquisitionExpenses.length !== 1 ||
+      matchingAcquisitionExpenses[0].variable ||
+      matchingAcquisitionExpenses[0].behavior !== "fixed_monthly"
+    ) {
+      return { status: "insufficient", blocker: "MEDIA_EXPENSE_UNRESOLVED" };
+    }
+    mediaExpenseId = matchingAcquisitionExpenses[0].id;
   }
-  const fixedNonAcquisition = subtract(totalNonAcquisition, variableNonAcquisition);
-  if (compare(fixedNonAcquisition, ZERO) < 0) {
-    return { status: "insufficient", blocker: "EXPENSE_AMOUNT_UNAVAILABLE" };
+
+  let fixedNonMediaAcquisition = ZERO;
+  let variableAcquisition = ZERO;
+  let fixedNonAcquisition = ZERO;
+  let variableNonAcquisition = ZERO;
+
+  for (const item of calculatedExpenses) {
+    if (item.category === "acquisition") {
+      if (item.id === mediaExpenseId) continue;
+      if (item.variable) variableAcquisition = add(variableAcquisition, item.parsedAmount);
+      else fixedNonMediaAcquisition = add(fixedNonMediaAcquisition, item.parsedAmount);
+    } else if (item.variable) {
+      variableNonAcquisition = add(variableNonAcquisition, item.parsedAmount);
+    } else {
+      fixedNonAcquisition = add(fixedNonAcquisition, item.parsedAmount);
+    }
   }
 
   const funnel = aggregateFunnel(funnelEntries);
