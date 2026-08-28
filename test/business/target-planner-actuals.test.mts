@@ -173,6 +173,30 @@ test("fails closed when matching media spend is modeled as a variable acquisitio
   });
 });
 
+test("fails closed instead of throwing for invalid or unsafe funnel counts", () => {
+  const negative = buildTargetPlannerActualMonth({
+    month: "2026-07",
+    core: coreResult(),
+    canonicalAdSpend: "2000",
+    funnelEntries: [{ ...funnelEntry, leads: -1 }],
+  });
+  assert.deepEqual(negative, {
+    status: "insufficient",
+    blocker: "FUNNEL_DATA_UNAVAILABLE",
+  });
+
+  const unsafe = buildTargetPlannerActualMonth({
+    month: "2026-07",
+    core: coreResult(),
+    canonicalAdSpend: "2000",
+    funnelEntries: [{ ...funnelEntry, leads: Number.MAX_SAFE_INTEGER + 1 }],
+  });
+  assert.deepEqual(unsafe, {
+    status: "insufficient",
+    blocker: "FUNNEL_DATA_UNAVAILABLE",
+  });
+});
+
 test("fails closed when funnel new customers do not reconcile to the business month", () => {
   const result = buildTargetPlannerActualMonth({
     month: "2026-07",
