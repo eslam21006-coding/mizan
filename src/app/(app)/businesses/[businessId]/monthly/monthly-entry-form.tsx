@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { normalizeLocalizedDigits } from "@/lib/business/monthly";
+import { parseOptionalDecimalInput } from "@/lib/business/monthly";
 import styles from "./monthly.module.css";
 
 export type RevenueInputRow = {
@@ -87,12 +87,9 @@ function basisLabel(value: string) {
 }
 
 function parseNumber(value: string) {
-  const normalized = normalizeLocalizedDigits(value)
-    .trim()
-    .replaceAll("٬", "")
-    .replaceAll("٫", ".");
-  if (!/^\d{1,16}(?:\.\d{1,8})?$/.test(normalized)) return null;
-  const parsed = Number(normalized);
+  const parsedInput = parseOptionalDecimalInput(value);
+  if (!parsedInput.ok || parsedInput.value === null) return null;
+  const parsed = Number(parsedInput.value);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
