@@ -18,6 +18,7 @@ function revenueStreamsPath(businessId: string, status: string) {
 function redirectToRevenueStreams(businessId: string, status: string): never {
   revalidatePath("/businesses");
   revalidatePath(`/businesses/${businessId}/revenue-streams`);
+  revalidatePath(`/businesses/${businessId}/monthly`);
   redirect(revenueStreamsPath(businessId, status));
 }
 
@@ -87,4 +88,38 @@ export async function updateRevenueStream(formData: FormData) {
   }
 
   redirectToRevenueStreams(businessId, "updated");
+}
+
+export async function deleteRevenueStream(formData: FormData) {
+  await requireAuthContext();
+
+  const businessId = parseResourceId(formData.get("business_id"));
+  const streamId = parseResourceId(formData.get("stream_id"));
+
+  if (!businessId) {
+    redirect("/businesses");
+  }
+
+  if (!streamId) {
+    redirect(revenueStreamsPath(businessId, "invalid"));
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: deletedStream, error } = await supabase
+    .from("revenue_streams")
+    .delete()
+    .eq("id", streamId)
+    .eq("business_id", businessId)
+    .select("id")
+    .maybeSingle();
+
+  if (error?.code === "23503") {
+    redirect(revenueStreamsPath(businessId, "in-use"));
+  }
+
+  if (error || !deletedStream) {
+    redirect(revenueStreamsPath(businessId, "delete-failed"));
+  }
+
+  redirectToRevenueStreams(businessId, "deleted");
 }
