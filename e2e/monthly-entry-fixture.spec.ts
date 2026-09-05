@@ -85,6 +85,7 @@ test.describe("Monthly entry UX fixture", () => {
     const saveButton = page.getByRole("button", { name: "حفظ الشهر" });
     const saveBox = await saveButton.boundingBox();
     expect(saveBox?.height ?? 0).toBeGreaterThanOrEqual(44);
+    await expect(page.getByTestId("monthly-save-bar")).toHaveCSS("position", "static");
 
     await page.screenshot({
       path: "test-results/screenshots/monthly-entry-fixture-mobile.png",
