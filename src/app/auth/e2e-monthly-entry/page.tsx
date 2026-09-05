@@ -6,6 +6,7 @@ import {
   type ExpenseInputRow,
   type RevenueInputRow,
 } from "@/app/(app)/businesses/[businessId]/monthly/monthly-entry-form";
+import saveBarStyles from "@/app/(app)/businesses/[businessId]/monthly/monthly-save-bar.module.css";
 import styles from "@/app/(app)/businesses/[businessId]/monthly/monthly.module.css";
 import { AppShell } from "@/components/app-shell";
 
@@ -117,7 +118,10 @@ export default async function MonthlyEntryE2eFixturePage() {
               adjustment_note: null,
             }}
           />
-          <div className={styles.saveBar}>
+          <div
+            className={`${styles.saveBar} ${saveBarStyles.mobileSafeSaveBar}`}
+            data-testid="monthly-save-bar"
+          >
             <div>
               <strong>حفظ أرقام أغسطس ٢٠٢٦</strong>
               <p>واجهة اختبار فقط — لا يتم حفظ أي بيانات.</p>
