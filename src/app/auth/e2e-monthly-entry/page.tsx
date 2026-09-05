@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import {
   MonthlyEntryForm,
   type ExpenseInputRow,
@@ -71,7 +72,8 @@ const expenseRows: ExpenseInputRow[] = [
   },
 ];
 
-export default function MonthlyEntryE2eFixturePage() {
+export default async function MonthlyEntryE2eFixturePage() {
+  await connection();
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
     notFound();
   }
