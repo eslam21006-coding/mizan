@@ -45,16 +45,27 @@ test.describe("Monthly entry UX fixture", () => {
     expect(errors).toEqual([]);
   });
 
-  test("updates per-stream net without treating blank inputs as zero", async ({ page }) => {
+  test("updates per-stream net without treating blank or malformed grouped inputs as amounts", async ({
+    page,
+  }) => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 1200, height: 900 });
     await page.goto(fixturePath);
 
     const gross = page.getByLabel("الإيراد المحصل — Front-End Offer");
     const refunds = page.getByLabel("المرتجعات — Front-End Offer");
+    const missingNetHint = page.getByText("أدخل المحصل والمرتجعات لإظهار الصافي.").first();
 
     await gross.fill("");
-    await expect(page.getByText("أدخل المحصل والمرتجعات لإظهار الصافي.").first()).toBeVisible();
+    await expect(missingNetHint).toBeVisible();
+
+    await gross.fill("1٬2");
+    await refunds.fill("0");
+    await expect(missingNetHint).toBeVisible();
+
+    await gross.fill("١٬٢٣٤");
+    await refunds.fill("٢٣٤");
+    await expect(page.getByText("1,000 USD", { exact: true })).toBeVisible();
 
     await gross.fill("31000");
     await refunds.fill("1000");
