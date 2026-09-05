@@ -20,10 +20,6 @@ begin
     raise invalid_parameter_value using message = 'Type حذف or Delete to confirm business deletion.';
   end if;
 
-  if not (select private.can_manage_business(p_business_id)) then
-    raise insufficient_privilege using message = 'Only the business owner or an admin can delete this business.';
-  end if;
-
   select business.id
   into locked_business_id
   from public.businesses as business
@@ -32,6 +28,10 @@ begin
 
   if not found then
     return false;
+  end if;
+
+  if not (select private.can_manage_business(p_business_id)) then
+    raise insufficient_privilege using message = 'Only the business owner or an admin can delete this business.';
   end if;
 
   -- Delete deepest historical children first so setup-level RESTRICT links remain
