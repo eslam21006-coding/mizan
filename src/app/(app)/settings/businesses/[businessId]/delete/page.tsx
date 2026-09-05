@@ -42,8 +42,8 @@ export default async function DeleteBusinessPage({ params, searchParams }: Delet
         <span className={styles.dangerBadge}>منطقة خطرة</span>
         <h1 id="delete-business-title">حذف {business.name}</h1>
         <p className={styles.warningCopy} id="business-delete-warning">
-          هذا إجراء دائم. ميزان لن ينفذ الحذف إلا بعد كتابة كلمة التأكيد، كما أن قاعدة البيانات
-          ستمنع العملية تلقائيًا إذا كان هناك تاريخ أو بيانات مرتبطة محمية من الحذف.
+          هذا إجراء دائم. بعد كتابة كلمة التأكيد سيحذف ميزان البزنس وكل البيانات المرتبطة به نهائيًا،
+          بما فيها الأرقام الشهرية والفانلز والمعاملات وبيانات العملاء والمحاكي.
         </p>
 
         <div className={styles.warningList}>
@@ -51,10 +51,10 @@ export default async function DeleteBusinessPage({ params, searchParams }: Delet
             <strong>التأكيد اليدوي مطلوب:</strong> اكتب «حذف» أو «Delete» قبل أن يصبح زر الحذف متاحًا.
           </div>
           <div>
-            <strong>حماية التاريخ:</strong> وجود بيانات محمية قد يمنع حذف البزنس حتى بعد التأكيد.
+            <strong>سيتم حذف كل بيانات البزنس:</strong> التأكيد يعني أنك تريد إزالة البزنس وتاريخه من ميزان بالكامل.
           </div>
           <div>
-            <strong>لا يوجد تراجع:</strong> إذا تم الحذف بنجاح فلن يمكن استرجاع البزنس من داخل ميزان.
+            <strong>لا يوجد تراجع:</strong> بعد نجاح الحذف لن يمكن استرجاع البزنس من داخل ميزان.
           </div>
         </div>
 
@@ -63,14 +63,9 @@ export default async function DeleteBusinessPage({ params, searchParams }: Delet
             اكتب «حذف» أو «Delete» للتأكيد قبل تنفيذ العملية.
           </div>
         )}
-        {query.status === "protected-data" && (
-          <div className={styles.statusProtected} role="alert">
-            لم يتم حذف البزنس لأن هناك بيانات مرتبطة محمية. لم يتم تغيير أو حذف أي من هذه البيانات.
-          </div>
-        )}
         {query.status === "failed" && (
           <div className={styles.statusError} role="alert">
-            تعذر حذف البزنس. لم يتم تغيير أي بيانات. أعد تحميل الصفحة وحاول مرة أخرى.
+            تعذر حذف البزنس. لم يتم حذف جزء من البيانات؛ أعد تحميل الصفحة وحاول مرة أخرى.
           </div>
         )}
 

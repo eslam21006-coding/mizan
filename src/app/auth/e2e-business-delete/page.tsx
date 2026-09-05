@@ -22,15 +22,15 @@ export default async function BusinessDeleteE2eFixturePage() {
           <span className={styles.dangerBadge}>منطقة خطرة</span>
           <h1 id="delete-business-title">حذف Mizan Founder Test</h1>
           <p className={styles.warningCopy} id="business-delete-warning">
-            هذا إجراء دائم. ميزان لن ينفذ الحذف إلا بعد كتابة كلمة التأكيد، كما أن قاعدة البيانات
-            ستمنع العملية تلقائيًا إذا كان هناك تاريخ أو بيانات مرتبطة محمية من الحذف.
+            هذا إجراء دائم. بعد كتابة كلمة التأكيد سيحذف ميزان البزنس وكل البيانات المرتبطة به نهائيًا،
+            بما فيها الأرقام الشهرية والفانلز والمعاملات وبيانات العملاء والمحاكي.
           </p>
           <div className={styles.warningList}>
             <div>
               <strong>التأكيد اليدوي مطلوب:</strong> اكتب «حذف» أو «Delete» قبل أن يصبح زر الحذف متاحًا.
             </div>
             <div>
-              <strong>حماية التاريخ:</strong> وجود بيانات محمية قد يمنع حذف البزنس حتى بعد التأكيد.
+              <strong>سيتم حذف كل بيانات البزنس:</strong> التأكيد يعني أنك تريد إزالة البزنس وتاريخه من ميزان بالكامل.
             </div>
           </div>
           <BusinessDeleteForm

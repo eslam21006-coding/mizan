@@ -14,12 +14,13 @@ function deleteBusinessPath(businessId: string, status: string) {
 export async function deleteBusiness(formData: FormData) {
   const auth = await requireAuthContext();
   const businessId = parseResourceId(formData.get("business_id"));
+  const confirmation = formData.get("confirmation");
 
   if (!businessId) {
     redirect("/settings");
   }
 
-  if (!isBusinessDeletionConfirmation(formData.get("confirmation"))) {
+  if (!isBusinessDeletionConfirmation(confirmation)) {
     redirect(deleteBusinessPath(businessId, "confirmation-required"));
   }
 
@@ -39,18 +40,16 @@ export async function deleteBusiness(formData: FormData) {
     redirect("/access-denied");
   }
 
-  const { data: deletedBusiness, error } = await supabase
-    .from("businesses")
-    .delete()
-    .eq("id", businessId)
-    .select("id")
-    .maybeSingle();
+  const { data: deleted, error } = await supabase.rpc("delete_business_confirmed", {
+    p_business_id: businessId,
+    p_confirmation: String(confirmation),
+  });
 
-  if (error?.code === "23503") {
-    redirect(deleteBusinessPath(businessId, "protected-data"));
+  if (error?.code === "42501") {
+    redirect("/access-denied");
   }
 
-  if (error || !deletedBusiness) {
+  if (error || deleted !== true) {
     redirect(deleteBusinessPath(businessId, "failed"));
   }
 
