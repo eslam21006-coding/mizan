@@ -1,6 +1,3 @@
-.mobileSafeSaveBar {
-}
-
 @media (max-width: 720px) {
   .mobileSafeSaveBar.mobileSafeSaveBar {
     position: static;
