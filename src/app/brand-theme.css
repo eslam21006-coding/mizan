@@ -1,0 +1,74 @@
+:root {
+  --bg: #f7f8f5;
+  --surface-soft: #f1f5f3;
+  --surface-muted: #e7eeeb;
+  --border: #dce5e1;
+  --border-strong: #c9d6d1;
+  --text: #20292e;
+  --text-soft: #59666c;
+  --text-faint: #7a878c;
+  --brand: #17313c;
+  --brand-strong: #0e252e;
+  --brand-soft: #e6f6f2;
+  --brand-ring: rgba(39, 181, 165, 0.22);
+  --accent: #27b5a5;
+  --accent-soft: #ddf5f1;
+  --shadow-soft: 0 10px 34px rgba(23, 49, 60, 0.07);
+}
+
+.brand-mark {
+  color: initial;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.brand-mark svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: none;
+}
+
+.mizan-mark-left {
+  fill: var(--brand);
+}
+
+.mizan-mark-dot,
+.mizan-mark-right {
+  fill: var(--accent);
+}
+
+.brand-copy strong {
+  color: var(--brand);
+}
+
+.brand-copy small {
+  color: var(--text-faint);
+}
+
+.nav-item-active,
+.status-pill {
+  color: var(--brand);
+  background: var(--accent-soft);
+  border-color: #bfe8e1;
+}
+
+.foundation-dot {
+  background: var(--accent);
+}
+
+.welcome-panel {
+  background:
+    radial-gradient(circle at 0% 100%, rgba(39, 181, 165, 0.09), transparent 36%),
+    var(--surface);
+}
+
+.empty-module-icon {
+  background: var(--accent-soft);
+  border-color: #bfe8e1;
+}
+
+.empty-module-icon span {
+  background: var(--accent);
+}
