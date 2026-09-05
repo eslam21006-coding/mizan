@@ -8,15 +8,14 @@ security definer
 set search_path = ''
 as $$
 declare
-  normalized_confirmation text := lower(btrim(coalesce(p_confirmation, '')));
   locked_business_id uuid;
 begin
   if (select auth.uid()) is null then
     raise insufficient_privilege using message = 'Authentication is required to delete a business.';
   end if;
 
-  if btrim(coalesce(p_confirmation, '')) <> 'حذف'
-     and normalized_confirmation <> 'delete' then
+  if p_confirmation is null
+     or p_confirmation not in ('حذف', 'Delete') then
     raise invalid_parameter_value using message = 'Type حذف or Delete to confirm business deletion.';
   end if;
 
@@ -99,4 +98,4 @@ grant execute on function public.delete_business_confirmed(uuid, text) to authen
 grant execute on function public.delete_business_confirmed(uuid, text) to service_role;
 
 comment on function public.delete_business_confirmed(uuid, text) is
-  'Explicit irreversible whole-business deletion. Requires owner/admin authorization and the confirmation word حذف or Delete. Removes all Mizan data scoped to the business in one database transaction; ordinary direct business deletion remains protected by existing history guards.';
+  'Explicit irreversible whole-business deletion. Requires owner/admin authorization and the exact confirmation word حذف or Delete. Removes all Mizan data scoped to the business in one database transaction; ordinary direct business deletion remains protected by existing history guards.';
