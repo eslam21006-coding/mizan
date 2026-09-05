@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AppShell } from "@/components/app-shell";
 import {
   MonthlyEntryForm,
   type ExpenseInputRow,
   type RevenueInputRow,
 } from "@/app/(app)/businesses/[businessId]/monthly/monthly-entry-form";
 import styles from "@/app/(app)/businesses/[businessId]/monthly/monthly.module.css";
+import { AppShell } from "@/components/app-shell";
+
+const fixtureShellProps = {
+  role: "admin" as const,
+  email: "admin.fixture@example.test",
+};
 
 const revenueRows: RevenueInputRow[] = [
   {
@@ -72,7 +77,7 @@ export default function MonthlyEntryE2eFixturePage() {
   }
 
   return (
-    <AppShell role="admin" email="admin.fixture@example.test">
+    <AppShell {...fixtureShellProps}>
       <div className="page-stack">
         <div>
           <span className="eyebrow">اختبار الإدخال الشهري</span>
