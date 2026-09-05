@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { normalizeLocalizedDigits } from "@/lib/business/monthly";
 import styles from "./monthly.module.css";
 
 export type RevenueInputRow = {
@@ -86,16 +87,19 @@ function basisLabel(value: string) {
 }
 
 function parseNumber(value: string) {
-  const trimmed = value.trim();
-  if (!trimmed) return null;
-  const parsed = Number(trimmed.replaceAll(",", ""));
+  const normalized = normalizeLocalizedDigits(value)
+    .trim()
+    .replaceAll("٬", "")
+    .replaceAll("٫", ".");
+  if (!/^\d{1,16}(?:\.\d{1,8})?$/.test(normalized)) return null;
+  const parsed = Number(normalized);
   return Number.isFinite(parsed) ? parsed : null;
 }
 
 function formatMoney(value: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
+  return `${new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 2,
-  }).format(value) + ` ${currency}`;
+  }).format(value)} ${currency}`;
 }
 
 function NetValue({ gross, refunds, currency }: { gross: string; refunds: string; currency: string }) {
@@ -212,52 +216,56 @@ function RevenueSection({
       />
 
       {revenueRows.length > 0 ? (
-        <div className={styles.revenueTable} role="table" aria-label="الإيرادات والمرتجعات حسب المصدر">
-          <div className={styles.revenueHeader} role="row">
-            <span>مصدر الإيراد</span>
-            <span>المحصل</span>
-            <span>المرتجعات</span>
-            <span>الصافي</span>
-          </div>
-          {revenueRows.map((row) => {
-            const current = revenueValues[row.id] ?? { gross: row.gross, refunds: row.refunds };
-            return (
-              <div className={styles.revenueRow} role="row" key={row.id}>
-                {editable && <input type="hidden" name="revenue_stream_id" value={row.id} />}
-                <div className={styles.rowIdentity} role="cell">
-                  <strong>{row.name}</strong>
-                  <div>
-                    <span>{streamTypeLabel(row.streamType)}</span>
-                    {!row.active && <span className={styles.inactiveBadge}>غير نشط حاليًا</span>}
-                  </div>
-                </div>
-                <div role="cell">
-                  <InputField
-                    editable={editable}
-                    name={`gross_${row.id}`}
-                    label={`الإيراد المحصل — ${row.name}`}
-                    value={editable ? current.gross : row.gross}
-                    suffix={currency}
-                    onValueChange={editable ? (value) => setRevenueValue(row.id, "gross", value) : undefined}
-                  />
-                </div>
-                <div role="cell">
-                  <InputField
-                    editable={editable}
-                    name={`refund_${row.id}`}
-                    label={`المرتجعات — ${row.name}`}
-                    value={editable ? current.refunds : row.refunds}
-                    suffix={currency}
-                    onValueChange={editable ? (value) => setRevenueValue(row.id, "refunds", value) : undefined}
-                  />
-                </div>
-                <div role="cell">
-                  <NetValue gross={current.gross} refunds={current.refunds} currency={currency} />
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        <table className={styles.revenueTable} aria-label="الإيرادات والمرتجعات حسب المصدر">
+          <thead>
+            <tr className={styles.revenueHeader}>
+              <th scope="col">مصدر الإيراد</th>
+              <th scope="col">المحصل</th>
+              <th scope="col">المرتجعات</th>
+              <th scope="col">الصافي</th>
+            </tr>
+          </thead>
+          <tbody>
+            {revenueRows.map((row) => {
+              const current = revenueValues[row.id] ?? { gross: row.gross, refunds: row.refunds };
+              return (
+                <tr className={styles.revenueRow} key={row.id}>
+                  <td className={styles.rowIdentity}>
+                    {editable && <input type="hidden" name="revenue_stream_id" value={row.id} />}
+                    <strong>{row.name}</strong>
+                    <div>
+                      <span>{streamTypeLabel(row.streamType)}</span>
+                      {!row.active && <span className={styles.inactiveBadge}>غير نشط حاليًا</span>}
+                    </div>
+                  </td>
+                  <td>
+                    <InputField
+                      editable={editable}
+                      name={`gross_${row.id}`}
+                      label={`الإيراد المحصل — ${row.name}`}
+                      value={editable ? current.gross : row.gross}
+                      suffix={currency}
+                      onValueChange={editable ? (value) => setRevenueValue(row.id, "gross", value) : undefined}
+                    />
+                  </td>
+                  <td>
+                    <InputField
+                      editable={editable}
+                      name={`refund_${row.id}`}
+                      label={`المرتجعات — ${row.name}`}
+                      value={editable ? current.refunds : row.refunds}
+                      suffix={currency}
+                      onValueChange={editable ? (value) => setRevenueValue(row.id, "refunds", value) : undefined}
+                    />
+                  </td>
+                  <td>
+                    <NetValue gross={current.gross} refunds={current.refunds} currency={currency} />
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       ) : (
         <div className={styles.emptyState}>
           <strong>لم تضف مصادر إيراد بعد.</strong>
