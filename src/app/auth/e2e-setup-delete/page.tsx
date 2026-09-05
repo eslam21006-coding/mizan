@@ -44,7 +44,7 @@ export default async function SetupDeleteE2eFixturePage() {
             </div>
             <div className={revenueStyles.deleteRow}>
               <p>الحذف متاح فقط إذا لم يُستخدم هذا المصدر في أي بيانات شهرية أو معاملات عملاء.</p>
-              <form>
+              <form action="?attempt=revenue-delete">
                 <ConfirmSubmitButton
                   className={revenueStyles.deleteButton}
                   ariaLabel="حذف مصدر الإيراد Agency"
@@ -75,7 +75,7 @@ export default async function SetupDeleteE2eFixturePage() {
             </div>
             <div className={expenseStyles.deleteRow}>
               <p>الحذف متاح فقط إذا لم يُستخدم هذا البند في أي بيانات شهرية أو تخصيصات سابقة.</p>
-              <form>
+              <form action="?attempt=expense-delete">
                 <ConfirmSubmitButton
                   className={expenseStyles.deleteButton}
                   ariaLabel="حذف المصروف رواتب"
