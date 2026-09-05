@@ -18,6 +18,7 @@ function expensesPath(businessId: string, status: string) {
 function redirectToExpenses(businessId: string, status: string): never {
   revalidatePath("/businesses");
   revalidatePath(`/businesses/${businessId}/expenses`);
+  revalidatePath(`/businesses/${businessId}/monthly`);
   redirect(expensesPath(businessId, status));
 }
 
@@ -91,4 +92,38 @@ export async function updateExpenseItem(formData: FormData) {
   }
 
   redirectToExpenses(businessId, "updated");
+}
+
+export async function deleteExpenseItem(formData: FormData) {
+  await requireAuthContext();
+
+  const businessId = parseResourceId(formData.get("business_id"));
+  const expenseId = parseResourceId(formData.get("expense_id"));
+
+  if (!businessId) {
+    redirect("/businesses");
+  }
+
+  if (!expenseId) {
+    redirect(expensesPath(businessId, "invalid"));
+  }
+
+  const supabase = await createSupabaseServerClient();
+  const { data: deletedExpense, error } = await supabase
+    .from("expense_items")
+    .delete()
+    .eq("id", expenseId)
+    .eq("business_id", businessId)
+    .select("id")
+    .maybeSingle();
+
+  if (error?.code === "23503") {
+    redirect(expensesPath(businessId, "in-use"));
+  }
+
+  if (error || !deletedExpense) {
+    redirect(expensesPath(businessId, "delete-failed"));
+  }
+
+  redirectToExpenses(businessId, "deleted");
 }

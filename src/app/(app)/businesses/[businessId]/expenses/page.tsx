@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { PageHeading } from "@/components/page-heading";
 import { requireAuthContext } from "@/lib/auth/context";
 import {
@@ -11,7 +12,7 @@ import {
 } from "@/lib/business/expenses";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createExpenseItem, updateExpenseItem } from "./actions";
+import { createExpenseItem, deleteExpenseItem, updateExpenseItem } from "./actions";
 import styles from "./expenses.module.css";
 
 type ExpensesPageProps = {
@@ -22,9 +23,12 @@ type ExpensesPageProps = {
 const STATUS_MESSAGES: Record<string, string> = {
   created: "تمت إضافة بند المصروف.",
   updated: "تم حفظ تعديلات بند المصروف.",
+  deleted: "تم حذف بند المصروف غير المستخدم.",
+  "in-use": "لا يمكن حذف هذا المصروف لأنه مستخدم في بيانات سابقة. عطّله بدل الحذف للحفاظ على التاريخ.",
   invalid: "راجع الاسم والتصنيف وطريقة التكلفة وحاول مرة أخرى.",
   "create-failed": "تعذر إضافة بند المصروف. لم يتم تغيير أي بيانات.",
   "update-failed": "تعذر حفظ التعديلات. لم يتم تغيير أي بيانات.",
+  "delete-failed": "تعذر حذف بند المصروف. لم يتم تغيير أي بيانات.",
 };
 
 function categoryLabel(value: string) {
@@ -71,7 +75,8 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
   const canManageExpenses = auth.role === "admin" || business.owner_user_id === auth.userId;
   const query = await searchParams;
   const statusMessage = query.status ? STATUS_MESSAGES[query.status] : null;
-  const isErrorStatus = query.status?.endsWith("failed") || query.status === "invalid";
+  const isErrorStatus =
+    query.status?.endsWith("failed") || query.status === "invalid" || query.status === "in-use";
 
   return (
     <div className="page-stack">
@@ -93,7 +98,7 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
 
       {!canManageExpenses && (
         <div className={styles.successStatus}>
-          صلاحيتك في هذا البزنس للعرض فقط. يمكنك مراجعة هيكل المصروفات بدون إضافة أو تعديل البنود.
+          صلاحيتك في هذا البزنس للعرض فقط. يمكنك مراجعة هيكل المصروفات بدون إضافة أو تعديل أو حذف البنود.
         </div>
       )}
 
@@ -210,51 +215,68 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
                 </div>
 
                 {canManageExpenses && (
-                  <form action={updateExpenseItem} className={styles.editForm}>
-                    <input type="hidden" name="business_id" value={businessId} />
-                    <input type="hidden" name="expense_id" value={expense.id} />
+                  <>
+                    <form action={updateExpenseItem} className={styles.editForm}>
+                      <input type="hidden" name="business_id" value={businessId} />
+                      <input type="hidden" name="expense_id" value={expense.id} />
 
-                    <label>
-                      <span>الاسم</span>
-                      <input
-                        type="text"
-                        name="name"
-                        maxLength={120}
-                        required
-                        defaultValue={expense.name}
-                        autoComplete="off"
-                      />
-                    </label>
+                      <label>
+                        <span>الاسم</span>
+                        <input
+                          type="text"
+                          name="name"
+                          maxLength={120}
+                          required
+                          defaultValue={expense.name}
+                          autoComplete="off"
+                        />
+                      </label>
 
-                    <label>
-                      <span>التصنيف</span>
-                      <select name="category" defaultValue={expense.category}>
-                        {EXPENSE_CATEGORY_OPTIONS.map((option) => (
-                          <option value={option.value} key={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                      <label>
+                        <span>التصنيف</span>
+                        <select name="category" defaultValue={expense.category}>
+                          {EXPENSE_CATEGORY_OPTIONS.map((option) => (
+                            <option value={option.value} key={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
 
-                    <label>
-                      <span>طريقة التكلفة</span>
-                      <select name="cost_behavior" defaultValue={expense.cost_behavior}>
-                        {EXPENSE_COST_BEHAVIOR_OPTIONS.map((option) => (
-                          <option value={option.value} key={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                      <label>
+                        <span>طريقة التكلفة</span>
+                        <select name="cost_behavior" defaultValue={expense.cost_behavior}>
+                          {EXPENSE_COST_BEHAVIOR_OPTIONS.map((option) => (
+                            <option value={option.value} key={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
 
-                    <label className={styles.activeToggle}>
-                      <input type="checkbox" name="is_active" defaultChecked={expense.is_active} />
-                      <span>المصروف نشط ويظهر في الإدخالات الجديدة</span>
-                    </label>
+                      <label className={styles.activeToggle}>
+                        <input type="checkbox" name="is_active" defaultChecked={expense.is_active} />
+                        <span>المصروف نشط ويظهر في الإدخالات الجديدة</span>
+                      </label>
 
-                    <button type="submit">حفظ التعديلات</button>
-                  </form>
+                      <button type="submit">حفظ التعديلات</button>
+                    </form>
+
+                    <div className={styles.deleteRow}>
+                      <p>الحذف متاح فقط إذا لم يُستخدم هذا البند في أي بيانات شهرية أو تخصيصات سابقة.</p>
+                      <form action={deleteExpenseItem}>
+                        <input type="hidden" name="business_id" value={businessId} />
+                        <input type="hidden" name="expense_id" value={expense.id} />
+                        <ConfirmSubmitButton
+                          className={styles.deleteButton}
+                          ariaLabel={`حذف المصروف ${expense.name}`}
+                          confirmMessage={`هل تريد حذف المصروف «${expense.name}»؟ لا يمكن التراجع عن حذف بند غير مستخدم.`}
+                        >
+                          حذف المصروف
+                        </ConfirmSubmitButton>
+                      </form>
+                    </div>
+                  </>
                 )}
               </article>
             ))}
@@ -268,7 +290,7 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
       </section>
 
       <p className={styles.historyNote}>
-        إيقاف المصروف لا يحذفه. يحتفظ ميزان به حتى تظل البيانات التاريخية قابلة للربط به لاحقًا.
+        يمكن حذف المصروف إذا لم يُستخدم بعد. بمجرد ارتباطه ببيانات تاريخية يمنع ميزان الحذف، ويمكنك تعطيله بدلًا من ذلك حتى يظل التاريخ محفوظًا.
       </p>
     </div>
   );

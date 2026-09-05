@@ -147,7 +147,7 @@ function InputField({
   return (
     <label className={styles.field}>
       <span>{label}</span>
-      <div className={styles.inputShell}>
+      <div className={styles.inputShell} dir="ltr">
         <input
           type="text"
           inputMode={integer ? "numeric" : "decimal"}
