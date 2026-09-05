@@ -42,14 +42,20 @@ function normalizeSignedDecimalText(raw: string, maximumFractionDigits: number) 
 }
 
 function normalizedMoneyInput(value: unknown) {
-  return normalizeLocalizedDigits(String(value ?? ""))
-    .trim()
-    .replaceAll("٬", "")
-    .replaceAll("٫", ".");
+  const localized = normalizeLocalizedDigits(String(value ?? "")).trim();
+  if (
+    localized.includes("٬") &&
+    !/^-?\d{1,3}(?:٬\d{3})+(?:[٫.]\d+)?$/.test(localized)
+  ) {
+    return null;
+  }
+
+  return localized.replaceAll("٬", "").replaceAll("٫", ".");
 }
 
 export function parseOptionalDecimalInput(value: unknown): ParsedInput<string | null> {
   const raw = normalizedMoneyInput(value);
+  if (raw === null) return { ok: false, value: null };
   if (raw.length === 0) return { ok: true, value: null };
   const normalized = normalizeDecimalText(raw, 8);
   return normalized === null ? { ok: false, value: null } : { ok: true, value: normalized };
@@ -57,6 +63,7 @@ export function parseOptionalDecimalInput(value: unknown): ParsedInput<string | 
 
 export function parseOptionalSignedDecimalInput(value: unknown): ParsedInput<string | null> {
   const raw = normalizedMoneyInput(value);
+  if (raw === null) return { ok: false, value: null };
   if (raw.length === 0) return { ok: true, value: null };
   const normalized = normalizeSignedDecimalText(raw, 8);
   return normalized === null ? { ok: false, value: null } : { ok: true, value: normalized };

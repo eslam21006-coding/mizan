@@ -10,6 +10,13 @@ const page = await readFile(
   new URL("../../src/app/(app)/businesses/[businessId]/monthly/page.tsx", import.meta.url),
   "utf8",
 );
+const entryForm = await readFile(
+  new URL(
+    "../../src/app/(app)/businesses/[businessId]/monthly/monthly-entry-form.tsx",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 test("Task 8 server actions validate input before calling the transactional monthly RPCs", () => {
   assert.match(actions, /await requireAuthContext\(\)/);
@@ -21,9 +28,9 @@ test("Task 8 server actions validate input before calling the transactional mont
   assert.doesNotMatch(actions, /\.from\("monthly_periods"\)\.(insert|update|upsert)/);
 });
 
-test("Task 8 page exposes the seven raw-input sections without calculated Task 9 KPIs", () => {
-  for (const title of ["الإيراد", "المرتجعات", "العملاء"]) {
-    assert.ok(page.includes(`title="${title}"`));
+test("monthly entry groups raw inputs into three compact sections without calculated dashboard KPIs", () => {
+  for (const title of ["الإيرادات والمرتجعات", "العملاء", "المصاريف"]) {
+    assert.ok(entryForm.includes(`title="${title}"`));
   }
 
   for (const title of [
@@ -32,15 +39,23 @@ test("Task 8 page exposes the seven raw-input sections without calculated Task 9
     "المصاريف التشغيلية العامة",
     "المصاريف المالية",
   ]) {
-    assert.ok(page.includes(`title: "${title}"`));
+    assert.ok(entryForm.includes(`title: "${title}"`));
   }
 
-  assert.match(page, /EXPENSE_SECTIONS\.map/);
-  assert.doesNotMatch(page, /Real Net Profit/i);
-  assert.doesNotMatch(page, /Ultimate CAC/i);
-  assert.doesNotMatch(page, /Contribution Profit/i);
-  assert.doesNotMatch(page, />MER</i);
-  assert.doesNotMatch(page, /ROAS/i);
+  assert.match(entryForm, /EXPENSE_SECTIONS\.map/);
+  assert.match(entryForm, /<table className=\{styles\.revenueTable\}/);
+  assert.match(entryForm, /name=\{`gross_\$\{row\.id\}`\}/);
+  assert.match(entryForm, /name=\{`refund_\$\{row\.id\}`\}/);
+  assert.match(page, /className=\{styles\.monthNavButton\}/);
+  assert.match(page, /إدارة مصادر الإيراد/);
+  assert.match(page, /إدارة هيكل المصروفات/);
+
+  const entrySurface = `${page}\n${entryForm}`;
+  assert.doesNotMatch(entrySurface, /Real Net Profit/i);
+  assert.doesNotMatch(entrySurface, /Ultimate CAC/i);
+  assert.doesNotMatch(entrySurface, /Contribution Profit/i);
+  assert.doesNotMatch(entrySurface, />MER</i);
+  assert.doesNotMatch(entrySurface, /ROAS/i);
 });
 
 test("Task 8 page uses server-derived Admin-or-owner management access and keeps members read-only", () => {
@@ -60,10 +75,10 @@ test("Task 8 page fails closed for mutations when any monthly data dependency fa
 });
 
 test("Task 8 requires an explicit Per Customer count basis instead of inferring one", () => {
-  assert.match(page, /defaultValue=\{row\.basis\}/);
-  assert.match(page, /<option value="" disabled>/);
-  assert.match(page, /اختر أساس عدد العملاء/);
-  assert.match(page, /aria-label=\{`أساس عدد العملاء — \$\{row\.name\}`\}[\s\S]*required/);
+  assert.match(entryForm, /defaultValue=\{row\.basis\}/);
+  assert.match(entryForm, /<option value="" disabled>/);
+  assert.match(entryForm, /اختر أساس عدد العملاء/);
+  assert.match(entryForm, /aria-label=\{`أساس عدد العملاء — \$\{row\.name\}`\}[\s\S]*required/);
   assert.match(page, /basis: String\(entry\?\.customer_count_basis \?\? ""\)/);
 });
 

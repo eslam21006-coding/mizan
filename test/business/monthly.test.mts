@@ -19,10 +19,16 @@ const migration = await readFile(
   "utf8",
 );
 
-test("localized numeric input accepts Arabic digits without silently interpreting ASCII commas", () => {
+test("localized numeric input validates Arabic thousands grouping without interpreting ASCII commas", () => {
   assert.equal(normalizeLocalizedDigits("١٢٣.٤٥"), "123.45");
   assert.deepEqual(parseOptionalDecimalInput("١٢٣٫٤٥"), { ok: true, value: "123.45" });
   assert.deepEqual(parseOptionalDecimalInput("۱۲۳٫۴۵"), { ok: true, value: "123.45" });
+  assert.deepEqual(parseOptionalDecimalInput("١٬٢٣٤٫٥٦"), { ok: true, value: "1234.56" });
+  assert.deepEqual(parseOptionalDecimalInput("12٬345.67"), { ok: true, value: "12345.67" });
+  assert.deepEqual(parseOptionalDecimalInput("1٬2"), { ok: false, value: null });
+  assert.deepEqual(parseOptionalDecimalInput("12٬34"), { ok: false, value: null });
+  assert.deepEqual(parseOptionalDecimalInput("1٬234٬56"), { ok: false, value: null });
+  assert.deepEqual(parseOptionalDecimalInput("1234٬567"), { ok: false, value: null });
   assert.deepEqual(parseOptionalDecimalInput("1,000"), { ok: false, value: null });
   assert.deepEqual(parseOptionalDecimalInput(""), { ok: true, value: null });
   assert.deepEqual(parseOptionalDecimalInput("-1"), { ok: false, value: null });

@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import type { ReactNode } from "react";
 import { PageHeading } from "@/components/page-heading";
 import { requireAuthContext } from "@/lib/auth/context";
-import { EXPENSE_CATEGORY_OPTIONS, EXPENSE_COST_BEHAVIOR_OPTIONS } from "@/lib/business/expenses";
 import {
   currentMonthKeyForTimeZone,
   parseMonthKey,
@@ -13,54 +11,19 @@ import {
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { copyPreviousMonthExpenses, saveMonthlyActuals } from "./actions";
+import {
+  MonthlyEntryForm,
+  type ExpenseInputRow,
+  type MonthlyPeriodValues,
+  type RevenueInputRow,
+} from "./monthly-entry-form";
+import saveBarStyles from "./monthly-save-bar.module.css";
 import styles from "./monthly.module.css";
 
 type MonthlyPageProps = {
   params: Promise<{ businessId: string }>;
   searchParams: Promise<{ month?: string; status?: string; copied?: string }>;
 };
-
-type RevenueInputRow = {
-  id: string;
-  name: string;
-  streamType: string;
-  active: boolean;
-  gross: string;
-  refunds: string;
-};
-
-type ExpenseInputRow = {
-  id: string;
-  name: string;
-  category: string;
-  behavior: string;
-  active: boolean;
-  value: string;
-  basis: string;
-};
-
-const EXPENSE_SECTIONS = [
-  {
-    category: "acquisition",
-    title: "الاكتساب",
-    description: "التسويق والمبيعات وكل تكلفة هدفها جلب عميل جديد.",
-  },
-  {
-    category: "fulfillment",
-    title: "التنفيذ وخدمة العملاء",
-    description: "تكاليف تقديم الخدمة أو المنتج ومتابعة العملاء.",
-  },
-  {
-    category: "overhead",
-    title: "المصاريف التشغيلية العامة",
-    description: "الإدارة والبرامج والإيجار والمحاسبة والتشغيل العام.",
-  },
-  {
-    category: "financial",
-    title: "المصاريف المالية",
-    description: "رسوم بوابات الدفع والضرائب والمصاريف المالية الأخرى.",
-  },
-] as const;
 
 const STATUS_MESSAGES: Record<string, string> = {
   saved: "تم حفظ بيانات الشهر.",
@@ -74,308 +37,6 @@ const STATUS_MESSAGES: Record<string, string> = {
 
 function asInputValue(value: unknown) {
   return value === null || value === undefined ? "" : String(value);
-}
-
-function streamTypeLabel(value: string) {
-  if (value === "front_end") return "Front-End";
-  if (value === "backend") return "Backend";
-  if (value === "other") return "Other";
-  return value;
-}
-
-function categoryLabel(value: string) {
-  return EXPENSE_CATEGORY_OPTIONS.find((option) => option.value === value)?.label ?? value;
-}
-
-function behaviorLabel(value: string) {
-  return EXPENSE_COST_BEHAVIOR_OPTIONS.find((option) => option.value === value)?.label ?? value;
-}
-
-function basisLabel(value: string) {
-  if (value === "new_customers") return "العملاء الجدد";
-  if (value === "total_paying_customers") return "إجمالي العملاء الدافعين";
-  return "غير محدد";
-}
-
-function InputField({
-  editable,
-  name,
-  label,
-  value,
-  suffix,
-  integer = false,
-}: {
-  editable: boolean;
-  name: string;
-  label: string;
-  value: string;
-  suffix?: string;
-  integer?: boolean;
-}) {
-  if (!editable) {
-    return (
-      <div className={styles.readField}>
-        <span>{label}</span>
-        <strong dir="ltr">
-          {value === "" ? "غير متاح" : `${value}${suffix ? ` ${suffix}` : ""}`}
-        </strong>
-      </div>
-    );
-  }
-
-  return (
-    <label className={styles.field}>
-      <span>{label}</span>
-      <div className={styles.inputShell}>
-        <input
-          type="text"
-          inputMode={integer ? "numeric" : "decimal"}
-          autoComplete="off"
-          name={name}
-          defaultValue={value}
-          aria-label={label}
-          dir="ltr"
-        />
-        {suffix && <small>{suffix}</small>}
-      </div>
-    </label>
-  );
-}
-
-function Section({
-  eyebrow,
-  title,
-  description,
-  children,
-}: {
-  eyebrow: string;
-  title: string;
-  description: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className={styles.section}>
-      <div className={styles.sectionHeading}>
-        <div>
-          <span>{eyebrow}</span>
-          <h2>{title}</h2>
-          <p>{description}</p>
-        </div>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function MonthlySections({
-  editable,
-  currency,
-  revenueRows,
-  expenseRows,
-  period,
-}: {
-  editable: boolean;
-  currency: string;
-  revenueRows: RevenueInputRow[];
-  expenseRows: ExpenseInputRow[];
-  period: Record<string, unknown> | null;
-}) {
-  return (
-    <>
-      <Section
-        eyebrow="1 / 7"
-        title="الإيراد"
-        description="سجل الكاش الذي تم تحصيله فعليًا قبل المرتجعات، وليس قيمة العقود المستقبلية."
-      >
-        {revenueRows.length > 0 ? (
-          <div className={styles.rowList}>
-            {revenueRows.map((row) => (
-              <div className={styles.dataRow} key={`gross-${row.id}`}>
-                {editable && <input type="hidden" name="revenue_stream_id" value={row.id} />}
-                <div className={styles.rowIdentity}>
-                  <strong>{row.name}</strong>
-                  <div>
-                    <span>{streamTypeLabel(row.streamType)}</span>
-                    {!row.active && <span className={styles.inactiveBadge}>غير نشط حاليًا</span>}
-                  </div>
-                </div>
-                <InputField
-                  editable={editable}
-                  name={`gross_${row.id}`}
-                  label={`الإيراد المحصل — ${row.name}`}
-                  value={row.gross}
-                  suffix={currency}
-                />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className={styles.emptyText}>لا توجد مصادر إيراد نشطة لهذا الشهر.</p>
-        )}
-
-        <div className={styles.manualBox}>
-          <InputField
-            editable={editable}
-            name="unallocated_gross"
-            label="إيراد محصل غير موزع على مصدر"
-            value={asInputValue(period?.unallocated_gross_cash_collected)}
-            suffix={currency}
-          />
-          {editable ? (
-            <label className={styles.field}>
-              <span>ملاحظة على المبالغ غير الموزعة</span>
-              <textarea
-                name="adjustment_note"
-                maxLength={500}
-                defaultValue={asInputValue(period?.adjustment_note)}
-                aria-label="ملاحظة على المبالغ غير الموزعة"
-              />
-            </label>
-          ) : (
-            <div className={styles.readField}>
-              <span>ملاحظة على المبالغ غير الموزعة</span>
-              <strong>{asInputValue(period?.adjustment_note) || "لا توجد ملاحظة"}</strong>
-            </div>
-          )}
-        </div>
-      </Section>
-
-      <Section
-        eyebrow="2 / 7"
-        title="المرتجعات"
-        description="سجل المرتجعات كمبالغ موجبة. المرتجع يخفض الإيراد ولا يُسجل مرة ثانية كمصروف."
-      >
-        {revenueRows.length > 0 ? (
-          <div className={styles.rowList}>
-            {revenueRows.map((row) => (
-              <div className={styles.dataRow} key={`refund-${row.id}`}>
-                <div className={styles.rowIdentity}>
-                  <strong>{row.name}</strong>
-                  <span>{streamTypeLabel(row.streamType)}</span>
-                </div>
-                <InputField
-                  editable={editable}
-                  name={`refund_${row.id}`}
-                  label={`المرتجعات — ${row.name}`}
-                  value={row.refunds}
-                  suffix={currency}
-                />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className={styles.emptyText}>لا توجد مصادر إيراد نشطة لهذا الشهر.</p>
-        )}
-        <div className={styles.manualBox}>
-          <InputField
-            editable={editable}
-            name="unallocated_refunds"
-            label="مرتجعات غير موزعة على مصدر"
-            value={asInputValue(period?.unallocated_refunds)}
-            suffix={currency}
-          />
-        </div>
-      </Section>
-
-      <Section
-        eyebrow="3 / 7"
-        title="العملاء"
-        description="اترك الحقل فارغًا إذا لم تكن تعرف الرقم. الصفر يعني أنك متأكد أن العدد صفر."
-      >
-        <div className={styles.twoColumn}>
-          <InputField
-            editable={editable}
-            integer
-            name="new_customers"
-            label="عملاء جدد"
-            value={asInputValue(period?.new_customers)}
-          />
-          <InputField
-            editable={editable}
-            integer
-            name="total_paying_customers"
-            label="إجمالي العملاء الدافعين"
-            value={asInputValue(period?.total_paying_customers)}
-          />
-        </div>
-        <p className={styles.helpText}>
-          العملاء الجدد لا يمكن أن يكونوا أكثر من إجمالي العملاء الدافعين في نفس الشهر.
-        </p>
-      </Section>
-
-      {EXPENSE_SECTIONS.map((section, index) => {
-        const rows = expenseRows.filter((row) => row.category === section.category);
-        return (
-          <Section
-            key={section.category}
-            eyebrow={`${index + 4} / 7`}
-            title={section.title}
-            description={section.description}
-          >
-            {rows.length > 0 ? (
-              <div className={styles.expenseList}>
-                {rows.map((row) => {
-                  const valueLabel =
-                    row.behavior === "fixed_monthly"
-                      ? `${row.name} — القيمة الشهرية`
-                      : row.behavior === "per_customer"
-                        ? `${row.name} — التكلفة لكل عميل`
-                        : `${row.name} — النسبة %`;
-                  const suffix = row.behavior === "percentage_revenue" ? "%" : currency;
-
-                  return (
-                    <div className={styles.expenseRow} key={row.id}>
-                      {editable && <input type="hidden" name="expense_item_id" value={row.id} />}
-                      <div className={styles.rowIdentity}>
-                        <strong>{row.name}</strong>
-                        <div>
-                          <span>{categoryLabel(row.category)}</span>
-                          <span>{behaviorLabel(row.behavior)}</span>
-                          {!row.active && <span className={styles.inactiveBadge}>غير نشط حاليًا</span>}
-                        </div>
-                      </div>
-                      <InputField
-                        editable={editable}
-                        name={`expense_value_${row.id}`}
-                        label={valueLabel}
-                        value={row.value}
-                        suffix={suffix}
-                      />
-                      {row.behavior === "per_customer" &&
-                        (editable ? (
-                          <label className={styles.field}>
-                            <span>{`أساس عدد العملاء — ${row.name}`}</span>
-                            <select
-                              name={`expense_basis_${row.id}`}
-                              defaultValue={row.basis}
-                              aria-label={`أساس عدد العملاء — ${row.name}`}
-                              required
-                            >
-                              <option value="" disabled>
-                                اختر أساس عدد العملاء
-                              </option>
-                              <option value="new_customers">العملاء الجدد</option>
-                              <option value="total_paying_customers">إجمالي العملاء الدافعين</option>
-                            </select>
-                          </label>
-                        ) : (
-                          <div className={styles.readField}>
-                            <span>أساس عدد العملاء</span>
-                            <strong>{basisLabel(row.basis)}</strong>
-                          </div>
-                        ))}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className={styles.emptyText}>لا توجد بنود معرفة في هذا التصنيف لهذا الشهر.</p>
-            )}
-          </Section>
-        );
-      })}
-    </>
-  );
 }
 
 export default async function MonthlyPage({ params, searchParams }: MonthlyPageProps) {
@@ -478,12 +139,11 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
     .filter((expense) => expense.is_active || expenseEntryById.has(expense.id))
     .map((expense) => {
       const entry = expenseEntryById.get(expense.id);
-      const category = String(entry?.category_snapshot ?? expense.category);
       const behavior = String(entry?.cost_behavior_snapshot ?? expense.cost_behavior);
       return {
         id: expense.id,
         name: String(entry?.expense_name_snapshot ?? expense.name),
-        category,
+        category: String(entry?.category_snapshot ?? expense.category),
         behavior,
         active: expense.is_active,
         value: storedExpenseValueForDisplay(
@@ -520,7 +180,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
       <div className={styles.headingRow}>
         <PageHeading
           title="الإدخال الشهري"
-          description={`أدخل الأرقام الفعلية لـ ${business.name}. ميزان لا يحسب مؤشرات الأداء في هذه الخطوة.`}
+          description={`أدخل الأرقام الفعلية لـ ${business.name}. هذه الصفحة للإدخال فقط، والنتائج تظهر بعد الحفظ في لوحة البزنس.`}
         />
         <Link className={styles.backLink} href="/businesses">
           العودة للبزنسات
@@ -528,21 +188,40 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
       </div>
 
       <section className={styles.monthBar} aria-label="اختيار الشهر">
-        {previousMonth && (
-          <Link href={`/businesses/${businessId}/monthly?month=${previousMonth}`}>الشهر السابق</Link>
+        {previousMonth ? (
+          <Link
+            className={styles.monthNavButton}
+            href={`/businesses/${businessId}/monthly?month=${previousMonth}`}
+          >
+            <span aria-hidden="true">→</span>
+            <span>الشهر السابق</span>
+          </Link>
+        ) : (
+          <span />
         )}
         <div className={styles.monthCenter}>
+          <span className={styles.monthEyebrow}>الشهر الحالي في النموذج</span>
           <strong>{monthLabel}</strong>
-          <span>{period ? "محفوظ" : "لم يُحفظ بعد"}</span>
+          <span className={period ? styles.savedState : styles.unsavedState}>
+            {period ? "محفوظ" : "لم يُحفظ بعد"}
+          </span>
         </div>
-        {nextMonth && (
-          <Link href={`/businesses/${businessId}/monthly?month=${nextMonth}`}>الشهر التالي</Link>
+        {nextMonth ? (
+          <Link
+            className={styles.monthNavButton}
+            href={`/businesses/${businessId}/monthly?month=${nextMonth}`}
+          >
+            <span>الشهر التالي</span>
+            <span aria-hidden="true">←</span>
+          </Link>
+        ) : (
+          <span />
         )}
       </section>
 
       <form key={`month-picker-${selectedMonth.monthKey}`} className={styles.monthPicker}>
         <label>
-          <span>الشهر</span>
+          <span>انتقل مباشرة إلى شهر</span>
           <input type="month" name="month" defaultValue={selectedMonth.monthKey} aria-label="الشهر" />
         </label>
         <button type="submit">فتح الشهر</button>
@@ -566,17 +245,46 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
         </div>
       )}
 
-      {canEditMonth && (
-        <div className={styles.actionStrip}>
-          <form action={copyPreviousMonthExpenses}>
-            <input type="hidden" name="business_id" value={businessId} />
-            <input type="hidden" name="month" value={selectedMonth.monthKey} />
-            <button type="submit" className={styles.secondaryButton}>
-              نسخ مصروفات الشهر السابق
-            </button>
-          </form>
-          <p>النسخ لا ينقل الإيراد أو المرتجعات أو أعداد العملاء، ولا يستبدل قيمة موجودة.</p>
-        </div>
+      {!dataLoadError && canManage && (
+        <section className={styles.setupPanel} aria-label="إعداد الإدخال الشهري">
+          <div className={styles.setupHeader}>
+            <div>
+              <span className="eyebrow">الإعداد قبل الإدخال</span>
+              <h2>كل الخانات تأتي من إعداد البزنس</h2>
+              <p>إذا كان مصدر إيراد أو مصروف ناقصًا، أضفه من هنا ثم ارجع لنفس الشهر.</p>
+            </div>
+            <div className={styles.setupStatusGrid}>
+              <div className={revenueRows.length > 0 ? styles.setupStatusReady : styles.setupStatusMissing}>
+                <strong>{revenueRows.length}</strong>
+                <span>مصدر إيراد</span>
+              </div>
+              <div className={expenseRows.length > 0 ? styles.setupStatusReady : styles.setupStatusMissing}>
+                <strong>{expenseRows.length}</strong>
+                <span>بند مصروف</span>
+              </div>
+            </div>
+          </div>
+          <div className={styles.setupActions}>
+            <Link className={styles.setupLinkButton} href={`/businesses/${businessId}/revenue-streams`}>
+              إدارة مصادر الإيراد
+            </Link>
+            <Link className={styles.setupLinkButton} href={`/businesses/${businessId}/expenses`}>
+              إدارة هيكل المصروفات
+            </Link>
+            {canEditMonth && (
+              <form action={copyPreviousMonthExpenses}>
+                <input type="hidden" name="business_id" value={businessId} />
+                <input type="hidden" name="month" value={selectedMonth.monthKey} />
+                <button type="submit" className={styles.secondaryButton}>
+                  نسخ مصروفات الشهر السابق
+                </button>
+              </form>
+            )}
+          </div>
+          <p className={styles.copyHint}>
+            النسخ ينقل المصروفات فقط، ولا ينقل الإيراد أو المرتجعات أو أعداد العملاء، ولا يستبدل قيمة موجودة.
+          </p>
+        </section>
       )}
 
       {!dataLoadError &&
@@ -588,16 +296,16 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
           >
             <input type="hidden" name="business_id" value={businessId} />
             <input type="hidden" name="month" value={selectedMonth.monthKey} />
-            <MonthlySections
+            <MonthlyEntryForm
               editable
               currency={business.base_currency}
               revenueRows={revenueRows}
               expenseRows={expenseRows}
-              period={period}
+              period={period as MonthlyPeriodValues}
             />
-            <div className={styles.saveBar}>
+            <div className={`${styles.saveBar} ${saveBarStyles.mobileSafeSaveBar}`}>
               <div>
-                <strong>حفظ بيانات {monthLabel}</strong>
+                <strong>حفظ أرقام {monthLabel}</strong>
                 <p>يتم حفظ الشهر كعملية واحدة. أي خطأ يمنع الحفظ الجزئي.</p>
               </div>
               <button type="submit">حفظ الشهر</button>
@@ -605,21 +313,15 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
           </form>
         ) : (
           <div key={`monthly-read-${selectedMonth.monthKey}`} className={styles.monthForm}>
-            <MonthlySections
+            <MonthlyEntryForm
               editable={false}
               currency={business.base_currency}
               revenueRows={revenueRows}
               expenseRows={expenseRows}
-              period={period}
+              period={period as MonthlyPeriodValues}
             />
           </div>
         ))}
-
-      <div className={styles.setupLinks}>
-        <span>تحتاج بندًا غير موجود؟</span>
-        <Link href={`/businesses/${businessId}/revenue-streams`}>إدارة مصادر الإيراد</Link>
-        <Link href={`/businesses/${businessId}/expenses`}>إدارة هيكل المصروفات</Link>
-      </div>
     </div>
   );
 }

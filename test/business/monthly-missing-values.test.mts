@@ -7,8 +7,11 @@ const actions = await readFile(
   new URL("../../src/app/(app)/businesses/[businessId]/monthly/actions.ts", import.meta.url),
   "utf8",
 );
-const page = await readFile(
-  new URL("../../src/app/(app)/businesses/[businessId]/monthly/page.tsx", import.meta.url),
+const entryForm = await readFile(
+  new URL(
+    "../../src/app/(app)/businesses/[businessId]/monthly/monthly-entry-form.tsx",
+    import.meta.url,
+  ),
   "utf8",
 );
 const correctionMigration = await readFile(
@@ -22,15 +25,15 @@ const packageJson = JSON.parse(
   await readFile(new URL("../../package.json", import.meta.url), "utf8"),
 ) as { engines?: { node?: string } };
 
-test("blank unallocated monthly inputs remain null from form to page rendering", () => {
+test("blank unallocated monthly inputs remain null from form to rendering", () => {
   assert.match(actions, /target_unallocated_gross:\s*unallocatedGross\.value/);
   assert.match(actions, /target_unallocated_refunds:\s*unallocatedRefunds\.value/);
   assert.doesNotMatch(actions, /target_unallocated_gross:[^\n]*\?\?\s*["']0["']/);
   assert.doesNotMatch(actions, /target_unallocated_refunds:[^\n]*\?\?\s*["']0["']/);
-  assert.match(page, /asInputValue\(period\?\.unallocated_gross_cash_collected\)/);
-  assert.match(page, /asInputValue\(period\?\.unallocated_refunds\)/);
-  assert.doesNotMatch(page, /unallocated_gross_cash_collected\s*\?\?\s*["']0["']/);
-  assert.doesNotMatch(page, /unallocated_refunds\s*\?\?\s*["']0["']/);
+  assert.match(entryForm, /asInputValue\(period\?\.unallocated_gross_cash_collected\)/);
+  assert.match(entryForm, /asInputValue\(period\?\.unallocated_refunds\)/);
+  assert.doesNotMatch(entryForm, /unallocated_gross_cash_collected\s*\?\?\s*["']0["']/);
+  assert.doesNotMatch(entryForm, /unallocated_refunds\s*\?\?\s*["']0["']/);
 });
 
 test("corrective migration preserves missing unallocated values and explicit per-customer validation", () => {
