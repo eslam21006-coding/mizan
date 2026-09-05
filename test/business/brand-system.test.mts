@@ -27,9 +27,12 @@ test("uses the new abstract balance mark instead of the former justice-scale ico
 test("ships the branded favicon and wires the theme after the base stylesheet", () => {
   const icon = read("src/app/icon.svg");
   const layout = read("src/app/layout.tsx");
+  const globalsIndex = layout.indexOf('import "./globals.css";');
+  const themeIndex = layout.indexOf('import "./brand-theme.css";');
 
   assert.match(icon, /fill="#17313C"/);
   assert.match(icon, /fill="#27B5A5"/);
-  assert.ok(layout.indexOf('import "\.\/globals\.css";') < layout.indexOf('import "\.\/brand-theme\.css";'));
+  assert.ok(globalsIndex >= 0);
+  assert.ok(themeIndex > globalsIndex);
   assert.match(layout, /themeColor:\s*"#f7f8f5"/i);
 });
