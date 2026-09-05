@@ -82,7 +82,7 @@ function behaviorLabel(value: string) {
 
 function basisLabel(value: string) {
   if (value === "new_customers") return "العملاء الجدد";
-  if (value === "total_paying_customers") return "إجمالي العملاء الدافعين";
+  if (value === "total_paying_customers") return "إجمالي العملاء الذين دفعوا خلال الشهر";
   return "غير محدد";
 }
 
@@ -333,12 +333,12 @@ function CustomersSection({ editable, period }: { editable: boolean; period: Mon
           editable={editable}
           integer
           name="total_paying_customers"
-          label="إجمالي العملاء الدافعين"
+          label="إجمالي العملاء الذين دفعوا خلال الشهر"
           value={asInputValue(period?.total_paying_customers)}
         />
       </div>
       <p className={styles.helpText}>
-        العملاء الجدد لا يمكن أن يكونوا أكثر من إجمالي العملاء الدافعين في نفس الشهر.
+        العملاء الجدد لا يمكن أن يكونوا أكثر من إجمالي العملاء الذين دفعوا خلال نفس الشهر.
       </p>
     </section>
   );
@@ -413,7 +413,7 @@ function ExpenseCalculation({ editable, row }: { editable: boolean; row: Expense
           اختر أساس عدد العملاء
         </option>
         <option value="new_customers">العملاء الجدد</option>
-        <option value="total_paying_customers">إجمالي العملاء الدافعين</option>
+        <option value="total_paying_customers">إجمالي العملاء الذين دفعوا خلال الشهر</option>
       </select>
       <small className={styles.autoHint}>الإجمالي = التكلفة لكل عميل × العدد المختار.</small>
     </label>
