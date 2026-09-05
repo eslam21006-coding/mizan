@@ -1,0 +1,73 @@
+.success {
+  padding: 13px 15px;
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+  border: 1px solid #d3e7e1;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.dangerZone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 14px 0 0;
+  padding: 12px 13px;
+  background: #fff7f7;
+  border: 1px solid #efc9c9;
+  border-radius: 10px;
+}
+
+.dangerZone div {
+  min-width: 0;
+}
+
+.dangerZone strong {
+  display: block;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.dangerZone p {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.deleteLink {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 7px 11px;
+  color: var(--danger);
+  background: var(--surface);
+  border: 1px solid #e7bcbc;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.deleteLink:hover {
+  background: #fff1f1;
+}
+
+.deleteLink:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 640px) {
+  .dangerZone {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .deleteLink {
+    width: 100%;
+  }
+}
