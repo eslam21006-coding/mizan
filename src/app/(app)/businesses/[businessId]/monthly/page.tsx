@@ -17,6 +17,7 @@ import {
   type MonthlyPeriodValues,
   type RevenueInputRow,
 } from "./monthly-entry-form";
+import saveBarStyles from "./monthly-save-bar.module.css";
 import styles from "./monthly.module.css";
 
 type MonthlyPageProps = {
@@ -302,7 +303,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
               expenseRows={expenseRows}
               period={period as MonthlyPeriodValues}
             />
-            <div className={styles.saveBar}>
+            <div className={`${styles.saveBar} ${saveBarStyles.mobileSafeSaveBar}`}>
               <div>
                 <strong>حفظ أرقام {monthLabel}</strong>
                 <p>يتم حفظ الشهر كعملية واحدة. أي خطأ يمنع الحفظ الجزئي.</p>
