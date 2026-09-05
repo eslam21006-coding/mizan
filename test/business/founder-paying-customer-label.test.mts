@@ -6,8 +6,13 @@ const monthlyEntrySource = readFileSync(
   "src/app/(app)/businesses/[businessId]/monthly/monthly-entry-form.tsx",
   "utf8",
 );
+const monthlyPageSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/monthly/page.tsx",
+  "utf8",
+);
 
 test("monthly entry uses the explicit paying-customer label consistently", () => {
-  assert.match(monthlyEntrySource, /إجمالي العملاء الذين دفعوا خلال الشهر/);
-  assert.doesNotMatch(monthlyEntrySource, /إجمالي العملاء الدافعين/);
+  const monthlyUiSource = `${monthlyEntrySource}\n${monthlyPageSource}`;
+  assert.match(monthlyUiSource, /إجمالي العملاء الذين دفعوا خلال الشهر/);
+  assert.doesNotMatch(monthlyUiSource, /إجمالي العملاء الدافعين/);
 });
