@@ -21,11 +21,12 @@ const confirmedDeleteSource = readFileSync(
   "utf8",
 );
 
-test("business deletion requires the explicit Arabic or English confirmation word", () => {
+test("business deletion requires exactly the Arabic or English confirmation word", () => {
   assert.equal(isBusinessDeletionConfirmation("حذف"), true);
-  assert.equal(isBusinessDeletionConfirmation(" Delete "), true);
-  assert.equal(isBusinessDeletionConfirmation("delete"), true);
-  assert.equal(isBusinessDeletionConfirmation("DELETE"), true);
+  assert.equal(isBusinessDeletionConfirmation("Delete"), true);
+  assert.equal(isBusinessDeletionConfirmation(" Delete "), false);
+  assert.equal(isBusinessDeletionConfirmation("delete"), false);
+  assert.equal(isBusinessDeletionConfirmation("DELETE"), false);
   assert.equal(isBusinessDeletionConfirmation("حذف البزنس"), false);
   assert.equal(isBusinessDeletionConfirmation("Delete business"), false);
   assert.equal(isBusinessDeletionConfirmation(""), false);
