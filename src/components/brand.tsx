@@ -7,6 +7,7 @@ export function Brand({ compact = false }: BrandProps) {
     <div className={compact ? "brand brand-compact" : "brand"} data-testid="mizan-brand">
       <span className="brand-mark" aria-hidden="true">
         <svg viewBox="0 0 64 64">
+          <title>ميزان</title>
           <path
             className="mizan-mark-left"
             d="M7 12.5c0-3.4 3.8-5.4 6.6-3.4l13.1 9.2c1.4 1 2.3 2.6 2.3 4.3V52c0 2.2-1.8 4-4 4H11c-2.2 0-4-1.8-4-4V12.5Z"
