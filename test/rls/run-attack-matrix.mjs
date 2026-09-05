@@ -10,13 +10,13 @@ export const sqlFiles = Object.freeze([
   "test/business/task-5-preexisting-business.fixture.sql",
   "supabase/migrations/20260818105500_task_5_business_creation_idempotency.sql",
   "supabase/migrations/20260818105501_task_5_creation_request_presence_check.sql",
+  "test/business/task-5-idempotency-backfill.test.sql",
   "supabase/migrations/20260818105502_task_5_backfill_creation_request_ids.sql",
   "supabase/migrations/20260818105503_task_5_validate_creation_request_presence.sql",
   "supabase/migrations/20260818105504_task_5_set_creation_request_not_null.sql",
   "supabase/migrations/20260818105505_task_5_creation_request_unique_index.sql",
   "supabase/migrations/20260818105506_task_5_attach_creation_request_unique_constraint.sql",
   "supabase/migrations/20260818105507_task_5_creation_request_immutability.sql",
-  "test/business/task-5-idempotency-backfill.test.sql",
   "test/rls/task-4-business-ownership.test.sql",
   "test/business/task-5-business-onboarding.test.sql",
   "supabase/migrations/20260818153600_task_6_revenue_stream_management.sql",
@@ -77,6 +77,8 @@ export const sqlFiles = Object.freeze([
   "test/rls/task-35-admin-mentee-directory.test.sql",
   "supabase/migrations/20260828145500_task_39_harden_security_definer_search_path.sql",
   "test/rls/task-39-full-security-review.test.sql",
+  "supabase/migrations/20260905163000_founder_setup_item_safe_delete.sql",
+  "test/business/founder-setup-item-safe-delete.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -152,7 +154,7 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     if (result.error) throw new Error(`Failed to execute psql for ${execution.sqlFile}: ${result.error.message}`);
     if (result.status !== 0) return result.status ?? 1;
   }
-  console.log("Task 4-8, Task 14-16, Tasks 20-25, Tasks 32-33, Task 35, and Task 39 database-backed security/business matrices passed.");
+  console.log("Mizan database-backed security and business matrices passed, including safe setup-item deletion boundaries.");
   return 0;
 }
 
