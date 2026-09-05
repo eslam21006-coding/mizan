@@ -33,6 +33,19 @@ test.describe("Monthly entry UX fixture", () => {
       await expect(navigation).toHaveCSS("border-style", "solid");
     }
 
+    const grossInput = page.getByLabel("الإيراد المحصل — Front-End Offer");
+    const grossShell = grossInput.locator("..");
+    const currencySuffix = grossShell.locator("small");
+    await expect(grossShell).toHaveAttribute("dir", "ltr");
+    await expect(currencySuffix).toHaveText("USD");
+    const inputBox = await grossInput.boundingBox();
+    const suffixBox = await currencySuffix.boundingBox();
+    expect(inputBox).not.toBeNull();
+    expect(suffixBox).not.toBeNull();
+    expect(suffixBox?.x ?? 0).toBeGreaterThan(
+      (inputBox?.x ?? 0) + (inputBox?.width ?? 0) * 0.6,
+    );
+
     await expect(page.getByText("إدخال يدوي", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("الإجمالي محسوب تلقائيًا", { exact: true }).first()).toBeVisible();
     await expect(page.getByText("28,000 USD", { exact: true })).toBeVisible();
