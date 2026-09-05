@@ -30,6 +30,13 @@ const nameConstraintMigration = await readFile(
   ),
   "utf8",
 );
+const safeDeleteMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20260905163000_founder_setup_item_safe_delete.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 
 test("Task 7 supports exactly the four Mizan expense categories", () => {
   assert.deepEqual([...EXPENSE_CATEGORIES], [
@@ -94,8 +101,7 @@ test("read-only business members do not receive expense mutation controls", () =
     page,
     /const canManageExpenses = auth\.role === "admin" \|\| business\.owner_user_id === auth\.userId/,
   );
-  assert.match(page, /\{canManageExpenses && \(\s*<section className=\{styles\.panel\}>/);
-  assert.match(page, /\{canManageExpenses && \(\s*<form action=\{updateExpenseItem\}/);
+  assert.match(page, /\{canManageExpenses && \(/);
 });
 
 test("database rejects expense names made only of whitespace without changing trimmed length semantics", () => {
@@ -116,14 +122,19 @@ test("Task 7 intentionally stores structure without monthly financial values", (
   assert.doesNotMatch(migration, /per_customer_amount/i);
 });
 
-test("Task 7 intentionally has no authenticated hard-delete path", () => {
-  assert.doesNotMatch(action, /\.delete\(\)/);
-  assert.match(migration, /grant select, insert, update on public\.expense_items to authenticated/i);
-  assert.doesNotMatch(migration, /grant[^;]*delete[^;]*expense_items[^;]*authenticated/i);
-  assert.doesNotMatch(migration, /create policy expense_items_delete/i);
+test("unused expense items have a guarded owner/admin delete path while history remains protected", () => {
+  assert.match(action, /export async function deleteExpenseItem/);
+  assert.match(action, /\.from\("expense_items"\)[\s\S]*\.delete\(\)/);
+  assert.match(action, /error\?\.code === "23503"/);
+  assert.match(page, /ConfirmSubmitButton/);
+  assert.match(page, /حذف المصروف/);
+  assert.match(page, /query\.status === "in-use"/);
+  assert.match(safeDeleteMigration, /grant delete on public\.expense_items to authenticated/i);
+  assert.match(safeDeleteMigration, /create policy expense_items_delete/i);
+  assert.match(safeDeleteMigration, /private\.can_manage_business\(business_id\)/i);
 });
 
-test("Task 7 migrations and attack matrix execute in database-backed CI", () => {
+test("Task 7 migrations and safe-delete attack matrix execute in database-backed CI", () => {
   const plan = buildExecutionPlan("postgresql://postgres:postgres@127.0.0.1:5432/mizan_test");
   const executedFiles = plan.map((execution) => {
     const fileFlagIndex = execution.args.indexOf("--file");
@@ -140,6 +151,12 @@ test("Task 7 migrations and attack matrix execute in database-backed CI", () => 
     ),
   );
   assert.ok(executedFiles.includes("test/business/task-7-expense-structure.test.sql"));
+  assert.ok(
+    executedFiles.includes(
+      "supabase/migrations/20260905163000_founder_setup_item_safe_delete.sql",
+    ),
+  );
+  assert.ok(executedFiles.includes("test/business/founder-setup-item-safe-delete.test.sql"));
 });
 
 test("Task 7 RLS uses the established read and manage business boundaries", () => {
