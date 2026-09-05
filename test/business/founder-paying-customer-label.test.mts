@@ -12,7 +12,8 @@ const monthlyPageSource = readFileSync(
 );
 
 test("monthly entry uses the explicit paying-customer label consistently", () => {
-  const monthlyUiSource = `${monthlyEntrySource}\n${monthlyPageSource}`;
-  assert.match(monthlyUiSource, /إجمالي العملاء الذين دفعوا خلال الشهر/);
-  assert.doesNotMatch(monthlyUiSource, /إجمالي العملاء الدافعين/);
+  for (const source of [monthlyEntrySource, monthlyPageSource]) {
+    assert.match(source, /إجمالي العملاء الذين دفعوا خلال الشهر/);
+    assert.doesNotMatch(source, /إجمالي العملاء الدافعين/);
+  }
 });
