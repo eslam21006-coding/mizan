@@ -747,7 +747,7 @@ function customFormatLooksLikeDate(formatCode: string) {
 }
 
 function customFormatLooksLikeTime(formatCode: string) {
-  const withoutLiterals = formatCode.replace(/"[^"]*"/g, "").replace(/\./g, "");
+  const withoutLiterals = formatCode.replace(/"[^"]*"/g, "").replace(/\\./g, "");
   if (/\[(?:h+|m+|s+)\]/i.test(withoutLiterals)) return false;
   const stripped = withoutLiterals
     .replace(/\[[^\]]*]/g, "")
