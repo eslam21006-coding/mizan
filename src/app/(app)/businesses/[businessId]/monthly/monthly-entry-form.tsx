@@ -313,33 +313,65 @@ function RevenueSection({
   );
 }
 
-function CustomersSection({ editable, period }: { editable: boolean; period: MonthlyPeriodValues }) {
+function CustomersSection({
+  editable,
+  period,
+  customerCountsDerived,
+}: {
+  editable: boolean;
+  period: MonthlyPeriodValues;
+  customerCountsDerived: boolean;
+}) {
+  const countsEditable = editable && !customerCountsDerived;
+  const newCustomers = asInputValue(period?.new_customers);
+  const totalPayingCustomers = asInputValue(period?.total_paying_customers);
+
   return (
     <section className={styles.section}>
       <SectionHeading
         step="2 / 3"
         title="العملاء"
-        description="اترك الحقل فارغًا إذا لم تكن تعرف الرقم. الصفر يعني أنك متأكد أن العدد صفر."
+        description={
+          customerCountsDerived
+            ? "ميزان يحسب أعداد العملاء تلقائيًا من التحصيلات الناجحة المستوردة لهذا الشهر."
+            : "اترك الحقل فارغًا إذا لم تكن تعرف الرقم. الصفر يعني أنك متأكد أن العدد صفر."
+        }
       />
+      {editable && customerCountsDerived && (
+        <>
+          <input type="hidden" name="new_customers" value={newCustomers} />
+          <input type="hidden" name="total_paying_customers" value={totalPayingCustomers} />
+        </>
+      )}
       <div className={styles.customerGrid}>
         <InputField
-          editable={editable}
+          editable={countsEditable}
           integer
           name="new_customers"
           label="عملاء جدد"
-          value={asInputValue(period?.new_customers)}
+          value={newCustomers}
         />
         <InputField
-          editable={editable}
+          editable={countsEditable}
           integer
           name="total_paying_customers"
           label="إجمالي العملاء الذين دفعوا خلال الشهر"
-          value={asInputValue(period?.total_paying_customers)}
+          value={totalPayingCustomers}
         />
       </div>
-      <p className={styles.helpText}>
-        العملاء الجدد لا يمكن أن يكونوا أكثر من إجمالي العملاء الذين دفعوا خلال نفس الشهر.
-      </p>
+      {customerCountsDerived ? (
+        <div className={styles.calculationBox}>
+          <span className={styles.autoBadge}>محسوب تلقائيًا من سجل المعاملات</span>
+          <strong>كل عميل يُحسب مرة واحدة مهما تعددت مدفوعاته خلال الشهر.</strong>
+          <small className={styles.autoHint}>
+            العميل الجديد هو من كانت أول عملية تحصيل ناجحة وموجبة له داخل هذا الشهر. الـUpsells والتجديدات لا تجعله عميلًا جديدًا مرة أخرى.
+          </small>
+        </div>
+      ) : (
+        <p className={styles.helpText}>
+          العملاء الجدد لا يمكن أن يكونوا أكثر من إجمالي العملاء الذين دفعوا خلال نفس الشهر. عند استيراد تحصيلات هذا الشهر، سيحسب ميزان الرقمين تلقائيًا.
+        </p>
+      )}
     </section>
   );
 }
@@ -489,12 +521,14 @@ export function MonthlyEntryForm({
   revenueRows,
   expenseRows,
   period,
+  customerCountsDerived = false,
 }: {
   editable: boolean;
   currency: string;
   revenueRows: RevenueInputRow[];
   expenseRows: ExpenseInputRow[];
   period: MonthlyPeriodValues;
+  customerCountsDerived?: boolean;
 }) {
   return (
     <>
@@ -504,7 +538,11 @@ export function MonthlyEntryForm({
         revenueRows={revenueRows}
         period={period}
       />
-      <CustomersSection editable={editable} period={period} />
+      <CustomersSection
+        editable={editable}
+        period={period}
+        customerCountsDerived={customerCountsDerived}
+      />
       <ExpensesSection editable={editable} currency={currency} expenseRows={expenseRows} />
     </>
   );
