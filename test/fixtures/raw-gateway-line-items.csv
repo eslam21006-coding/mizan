@@ -1,0 +1,8 @@
+Internal transaction id,Customer email,Currency,Total amount paid,Status,Transaction date,Line item name
+tx_100,first@example.com,USD,29,succeeded,27-Aug-26,Base product
+tx_100,first@example.com,,,succeeded,,Upsell A
+tx_100,first@example.com,,,succeeded,,Upsell B
+tx_101,second@example.com,USD,27,succeeded,27-Aug-26,Other product
+tx_102,event@example.com,JOD,,succeeded,28-Aug-26,Free ticket
+tx_103,repeat@example.com,USD,9,succeeded,28-Aug-26,Course
+tx_104,repeat@example.com,USD,27,succeeded,28-Aug-26,Separate upsell transaction
