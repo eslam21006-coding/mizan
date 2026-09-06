@@ -79,6 +79,8 @@ select public.set_transaction_history_complete(
   false
 );
 
+reset role;
+
 insert into public.customer_transaction_sources (business_id, source, created_by_user_id)
 values (
   '77777777-aaaa-4777-8777-777777777777',
@@ -107,6 +109,10 @@ insert into public.customer_transactions (
   1,
   '77777777-7777-4777-8777-777777777777'
 );
+
+set local role authenticated;
+set local request.jwt.claims =
+  '{"sub":"77777777-7777-4777-8777-777777777777","role":"authenticated","app_metadata":{"role":"mentee"}}';
 
 do $$
 begin
