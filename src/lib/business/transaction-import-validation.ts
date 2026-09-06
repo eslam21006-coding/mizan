@@ -590,12 +590,13 @@ function rowIssues(
       issues.push({ rowNumber: row.rowNumber, field: "timezone", code: "TIMEZONE_INVALID", rawValue: row.timezone ?? "" });
     }
     if (
-      ISO_DATE_PATTERN.test(transactionDate) &&
       transactionTime &&
       timezone &&
       parseTransactionTime(transactionTime) &&
       normalizeTransactionTimezone(timezone) &&
-      normalizeTransactionDateTimeForImport(row.transactionDate, transactionTime, timezone) === null
+      isValidTransactionDate(transactionDate) &&
+      !ISO_DATE_TIME_PATTERN.test(transactionDate) &&
+      normalizeTransactionDateTimeForImport(transactionDate, transactionTime, timezone) === null
     ) {
       issues.push({ rowNumber: row.rowNumber, field: "transactionTime", code: "TRANSACTION_TIME_INVALID", rawValue: row.transactionTime ?? "" });
     }
