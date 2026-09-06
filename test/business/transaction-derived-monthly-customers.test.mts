@@ -214,7 +214,7 @@ test("incomplete or missing history status still derives paying customers but wi
   }
 });
 
-test("refund-only or empty months preserve manual fallback instead of inventing zero", async () => {
+test("refund-only or empty months preserve manual fallback while history is incomplete", async () => {
   const fake = new FakeSupabase({
     customer_transactions: [transaction("1", "refund@example.com", "2026-07-02", "refund")],
   });
@@ -225,6 +225,22 @@ test("refund-only or empty months preserve manual fallback instead of inventing 
     counts: null,
     positiveCollectionRows: 0,
     transactionHistoryComplete: null,
+    dataLoadError: false,
+  });
+});
+
+test("complete history makes a no-collection month authoritative zero", async () => {
+  const fake = new FakeSupabase({
+    business_transaction_history_status: completeHistoryStatus(),
+    customer_transactions: [transaction("1", "refund@example.com", "2026-07-02", "refund")],
+  });
+
+  const result = await loadTransactionDerivedMonthlyCustomerCounts(fake as never, "business-a", "2026-07-01");
+  assert.deepEqual(result, {
+    available: true,
+    counts: { newCustomers: 0, totalPayingCustomers: 0 },
+    positiveCollectionRows: 0,
+    transactionHistoryComplete: true,
     dataLoadError: false,
   });
 });
@@ -311,9 +327,10 @@ test("UI, dashboard, database guard, and test matrices preserve the history-comp
   assert.match(dashboardSource, /total_paying_customers: derivedCustomerCounts\.counts\.totalPayingCustomers/);
   assert.match(originalMigrationSource, /monthly-customer-counts:/);
   assert.match(guardMigrationSource, /business_transaction_history_status/);
-  assert.match(guardMigrationSource, /when history_complete then counts\.new_customers/);
+  assert.match(guardMigrationSource, /when history_complete then coalesce\(counts\.new_customers, 0\)/);
   assert.match(guardMigrationSource, /effective_total_paying_customers := derived_total_paying_customers/);
   assert.match(guardMigrationSource, /if history_complete then/);
+  assert.match(guardMigrationSource, /manual new customers cannot exceed transaction-derived paying customers/);
   assert.match(guardMigrationSource, /set_transaction_history_complete/);
   assert.match(importPageSource, /أؤكد أنني رفعت كل تاريخ المعاملات المتاح للبزنس/);
   assert.match(importActionSource, /set_transaction_history_complete/);
@@ -324,4 +341,6 @@ test("UI, dashboard, database guard, and test matrices preserve the history-comp
   assert.match(derivedMatrixSource, /wait_event = 'advisory'/);
   assert.match(historyMatrixSource, /20260906123000_transaction_history_completeness_guard\.sql/);
   assert.match(historyMatrixSource, /transaction-history-completeness\.test\.sql/);
+  assert.match(historyMatrixSource, /transaction-history-zero-month\.test\.sql/);
+  assert.match(historyMatrixSource, /transaction-history-confirmer-delete\.test\.sql/);
 });
