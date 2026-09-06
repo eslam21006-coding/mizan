@@ -33,6 +33,7 @@ function historyStatusMessage(status: string | undefined) {
   return null;
 }
 
+/** Renders the import workflow and gates history completion on persisted qualifying purchases. */
 export default async function TransactionImportPage({
   params,
   searchParams,
