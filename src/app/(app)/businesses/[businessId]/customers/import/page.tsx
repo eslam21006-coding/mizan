@@ -180,7 +180,7 @@ export default async function TransactionImportPage({
               <li>
                 <strong>تاريخ المعاملة</strong>
                 <small dir="ltr">Transaction Date</small>
-                <small dir="ltr">مثال: 2026-08-23 أو 2026-08-23T14:30:00+03:00</small>
+                <small dir="ltr">مثال: 28-Aug-26 أو 2026-08-23</small>
               </li>
               <li>
                 <strong>المبلغ المحصل</strong>
@@ -192,6 +192,17 @@ export default async function TransactionImportPage({
           <article className={styles.guideCard}>
             <span className={styles.optionalBadge}>اختياري</span>
             <ul>
+              <li>
+                <strong>وقت المعاملة</strong>
+                <small dir="ltr">Transaction Time</small>
+                <small dir="ltr">مثال: 5:34 PM أو 17:34</small>
+              </li>
+              <li>
+                <strong>المنطقة الزمنية</strong>
+                <small dir="ltr">Timezone</small>
+                <small dir="ltr">مثال: Africa/Cairo</small>
+                <small>إذا كان الوقت موجودًا كعمود منفصل، اختر المنطقة الزمنية معه ليحوّلهما ميزان إلى توقيت واحد صحيح.</small>
+              </li>
               <li>
                 <strong>رقم المعاملة</strong>
                 <small dir="ltr">Transaction ID</small>
@@ -207,7 +218,7 @@ export default async function TransactionImportPage({
         </div>
 
         <p className={styles.guideNote}>
-          ميزان يحاول التعرف على أعمدة بوابة الدفع تلقائيًا. إذا احتجت تعديل المطابقة يدويًا، يحفظها لنفس ترتيب الأعمدة في هذا البزنس.
+          ميزان يحاول التعرف على أعمدة بوابة الدفع تلقائيًا، بما فيها Date وTime وTimezone عندما تكون منفصلة. إذا احتجت تعديل المطابقة يدويًا، يحفظها لنفس ترتيب الأعمدة في هذا البزنس.
         </p>
         <p className={styles.splitNote}>
           يجب أن يحتوي الملف الواحد على تحصيلات أو استرجاعات فقط. إذا كان التصدير يحتوي على النوعين، افصلهما إلى ملفين ثم ارفع كل ملف على حدة.
