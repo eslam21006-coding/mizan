@@ -5,7 +5,7 @@ create table public.business_transaction_history_status (
   confirmed_by_user_id uuid references auth.users(id) on delete set null,
   updated_at timestamptz not null default now(),
   constraint business_transaction_history_confirmation_consistency check (
-    (is_complete and confirmed_at is not null and confirmed_by_user_id is not null)
+    (is_complete and confirmed_at is not null)
     or (not is_complete and confirmed_at is null and confirmed_by_user_id is null)
   )
 );
@@ -299,7 +299,7 @@ revoke all on function public.set_transaction_history_complete(uuid, boolean) fr
 grant execute on function public.set_transaction_history_complete(uuid, boolean) to authenticated;
 
 comment on table public.business_transaction_history_status is
-  'Business-scoped trust state for whether imported transaction history covers the business from its earliest available payment. Incomplete history must never make earliest-known transactions authoritative New Customer evidence.';
+  'Business-scoped trust state for whether imported transaction history covers the business from its earliest available payment. Incomplete history must never make earliest-known transactions authoritative New Customer evidence. A completed record retains its confirmation timestamp if the confirming auth user is later deleted; the confirmer foreign key is then intentionally null.';
 
 comment on function public.set_transaction_history_complete(uuid, boolean) is
   'Owner/admin-only transition for transaction-history completeness. Marking complete recalculates existing monthly New Customer counts while holding the shared transaction/monthly advisory lock.';
