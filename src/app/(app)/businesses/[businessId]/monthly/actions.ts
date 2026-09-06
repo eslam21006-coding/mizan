@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAuthContext } from "@/lib/auth/context";
-import { loadTransactionDerivedMonthlyCustomerCounts } from "@/lib/business/monthly-customer-counts";
 import {
   normalizeAdjustmentNote,
   parseCustomerCountBasis,
@@ -71,6 +70,14 @@ export async function saveMonthlyActuals(formData: FormData) {
     redirectMonthly(businessId, month.monthKey, "invalid-input");
   }
 
+  if (
+    newCustomers.value !== null &&
+    payingCustomers.value !== null &&
+    newCustomers.value > payingCustomers.value
+  ) {
+    redirectMonthly(businessId, month.monthKey, "invalid-customers");
+  }
+
   const revenueStreamIds = uniqueResourceIds(formData.getAll("revenue_stream_id"));
   const expenseItemIds = uniqueResourceIds(formData.getAll("expense_item_id"));
   if (!revenueStreamIds || !expenseItemIds) {
@@ -113,36 +120,11 @@ export async function saveMonthlyActuals(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const derivedCustomerCounts = await loadTransactionDerivedMonthlyCustomerCounts(
-    supabase,
-    businessId,
-    month.monthStart,
-  );
-
-  if (derivedCustomerCounts.dataLoadError) {
-    redirectMonthly(businessId, month.monthKey, "customer-count-load-failed");
-  }
-
-  const effectiveNewCustomers = derivedCustomerCounts.available
-    ? derivedCustomerCounts.counts.newCustomers
-    : newCustomers.value;
-  const effectivePayingCustomers = derivedCustomerCounts.available
-    ? derivedCustomerCounts.counts.totalPayingCustomers
-    : payingCustomers.value;
-
-  if (
-    effectiveNewCustomers !== null &&
-    effectivePayingCustomers !== null &&
-    effectiveNewCustomers > effectivePayingCustomers
-  ) {
-    redirectMonthly(businessId, month.monthKey, "invalid-customers");
-  }
-
   const { error } = await supabase.rpc("save_monthly_actuals", {
     target_business_id: businessId,
     target_month_start: month.monthStart,
-    target_new_customers: effectiveNewCustomers,
-    target_total_paying_customers: effectivePayingCustomers,
+    target_new_customers: newCustomers.value,
+    target_total_paying_customers: payingCustomers.value,
     target_unallocated_gross: unallocatedGross.value,
     target_unallocated_refunds: unallocatedRefunds.value,
     target_adjustment_note: adjustmentNote,
