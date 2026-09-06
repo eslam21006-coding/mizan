@@ -1,10 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  autoMapTransactionHeaderRow,
   buildTransactionColumnChoices,
   EMPTY_TRANSACTION_COLUMN_MAPPING,
+  fingerprintTransactionHeaderRow,
   inspectTransactionColumnMapping,
+  normalizeTransactionHeaderRow,
+  parseStoredTransactionColumnMapping,
   REQUIRED_TRANSACTION_FIELDS,
   setTransactionFieldColumn,
   TRANSACTION_MAPPING_FIELDS,
@@ -13,10 +17,12 @@ import {
   type TransactionMappingField,
 } from "@/lib/business/transaction-column-mapping";
 import { transactionColumnLabel } from "@/lib/business/transaction-columns";
+import { readTransactionHeaderRow } from "@/lib/business/transaction-header-source";
 import {
   TRANSACTION_PREVIEW_LIMITS,
   type TransactionFilePreview,
 } from "@/lib/business/transaction-preview";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { TransactionImportValidator } from "./transaction-import-validator";
 import styles from "./transaction-import.module.css";
 
@@ -62,6 +68,15 @@ function sampleValue(preview: TransactionFilePreview, column: number) {
   return "";
 }
 
+function sameHeaderLayout(left: unknown, right: readonly string[]) {
+  if (!Array.isArray(left) || left.length !== right.length) return false;
+  return left.every((value, index) => typeof value === "string" && value === right[index]);
+}
+
+/**
+ * Maps gateway columns, automatically recognizes safe header aliases, and remembers a confirmed
+ * complete mapping only for the exact ordered full header layout of this business.
+ */
 export function TransactionColumnMapper({
   businessId,
   baseCurrency,
@@ -71,6 +86,13 @@ export function TransactionColumnMapper({
   onImportBusyChange,
 }: TransactionColumnMapperProps) {
   const [mapping, setMapping] = useState<TransactionColumnMapping>(EMPTY_TRANSACTION_COLUMN_MAPPING);
+  const [mappingOrigin, setMappingOrigin] = useState<"automatic" | "saved" | "manual">("manual");
+  const [autoMappingDetected, setAutoMappingDetected] = useState(false);
+  const [headerFingerprint, setHeaderFingerprint] = useState<string | null>(null);
+  const [normalizedHeaderRow, setNormalizedHeaderRow] = useState<string[] | null>(null);
+  const [mappingMemoryReady, setMappingMemoryReady] = useState(false);
+  const [mappingMemoryError, setMappingMemoryError] = useState(false);
+  const mappingTouchedRef = useRef(false);
   const mappingState = inspectTransactionColumnMapping(mapping);
   const hasValidColumnCount = Number.isSafeInteger(preview.totalColumns) && preview.totalColumns > 0;
   const usesDirectColumnEntry =
@@ -85,8 +107,133 @@ export function TransactionColumnMapper({
     });
   }, [preview, hasValidColumnCount, usesDirectColumnEntry]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadHeaderAndSavedMapping = async () => {
+      setMappingMemoryReady(false);
+      setMappingMemoryError(false);
+      setHeaderFingerprint(null);
+      setNormalizedHeaderRow(null);
+      setAutoMappingDetected(false);
+
+      if (!hasValidColumnCount) {
+        setMappingMemoryReady(true);
+        return;
+      }
+
+      try {
+        const fullHeaderRow = await readTransactionHeaderRow({
+          fileName: preview.fileName,
+          fileSize: preview.fileSize,
+          buffer: fileBuffer,
+        });
+        if (!active) return;
+        if (!fullHeaderRow || fullHeaderRow.length === 0) {
+          setMappingMemoryReady(true);
+          return;
+        }
+
+        const automatic = autoMapTransactionHeaderRow(fullHeaderRow);
+        setAutoMappingDetected(automatic.detected);
+
+        const completeHeaderLayout = fullHeaderRow.length === preview.totalColumns;
+        let fingerprint: string | null = null;
+        let normalized: string[] | null = null;
+        let savedMapping: TransactionColumnMapping | null = null;
+
+        if (completeHeaderLayout) {
+          normalized = normalizeTransactionHeaderRow(fullHeaderRow);
+          fingerprint = await fingerprintTransactionHeaderRow(fullHeaderRow);
+          if (!active) return;
+
+          const supabase = createSupabaseBrowserClient();
+          const { data, error } = await supabase
+            .from("customer_transaction_column_mappings")
+            .select("header_columns,mapping")
+            .eq("business_id", businessId)
+            .eq("header_fingerprint", fingerprint)
+            .maybeSingle();
+
+          if (!active) return;
+          if (error) {
+            setMappingMemoryError(true);
+          } else if (data && sameHeaderLayout(data.header_columns, normalized)) {
+            savedMapping = parseStoredTransactionColumnMapping(data.mapping, preview.totalColumns);
+          }
+        }
+
+        if (!mappingTouchedRef.current) {
+          if (savedMapping) {
+            setMapping(savedMapping);
+            setMappingOrigin("saved");
+          } else if (automatic.detected) {
+            setMapping(automatic.mapping);
+            setMappingOrigin("automatic");
+          }
+        }
+
+        setHeaderFingerprint(fingerprint);
+        setNormalizedHeaderRow(normalized);
+        setMappingMemoryReady(true);
+      } catch {
+        if (!active) return;
+        setMappingMemoryError(true);
+        setMappingMemoryReady(true);
+      }
+    };
+
+    void loadHeaderAndSavedMapping();
+    return () => {
+      active = false;
+    };
+  }, [businessId, fileBuffer, hasValidColumnCount, preview.fileName, preview.fileSize, preview.totalColumns]);
+
+  useEffect(() => {
+    if (
+      !mappingMemoryReady ||
+      !headerFingerprint ||
+      !normalizedHeaderRow ||
+      !mappingState.isComplete
+    ) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const saveMapping = async () => {
+        const supabase = createSupabaseBrowserClient();
+        const { error } = await supabase.from("customer_transaction_column_mappings").upsert(
+          {
+            business_id: businessId,
+            header_fingerprint: headerFingerprint,
+            header_columns: normalizedHeaderRow,
+            mapping,
+          },
+          { onConflict: "business_id,header_fingerprint" },
+        );
+        setMappingMemoryError(Boolean(error));
+      };
+      void saveMapping();
+    }, 500);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    businessId,
+    headerFingerprint,
+    mapping,
+    mappingMemoryReady,
+    mappingState.isComplete,
+    normalizedHeaderRow,
+  ]);
+
+  const markManualMapping = () => {
+    mappingTouchedRef.current = true;
+    setMappingOrigin("manual");
+  };
+
   const setSelectField = (field: TransactionMappingField, value: string) => {
     if (importBusy) return;
+    markManualMapping();
     if (value === "") {
       setMapping((current) => setTransactionFieldColumn(current, field, null));
       return;
@@ -99,6 +246,7 @@ export function TransactionColumnMapper({
 
   const setDirectField = (field: TransactionMappingField, value: string) => {
     if (importBusy) return;
+    markManualMapping();
     if (value.trim() === "") {
       setMapping((current) => setTransactionFieldColumn(current, field, null));
       return;
@@ -130,13 +278,27 @@ export function TransactionColumnMapper({
             <span className={styles.kicker}>الخطوة 4</span>
             <h2 id="transaction-mapping-title">طابق أعمدة ملفك</h2>
             <p>
-              حدد العمود الذي يحتوي على كل معلومة. أول ثلاثة حقول مطلوبة، ورقم المعاملة والعملة اختياريان.
+              ميزان يحاول التعرف على عناوين الأعمدة تلقائيًا. إذا احتجت تعديلها يدويًا، يحفظ المطابقة لنفس ترتيب الأعمدة في هذا البزنس.
             </p>
           </div>
           <span className={mappingState.isComplete ? styles.mappingReady : styles.mappingPending}>
             {mappingState.isComplete ? "الأعمدة مكتملة" : "أكمل الأعمدة المطلوبة"}
           </span>
         </div>
+
+        {mappingOrigin === "saved" && (
+          <p className={styles.mappingHint}>تم استرجاع مطابقة محفوظة لنفس ترتيب عناوين الأعمدة بالكامل.</p>
+        )}
+        {mappingOrigin === "automatic" && autoMappingDetected && (
+          <p className={styles.mappingHint}>
+            تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.transactionId != null ? " ورقم المعاملة" : ""}{mapping.currency != null ? " والعملة" : ""} من أول صف غير فارغ.
+          </p>
+        )}
+        {mappingMemoryError && (
+          <div className={styles.mappingError} role="status">
+            تعذر حفظ أو استرجاع تفضيل مطابقة الأعمدة. يمكنك متابعة الاستيراد يدويًا بدون فقد أي بيانات.
+          </div>
+        )}
 
         {!hasValidColumnCount ? (
           <div className={styles.mappingError} role="alert">
@@ -244,6 +406,12 @@ export function TransactionColumnMapper({
               </strong>
             </div>
           </div>
+        )}
+
+        {autoMappingDetected && (
+          <p className={styles.mappingHint}>
+            تم التعرف على أول صف غير فارغ كعناوين أعمدة. في خطوة المراجعة التالية تأكد أن خيار «أول صف غير فارغ يحتوي على عناوين الأعمدة» مفعّل.
+          </p>
         )}
       </section>
 

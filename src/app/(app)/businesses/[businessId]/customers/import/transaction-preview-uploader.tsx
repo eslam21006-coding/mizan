@@ -39,12 +39,14 @@ const WORKFLOW_STEPS = [
   "مراجعة وحفظ",
 ] as const;
 
+/** Formats a file byte count for the upload metadata card. */
 function fileSizeLabel(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
+/** Returns the Arabic label for the delimiter detected in a CSV file. */
 function delimiterLabel(delimiter: string | null) {
   if (delimiter === ",") return "فاصلة ,";
   if (delimiter === ";") return "فاصلة منقوطة ;";
@@ -52,6 +54,7 @@ function delimiterLabel(delimiter: string | null) {
   return "—";
 }
 
+/** Adds deterministic occurrence suffixes so duplicate preview rows keep stable React keys. */
 function keyedRows(rows: string[][]) {
   const occurrences = new Map<string, number>();
   return rows.map((row) => {
@@ -62,6 +65,7 @@ function keyedRows(rows: string[][]) {
   });
 }
 
+/** Converts a parser exception into the user-facing upload error copy. */
 function errorMessage(error: unknown) {
   if (error instanceof TransactionPreviewError) {
     return ERROR_MESSAGES[error.code] ?? "تعذر معاينة الملف. لم يتم حفظ أو رفع أي بيانات.";
@@ -69,6 +73,10 @@ function errorMessage(error: unknown) {
   return "حدث خطأ غير متوقع أثناء قراءة الملف. لم يتم حفظ أو رفع أي بيانات.";
 }
 
+/**
+ * Owns the transaction-file selection and preview lifecycle. Every successful file selection gets
+ * a new mapper instance so mappings can never leak between different files with identical metadata.
+ */
 export function TransactionPreviewUploader({
   businessId,
   baseCurrency,
@@ -77,10 +85,12 @@ export function TransactionPreviewUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<TransactionFilePreview | null>(null);
   const [fileBuffer, setFileBuffer] = useState<ArrayBuffer | null>(null);
+  const [fileSelectionId, setFileSelectionId] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isReading, setIsReading] = useState(false);
   const [importBusy, setImportBusy] = useState(false);
 
+  /** Clears the current source and preview without mutating imported transaction data. */
   const reset = () => {
     if (importBusy) return;
     if (inputRef.current) inputRef.current.value = "";
@@ -90,6 +100,7 @@ export function TransactionPreviewUploader({
     setIsReading(false);
   };
 
+  /** Reads one selected source, builds its preview, and assigns a fresh mapper lifecycle ID. */
   const handleFile = async (file: File | undefined) => {
     if (!file || importBusy) return;
     setPreview(null);
@@ -110,6 +121,7 @@ export function TransactionPreviewUploader({
         fileSize: file.size,
         buffer,
       });
+      setFileSelectionId((current) => current + 1);
       setFileBuffer(buffer);
       setPreview(result);
     } catch (caught) {
@@ -291,7 +303,7 @@ export function TransactionPreviewUploader({
 
           {canManage && fileBuffer && preview.previewRows.length > 0 && visibleColumns > 0 && (
             <TransactionColumnMapper
-              key={`${preview.fileName}:${preview.fileSize}:${preview.totalRows}:${preview.totalColumns}`}
+              key={`${fileSelectionId}:${preview.fileName}:${preview.fileSize}:${preview.totalRows}:${preview.totalColumns}`}
               businessId={businessId}
               baseCurrency={baseCurrency}
               preview={preview}

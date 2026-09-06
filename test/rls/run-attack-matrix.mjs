@@ -83,6 +83,8 @@ export const sqlFiles = Object.freeze([
   "test/business/founder-business-delete.test.sql",
   "supabase/migrations/20260905213500_founder_business_confirmed_cascade_delete.sql",
   "test/business/founder-business-confirmed-cascade-delete.test.sql",
+  "supabase/migrations/20260906080000_transaction_column_mapping_memory.sql",
+  "test/business/transaction-column-mapping-memory.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -158,7 +160,7 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     if (result.error) throw new Error(`Failed to execute psql for ${execution.sqlFile}: ${result.error.message}`);
     if (result.status !== 0) return result.status ?? 1;
   }
-  console.log("Mizan database-backed security and business matrices passed, including confirmed whole-business deletion with owner/admin authorization.");
+  console.log("Mizan database-backed security and business matrices passed, including owner/admin-only transaction mapping memory and confirmed whole-business deletion.");
   return 0;
 }
 
