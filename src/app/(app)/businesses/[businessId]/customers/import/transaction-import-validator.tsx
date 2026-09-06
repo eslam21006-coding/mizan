@@ -83,6 +83,8 @@ class TransactionImportProcessError extends Error {
 const FIELD_LABELS = {
   customerEmail: "بريد العميل",
   transactionDate: "تاريخ المعاملة",
+  transactionTime: "وقت المعاملة",
+  timezone: "المنطقة الزمنية",
   amountCollected: "المبلغ المحصل",
   transactionId: "رقم المعاملة",
   currency: "العملة",
@@ -92,7 +94,11 @@ const ISSUE_MESSAGES = {
   EMAIL_REQUIRED: "بريد العميل مطلوب.",
   EMAIL_INVALID: "صيغة بريد العميل غير صالحة أو أطول من الحد المسموح.",
   TRANSACTION_DATE_REQUIRED: "تاريخ المعاملة مطلوب.",
-  TRANSACTION_DATE_INVALID: "استخدم تاريخًا أو توقيتًا صالحًا مثل 2026-08-23 أو 2026-08-23T14:30:00+03:00.",
+  TRANSACTION_DATE_INVALID: "استخدم تاريخًا صالحًا مثل 28-Aug-26 أو 2026-08-23.",
+  TRANSACTION_TIME_REQUIRED: "يوجد عمود منطقة زمنية لهذا الصف، لذلك وقت المعاملة مطلوب أيضًا.",
+  TRANSACTION_TIME_INVALID: "استخدم وقتًا صالحًا مثل 5:34 PM أو 17:34. لا يخمن ميزان الأوقات غير الصالحة أو الملتبسة عند تغيير التوقيت.",
+  TIMEZONE_REQUIRED: "يوجد وقت للمعاملة، لذلك المنطقة الزمنية مطلوبة أيضًا.",
+  TIMEZONE_INVALID: "استخدم منطقة زمنية IANA صالحة مثل Africa/Cairo.",
   AMOUNT_REQUIRED: "المبلغ المحصل مطلوب.",
   AMOUNT_INVALID: "المبلغ يجب أن يكون رقمًا صالحًا بدون رمز عملة.",
   TRANSACTION_ID_TOO_LONG: "رقم المعاملة أطول من 512 حرفًا.",
@@ -130,8 +136,22 @@ function mappedColumns(mapping: TransactionColumnMapping) {
   if (!required.every((column): column is number => column !== null)) return null;
 
   const columns = [...required];
+  let transactionTimeValueIndex: number | null = null;
+  let timezoneValueIndex: number | null = null;
   let transactionIdValueIndex: number | null = null;
   let currencyValueIndex: number | null = null;
+
+  const transactionTime = mapping.transactionTime ?? null;
+  if (transactionTime !== null) {
+    transactionTimeValueIndex = columns.length;
+    columns.push(transactionTime);
+  }
+
+  const timezone = mapping.timezone ?? null;
+  if (timezone !== null) {
+    timezoneValueIndex = columns.length;
+    columns.push(timezone);
+  }
 
   const transactionId = mapping.transactionId ?? null;
   if (transactionId !== null) {
@@ -145,7 +165,7 @@ function mappedColumns(mapping: TransactionColumnMapping) {
     columns.push(currency);
   }
 
-  return { columns, transactionIdValueIndex, currencyValueIndex };
+  return { columns, transactionTimeValueIndex, timezoneValueIndex, transactionIdValueIndex, currencyValueIndex };
 }
 
 function parseNonNegativeInteger(value: unknown) {
@@ -295,6 +315,14 @@ export function TransactionImportValidator({
         customerEmail: row.values[0] ?? "",
         transactionDate: row.values[1] ?? "",
         amountCollected: row.values[2] ?? "",
+        transactionTime:
+          selected.transactionTimeValueIndex === null
+            ? undefined
+            : (row.values[selected.transactionTimeValueIndex] ?? ""),
+        timezone:
+          selected.timezoneValueIndex === null
+            ? undefined
+            : (row.values[selected.timezoneValueIndex] ?? ""),
         transactionId:
           selected.transactionIdValueIndex === null
             ? undefined
@@ -618,6 +646,8 @@ export function TransactionImportValidator({
       <div className={styles.validationMappingNote}>
         <span>{FIELD_LABELS.customerEmail}</span>
         <span>{FIELD_LABELS.transactionDate}</span>
+        <span>{FIELD_LABELS.transactionTime}: {mapping.transactionTime == null ? "غير موجود" : "تم اختياره"}</span>
+        <span>{FIELD_LABELS.timezone}: {mapping.timezone == null ? "غير موجود" : "تم اختيارها"}</span>
         <span>{FIELD_LABELS.amountCollected}</span>
         <span>
           {FIELD_LABELS.transactionId}: {mapping.transactionId == null ? "غير موجود — سنراجع التكرار بالبيانات المتاحة" : "تم اختياره"}

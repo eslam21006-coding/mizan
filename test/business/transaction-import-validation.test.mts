@@ -347,7 +347,7 @@ test("Task 19 reads selected XLSX values and preserves the worksheet row number"
   });
 });
 
-test("Task 19 handles conditional XLSX date formats but rejects time-only cells and Excel serial 60", async () => {
+test("Task 19 handles conditional XLSX date formats, decodes time-only cells, and rejects Excel serial 60 as a date", async () => {
   const bytes = xlsxDateEdgeCases();
   const source = await readTransactionValidationSource({
     fileName: "date-edge-cases.xlsx",
@@ -357,7 +357,7 @@ test("Task 19 handles conditional XLSX date formats but rejects time-only cells 
   });
 
   assert.deepEqual(source.rows[1]?.values, ["date@example.com", "2024-01-01", "10"]);
-  assert.deepEqual(source.rows[2]?.values, ["time@example.com", "0.5", "20"]);
+  assert.deepEqual(source.rows[2]?.values, ["time@example.com", "12:00:00", "20"]);
   assert.deepEqual(source.rows[3]?.values, ["serial60@example.com", "60.5", "30"]);
 
   const result = validateTransactionImportRows(

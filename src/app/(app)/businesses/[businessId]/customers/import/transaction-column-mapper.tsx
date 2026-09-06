@@ -39,13 +39,21 @@ const FIELD_LABELS: Record<TransactionMappingField, string> = {
   customerEmail: "البريد الإلكتروني للعميل",
   transactionDate: "تاريخ المعاملة",
   amountCollected: "المبلغ المحصل",
+  transactionTime: "وقت المعاملة",
+  timezone: "المنطقة الزمنية",
   transactionId: "رقم المعاملة",
   currency: "العملة",
 };
 
 function fieldDescription(field: TransactionMappingField, baseCurrency: string) {
   if (field === "customerEmail") return "اختر العمود الذي يحتوي على بريد العميل.";
-  if (field === "transactionDate") return "اختر العمود الذي يحتوي على تاريخ أو توقيت المعاملة.";
+  if (field === "transactionDate") return "اختر عمود التاريخ فقط، مثل 28-Aug-26 أو 2026-08-28.";
+  if (field === "transactionTime") {
+    return "اختياري. اختر عمود الساعة المنفصل، مثل 5:34 PM أو 17:34.";
+  }
+  if (field === "timezone") {
+    return "اختياري. اختر عمود المنطقة الزمنية المنفصل، مثل Africa/Cairo. عند وجود وقت يجب تحديد المنطقة الزمنية أيضًا.";
+  }
   if (field === "amountCollected") return "اختر العمود الذي يحتوي على قيمة المعاملة بدون رمز العملة.";
   if (field === "transactionId") {
     return "اختياري. يفضل استخدامه لأنه يجعل اكتشاف المعاملات المكررة أكثر دقة.";
@@ -55,6 +63,8 @@ function fieldDescription(field: TransactionMappingField, baseCurrency: string) 
 
 function emptyOptionLabel(field: TransactionMappingField, required: boolean) {
   if (required) return "اختر العمود";
+  if (field === "transactionTime") return "لا يوجد عمود وقت منفصل";
+  if (field === "timezone") return "لا يوجد عمود منطقة زمنية";
   if (field === "transactionId") return "لا يوجد رقم معاملة";
   return "لا يوجد عمود للعملة";
 }
@@ -267,7 +277,7 @@ export function TransactionColumnMapper({
   };
 
   const validationKey = mappingState.isComplete
-    ? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}`
+    ? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.transactionTime ?? "none"}:${mapping.timezone ?? "none"}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}`
     : "incomplete";
 
   return (
@@ -278,7 +288,7 @@ export function TransactionColumnMapper({
             <span className={styles.kicker}>الخطوة 4</span>
             <h2 id="transaction-mapping-title">طابق أعمدة ملفك</h2>
             <p>
-              ميزان يحاول التعرف على عناوين الأعمدة تلقائيًا. إذا احتجت تعديلها يدويًا، يحفظ المطابقة لنفس ترتيب الأعمدة في هذا البزنس.
+              ميزان يحاول التعرف على عناوين الأعمدة تلقائيًا، بما فيها التاريخ والوقت والمنطقة الزمنية إذا كانت منفصلة. إذا احتجت تعديلها يدويًا، يحفظ المطابقة لنفس ترتيب الأعمدة في هذا البزنس.
             </p>
           </div>
           <span className={mappingState.isComplete ? styles.mappingReady : styles.mappingPending}>
@@ -291,7 +301,7 @@ export function TransactionColumnMapper({
         )}
         {mappingOrigin === "automatic" && autoMappingDetected && (
           <p className={styles.mappingHint}>
-            تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.transactionId != null ? " ورقم المعاملة" : ""}{mapping.currency != null ? " والعملة" : ""} من أول صف غير فارغ.
+            تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.transactionTime != null ? " والوقت" : ""}{mapping.timezone != null ? " والمنطقة الزمنية" : ""}{mapping.transactionId != null ? " ورقم المعاملة" : ""}{mapping.currency != null ? " والعملة" : ""} من أول صف غير فارغ.
           </p>
         )}
         {mappingMemoryError && (
@@ -389,6 +399,22 @@ export function TransactionColumnMapper({
                 <strong>العمود {transactionColumnLabel(mapping[field] as number)}</strong>
               </div>
             ))}
+            <div>
+              <span>{FIELD_LABELS.transactionTime}</span>
+              <strong>
+                {mapping.transactionTime === null || mapping.transactionTime === undefined
+                  ? "لا يوجد عمود وقت منفصل"
+                  : `العمود ${transactionColumnLabel(mapping.transactionTime)}`}
+              </strong>
+            </div>
+            <div>
+              <span>{FIELD_LABELS.timezone}</span>
+              <strong>
+                {mapping.timezone === null || mapping.timezone === undefined
+                  ? "لا يوجد عمود منطقة زمنية"
+                  : `العمود ${transactionColumnLabel(mapping.timezone)}`}
+              </strong>
+            </div>
             <div>
               <span>{FIELD_LABELS.transactionId}</span>
               <strong>

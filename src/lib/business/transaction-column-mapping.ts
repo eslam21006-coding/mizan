@@ -6,7 +6,12 @@ export const REQUIRED_TRANSACTION_FIELDS = [
   "amountCollected",
 ] as const;
 
-export const OPTIONAL_TRANSACTION_FIELDS = ["transactionId", "currency"] as const;
+export const OPTIONAL_TRANSACTION_FIELDS = [
+  "transactionTime",
+  "timezone",
+  "transactionId",
+  "currency",
+] as const;
 export const TRANSACTION_MAPPING_FIELDS = [
   ...REQUIRED_TRANSACTION_FIELDS,
   ...OPTIONAL_TRANSACTION_FIELDS,
@@ -19,6 +24,8 @@ export type OptionalTransactionField = (typeof OPTIONAL_TRANSACTION_FIELDS)[numb
 export type TransactionMappingField = (typeof TRANSACTION_MAPPING_FIELDS)[number];
 
 export type TransactionColumnMapping = Record<RequiredTransactionField, number | null> & {
+  transactionTime?: number | null;
+  timezone?: number | null;
   transactionId?: number | null;
   currency?: number | null;
 };
@@ -27,6 +34,8 @@ export const EMPTY_TRANSACTION_COLUMN_MAPPING: TransactionColumnMapping = {
   customerEmail: null,
   transactionDate: null,
   amountCollected: null,
+  transactionTime: null,
+  timezone: null,
   transactionId: null,
   currency: null,
 };
@@ -35,6 +44,8 @@ export const TRANSACTION_FIELD_LABELS: Record<TransactionMappingField, string> =
   customerEmail: "Customer Email",
   transactionDate: "Transaction Date",
   amountCollected: "Amount Collected",
+  transactionTime: "Transaction Time",
+  timezone: "Timezone",
   transactionId: "Transaction ID",
   currency: "Currency",
 };
@@ -48,14 +59,7 @@ const TRANSACTION_HEADER_ALIASES: Record<TransactionMappingField, readonly strin
     "email address",
     "customer email address",
   ],
-  transactionDate: [
-    "transaction date",
-    "transaction_date",
-    "payment date",
-    "paid at",
-    "payment time",
-    "transaction time",
-  ],
+  transactionDate: ["transaction date", "transaction_date", "payment date", "paid date"],
   amountCollected: [
     "amount collected",
     "amount_collected",
@@ -63,6 +67,20 @@ const TRANSACTION_HEADER_ALIASES: Record<TransactionMappingField, readonly strin
     "amount paid",
     "total paid",
     "paid amount",
+  ],
+  transactionTime: [
+    "transaction time",
+    "transaction_time",
+    "payment time",
+    "paid time",
+  ],
+  timezone: [
+    "timezone",
+    "time zone",
+    "transaction timezone",
+    "transaction time zone",
+    "payment timezone",
+    "payment time zone",
   ],
   transactionId: [
     "transaction id",
@@ -134,6 +152,22 @@ export function autoMapTransactionHeaderRow(row: readonly unknown[]): Transactio
     }
   }
 
+  // Legacy exports can label their only combined ISO timestamp as Transaction time or Payment time.
+  // Reinterpret it as the required date/timestamp only when no separate date or timezone header exists.
+  if (
+    mapping.transactionDate === null &&
+    mapping.transactionTime != null &&
+    mapping.timezone === null &&
+    !ambiguousFields.includes("timezone") &&
+    !ambiguousFields.includes("transactionDate")
+  ) {
+    const combinedTimestampColumn = mapping.transactionTime;
+    mapping = setTransactionFieldColumn(mapping, "transactionDate", combinedTimestampColumn);
+    mapping = setTransactionFieldColumn(mapping, "transactionTime", null);
+    const timeIndex = recognizedFields.indexOf("transactionTime");
+    if (timeIndex >= 0) recognizedFields.splice(timeIndex, 1);
+    recognizedFields.push("transactionDate");
+  }
   const state = inspectTransactionColumnMapping(mapping);
   return {
     detected: state.isComplete,
