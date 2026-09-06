@@ -6,7 +6,7 @@ const CUSTOMER_TRANSACTION_PAGE_SIZE = 1_000;
 type ServerSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 export type DerivedMonthlyCustomerCounts = {
-  newCustomers: number;
+  newCustomers: number | null;
   totalPayingCustomers: number;
 };
 
@@ -15,18 +15,21 @@ export type MonthlyCustomerCountsLoadResult =
       available: true;
       counts: DerivedMonthlyCustomerCounts;
       positiveCollectionRows: number;
+      transactionHistoryComplete: boolean;
       dataLoadError: false;
     }
   | {
       available: false;
       counts: null;
       positiveCollectionRows: 0;
+      transactionHistoryComplete: null;
       dataLoadError: false;
     }
   | {
       available: false;
       counts: null;
       positiveCollectionRows: null;
+      transactionHistoryComplete: null;
       dataLoadError: true;
     };
 
@@ -43,7 +46,7 @@ function normalizedCustomerEmail(value: unknown) {
 export function deriveMonthlyCustomerCounts(
   payingCustomerEmails: readonly unknown[],
   newCustomerEmails: readonly unknown[],
-): DerivedMonthlyCustomerCounts {
+): { newCustomers: number; totalPayingCustomers: number } {
   const paying = new Set<string>();
   for (const value of payingCustomerEmails) {
     const email = normalizedCustomerEmail(value);
@@ -67,12 +70,38 @@ export function deriveMonthlyCustomerCounts(
   };
 }
 
+/** Counts unique valid paying-customer identities without making any acquisition-date claim. */
+function countUniquePayingCustomers(values: readonly unknown[]) {
+  const paying = new Set<string>();
+  for (const value of values) {
+    const email = normalizedCustomerEmail(value);
+    if (!email) throw new Error("Monthly paying-customer identity is missing.");
+    paying.add(email);
+  }
+  return paying.size;
+}
+
 /** Resolves an exact month-start date into an inclusive start and exclusive end bound. */
 function resolveMonthBounds(monthStart: string) {
   const parsed = parseMonthKey(monthStart.slice(0, 7));
   if (!parsed || parsed.monthStart !== monthStart) return null;
   const nextMonthKey = shiftMonthKey(parsed.monthKey, 1);
   return nextMonthKey ? { start: monthStart, end: `${nextMonthKey}-01` } : null;
+}
+
+/** Loads the business-level trust flag that permits earliest-known payments to define New Customers. */
+async function loadTransactionHistoryCompleteness(
+  supabase: ServerSupabaseClient,
+  businessId: string,
+) {
+  const { data, error } = await supabase
+    .from("business_transaction_history_status")
+    .select("is_complete")
+    .eq("business_id", businessId)
+    .maybeSingle();
+
+  if (error) return null;
+  return data?.is_complete === true;
 }
 
 /** Loads every successful positive-collection customer identity for one business month. */
@@ -133,9 +162,10 @@ async function loadNewCustomerEmails(
 }
 
 /**
- * Uses imported successful positive collections as an authoritative customer-count source only when
- * that month contains at least one such collection. Months without imported collections retain the
- * existing manual-entry fallback so missing transaction history is never silently interpreted as zero.
+ * Uses imported successful positive collections as an authoritative Paying Customer source whenever
+ * the selected month contains such collections. New Customers are returned only when the business has
+ * explicitly confirmed that imported history covers the business from its earliest available payment.
+ * Months without imported positive collections retain the existing manual-entry fallback.
  */
 export async function loadTransactionDerivedMonthlyCustomerCounts(
   supabase: ServerSupabaseClient,
@@ -144,7 +174,13 @@ export async function loadTransactionDerivedMonthlyCustomerCounts(
 ): Promise<MonthlyCustomerCountsLoadResult> {
   const bounds = resolveMonthBounds(monthStart);
   if (!bounds) {
-    return { available: false, counts: null, positiveCollectionRows: null, dataLoadError: true };
+    return {
+      available: false,
+      counts: null,
+      positiveCollectionRows: null,
+      transactionHistoryComplete: null,
+      dataLoadError: true,
+    };
   }
 
   const { count, error: countError } = await supabase
@@ -158,30 +194,90 @@ export async function loadTransactionDerivedMonthlyCustomerCounts(
     .lt("transaction_date", bounds.end);
 
   if (countError || count === null) {
-    return { available: false, counts: null, positiveCollectionRows: null, dataLoadError: true };
+    return {
+      available: false,
+      counts: null,
+      positiveCollectionRows: null,
+      transactionHistoryComplete: null,
+      dataLoadError: true,
+    };
   }
 
   if (count === 0) {
-    return { available: false, counts: null, positiveCollectionRows: 0, dataLoadError: false };
+    return {
+      available: false,
+      counts: null,
+      positiveCollectionRows: 0,
+      transactionHistoryComplete: null,
+      dataLoadError: false,
+    };
   }
 
-  const [payingEmails, newEmails] = await Promise.all([
-    loadPositiveCollectionEmails(supabase, businessId, bounds.start, bounds.end),
-    loadNewCustomerEmails(supabase, businessId, monthStart),
-  ]);
+  const historyComplete = await loadTransactionHistoryCompleteness(supabase, businessId);
+  if (historyComplete === null) {
+    return {
+      available: false,
+      counts: null,
+      positiveCollectionRows: null,
+      transactionHistoryComplete: null,
+      dataLoadError: true,
+    };
+  }
 
-  if (!payingEmails || !newEmails) {
-    return { available: false, counts: null, positiveCollectionRows: null, dataLoadError: true };
+  const payingEmails = await loadPositiveCollectionEmails(
+    supabase,
+    businessId,
+    bounds.start,
+    bounds.end,
+  );
+  if (!payingEmails) {
+    return {
+      available: false,
+      counts: null,
+      positiveCollectionRows: null,
+      transactionHistoryComplete: null,
+      dataLoadError: true,
+    };
   }
 
   try {
+    const totalPayingCustomers = countUniquePayingCustomers(payingEmails);
+    if (!historyComplete) {
+      return {
+        available: true,
+        counts: { newCustomers: null, totalPayingCustomers },
+        positiveCollectionRows: count,
+        transactionHistoryComplete: false,
+        dataLoadError: false,
+      };
+    }
+
+    const newEmails = await loadNewCustomerEmails(supabase, businessId, monthStart);
+    if (!newEmails) {
+      return {
+        available: false,
+        counts: null,
+        positiveCollectionRows: null,
+        transactionHistoryComplete: null,
+        dataLoadError: true,
+      };
+    }
+
+    const derived = deriveMonthlyCustomerCounts(payingEmails, newEmails);
     return {
       available: true,
-      counts: deriveMonthlyCustomerCounts(payingEmails, newEmails),
+      counts: derived,
       positiveCollectionRows: count,
+      transactionHistoryComplete: true,
       dataLoadError: false,
     };
   } catch {
-    return { available: false, counts: null, positiveCollectionRows: null, dataLoadError: true };
+    return {
+      available: false,
+      counts: null,
+      positiveCollectionRows: null,
+      transactionHistoryComplete: null,
+      dataLoadError: true,
+    };
   }
 }
