@@ -587,6 +587,7 @@ function rowIssues(
       issues.push({ rowNumber: row.rowNumber, field: "timezone", code: "TIMEZONE_INVALID", rawValue: row.timezone ?? "" });
     }
     if (
+      ISO_DATE_PATTERN.test(transactionDate) &&
       transactionTime &&
       timezone &&
       parseTransactionTime(transactionTime) &&
