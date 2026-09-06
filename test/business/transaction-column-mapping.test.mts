@@ -175,6 +175,22 @@ test("Transaction time plus Timezone without a date remains incomplete instead o
   assert.deepEqual(result.mapping.amountCollected, 3);
 });
 
+test("ambiguous timezone headers keep Transaction time separate and leave the required date unmapped", () => {
+  const result = autoMapTransactionHeaderRow([
+    "Customer email",
+    "Transaction time",
+    "Timezone",
+    "Time zone",
+    "Total amount paid",
+  ]);
+
+  assert.equal(result.detected, false);
+  assert.equal(result.mapping.transactionDate, null);
+  assert.equal(result.mapping.transactionTime, 1);
+  assert.equal(result.mapping.timezone, null);
+  assert.deepEqual(result.ambiguousFields, ["timezone"]);
+});
+
 test("auto-mapping refuses ambiguous required headers instead of guessing", () => {
   const result = autoMapTransactionHeaderRow([
     "Customer email",
