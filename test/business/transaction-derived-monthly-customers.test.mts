@@ -122,10 +122,13 @@ class FakeQuery implements PromiseLike<FakeQueryResult> {
 }
 
 class FakeSupabase {
-  constructor(
-    private readonly database: FakeDatabase,
-    private readonly errorTables = new Set<string>(),
-  ) {}
+  private readonly database: FakeDatabase;
+  private readonly errorTables: Set<string>;
+
+  constructor(database: FakeDatabase, errorTables = new Set<string>()) {
+    this.database = database;
+    this.errorTables = errorTables;
+  }
 
   /** Creates a fake table query and optionally forces that table to fail. */
   from(table: string) {
