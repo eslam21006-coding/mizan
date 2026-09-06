@@ -13,6 +13,7 @@ import {
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+/** Builds the canonical monthly-entry URL with status and copy-result query parameters. */
 function monthlyPath(
   businessId: string,
   monthKey: string,
@@ -25,12 +26,14 @@ function monthlyPath(
   return `/businesses/${businessId}/monthly?${query.toString()}`;
 }
 
+/** Revalidates monthly views and redirects to the selected month with a status code. */
 function redirectMonthly(businessId: string, monthKey: string, status: string): never {
   revalidatePath("/businesses");
   revalidatePath(`/businesses/${businessId}/monthly`);
   redirect(monthlyPath(businessId, monthKey, status));
 }
 
+/** Parses a submitted resource-id list and rejects duplicates or malformed identifiers. */
 function uniqueResourceIds(values: FormDataEntryValue[]) {
   const ids: string[] = [];
   const seen = new Set<string>();
@@ -45,6 +48,7 @@ function uniqueResourceIds(values: FormDataEntryValue[]) {
   return ids;
 }
 
+/** Validates and atomically persists one month's actual revenue, expenses, and customer inputs. */
 export async function saveMonthlyActuals(formData: FormData) {
   await requireAuthContext();
 
@@ -139,6 +143,7 @@ export async function saveMonthlyActuals(formData: FormData) {
   redirectMonthly(businessId, month.monthKey, "saved");
 }
 
+/** Copies the previous month's expense inputs into the selected month without changing other actuals. */
 export async function copyPreviousMonthExpenses(formData: FormData) {
   await requireAuthContext();
 
