@@ -1,5 +1,5 @@
 import type { createSupabaseServerClient } from "../supabase/server";
-import { parseMonthKey, shiftMonthKey } from "./monthly";
+import { parseMonthKey, shiftMonthKey } from "./monthly.ts";
 
 const CUSTOMER_TRANSACTION_PAGE_SIZE = 1_000;
 
