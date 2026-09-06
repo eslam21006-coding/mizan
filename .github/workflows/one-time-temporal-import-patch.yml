@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   patch:
-    if: github.event.head_commit.message == 'Apply one-time temporal import integration patch'
+    if: github.event.head_commit.message == 'Retry one-time temporal import integration patch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +62,8 @@ jobs:
             TIMEZONE_INVALID: "استخدم منطقة زمنية IANA صالحة مثل Africa/Cairo.",
             AMOUNT_REQUIRED: "المبلغ المحصل مطلوب.",''')
 
-          old_mapped = '''function mappedColumns(mapping: TransactionColumnMapping) {
+          replace_once(validator,
+          '''function mappedColumns(mapping: TransactionColumnMapping) {
             const required = [mapping.customerEmail, mapping.transactionDate, mapping.amountCollected];
             if (!required.every((column): column is number => column !== null)) return null;
 
@@ -83,8 +84,8 @@ jobs:
             }
 
             return { columns, transactionIdValueIndex, currencyValueIndex };
-          }'''
-          new_mapped = '''function mappedColumns(mapping: TransactionColumnMapping) {
+          }''',
+          '''function mappedColumns(mapping: TransactionColumnMapping) {
             const required = [mapping.customerEmail, mapping.transactionDate, mapping.amountCollected];
             if (!required.every((column): column is number => column !== null)) return null;
 
@@ -118,15 +119,8 @@ jobs:
               columns.push(currency);
             }
 
-            return {
-              columns,
-              transactionTimeValueIndex,
-              timezoneValueIndex,
-              transactionIdValueIndex,
-              currencyValueIndex,
-            };
-          }'''
-          replace_once(validator, old_mapped, new_mapped)
+            return { columns, transactionTimeValueIndex, timezoneValueIndex, transactionIdValueIndex, currencyValueIndex };
+          }''')
 
           replace_once(validator,
           '''        amountCollected: row.values[2] ?? "",
@@ -154,12 +148,8 @@ jobs:
                   <span>
                     {FIELD_LABELS.transactionId}:''',
           '''        <span>{FIELD_LABELS.transactionDate}</span>
-                  <span>
-                    {FIELD_LABELS.transactionTime}: {mapping.transactionTime == null ? "غير موجود" : "تم اختياره"}
-                  </span>
-                  <span>
-                    {FIELD_LABELS.timezone}: {mapping.timezone == null ? "غير موجود" : "تم اختيارها"}
-                  </span>
+                  <span>{FIELD_LABELS.transactionTime}: {mapping.transactionTime == null ? "غير موجود" : "تم اختياره"}</span>
+                  <span>{FIELD_LABELS.timezone}: {mapping.timezone == null ? "غير موجود" : "تم اختيارها"}</span>
                   <span>{FIELD_LABELS.amountCollected}</span>
                   <span>
                     {FIELD_LABELS.transactionId}:''')
@@ -174,33 +164,7 @@ jobs:
                 transactionTime &&
                 timezone &&''')
 
-          page = "src/app/(app)/businesses/[businessId]/customers/import/page.tsx"
-          replace_once(page,
-          '''                <small dir="ltr">Transaction Date</small>
-                        <small dir="ltr">مثال: 2026-08-23 أو 2026-08-23T14:30:00+03:00</small>''',
-          '''                <small dir="ltr">Transaction Date</small>
-                        <small dir="ltr">مثال: 28-Aug-26 أو 2026-08-23</small>''')
-          replace_once(page,
-          '''              <li>
-                        <strong>رقم المعاملة</strong>
-                        <small dir="ltr">Transaction ID</small>''',
-          '''              <li>
-                        <strong>وقت المعاملة</strong>
-                        <small dir="ltr">Transaction Time</small>
-                        <small dir="ltr">مثال: 5:34 PM أو 17:34</small>
-                      </li>
-                      <li>
-                        <strong>المنطقة الزمنية</strong>
-                        <small dir="ltr">Timezone</small>
-                        <small dir="ltr">مثال: Africa/Cairo</small>
-                        <small>إذا كان الوقت موجودًا كعمود منفصل، اختر المنطقة الزمنية معه ليحوّلهما ميزان إلى توقيت واحد صحيح.</small>
-                      </li>
-                      <li>
-                        <strong>رقم المعاملة</strong>
-                        <small dir="ltr">Transaction ID</small>''')
-
-          workflow = Path(".github/workflows/one-time-temporal-import-patch.yml")
-          workflow.unlink()
+          Path(".github/workflows/one-time-temporal-import-patch.yml").unlink()
           PY
       - name: Commit patched source
         run: |
