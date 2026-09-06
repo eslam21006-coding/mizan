@@ -1,10 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  autoMapTransactionHeaderRow,
   buildTransactionColumnChoices,
   EMPTY_TRANSACTION_COLUMN_MAPPING,
+  fingerprintTransactionHeaderRow,
   inspectTransactionColumnMapping,
+  normalizeTransactionHeaderRow,
+  parseStoredTransactionColumnMapping,
   REQUIRED_TRANSACTION_FIELDS,
   setTransactionFieldColumn,
   TRANSACTION_MAPPING_FIELDS,
@@ -17,6 +21,7 @@ import {
   TRANSACTION_PREVIEW_LIMITS,
   type TransactionFilePreview,
 } from "@/lib/business/transaction-preview";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { TransactionImportValidator } from "./transaction-import-validator";
 import styles from "./transaction-import.module.css";
 
@@ -62,6 +67,15 @@ function sampleValue(preview: TransactionFilePreview, column: number) {
   return "";
 }
 
+function sameHeaderLayout(left: unknown, right: readonly string[]) {
+  if (!Array.isArray(left) || left.length !== right.length) return false;
+  return left.every((value, index) => typeof value === "string" && value === right[index]);
+}
+
+/**
+ * Maps gateway columns, automatically recognizes safe header aliases, and remembers a confirmed
+ * complete mapping only for the exact ordered header layout of this business.
+ */
 export function TransactionColumnMapper({
   businessId,
   baseCurrency,
@@ -70,7 +84,25 @@ export function TransactionColumnMapper({
   importBusy,
   onImportBusyChange,
 }: TransactionColumnMapperProps) {
-  const [mapping, setMapping] = useState<TransactionColumnMapping>(EMPTY_TRANSACTION_COLUMN_MAPPING);
+  const firstPreviewRow = preview.previewRows[0] ?? [];
+  const autoMapping = useMemo(
+    () => autoMapTransactionHeaderRow(firstPreviewRow),
+    [firstPreviewRow],
+  );
+  const normalizedHeaderRow = useMemo(
+    () => normalizeTransactionHeaderRow(firstPreviewRow),
+    [firstPreviewRow],
+  );
+  const [mapping, setMapping] = useState<TransactionColumnMapping>(() =>
+    autoMapping.detected ? autoMapping.mapping : EMPTY_TRANSACTION_COLUMN_MAPPING,
+  );
+  const [mappingOrigin, setMappingOrigin] = useState<"automatic" | "saved" | "manual">(
+    autoMapping.detected ? "automatic" : "manual",
+  );
+  const [headerFingerprint, setHeaderFingerprint] = useState<string | null>(null);
+  const [mappingMemoryReady, setMappingMemoryReady] = useState(false);
+  const [mappingMemoryError, setMappingMemoryError] = useState(false);
+  const mappingTouchedRef = useRef(false);
   const mappingState = inspectTransactionColumnMapping(mapping);
   const hasValidColumnCount = Number.isSafeInteger(preview.totalColumns) && preview.totalColumns > 0;
   const usesDirectColumnEntry =
@@ -85,8 +117,104 @@ export function TransactionColumnMapper({
     });
   }, [preview, hasValidColumnCount, usesDirectColumnEntry]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadSavedMapping = async () => {
+      if (!hasValidColumnCount || normalizedHeaderRow.length === 0) {
+        setMappingMemoryReady(true);
+        return;
+      }
+
+      try {
+        const fingerprint = await fingerprintTransactionHeaderRow(normalizedHeaderRow);
+        if (!active) return;
+        setHeaderFingerprint(fingerprint);
+
+        const supabase = createSupabaseBrowserClient();
+        const { data, error } = await supabase
+          .from("customer_transaction_column_mappings")
+          .select("header_columns,mapping")
+          .eq("business_id", businessId)
+          .eq("header_fingerprint", fingerprint)
+          .maybeSingle();
+
+        if (!active) return;
+        if (error) {
+          setMappingMemoryError(true);
+          setMappingMemoryReady(true);
+          return;
+        }
+
+        const savedMapping =
+          data && sameHeaderLayout(data.header_columns, normalizedHeaderRow)
+            ? parseStoredTransactionColumnMapping(data.mapping, preview.totalColumns)
+            : null;
+
+        if (savedMapping && !mappingTouchedRef.current) {
+          setMapping(savedMapping);
+          setMappingOrigin("saved");
+        }
+        setMappingMemoryError(false);
+        setMappingMemoryReady(true);
+      } catch {
+        if (!active) return;
+        setMappingMemoryError(true);
+        setMappingMemoryReady(true);
+      }
+    };
+
+    void loadSavedMapping();
+    return () => {
+      active = false;
+    };
+  }, [businessId, hasValidColumnCount, normalizedHeaderRow, preview.totalColumns]);
+
+  useEffect(() => {
+    if (
+      !mappingMemoryReady ||
+      !headerFingerprint ||
+      !mappingState.isComplete ||
+      normalizedHeaderRow.length === 0
+    ) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const saveMapping = async () => {
+        const supabase = createSupabaseBrowserClient();
+        const { error } = await supabase.from("customer_transaction_column_mappings").upsert(
+          {
+            business_id: businessId,
+            header_fingerprint: headerFingerprint,
+            header_columns: normalizedHeaderRow,
+            mapping,
+          },
+          { onConflict: "business_id,header_fingerprint" },
+        );
+        setMappingMemoryError(Boolean(error));
+      };
+      void saveMapping();
+    }, 500);
+
+    return () => window.clearTimeout(timeout);
+  }, [
+    businessId,
+    headerFingerprint,
+    mapping,
+    mappingMemoryReady,
+    mappingState.isComplete,
+    normalizedHeaderRow,
+  ]);
+
+  const markManualMapping = () => {
+    mappingTouchedRef.current = true;
+    setMappingOrigin("manual");
+  };
+
   const setSelectField = (field: TransactionMappingField, value: string) => {
     if (importBusy) return;
+    markManualMapping();
     if (value === "") {
       setMapping((current) => setTransactionFieldColumn(current, field, null));
       return;
@@ -99,6 +227,7 @@ export function TransactionColumnMapper({
 
   const setDirectField = (field: TransactionMappingField, value: string) => {
     if (importBusy) return;
+    markManualMapping();
     if (value.trim() === "") {
       setMapping((current) => setTransactionFieldColumn(current, field, null));
       return;
@@ -130,13 +259,27 @@ export function TransactionColumnMapper({
             <span className={styles.kicker}>الخطوة 4</span>
             <h2 id="transaction-mapping-title">طابق أعمدة ملفك</h2>
             <p>
-              حدد العمود الذي يحتوي على كل معلومة. أول ثلاثة حقول مطلوبة، ورقم المعاملة والعملة اختياريان.
+              ميزان يحاول التعرف على عناوين الأعمدة تلقائيًا. إذا احتجت تعديلها يدويًا، يحفظ المطابقة لنفس ترتيب الأعمدة في هذا البزنس.
             </p>
           </div>
           <span className={mappingState.isComplete ? styles.mappingReady : styles.mappingPending}>
             {mappingState.isComplete ? "الأعمدة مكتملة" : "أكمل الأعمدة المطلوبة"}
           </span>
         </div>
+
+        {mappingOrigin === "saved" && (
+          <p className={styles.mappingHint}>تم استرجاع مطابقة محفوظة لنفس ترتيب عناوين الأعمدة.</p>
+        )}
+        {mappingOrigin === "automatic" && autoMapping.detected && (
+          <p className={styles.mappingHint}>
+            تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.transactionId != null ? " ورقم المعاملة" : ""}{mapping.currency != null ? " والعملة" : ""} من الصف الأول.
+          </p>
+        )}
+        {mappingMemoryError && (
+          <div className={styles.mappingError} role="status">
+            تعذر حفظ أو استرجاع تفضيل مطابقة الأعمدة. يمكنك متابعة الاستيراد يدويًا بدون فقد أي بيانات.
+          </div>
+        )}
 
         {!hasValidColumnCount ? (
           <div className={styles.mappingError} role="alert">
@@ -244,6 +387,12 @@ export function TransactionColumnMapper({
               </strong>
             </div>
           </div>
+        )}
+
+        {autoMapping.detected && (
+          <p className={styles.mappingHint}>
+            تم التعرف على الصف الأول كعناوين أعمدة. في خطوة المراجعة التالية تأكد أن خيار «أول صف غير فارغ يحتوي على عناوين الأعمدة» مفعّل.
+          </p>
         )}
       </section>
 

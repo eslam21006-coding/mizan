@@ -1,9 +1,14 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
+  autoMapTransactionHeaderRow,
   buildTransactionColumnChoices,
   EMPTY_TRANSACTION_COLUMN_MAPPING,
+  fingerprintTransactionHeaderRow,
   inspectTransactionColumnMapping,
+  normalizeTransactionHeaderRow,
+  parseStoredTransactionColumnMapping,
   setTransactionFieldColumn,
   TRANSACTION_NATIVE_MAPPING_OPTION_LIMIT,
 } from "../../src/lib/business/transaction-column-mapping.ts";
@@ -122,4 +127,84 @@ test("Task 20 keeps Transaction ID optional while using it in duplicate-column c
   });
   assert.equal(conflictingId.isComplete, false);
   assert.equal(conflictingId.hasDuplicateColumns, true);
+});
+
+test("gateway headers from the founder fixture auto-map without manual column selection", async () => {
+  const fixture = await readFile("test/fixtures/raw-gateway-line-items.csv", "utf8");
+  const header = fixture.split(/\r?\n/, 1)[0]?.split(",") ?? [];
+  const result = autoMapTransactionHeaderRow(header);
+
+  assert.equal(result.detected, true);
+  assert.deepEqual(result.ambiguousFields, []);
+  assert.deepEqual(result.mapping, {
+    customerEmail: 1,
+    transactionDate: 5,
+    amountCollected: 3,
+    transactionId: 0,
+    currency: 2,
+  });
+});
+
+test("auto-mapping refuses ambiguous required headers instead of guessing", () => {
+  const result = autoMapTransactionHeaderRow([
+    "Customer email",
+    "Email",
+    "Transaction date",
+    "Total amount paid",
+  ]);
+
+  assert.equal(result.detected, false);
+  assert.equal(result.mapping.customerEmail, null);
+  assert.deepEqual(result.ambiguousFields, ["customerEmail"]);
+});
+
+test("stored mappings are accepted only when complete and within the current file width", () => {
+  const valid = parseStoredTransactionColumnMapping(
+    {
+      customerEmail: 1,
+      transactionDate: 5,
+      amountCollected: 3,
+      transactionId: 0,
+      currency: 2,
+    },
+    7,
+  );
+  assert.deepEqual(valid, {
+    customerEmail: 1,
+    transactionDate: 5,
+    amountCollected: 3,
+    transactionId: 0,
+    currency: 2,
+  });
+
+  assert.equal(
+    parseStoredTransactionColumnMapping(
+      { customerEmail: 1, transactionDate: 5, amountCollected: 99 },
+      7,
+    ),
+    null,
+  );
+  assert.equal(
+    parseStoredTransactionColumnMapping(
+      { customerEmail: 1, transactionDate: null, amountCollected: 3 },
+      7,
+    ),
+    null,
+  );
+});
+
+test("header fingerprints are stable for equivalent formatting and change with ordered layout", async () => {
+  const first = [" Customer Email ", "Transaction_Date", "Total amount paid"];
+  const equivalent = ["customer email", "transaction date", "total amount paid"];
+  const reordered = ["Transaction Date", "Customer Email", "Total amount paid"];
+
+  assert.deepEqual(normalizeTransactionHeaderRow(first), normalizeTransactionHeaderRow(equivalent));
+  assert.equal(
+    await fingerprintTransactionHeaderRow(first),
+    await fingerprintTransactionHeaderRow(equivalent),
+  );
+  assert.notEqual(
+    await fingerprintTransactionHeaderRow(first),
+    await fingerprintTransactionHeaderRow(reordered),
+  );
 });
