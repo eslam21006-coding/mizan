@@ -154,7 +154,7 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
         </section>
       )}
 
-      {!decision.currentPeriodExists && (
+      {!decision.currentPeriodLoadError && !decision.currentPeriodExists && (
         <section className={styles.emptyState}>
           <h2>لا توجد أرقام محفوظة لـ {currentLabel}</h2>
           <p>أدخل بيانات الشهر المرجعي أولًا حتى يستطيع Decision Engine تقييم البزنس.</p>
@@ -167,18 +167,21 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
         </section>
       )}
 
-      {decision.currentPeriodExists && previousMonth && !decision.previousPeriodExists && (
-        <section className={styles.emptyState}>
-          <h2>لا توجد قاعدة مقارنة لـ {previousLabel}</h2>
-          <p>سيمنع ميزان أي قاعدة تحتاج الشهر السابق بدل اعتبار الشهر المفقود صفرًا.</p>
-          <Link
-            className={styles.primaryAction}
-            href={`/businesses/${selectedBusiness.id}/monthly?month=${previousMonth.monthKey}`}
-          >
-            إدخال أرقام {previousLabel}
-          </Link>
-        </section>
-      )}
+      {decision.currentPeriodExists &&
+        previousMonth &&
+        !decision.previousPeriodLoadError &&
+        !decision.previousPeriodExists && (
+          <section className={styles.emptyState}>
+            <h2>لا توجد قاعدة مقارنة لـ {previousLabel}</h2>
+            <p>سيمنع ميزان أي قاعدة تحتاج الشهر السابق بدل اعتبار الشهر المفقود صفرًا.</p>
+            <Link
+              className={styles.primaryAction}
+              href={`/businesses/${selectedBusiness.id}/monthly?month=${previousMonth.monthKey}`}
+            >
+              إدخال أرقام {previousLabel}
+            </Link>
+          </section>
+        )}
 
       <DecisionInsightsPanel
         insights={decision.model.insights}
