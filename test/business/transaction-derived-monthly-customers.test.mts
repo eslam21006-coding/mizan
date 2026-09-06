@@ -92,6 +92,7 @@ class FakeQuery implements PromiseLike<{ data: Row[] | null; error: Error | null
     return { data: this.head ? null : rows, error: null, count };
   }
 
+  // biome-ignore lint/suspicious/noThenProperty: Supabase query builders are intentionally thenable; this fake mirrors that contract.
   then<TResult1 = { data: Row[] | null; error: Error | null; count: number | null }, TResult2 = never>(
     onfulfilled?: ((value: { data: Row[] | null; error: Error | null; count: number | null }) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
