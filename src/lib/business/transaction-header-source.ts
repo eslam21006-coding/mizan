@@ -40,11 +40,13 @@ function firstNonEmptyCsvRow(text: string, delimiter: string) {
   let quoted = false;
   let justClosedQuote = false;
 
+  /** Appends one decoded character to the active CSV header cell. */
   const appendCellCharacter = (char: string) => {
     cellHasContent = true;
     cell += char;
   };
 
+  /** Finalizes the active CSV cell while enforcing the supported column boundary. */
   const pushCell = () => {
     if (row.length >= TRANSACTION_HEADER_COLUMN_LIMIT) {
       throw new RangeError("Transaction header exceeds the supported column limit.");
@@ -56,6 +58,7 @@ function firstNonEmptyCsvRow(text: string, delimiter: string) {
     justClosedQuote = false;
   };
 
+  /** Finalizes a CSV row and returns it only when at least one cell contains content. */
   const finishRow = () => {
     pushCell();
     if (rowHasContent) return row;
