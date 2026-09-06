@@ -240,20 +240,26 @@ test("customer-count data errors fail closed rather than falling back to stale m
   assert.equal(result.available, false);
 });
 
-test("monthly UI, save action, and dashboard all consume the same derived customer-count loader", async () => {
-  const [pageSource, formSource, actionSource, dashboardSource] = await Promise.all([
+test("monthly UI and dashboard read derived counts while the database save RPC remains authoritative", async () => {
+  const [pageSource, formSource, actionSource, dashboardSource, migrationSource] = await Promise.all([
     readFile("src/app/(app)/businesses/[businessId]/monthly/page.tsx", "utf8"),
     readFile("src/app/(app)/businesses/[businessId]/monthly/monthly-entry-form.tsx", "utf8"),
     readFile("src/app/(app)/businesses/[businessId]/monthly/actions.ts", "utf8"),
     readFile("src/lib/business/dashboard-month.ts", "utf8"),
+    readFile("supabase/migrations/20260906064500_transaction_derived_monthly_customer_counts.sql", "utf8"),
   ]);
 
   assert.match(pageSource, /loadTransactionDerivedMonthlyCustomerCounts/);
   assert.match(pageSource, /customerCountsDerived=\{customerCountsDerived\}/);
   assert.match(formSource, /محسوب تلقائيًا من سجل المعاملات/);
   assert.match(formSource, /type="hidden" name="new_customers"/);
-  assert.match(actionSource, /effectiveNewCustomers = derivedCustomerCounts\.available/);
-  assert.match(actionSource, /target_new_customers: effectiveNewCustomers/);
+  assert.doesNotMatch(actionSource, /loadTransactionDerivedMonthlyCustomerCounts/);
+  assert.match(actionSource, /target_new_customers: newCustomers\.value/);
+  assert.match(actionSource, /target_total_paying_customers: payingCustomers\.value/);
   assert.match(dashboardSource, /new_customers: derivedCustomerCounts\.counts\.newCustomers/);
   assert.match(dashboardSource, /total_paying_customers: derivedCustomerCounts\.counts\.totalPayingCustomers/);
+  assert.match(migrationSource, /monthly-customer-counts:/);
+  assert.match(migrationSource, /create trigger lock_customer_transaction_monthly_counts/);
+  assert.match(migrationSource, /effective_new_customers := derived_new_customers/);
+  assert.match(migrationSource, /effective_total_paying_customers/);
 });
