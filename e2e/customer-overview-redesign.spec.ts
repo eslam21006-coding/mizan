@@ -36,12 +36,22 @@ test.describe("Customer and LTV overview redesign", () => {
 
     await expect(observedTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("region", { name: "لوحة قيمة العميل المحققة" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "لوحة مصادر الإيراد" })).toHaveCount(0);
+
+    const revenuePanelId = await revenueTab.getAttribute("aria-controls");
+    expect(revenuePanelId).not.toBeNull();
+    const revenuePanel = page.locator(`#${revenuePanelId}`);
+    await expect(revenuePanel).toHaveCount(1);
+    await expect(revenuePanel).toBeHidden();
+    await expect(revenuePanel.getByRole("region", { name: "لوحة مصادر الإيراد" })).toHaveCount(0);
 
     await revenueTab.click();
     await expect(revenueTab).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByRole("region", { name: "لوحة مصادر الإيراد" })).toBeVisible();
-    await expect(page.getByRole("region", { name: "لوحة قيمة العميل المحققة" })).toBeHidden();
+    await expect(revenuePanel).toBeVisible();
+    await expect(revenuePanel.getByRole("region", { name: "لوحة مصادر الإيراد" })).toBeVisible();
+
+    const observedPanelId = await observedTab.getAttribute("aria-controls");
+    expect(observedPanelId).not.toBeNull();
+    await expect(page.locator(`#${observedPanelId}`)).toBeHidden();
 
     await revenueTab.press("ArrowLeft");
     await expect(contributionTab).toBeFocused();
