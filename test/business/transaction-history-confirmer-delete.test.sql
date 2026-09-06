@@ -15,6 +15,35 @@ values (
   '75757575-bbbb-4757-8757-757575757575'
 );
 
+insert into public.customer_transaction_sources (business_id, source, created_by_user_id)
+values (
+  '75757575-aaaa-4757-8757-757575757575',
+  'stripe',
+  '75757575-7575-4757-8757-757575757575'
+);
+
+insert into public.customer_transactions (
+  id, business_id, source, source_transaction_id, import_row_token, customer_email,
+  transaction_date, source_transaction_at, transaction_at, amount_collected,
+  transaction_type, normalized_outcome, currency, source_row_number, imported_by_user_id
+) values (
+  '75000000-0000-4000-8000-000000000001',
+  '75757575-aaaa-4757-8757-757575757575',
+  'stripe',
+  'history-delete-qualifying-purchase',
+  '75000000-0000-4000-8000-000000000002',
+  'buyer@example.test',
+  '2026-08-01',
+  '2026-08-01T12:00:00+03:00',
+  '2026-08-01T09:00:00Z',
+  100,
+  'collection',
+  'successful',
+  'USD',
+  1,
+  '75757575-7575-4757-8757-757575757575'
+);
+
 set local role authenticated;
 set local request.jwt.claims =
   '{"sub":"76767676-7676-4767-8767-767676767676","role":"authenticated","app_metadata":{"role":"admin"}}';
