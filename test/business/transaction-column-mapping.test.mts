@@ -140,6 +140,8 @@ test("gateway headers from the founder fixture auto-map without manual column se
     customerEmail: 1,
     transactionDate: 5,
     amountCollected: 3,
+    transactionTime: null,
+    timezone: null,
     transactionId: 0,
     currency: 2,
   });
@@ -173,6 +175,8 @@ test("stored mappings are accepted only when complete and within the current fil
     customerEmail: 1,
     transactionDate: 5,
     amountCollected: 3,
+    transactionTime: null,
+    timezone: null,
     transactionId: 0,
     currency: 2,
   });
