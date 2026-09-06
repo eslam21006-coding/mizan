@@ -1,6 +1,8 @@
 import {
   isValidTransactionDate,
   isValidTransactionEmail,
+  normalizeGatewayTransactionRows,
+  normalizeTransactionDateForImport,
   normalizeTransactionEmail,
   parseTransactionAmount,
   TRANSACTION_ID_MAX_LENGTH,
@@ -87,16 +89,13 @@ export function prepareTransactionImportRows(
   },
 ): PreparedTransactionImportRow[] {
   const prepared: PreparedTransactionImportRow[] = [];
-  let firstSourceRowSeen = false;
   const baseCurrency = options.baseCurrency.trim().toUpperCase();
   if (!baseCurrency) throw new RangeError("Transaction import base currency is required.");
+  const normalized = normalizeGatewayTransactionRows(rows, {
+    skipFirstRow: options.skipFirstRow,
+  });
 
-  for (const row of rows) {
-    if (!firstSourceRowSeen) {
-      firstSourceRowSeen = true;
-      if (options.skipFirstRow) continue;
-    }
-
+  for (const row of normalized.rows) {
     const transactionId = normalizeTransactionId(row.transactionId);
     if (transactionId && Array.from(transactionId).length > TRANSACTION_ID_MAX_LENGTH) {
       throw new TransactionImportPreparationError(
@@ -107,7 +106,7 @@ export function prepareTransactionImportRows(
     }
 
     const email = normalizeTransactionEmail(row.customerEmail);
-    const transactionDate = row.transactionDate.trim();
+    const transactionDate = normalizeTransactionDateForImport(row.transactionDate);
     const amount = parseTransactionAmount(row.amountCollected);
     const amountSign = exactDecimalSign(row.amountCollected);
     const amountHasValidSign =
@@ -117,6 +116,7 @@ export function prepareTransactionImportRows(
     const rowCurrency = row.currency?.trim().toUpperCase();
     if (
       !isValidTransactionEmail(email) ||
+      transactionDate === null ||
       !isValidTransactionDate(transactionDate) ||
       !amountHasValidSign ||
       (rowCurrency !== undefined && rowCurrency !== baseCurrency)
