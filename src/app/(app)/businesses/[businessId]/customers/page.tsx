@@ -11,6 +11,7 @@ type BusinessCustomersPageProps = {
   params: Promise<{ businessId: string }>;
 };
 
+/** Loads one authorized business context and composes its existing customer-economics analyses. */
 export default async function BusinessCustomersPage({ params }: BusinessCustomersPageProps) {
   const { businessId: rawBusinessId } = await params;
   const businessId = parseResourceId(rawBusinessId);
