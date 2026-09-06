@@ -10,6 +10,8 @@ export type LoadedDecisionDashboard = {
   model: DecisionDashboardModel;
   currentPeriodExists: boolean;
   previousPeriodExists: boolean;
+  currentPeriodLoadError: boolean;
+  previousPeriodLoadError: boolean;
   sourceLoadError: boolean;
 };
 
@@ -50,6 +52,8 @@ export async function loadDecisionDashboard(
     funnelMonth.dataLoadError || funnelMonth.reconciliationError
       ? null
       : funnelMonth.reconciliation;
+  const currentPeriodLoadError = currentLoad.dataLoadError || currentLoad.calculationError;
+  const previousPeriodLoadError = previousLoad.dataLoadError || previousLoad.calculationError;
 
   return {
     model: buildDecisionDashboardModel({
@@ -60,11 +64,11 @@ export async function loadDecisionDashboard(
     }),
     currentPeriodExists: currentLoad.periodExists,
     previousPeriodExists: previousLoad.periodExists,
+    currentPeriodLoadError,
+    previousPeriodLoadError,
     sourceLoadError:
-      currentLoad.dataLoadError ||
-      currentLoad.calculationError ||
-      previousLoad.dataLoadError ||
-      previousLoad.calculationError ||
+      currentPeriodLoadError ||
+      previousPeriodLoadError ||
       funnelMonth.dataLoadError ||
       funnelMonth.reconciliationError ||
       funnelMonth.calculatedEntries.some((entry) => entry.calculationError),
