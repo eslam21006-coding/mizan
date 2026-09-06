@@ -3,6 +3,7 @@ import { CustomerOverviewShell } from "@/app/(app)/businesses/[businessId]/custo
 
 const FIXTURE_BUSINESS_ID = "00000000-0000-4000-8000-000000000057";
 
+/** Renders deterministic customer-overview content for browser-only RTL and interaction verification. */
 export default function CustomerOverviewE2eFixturePage() {
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
     notFound();
