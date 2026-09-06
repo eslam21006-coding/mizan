@@ -95,6 +95,30 @@ test("gateway-format dates reject nonexistent DST wall-clock times during valida
   );
 });
 
+test("offsetless combined timestamps do not bypass DST validation when separate time and timezone are present", () => {
+  const result = validateTransactionImportRows(
+    [
+      {
+        rowNumber: 1,
+        customerEmail: "buyer@example.test",
+        transactionDate: "2024-03-10T02:30",
+        transactionTime: "02:30",
+        timezone: "America/New_York",
+        amountCollected: "29",
+      },
+    ],
+    { baseCurrency: "USD" },
+  );
+
+  assert.equal(result.isValid, false);
+  assert.equal(
+    result.issues.some(
+      (issue) => issue.field === "transactionTime" && issue.code === "TRANSACTION_TIME_INVALID",
+    ),
+    true,
+  );
+});
+
 test("gateway line-item rows share temporal data and still collapse by Transaction ID", () => {
   const normalized = normalizeGatewayTransactionRows([
     {
