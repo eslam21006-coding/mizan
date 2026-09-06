@@ -27,6 +27,9 @@ export async function setTransactionHistoryCompletenessAction(formData: FormData
     p_complete: historyComplete,
   });
 
+  if (error?.code === "MZ001") {
+    redirect(`/businesses/${businessId}/customers/import?historyStatus=transactions-required`);
+  }
   if (error?.code === "42501") redirect("/access-denied");
   if (error || data !== true) {
     redirect(`/businesses/${businessId}/customers/import?historyStatus=update-failed`);
