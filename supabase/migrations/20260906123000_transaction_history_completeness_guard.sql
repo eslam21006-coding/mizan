@@ -95,17 +95,31 @@ begin
     from positive_collections as collection
     join first_collection as acquired using (customer_email)
     group by date_trunc('month', collection.transaction_date)::date
+  ),
+  resolved_period_counts as (
+    select
+      period.id,
+      case
+        when history_complete then coalesce(counts.new_customers, 0)
+        else period.new_customers
+      end as new_customers,
+      case
+        when counts.month_start is not null then counts.total_paying_customers
+        when history_complete then 0
+        else period.total_paying_customers
+      end as total_paying_customers
+    from public.monthly_periods as period
+    left join monthly_counts as counts
+      on counts.month_start = period.month_start
+    where period.business_id = target_business_id
+      and (history_complete or counts.month_start is not null)
   )
   update public.monthly_periods as period
   set
-    new_customers = case
-      when history_complete then counts.new_customers
-      else period.new_customers
-    end,
-    total_paying_customers = counts.total_paying_customers
-  from monthly_counts as counts
-  where period.business_id = target_business_id
-    and period.month_start = counts.month_start;
+    new_customers = resolved.new_customers,
+    total_paying_customers = resolved.total_paying_customers
+  from resolved_period_counts as resolved
+  where period.id = resolved.id;
 end;
 $$;
 
@@ -192,11 +206,18 @@ begin
   from month_payers as payer
   join first_collection as acquired using (customer_email);
 
-  if derived_total_paying_customers > 0 then
+  if history_complete then
+    effective_new_customers := derived_new_customers;
     effective_total_paying_customers := derived_total_paying_customers;
-    if history_complete then
-      effective_new_customers := derived_new_customers;
+  elsif derived_total_paying_customers > 0 then
+    if target_new_customers is not null
+       and target_new_customers > derived_total_paying_customers then
+      raise exception 'manual new customers cannot exceed transaction-derived paying customers for this month'
+        using errcode = '22023';
     end if;
+
+    effective_new_customers := target_new_customers;
+    effective_total_paying_customers := derived_total_paying_customers;
   else
     effective_new_customers := target_new_customers;
     effective_total_paying_customers := target_total_paying_customers;
@@ -302,4 +323,4 @@ comment on table public.business_transaction_history_status is
   'Business-scoped trust state for whether imported transaction history covers the business from its earliest available payment. Incomplete history must never make earliest-known transactions authoritative New Customer evidence. A completed record retains its confirmation timestamp if the confirming auth user is later deleted; the confirmer foreign key is then intentionally null.';
 
 comment on function public.set_transaction_history_complete(uuid, boolean) is
-  'Owner/admin-only transition for transaction-history completeness. Marking complete recalculates existing monthly New Customer counts while holding the shared transaction/monthly advisory lock.';
+  'Owner/admin-only transition for transaction-history completeness. Marking complete recalculates existing monthly New Customer counts, including authoritative zero-count months, while holding the shared transaction/monthly advisory lock.';
