@@ -676,10 +676,16 @@ export function TransactionImportValidator({
             <p className={styles.validationNote}>تم استبعاد أول صف غير فارغ باعتباره عناوين الأعمدة بناءً على اختيارك.</p>
           )}
 
+          {result.ignoredDetailRows > 0 && (
+            <p className={styles.validationNote}>
+              تم تجاهل {result.ignoredDetailRows} صف تفاصيل لا يحتوي على تاريخ معاملة ولا مبلغ محصل؛ لم يُحسب كمعاملة.
+            </p>
+          )}
+
           {result.isValid ? (
             <>
               <div className={styles.validationSuccess}>
-                كل الصفوف صالحة. أكمل مصدر المعاملات ونوع الملف وعملته، ثم أكد الاستيراد.
+                كل الصفوف الصالحة للمراجعة سليمة. أكمل مصدر المعاملات ونوع الملف وعملته، ثم أكد الاستيراد.
               </div>
               <fieldset className={task20Styles.importPanel}>
                 <legend className={task20Styles.importLegend}>تأكيد الاستيراد</legend>
@@ -844,7 +850,11 @@ export function TransactionImportValidator({
             </>
           ) : result.checkedRows === 0 ? (
             <div className={styles.mappingError} role="alert">
-              {skipFirstRow ? "لا توجد معاملات قابلة للمراجعة بعد استبعاد أول صف باعتباره عناوين الأعمدة." : "لا توجد صفوف معاملات قابلة للمراجعة في الملف."}
+              {result.ignoredDetailRows > 0
+                ? `تم تجاهل ${result.ignoredDetailRows} صف تفاصيل لا يحتوي على تاريخ معاملة ولا مبلغ محصل، ولا توجد معاملات مكتملة قابلة للمراجعة في الملف.`
+                : skipFirstRow
+                  ? "لا توجد معاملات قابلة للمراجعة بعد استبعاد أول صف باعتباره عناوين الأعمدة."
+                  : "لا توجد صفوف معاملات قابلة للمراجعة في الملف."}
             </div>
           ) : (
             <div className={styles.validationIssues}>
