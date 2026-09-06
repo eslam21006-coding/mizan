@@ -165,7 +165,8 @@ async function loadNewCustomerEmails(
  * Uses imported successful positive collections as an authoritative Paying Customer source whenever
  * the selected month contains such collections. New Customers are returned only when the business has
  * explicitly confirmed that imported history covers the business from its earliest available payment.
- * Months without imported positive collections retain the existing manual-entry fallback.
+ * For incomplete history, a month with no imported positive collections keeps the manual-entry fallback.
+ * Once history is complete, no qualifying collections is authoritative evidence that both counts are zero.
  */
 export async function loadTransactionDerivedMonthlyCustomerCounts(
   supabase: ServerSupabaseClient,
@@ -203,16 +204,6 @@ export async function loadTransactionDerivedMonthlyCustomerCounts(
     };
   }
 
-  if (count === 0) {
-    return {
-      available: false,
-      counts: null,
-      positiveCollectionRows: 0,
-      transactionHistoryComplete: null,
-      dataLoadError: false,
-    };
-  }
-
   const historyComplete = await loadTransactionHistoryCompleteness(supabase, businessId);
   if (historyComplete === null) {
     return {
@@ -221,6 +212,26 @@ export async function loadTransactionDerivedMonthlyCustomerCounts(
       positiveCollectionRows: null,
       transactionHistoryComplete: null,
       dataLoadError: true,
+    };
+  }
+
+  if (count === 0) {
+    if (historyComplete) {
+      return {
+        available: true,
+        counts: { newCustomers: 0, totalPayingCustomers: 0 },
+        positiveCollectionRows: 0,
+        transactionHistoryComplete: true,
+        dataLoadError: false,
+      };
+    }
+
+    return {
+      available: false,
+      counts: null,
+      positiveCollectionRows: 0,
+      transactionHistoryComplete: null,
+      dataLoadError: false,
     };
   }
 
