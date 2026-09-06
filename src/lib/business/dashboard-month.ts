@@ -20,8 +20,9 @@ export type DashboardMonthLoadResult = {
 type ServerSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
 /**
- * Loads one business month and calculates canonical dashboard financials, replacing manual customer
- * counts with transaction-derived counts whenever imported positive collections make them authoritative.
+ * Loads one business month and calculates canonical dashboard financials. Paying Customers are
+ * replaced by imported monthly transaction identities when available; New Customers are replaced
+ * only when the business has explicitly confirmed complete transaction history.
  */
 export async function loadDashboardMonth(
   supabase: ServerSupabaseClient,
@@ -99,7 +100,10 @@ export async function loadDashboardMonth(
   const effectivePeriod = derivedCustomerCounts.available
     ? {
         ...period,
-        new_customers: derivedCustomerCounts.counts.newCustomers,
+        new_customers:
+          derivedCustomerCounts.counts.newCustomers === null
+            ? period.new_customers
+            : derivedCustomerCounts.counts.newCustomers,
         total_paying_customers: derivedCustomerCounts.counts.totalPayingCustomers,
       }
     : period;
