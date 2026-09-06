@@ -8,10 +8,11 @@ import {
 
 type Row = Record<string, unknown>;
 type Filter = (row: Row) => boolean;
-
 type FakeDatabase = Record<string, Row[]>;
 
-class FakeQuery implements PromiseLike<{ data: Row[] | null; error: Error | null; count: number | null }> {
+type FakeQueryResult = { data: Row[] | null; error: Error | null; count: number | null };
+
+class FakeQuery implements PromiseLike<FakeQueryResult> {
   private readonly rows: Row[];
   private readonly forcedError: Error | null;
   private readonly filters: Filter[] = [];
@@ -28,6 +29,7 @@ class FakeQuery implements PromiseLike<{ data: Row[] | null; error: Error | null
     this.forcedError = forcedError;
   }
 
+  /** Records the selected columns and optional exact-count/head semantics. */
   select(columns: string, options?: { count?: string; head?: boolean }) {
     this.selectedColumns = columns.split(",").map((column) => column.trim());
     this.wantsCount = options?.count === "exact";
@@ -35,39 +37,46 @@ class FakeQuery implements PromiseLike<{ data: Row[] | null; error: Error | null
     return this;
   }
 
+  /** Adds an equality predicate to the fake query. */
   eq(column: string, value: unknown) {
     this.filters.push((row) => row[column] === value);
     return this;
   }
 
+  /** Adds a numeric greater-than predicate to the fake query. */
   gt(column: string, value: number) {
     this.filters.push((row) => Number(row[column]) > value);
     return this;
   }
 
+  /** Adds a string/date greater-than-or-equal predicate to the fake query. */
   gte(column: string, value: string) {
     this.filters.push((row) => String(row[column] ?? "") >= value);
     return this;
   }
 
+  /** Adds a string/date less-than predicate to the fake query. */
   lt(column: string, value: string) {
     this.filters.push((row) => String(row[column] ?? "") < value);
     return this;
   }
 
+  /** Records deterministic ordering for pagination. */
   order(column: string, options?: { ascending?: boolean }) {
     this.orderColumn = column;
     this.orderAscending = options?.ascending !== false;
     return this;
   }
 
+  /** Records an inclusive Supabase-style range. */
   range(start: number, end: number) {
     this.rangeStart = start;
     this.rangeEnd = end;
     return this;
   }
 
-  private execute() {
+  /** Executes accumulated fake query operations against the in-memory table. */
+  private execute(): FakeQueryResult {
     if (this.forcedError) {
       return { data: null, error: this.forcedError, count: null };
     }
@@ -97,9 +106,18 @@ class FakeQuery implements PromiseLike<{ data: Row[] | null; error: Error | null
     return { data: this.head ? null : rows, error: null, count };
   }
 
+  /** Mirrors Supabase maybeSingle for business history-status lookups. */
+  async maybeSingle() {
+    const result = this.execute();
+    if (result.error) return { data: null, error: result.error };
+    const rows = result.data ?? [];
+    if (rows.length > 1) return { data: null, error: new Error("multiple rows") };
+    return { data: rows[0] ?? null, error: null };
+  }
+
   // biome-ignore lint/suspicious/noThenProperty: Supabase query builders are intentionally thenable; this fake mirrors that contract.
-  then<TResult1 = { data: Row[] | null; error: Error | null; count: number | null }, TResult2 = never>(
-    onfulfilled?: ((value: { data: Row[] | null; error: Error | null; count: number | null }) => TResult1 | PromiseLike<TResult1>) | null,
+  then<TResult1 = FakeQueryResult, TResult2 = never>(
+    onfulfilled?: ((value: FakeQueryResult) => TResult1 | PromiseLike<TResult1>) | null,
     onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
   ): PromiseLike<TResult1 | TResult2> {
     return Promise.resolve(this.execute()).then(onfulfilled, onrejected);
@@ -115,6 +133,7 @@ class FakeSupabase {
     this.errorTables = errorTables;
   }
 
+  /** Creates a fake query against the requested table, optionally forcing its reads to fail. */
   from(table: string) {
     return new FakeQuery(
       this.database[table] ?? [],
@@ -123,6 +142,7 @@ class FakeSupabase {
   }
 }
 
+/** Builds one normalized transaction fixture for customer-count tests. */
 function transaction(
   id: string,
   email: string,
@@ -141,8 +161,14 @@ function transaction(
   };
 }
 
-test("transaction-derived counts dedupe repeat payments and keep only first-time acquisitions as new", async () => {
+/** Builds the explicit complete-history status row used by authoritative New Customer tests. */
+function completeHistoryStatus() {
+  return [{ business_id: "business-a", is_complete: true }];
+}
+
+test("complete history dedupes repeat payments and keeps only first-time acquisitions as new", async () => {
   const fake = new FakeSupabase({
+    business_transaction_history_status: completeHistoryStatus(),
     customer_transactions: [
       transaction("1", "alice@example.com", "2026-07-01"),
       transaction("2", "alice@example.com", "2026-07-05"),
@@ -168,7 +194,54 @@ test("transaction-derived counts dedupe repeat payments and keep only first-time
   assert.equal(result.available, true);
   if (!result.available) return;
   assert.equal(result.positiveCollectionRows, 3);
+  assert.equal(result.transactionHistoryComplete, true);
   assert.deepEqual(result.counts, { newCustomers: 1, totalPayingCustomers: 2 });
+});
+
+test("incomplete history still derives paying customers but withholds automatic new customers", async () => {
+  const fake = new FakeSupabase({
+    business_transaction_history_status: [{ business_id: "business-a", is_complete: false }],
+    customer_transactions: [
+      transaction("1", "old@example.com", "2026-07-01"),
+      transaction("2", "old@example.com", "2026-07-05"),
+      transaction("3", "second@example.com", "2026-07-10"),
+    ],
+    customer_acquisition_cohorts: [
+      { business_id: "business-a", customer_email: "old@example.com", cohort_month: "2026-07-01" },
+      { business_id: "business-a", customer_email: "second@example.com", cohort_month: "2026-07-01" },
+    ],
+  });
+
+  const result = await loadTransactionDerivedMonthlyCustomerCounts(
+    fake as never,
+    "business-a",
+    "2026-07-01",
+  );
+
+  assert.equal(result.available, true);
+  if (!result.available) return;
+  assert.equal(result.transactionHistoryComplete, false);
+  assert.deepEqual(result.counts, { newCustomers: null, totalPayingCustomers: 2 });
+});
+
+test("missing status row is treated as incomplete rather than trusting earliest-known transactions", async () => {
+  const fake = new FakeSupabase({
+    business_transaction_history_status: [],
+    customer_transactions: [transaction("1", "payer@example.com", "2026-07-01")],
+    customer_acquisition_cohorts: [
+      { business_id: "business-a", customer_email: "payer@example.com", cohort_month: "2026-07-01" },
+    ],
+  });
+
+  const result = await loadTransactionDerivedMonthlyCustomerCounts(
+    fake as never,
+    "business-a",
+    "2026-07-01",
+  );
+
+  assert.equal(result.available, true);
+  if (!result.available) return;
+  assert.deepEqual(result.counts, { newCustomers: null, totalPayingCustomers: 1 });
 });
 
 test("refund-only or empty months preserve the manual-count fallback instead of inventing zero", async () => {
@@ -187,6 +260,7 @@ test("refund-only or empty months preserve the manual-count fallback instead of 
     available: false,
     counts: null,
     positiveCollectionRows: 0,
+    transactionHistoryComplete: null,
     dataLoadError: false,
   });
 });
@@ -196,6 +270,7 @@ test("paying-customer derivation paginates beyond one thousand transactions with
     transaction(String(index + 1).padStart(4, "0"), "repeat@example.com", "2026-07-10"),
   );
   const fake = new FakeSupabase({
+    business_transaction_history_status: completeHistoryStatus(),
     customer_transactions: [
       ...repeated,
       transaction("2000", "second@example.com", "2026-07-11"),
@@ -225,6 +300,25 @@ test("new customer identities must also be paying identities in the acquisition 
   );
 });
 
+test("history-status load errors fail closed rather than trusting cohort-derived new customers", async () => {
+  const fake = new FakeSupabase(
+    {
+      business_transaction_history_status: [],
+      customer_transactions: [transaction("1", "payer@example.com", "2026-07-01")],
+      customer_acquisition_cohorts: [],
+    },
+    new Set(["business_transaction_history_status"]),
+  );
+
+  const result = await loadTransactionDerivedMonthlyCustomerCounts(
+    fake as never,
+    "business-a",
+    "2026-07-01",
+  );
+  assert.equal(result.dataLoadError, true);
+  assert.equal(result.available, false);
+});
+
 test("customer-count data errors fail closed rather than falling back to stale manual counts", async () => {
   const fake = new FakeSupabase(
     { customer_transactions: [], customer_acquisition_cohorts: [] },
@@ -240,13 +334,16 @@ test("customer-count data errors fail closed rather than falling back to stale m
   assert.equal(result.available, false);
 });
 
-test("monthly UI and dashboard read derived counts while the database save and import paths remain authoritative", async () => {
+test("monthly UI, dashboard, save RPC, and import refresh enforce the history-completeness trust boundary", async () => {
   const [
     pageSource,
     formSource,
     actionSource,
     dashboardSource,
-    migrationSource,
+    originalMigrationSource,
+    guardMigrationSource,
+    importPageSource,
+    importActionSource,
     packageSource,
     matrixSource,
   ] = await Promise.all([
@@ -255,28 +352,36 @@ test("monthly UI and dashboard read derived counts while the database save and i
     readFile("src/app/(app)/businesses/[businessId]/monthly/actions.ts", "utf8"),
     readFile("src/lib/business/dashboard-month.ts", "utf8"),
     readFile("supabase/migrations/20260906064500_transaction_derived_monthly_customer_counts.sql", "utf8"),
+    readFile("supabase/migrations/20260906123000_transaction_history_completeness_guard.sql", "utf8"),
+    readFile("src/app/(app)/businesses/[businessId]/customers/import/page.tsx", "utf8"),
+    readFile("src/app/(app)/businesses/[businessId]/customers/import/actions.ts", "utf8"),
     readFile("package.json", "utf8"),
     readFile("test/rls/run-transaction-derived-monthly-matrix.mjs", "utf8"),
   ]);
 
-  assert.match(pageSource, /loadTransactionDerivedMonthlyCustomerCounts/);
-  assert.match(pageSource, /customerCountsDerived=\{customerCountsDerived\}/);
+  assert.match(pageSource, /payingCustomersDerived/);
+  assert.match(pageSource, /newCustomersDerived/);
+  assert.match(pageSource, /customerCountsDerived=\{newCustomersDerived\}/);
+  assert.match(pageSource, /period\?\.new_customers/);
   assert.match(formSource, /محسوب تلقائيًا من سجل المعاملات/);
-  assert.match(formSource, /type="hidden" name="new_customers"/);
   assert.doesNotMatch(actionSource, /loadTransactionDerivedMonthlyCustomerCounts/);
   assert.match(actionSource, /target_new_customers: newCustomers\.value/);
   assert.match(actionSource, /target_total_paying_customers: payingCustomers\.value/);
-  assert.match(dashboardSource, /new_customers: derivedCustomerCounts\.counts\.newCustomers/);
+  assert.match(dashboardSource, /derivedCustomerCounts\.counts\.newCustomers === null/);
   assert.match(dashboardSource, /total_paying_customers: derivedCustomerCounts\.counts\.totalPayingCustomers/);
-  assert.match(migrationSource, /monthly-customer-counts:/);
-  assert.match(migrationSource, /create trigger lock_customer_transaction_monthly_counts/);
-  assert.match(migrationSource, /alter function public\.import_customer_transactions\(uuid, text, jsonb\)/);
-  assert.match(migrationSource, /refresh_monthly_customer_counts_for_business/);
-  assert.match(migrationSource, /effective_new_customers := derived_new_customers/);
-  assert.match(migrationSource, /effective_total_paying_customers/);
+  assert.match(originalMigrationSource, /monthly-customer-counts:/);
+  assert.match(originalMigrationSource, /create trigger lock_customer_transaction_monthly_counts/);
+  assert.match(guardMigrationSource, /business_transaction_history_status/);
+  assert.match(guardMigrationSource, /when history_complete then counts\.new_customers/);
+  assert.match(guardMigrationSource, /effective_total_paying_customers := derived_total_paying_customers/);
+  assert.match(guardMigrationSource, /if history_complete then/);
+  assert.match(guardMigrationSource, /set_transaction_history_complete/);
+  assert.match(importPageSource, /أؤكد أنني رفعت كل تاريخ المعاملات المتاح للبزنس/);
+  assert.match(importActionSource, /set_transaction_history_complete/);
   assert.match(packageSource, /run-transaction-derived-monthly-matrix\.mjs/);
   assert.match(matrixSource, /20260906064500_transaction_derived_monthly_customer_counts\.sql/);
-  assert.match(matrixSource, /transaction-derived-monthly-customers\.test\.sql/);
+  assert.match(matrixSource, /20260906123000_transaction_history_completeness_guard\.sql/);
+  assert.match(matrixSource, /transaction-history-completeness\.test\.sql/);
   assert.match(matrixSource, /MIZAN_SAVE_LOCK_HELD/);
   assert.match(matrixSource, /MIZAN_INSERT_LOCK_HELD/);
   assert.match(matrixSource, /wait_event = 'advisory'/);
