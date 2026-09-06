@@ -1,0 +1,228 @@
+name: One-time CodeRabbit temporal fixes
+
+on:
+  push:
+    branches:
+      - agent/separate-transaction-date-time-timezone
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message == 'Apply CodeRabbit temporal import fixes'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/separate-transaction-date-time-timezone
+          fetch-depth: 0
+      - name: Apply reviewed fixes
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one match in {path}, found {count}")
+              p.write_text(text.replace(old, new, 1))
+
+          mapping = "src/lib/business/transaction-column-mapping.ts"
+          replace_once(mapping,
+          '''  for (const field of TRANSACTION_MAPPING_FIELDS) {
+            const aliases = new Set(
+              TRANSACTION_HEADER_ALIASES[field].map((alias) => normalizeTransactionHeader(alias)),
+            );
+            const matches = normalizedHeaders.flatMap((header, index) => (aliases.has(header) ? [index] : []));
+
+            if (matches.length === 1) {
+              mapping = setTransactionFieldColumn(mapping, field, matches[0] as number);
+              recognizedFields.push(field);
+            } else if (matches.length > 1) {
+              ambiguousFields.push(field);
+            }
+          }
+
+          const state = inspectTransactionColumnMapping(mapping);''',
+          '''  for (const field of TRANSACTION_MAPPING_FIELDS) {
+            const aliases = new Set(
+              TRANSACTION_HEADER_ALIASES[field].map((alias) => normalizeTransactionHeader(alias)),
+            );
+            const matches = normalizedHeaders.flatMap((header, index) => (aliases.has(header) ? [index] : []));
+
+            if (matches.length === 1) {
+              mapping = setTransactionFieldColumn(mapping, field, matches[0] as number);
+              recognizedFields.push(field);
+            } else if (matches.length > 1) {
+              ambiguousFields.push(field);
+            }
+          }
+
+          // Legacy gateway exports sometimes label their sole combined ISO timestamp as
+          // "Transaction time" / "Payment time". Keep that auto-mapping only when there is
+          // no separate date header; when Date + Time coexist, they remain distinct fields.
+          if (
+            mapping.transactionDate === null &&
+            mapping.transactionTime !== null &&
+            !ambiguousFields.includes("transactionDate")
+          ) {
+            const combinedTimestampColumn = mapping.transactionTime;
+            mapping = setTransactionFieldColumn(mapping, "transactionDate", combinedTimestampColumn);
+            mapping = setTransactionFieldColumn(mapping, "transactionTime", null);
+            const timeIndex = recognizedFields.indexOf("transactionTime");
+            if (timeIndex >= 0) recognizedFields.splice(timeIndex, 1);
+            recognizedFields.push("transactionDate");
+          }
+
+          const state = inspectTransactionColumnMapping(mapping);''')
+
+          validation = "src/lib/business/transaction-import-validation.ts"
+          replace_once(validation,
+          '''function utcWallClock(parts: DateTimeParts) {
+            return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+          }''',
+          '''function utcWallClock(parts: DateTimeParts) {
+            const value = new Date(0);
+            value.setUTCHours(parts.hour, parts.minute, parts.second, 0);
+            value.setUTCFullYear(parts.year, parts.month - 1, parts.day);
+            return value.getTime();
+          }''')
+
+          parser = "src/lib/business/transaction-source-parser.ts"
+          replace_once(parser,
+          '''export type XlsxStyles = {
+            dateStyleIndexes: Set<number>;
+          };''',
+          '''export type XlsxStyles = {
+            dateStyleIndexes: Set<number>;
+            timeStyleIndexes?: Set<number>;
+          };''')
+
+          replace_once(parser,
+          '''const BUILTIN_DATE_FORMAT_IDS = new Set([
+            14, 15, 16, 17, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 50, 51, 52, 53, 54, 55, 56,
+            57, 58,
+          ]);''',
+          '''const BUILTIN_DATE_FORMAT_IDS = new Set([
+            14, 15, 16, 17, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 50, 51, 52, 53, 54, 55, 56,
+            57, 58,
+          ]);
+          const BUILTIN_TIME_FORMAT_IDS = new Set([18, 19, 20, 21, 45, 47]);''')
+
+          replace_once(parser,
+          '''function parseStyles(xml: string | null): XlsxStyles {
+            const dateFormatIds = new Set(BUILTIN_DATE_FORMAT_IDS);
+            if (!xml) return { dateStyleIndexes: new Set() };
+
+            const sourceXml = stripXmlCommentsOutsideCdata(xml);
+            const searchableXml = maskXmlCdataContents(sourceXml);
+            const customFormats =
+              searchableXml.match(
+                /<(?:[A-Za-z_][\\w.-]*:)?numFmt\\b(?:[^>"']|"[^"]*"|'[^']*')*\\/?\\s*>/gi,
+              ) ?? [];
+            for (const tag of customFormats) {
+              const id = Number(attributeValue(tag, "numFmtId"));
+              const code = attributeValue(tag, "formatCode");
+              if (Number.isInteger(id) && code && customFormatLooksLikeDate(code)) dateFormatIds.add(id);
+            }
+
+            const cellXfs = searchableXml.match(
+              /<(?:[A-Za-z_][\\w.-]*:)?cellXfs\\b[^>]*>([\\s\\S]*?)<\\/(?:[A-Za-z_][\\w.-]*:)?cellXfs>/i,
+            )?.[1];
+            const dateStyleIndexes = new Set<number>();
+            if (!cellXfs) return { dateStyleIndexes };
+
+            const xfTags = cellXfs.match(/<(?:[A-Za-z_][\\w.-]*:)?xf\\b[^>]*\\/?\\s*>/gi) ?? [];
+            xfTags.forEach((tag, index) => {
+              const numFmtId = Number(attributeValue(tag, "numFmtId") ?? 0);
+              if (dateFormatIds.has(numFmtId)) dateStyleIndexes.add(index);
+            });
+            return { dateStyleIndexes };
+          }''',
+          '''function customFormatLooksLikeTime(formatCode: string) {
+            const withoutLiterals = formatCode.replace(/"[^"]*"/g, "").replace(/\\\\./g, "");
+            if (/\\[(?:h+|m+|s+)\\]/i.test(withoutLiterals)) return false;
+            const stripped = withoutLiterals
+              .replace(/\\[[^\\]]*]/g, "")
+              .replace(/_.|\\*./g, "")
+              .toLowerCase();
+            if (/[yd]/.test(stripped)) return false;
+            return /[hs]/.test(stripped);
+          }
+
+          function parseStyles(xml: string | null): XlsxStyles {
+            const dateFormatIds = new Set(BUILTIN_DATE_FORMAT_IDS);
+            const timeFormatIds = new Set(BUILTIN_TIME_FORMAT_IDS);
+            if (!xml) return { dateStyleIndexes: new Set(), timeStyleIndexes: new Set() };
+
+            const sourceXml = stripXmlCommentsOutsideCdata(xml);
+            const searchableXml = maskXmlCdataContents(sourceXml);
+            const customFormats =
+              searchableXml.match(
+                /<(?:[A-Za-z_][\\w.-]*:)?numFmt\\b(?:[^>"']|"[^"]*"|'[^']*')*\\/?\\s*>/gi,
+              ) ?? [];
+            for (const tag of customFormats) {
+              const id = Number(attributeValue(tag, "numFmtId"));
+              const code = attributeValue(tag, "formatCode");
+              if (!Number.isInteger(id) || !code) continue;
+              if (customFormatLooksLikeDate(code)) dateFormatIds.add(id);
+              else if (customFormatLooksLikeTime(code)) timeFormatIds.add(id);
+            }
+
+            const cellXfs = searchableXml.match(
+              /<(?:[A-Za-z_][\\w.-]*:)?cellXfs\\b[^>]*>([\\s\\S]*?)<\\/(?:[A-Za-z_][\\w.-]*:)?cellXfs>/i,
+            )?.[1];
+            const dateStyleIndexes = new Set<number>();
+            const timeStyleIndexes = new Set<number>();
+            if (!cellXfs) return { dateStyleIndexes, timeStyleIndexes };
+
+            const xfTags = cellXfs.match(/<(?:[A-Za-z_][\\w.-]*:)?xf\\b[^>]*\\/?\\s*>/gi) ?? [];
+            xfTags.forEach((tag, index) => {
+              const numFmtId = Number(attributeValue(tag, "numFmtId") ?? 0);
+              if (dateFormatIds.has(numFmtId)) dateStyleIndexes.add(index);
+              else if (timeFormatIds.has(numFmtId)) timeStyleIndexes.add(index);
+            });
+            return { dateStyleIndexes, timeStyleIndexes };
+          }''')
+
+          replace_once(parser,
+          '''function textFragments(xml: string) {''',
+          '''function excelTimeString(serialText: string) {
+            const serial = Number(serialText);
+            if (!Number.isFinite(serial) || serial < 0 || serial >= 1) return serialText;
+            const secondsInDay = 86_400;
+            const roundedSeconds = Math.round(serial * secondsInDay) % secondsInDay;
+            const hour = Math.floor(roundedSeconds / 3_600);
+            const minute = Math.floor((roundedSeconds % 3_600) / 60);
+            const second = roundedSeconds % 60;
+            return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
+          }
+
+          function textFragments(xml: string) {''')
+
+          replace_once(parser,
+          '''  if (Number.isInteger(styleIndex) && styles.dateStyleIndexes.has(styleIndex)) {
+            return excelDateString(value, date1904);
+          }
+          return value;''',
+          '''  if (Number.isInteger(styleIndex) && styles.dateStyleIndexes.has(styleIndex)) {
+            return excelDateString(value, date1904);
+          }
+          if (Number.isInteger(styleIndex) && styles.timeStyleIndexes?.has(styleIndex)) {
+            return excelTimeString(value);
+          }
+          return value;''')
+
+          Path(".github/workflows/one-time-coderabbit-temporal-fixes.yml").unlink()
+          PY
+      - name: Commit fixes
+        run: |
+          git config user.name "mizan-automation"
+          git config user.email "actions@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix temporal import review findings"
+          git push origin HEAD:agent/separate-transaction-date-time-timezone
