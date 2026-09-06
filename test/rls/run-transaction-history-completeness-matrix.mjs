@@ -73,7 +73,8 @@ runPsqlFile(
   environment,
 );
 runPsqlFile("test/business/transaction-history-completeness.test.sql", environment);
+runPsqlFile("test/business/transaction-history-confirmer-delete.test.sql", environment);
 
 console.log(
-  "Transaction-history completeness guard passed default-incomplete, paying/new trust, owner/admin, member/outsider, and direct-write denial tests.",
+  "Transaction-history completeness guard passed default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, and confirmer-deletion audit-retention tests.",
 );
