@@ -19,7 +19,7 @@ test.describe("Decision Engine Top 3 UI", () => {
     await expect(panel.getByText("النمو الحالي يضغط على الربح")).toBeVisible();
     await expect(panel.getByText("الضغط يأتي من تكاليف خارج الميديا")).toBeVisible();
     await expect(panel.getByText("الحضور هو الاختناق الأوضح في الفانل")).toBeVisible();
-    await expect(panel.getByText("التكلفة الكاملة للبزنس لكل عميل جديد", { exact: false })).toBeVisible();
+    await expect(panel.getByText("التكلفة الكاملة للبزنس لكل عميل جديد", { exact: true })).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect
