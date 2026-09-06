@@ -156,7 +156,7 @@ export function autoMapTransactionHeaderRow(row: readonly unknown[]): Transactio
   // Reinterpret it as the required date/timestamp only when no separate date or timezone header exists.
   if (
     mapping.transactionDate === null &&
-    mapping.transactionTime !== null &&
+    mapping.transactionTime != null &&
     mapping.timezone === null &&
     !ambiguousFields.includes("timezone") &&
     !ambiguousFields.includes("transactionDate")
