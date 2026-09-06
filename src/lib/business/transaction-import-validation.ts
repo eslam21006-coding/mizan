@@ -320,13 +320,16 @@ export function normalizeGatewayTransactionRows(
     }
 
     collapsedSourceRows += Math.max(0, group.length - 1);
+    const currencyWasMapped = group.some((row) => row.currency !== undefined);
     normalizedRows.push({
       rowNumber: group[0].rowNumber,
       customerEmail: groupedFieldValue(group, item.transactionId, "customerEmail"),
       transactionDate: groupedFieldValue(group, item.transactionId, "transactionDate"),
       amountCollected,
       transactionId: item.transactionId,
-      currency: groupedFieldValue(group, item.transactionId, "currency"),
+      currency: currencyWasMapped
+        ? groupedFieldValue(group, item.transactionId, "currency")
+        : undefined,
     });
   }
 
