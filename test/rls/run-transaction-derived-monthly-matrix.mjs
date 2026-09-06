@@ -13,6 +13,7 @@ const targetEnvironmentVariables = [
   "PGSERVICEFILE",
 ];
 
+/** Ensures destructive matrix tests can run only against the disposable local test database. */
 function validateDatabaseUrl(value) {
   if (!value) {
     throw new Error(
@@ -39,6 +40,7 @@ function validateDatabaseUrl(value) {
   }
 }
 
+/** Builds a sanitized PostgreSQL child-process environment that cannot redirect the target database. */
 function buildEnvironment() {
   const environment = { ...process.env, PGCONNECT_TIMEOUT: "5" };
   for (const variable of targetEnvironmentVariables) delete environment[variable];
@@ -48,10 +50,12 @@ function buildEnvironment() {
 validateDatabaseUrl(databaseUrl);
 const childEnvironment = buildEnvironment();
 
+/** Returns the common safe psql arguments used by every matrix subprocess. */
 function commonPsqlArgs() {
   return ["--no-psqlrc", "--set", "ON_ERROR_STOP=1", "--dbname", databaseUrl];
 }
 
+/** Executes a SQL file synchronously and fails the matrix immediately on any psql error. */
 function runPsqlFile(sqlFile) {
   const result = spawnSync("psql", [...commonPsqlArgs(), "--file", sqlFile], {
     cwd: repositoryRoot,
@@ -66,6 +70,7 @@ function runPsqlFile(sqlFile) {
   }
 }
 
+/** Executes one SQL command synchronously and returns its trimmed scalar/text output. */
 function runPsqlCommand(sql) {
   const result = spawnSync(
     "psql",
@@ -84,6 +89,7 @@ function runPsqlCommand(sql) {
   return result.stdout.trim();
 }
 
+/** Starts an asynchronous psql session so lock ordering can be tested across real database sessions. */
 function startPsqlSession(commands) {
   const args = commonPsqlArgs();
   for (const command of commands) args.push("--command", command);
@@ -119,10 +125,12 @@ function startPsqlSession(commands) {
   };
 }
 
+/** Waits for a small deterministic delay while polling concurrent test state. */
 function sleep(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
+/** Waits until a spawned psql session emits a synchronization marker or fails. */
 async function waitForMarker(session, marker, timeoutMs = 5_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -137,6 +145,7 @@ async function waitForMarker(session, marker, timeoutMs = 5_000) {
   throw new Error(`Timed out waiting for marker ${marker}. stdout=${session.stdout()}`);
 }
 
+/** Confirms a named database session is actually blocked on the shared advisory lock. */
 async function waitForAdvisoryWait(applicationName, timeoutMs = 5_000) {
   const escapedApplicationName = applicationName.replaceAll("'", "''");
   const deadline = Date.now() + timeoutMs;
@@ -154,6 +163,7 @@ async function waitForAdvisoryWait(applicationName, timeoutMs = 5_000) {
   throw new Error(`Timed out waiting for ${applicationName} to block on the shared advisory lock.`);
 }
 
+/** Awaits a spawned psql session and surfaces stdout/stderr when the session fails. */
 async function requireSuccessfulSession(session, label) {
   const result = await session.exit;
   if (result.code !== 0) {
@@ -163,6 +173,7 @@ async function requireSuccessfulSession(session, label) {
   }
 }
 
+/** Builds authenticated JWT claims for a test mentee session. */
 function claims(userId) {
   return `set request.jwt.claims = '{"sub":"${userId}","role":"authenticated","app_metadata":{"role":"mentee"}}'`;
 }
