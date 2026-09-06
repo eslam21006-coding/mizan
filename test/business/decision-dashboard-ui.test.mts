@@ -106,5 +106,5 @@ test("Decision Engine route is user-facing, load-safe, and preserves locked prod
   assert.match(loader, /previousPeriodLoadError/);
   assert.match(panel, /أهم 3 ملاحظات/);
   assert.match(panel, /التكلفة الكاملة للبزنس لكل عميل جديد/);
-  assert.match(panel, /لا توجد استنتاجات مولدة أو أرقام مفترضة/);
+  assert.match(panel, /لا توجد\s+استنتاجات مولدة أو أرقام مفترضة/);
 });
