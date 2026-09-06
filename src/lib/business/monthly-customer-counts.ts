@@ -30,6 +30,7 @@ export type MonthlyCustomerCountsLoadResult =
       dataLoadError: true;
     };
 
+/** Normalizes a customer email into Mizan's case-insensitive identity key. */
 function normalizedCustomerEmail(value: unknown) {
   const normalized = String(value ?? "").trim().toLowerCase();
   return normalized.length > 0 ? normalized : null;
@@ -66,6 +67,7 @@ export function deriveMonthlyCustomerCounts(
   };
 }
 
+/** Resolves an exact month-start date into an inclusive start and exclusive end bound. */
 function resolveMonthBounds(monthStart: string) {
   const parsed = parseMonthKey(monthStart.slice(0, 7));
   if (!parsed || parsed.monthStart !== monthStart) return null;
@@ -73,6 +75,7 @@ function resolveMonthBounds(monthStart: string) {
   return nextMonthKey ? { start: monthStart, end: `${nextMonthKey}-01` } : null;
 }
 
+/** Loads every successful positive-collection customer identity for one business month. */
 async function loadPositiveCollectionEmails(
   supabase: ServerSupabaseClient,
   businessId: string,
@@ -103,6 +106,7 @@ async function loadPositiveCollectionEmails(
   return emails;
 }
 
+/** Loads customer identities whose acquisition cohort starts in the selected month. */
 async function loadNewCustomerEmails(
   supabase: ServerSupabaseClient,
   businessId: string,
