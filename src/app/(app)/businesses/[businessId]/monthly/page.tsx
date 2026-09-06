@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { requireAuthContext } from "@/lib/auth/context";
+import { loadTransactionDerivedMonthlyCustomerCounts } from "@/lib/business/monthly-customer-counts";
 import {
   currentMonthKeyForTimeZone,
   parseMonthKey,
@@ -30,6 +31,7 @@ const STATUS_MESSAGES: Record<string, string> = {
   "invalid-month": "صيغة الشهر غير صحيحة.",
   "invalid-input": "راجع القيم المدخلة. استخدم أرقامًا موجبة أو اترك القيمة فارغة إذا كانت غير متاحة.",
   "invalid-customers": "عدد العملاء الجدد لا يمكن أن يتجاوز إجمالي العملاء الذين دفعوا خلال الشهر.",
+  "customer-count-load-failed": "تعذر التحقق من أعداد العملاء من سجل المعاملات. لم يتم حفظ الشهر حتى لا نستخدم أرقامًا غير مؤكدة.",
   "save-failed": "تعذر حفظ الشهر. لم يتم حفظ تعديل جزئي.",
   "copy-failed": "تعذر نسخ مصروفات الشهر السابق.",
   "no-previous": "لا توجد بيانات للشهر السابق لنسخها.",
@@ -59,7 +61,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
     parseMonthKey(query.month) ?? parseMonthKey(currentMonthKeyForTimeZone(business.timezone));
   if (!selectedMonth) notFound();
 
-  const [periodResult, streamsResult, expensesResult] = await Promise.all([
+  const [periodResult, streamsResult, expensesResult, customerCountsResult] = await Promise.all([
     supabase
       .from("monthly_periods")
       .select(
@@ -78,6 +80,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
       .select("id,name,category,cost_behavior,is_active,created_at")
       .eq("business_id", businessId)
       .order("created_at", { ascending: true }),
+    loadTransactionDerivedMonthlyCustomerCounts(supabase, businessId, selectedMonth.monthStart),
   ]);
 
   const period = periodResult.data;
@@ -109,10 +112,22 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
   }
 
   const dataLoadError = Boolean(
-    periodResult.error || streamsResult.error || expensesResult.error || entryLoadError,
+    periodResult.error ||
+      streamsResult.error ||
+      expensesResult.error ||
+      customerCountsResult.dataLoadError ||
+      entryLoadError,
   );
   const streams = streamsResult.data ?? [];
   const expenses = expensesResult.data ?? [];
+  const customerCountsDerived = customerCountsResult.available;
+  const effectivePeriod: MonthlyPeriodValues = customerCountsDerived
+    ? {
+        ...(period ?? {}),
+        new_customers: customerCountsResult.counts.newCustomers,
+        total_paying_customers: customerCountsResult.counts.totalPayingCustomers,
+      }
+    : (period as MonthlyPeriodValues);
 
   const revenueEntryById = new Map(
     revenueEntries.map((entry) => [String(entry.revenue_stream_id), entry]),
@@ -301,7 +316,8 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
               currency={business.base_currency}
               revenueRows={revenueRows}
               expenseRows={expenseRows}
-              period={period as MonthlyPeriodValues}
+              period={effectivePeriod}
+              customerCountsDerived={customerCountsDerived}
             />
             <div className={`${styles.saveBar} ${saveBarStyles.mobileSafeSaveBar}`}>
               <div>
@@ -318,7 +334,8 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
               currency={business.base_currency}
               revenueRows={revenueRows}
               expenseRows={expenseRows}
-              period={period as MonthlyPeriodValues}
+              period={effectivePeriod}
+              customerCountsDerived={customerCountsDerived}
             />
           </div>
         ))}

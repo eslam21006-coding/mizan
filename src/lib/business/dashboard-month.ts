@@ -7,6 +7,7 @@ import {
 } from "./calculations";
 import { buildDashboardCalculationInput } from "./dashboard";
 import { loadFunnelMonth } from "./funnel-month";
+import { loadTransactionDerivedMonthlyCustomerCounts } from "./monthly-customer-counts";
 
 export type DashboardMonthLoadResult = {
   periodExists: boolean;
@@ -18,6 +19,10 @@ export type DashboardMonthLoadResult = {
 
 type ServerSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
+/**
+ * Loads one business month and calculates canonical dashboard financials, replacing manual customer
+ * counts with transaction-derived counts whenever imported positive collections make them authoritative.
+ */
 export async function loadDashboardMonth(
   supabase: ServerSupabaseClient,
   businessId: string,
@@ -52,7 +57,7 @@ export async function loadDashboardMonth(
     };
   }
 
-  const [revenueResult, expenseResult, funnelMonth] = await Promise.all([
+  const [revenueResult, expenseResult, funnelMonth, derivedCustomerCounts] = await Promise.all([
     supabase
       .from("monthly_revenue_entries")
       .select(
@@ -68,6 +73,7 @@ export async function loadDashboardMonth(
       .eq("business_id", businessId)
       .eq("monthly_period_id", period.id),
     loadFunnelMonth(supabase, businessId, monthStart),
+    loadTransactionDerivedMonthlyCustomerCounts(supabase, businessId, monthStart),
   ]);
 
   if (revenueResult.error || expenseResult.error) {
@@ -80,9 +86,27 @@ export async function loadDashboardMonth(
     };
   }
 
+  if (derivedCustomerCounts.dataLoadError) {
+    return {
+      periodExists: true,
+      result: null,
+      calculationInput: null,
+      dataLoadError: true,
+      calculationError: false,
+    };
+  }
+
+  const effectivePeriod = derivedCustomerCounts.available
+    ? {
+        ...period,
+        new_customers: derivedCustomerCounts.counts.newCustomers,
+        total_paying_customers: derivedCustomerCounts.counts.totalPayingCustomers,
+      }
+    : period;
+
   try {
     const input = buildDashboardCalculationInput({
-      period,
+      period: effectivePeriod,
       revenueEntries: revenueResult.data ?? [],
       expenseEntries: expenseResult.data ?? [],
       canonicalAdSpend:
