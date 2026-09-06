@@ -62,8 +62,8 @@
   gap: 6px;
 }
 
-.controlForm label > span,
-.periodBadge span {
+.periodBadge span,
+.controlForm label > span {
   color: var(--text-soft);
   font-size: 0.82rem;
   font-weight: 700;
