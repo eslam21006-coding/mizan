@@ -66,6 +66,35 @@ test("invalid or incomplete temporal data is rejected instead of guessed", () =>
   assert.equal(result.issues.some((issue) => issue.code === "TIMEZONE_REQUIRED"), true);
 });
 
+test("gateway-format dates reject nonexistent DST wall-clock times during validation", () => {
+  assert.equal(
+    normalizeTransactionDateTimeForImport("8-Mar-26", "2:30 AM", "America/New_York"),
+    null,
+  );
+
+  const result = validateTransactionImportRows(
+    [
+      {
+        rowNumber: 1,
+        customerEmail: "buyer@example.test",
+        transactionDate: "8-Mar-26",
+        transactionTime: "2:30 AM",
+        timezone: "America/New_York",
+        amountCollected: "29",
+      },
+    ],
+    { baseCurrency: "USD" },
+  );
+
+  assert.equal(result.isValid, false);
+  assert.equal(
+    result.issues.some(
+      (issue) => issue.field === "transactionTime" && issue.code === "TRANSACTION_TIME_INVALID",
+    ),
+    true,
+  );
+});
+
 test("gateway line-item rows share temporal data and still collapse by Transaction ID", () => {
   const normalized = normalizeGatewayTransactionRows([
     {
