@@ -87,7 +87,7 @@ export function TransactionColumnMapper({
 }: TransactionColumnMapperProps) {
   const [mapping, setMapping] = useState<TransactionColumnMapping>(EMPTY_TRANSACTION_COLUMN_MAPPING);
   const [mappingOrigin, setMappingOrigin] = useState<"automatic" | "saved" | "manual">("manual");
-  const [headerDetected, setHeaderDetected] = useState(false);
+  const [autoMappingDetected, setAutoMappingDetected] = useState(false);
   const [headerFingerprint, setHeaderFingerprint] = useState<string | null>(null);
   const [normalizedHeaderRow, setNormalizedHeaderRow] = useState<string[] | null>(null);
   const [mappingMemoryReady, setMappingMemoryReady] = useState(false);
@@ -115,7 +115,7 @@ export function TransactionColumnMapper({
       setMappingMemoryError(false);
       setHeaderFingerprint(null);
       setNormalizedHeaderRow(null);
-      setHeaderDetected(false);
+      setAutoMappingDetected(false);
 
       if (!hasValidColumnCount) {
         setMappingMemoryReady(true);
@@ -135,6 +135,8 @@ export function TransactionColumnMapper({
         }
 
         const automatic = autoMapTransactionHeaderRow(fullHeaderRow);
+        setAutoMappingDetected(automatic.detected);
+
         const completeHeaderLayout = fullHeaderRow.length === preview.totalColumns;
         let fingerprint: string | null = null;
         let normalized: string[] | null = null;
@@ -160,9 +162,6 @@ export function TransactionColumnMapper({
             savedMapping = parseStoredTransactionColumnMapping(data.mapping, preview.totalColumns);
           }
         }
-
-        const recognizedHeader = automatic.detected || savedMapping !== null;
-        setHeaderDetected(recognizedHeader);
 
         if (!mappingTouchedRef.current) {
           if (savedMapping) {
@@ -268,7 +267,7 @@ export function TransactionColumnMapper({
   };
 
   const validationKey = mappingState.isComplete
-    ? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}:${headerDetected ? "header" : "data"}`
+    ? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}`
     : "incomplete";
 
   return (
@@ -290,7 +289,7 @@ export function TransactionColumnMapper({
         {mappingOrigin === "saved" && (
           <p className={styles.mappingHint}>تم استرجاع مطابقة محفوظة لنفس ترتيب عناوين الأعمدة بالكامل.</p>
         )}
-        {mappingOrigin === "automatic" && headerDetected && (
+        {mappingOrigin === "automatic" && autoMappingDetected && (
           <p className={styles.mappingHint}>
             تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.transactionId != null ? " ورقم المعاملة" : ""}{mapping.currency != null ? " والعملة" : ""} من أول صف غير فارغ.
           </p>
@@ -409,9 +408,9 @@ export function TransactionColumnMapper({
           </div>
         )}
 
-        {headerDetected && (
+        {autoMappingDetected && (
           <p className={styles.mappingHint}>
-            تم التعرف على أول صف غير فارغ كعناوين أعمدة، وسيتم استبعاده تلقائيًا عند مراجعة الملف.
+            تم التعرف على أول صف غير فارغ كعناوين أعمدة. في خطوة المراجعة التالية تأكد أن خيار «أول صف غير فارغ يحتوي على عناوين الأعمدة» مفعّل.
           </p>
         )}
       </section>
@@ -424,7 +423,6 @@ export function TransactionColumnMapper({
           preview={preview}
           fileBuffer={fileBuffer}
           mapping={mapping}
-          headerDetected={headerDetected}
           onImportBusyChange={onImportBusyChange}
         />
       )}
