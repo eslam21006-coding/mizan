@@ -19,6 +19,10 @@ export type DashboardMonthLoadResult = {
 
 type ServerSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
+/**
+ * Loads one business month and calculates canonical dashboard financials, replacing manual customer
+ * counts with transaction-derived counts whenever imported positive collections make them authoritative.
+ */
 export async function loadDashboardMonth(
   supabase: ServerSupabaseClient,
   businessId: string,
