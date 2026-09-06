@@ -1,19 +1,19 @@
-import type { createSupabaseServerClient } from "../supabase/server";
-import type { CoreCalculationResult } from "./calculations";
+import type { createSupabaseServerClient } from "../supabase/server.ts";
+import type { CoreCalculationResult } from "./calculations.ts";
 import {
   buildDataQualityProfile,
   type ExternalDataQualitySignal,
-} from "./data-quality";
+} from "./data-quality.ts";
 import {
   generateRuleBasedInsights,
   type DecisionFunnelInput,
   type DecisionInsightCandidate,
   type DecisionRuleEvaluation,
-} from "./decision-insights";
-import { loadDashboardMonth } from "./dashboard-month";
-import type { AdSpendReconciliationResult } from "./funnel-calculations";
-import { loadFunnelMonth } from "./funnel-month";
-import { prioritizeDecisionInsights } from "./insight-prioritization";
+} from "./decision-insights.ts";
+import { loadDashboardMonth } from "./dashboard-month.ts";
+import type { AdSpendReconciliationResult } from "./funnel-calculations.ts";
+import { loadFunnelMonth } from "./funnel-month.ts";
+import { prioritizeDecisionInsights } from "./insight-prioritization.ts";
 
 type ServerSupabaseClient = Awaited<ReturnType<typeof createSupabaseServerClient>>;
 
