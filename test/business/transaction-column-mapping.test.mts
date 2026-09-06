@@ -147,6 +147,34 @@ test("gateway headers from the founder fixture auto-map without manual column se
   });
 });
 
+test("legacy combined Transaction time header still maps as the required timestamp when no timezone exists", () => {
+  const result = autoMapTransactionHeaderRow([
+    "Customer email",
+    "Transaction time",
+    "Total amount paid",
+  ]);
+
+  assert.equal(result.detected, true);
+  assert.equal(result.mapping.transactionDate, 1);
+  assert.equal(result.mapping.transactionTime, null);
+  assert.equal(result.mapping.timezone, null);
+});
+
+test("Transaction time plus Timezone without a date remains incomplete instead of applying legacy fallback", () => {
+  const result = autoMapTransactionHeaderRow([
+    "Customer email",
+    "Transaction time",
+    "Timezone",
+    "Total amount paid",
+  ]);
+
+  assert.equal(result.detected, false);
+  assert.equal(result.mapping.transactionDate, null);
+  assert.equal(result.mapping.transactionTime, 1);
+  assert.equal(result.mapping.timezone, 2);
+  assert.deepEqual(result.mapping.amountCollected, 3);
+});
+
 test("auto-mapping refuses ambiguous required headers instead of guessing", () => {
   const result = autoMapTransactionHeaderRow([
     "Customer email",
