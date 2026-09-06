@@ -158,6 +158,7 @@ export function autoMapTransactionHeaderRow(row: readonly unknown[]): Transactio
     mapping.transactionDate === null &&
     mapping.transactionTime !== null &&
     mapping.timezone === null &&
+    !ambiguousFields.includes("timezone") &&
     !ambiguousFields.includes("transactionDate")
   ) {
     const combinedTimestampColumn = mapping.transactionTime;
