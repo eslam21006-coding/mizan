@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { fingerprintTransactionHeaderRow } from "../../src/lib/business/transaction-column-mapping.ts";
-import { readTransactionHeaderRow } from "../../src/lib/business/transaction-header-source.ts";
+import {
+  materializeTransactionHeaderRow,
+  readTransactionHeaderRow,
+} from "../../src/lib/business/transaction-header-source.ts";
 
 function csvSource(text: string, fileName = "transactions.csv") {
   const bytes = new TextEncoder().encode(text);
@@ -66,4 +69,22 @@ test("CSV header reader keeps quoted delimiters inside the full header cell", as
     "Internal, transaction id",
     "Currency",
   ]);
+});
+
+test("blank sparse XLSX rows never materialize a far-right dense header array", () => {
+  const result = materializeTransactionHeaderRow(new Map(), 16_383, false);
+  assert.equal(result, null);
+});
+
+test("non-empty sparse XLSX headers preserve blank positions when materialized", () => {
+  const result = materializeTransactionHeaderRow(
+    new Map([
+      [0, "Customer email"],
+      [4, "Total amount paid"],
+    ]),
+    4,
+    true,
+  );
+
+  assert.deepEqual(result, ["Customer email", "", "", "", "Total amount paid"]);
 });
