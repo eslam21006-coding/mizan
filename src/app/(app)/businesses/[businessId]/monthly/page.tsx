@@ -12,6 +12,7 @@ import {
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { copyPreviousMonthExpenses, saveMonthlyActuals } from "./actions";
+import trustStyles from "./customer-history-trust.module.css";
 import {
   MonthlyEntryForm,
   type ExpenseInputRow,
@@ -37,6 +38,7 @@ const STATUS_MESSAGES: Record<string, string> = {
   "no-previous": "لا توجد بيانات للشهر السابق لنسخها.",
 };
 
+/** Converts nullable persisted values into monthly-form text values. */
 function asInputValue(value: unknown) {
   return value === null || value === undefined ? "" : String(value);
 }
@@ -120,11 +122,15 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
   );
   const streams = streamsResult.data ?? [];
   const expenses = expensesResult.data ?? [];
-  const customerCountsDerived = customerCountsResult.available;
-  const effectivePeriod: MonthlyPeriodValues = customerCountsDerived
+  const payingCustomersDerived = customerCountsResult.available;
+  const newCustomersDerived =
+    customerCountsResult.available && customerCountsResult.counts.newCustomers !== null;
+  const effectivePeriod: MonthlyPeriodValues = payingCustomersDerived
     ? {
         ...(period ?? {}),
-        new_customers: customerCountsResult.counts.newCustomers,
+        new_customers: newCustomersDerived
+          ? customerCountsResult.counts.newCustomers
+          : period?.new_customers,
         total_paying_customers: customerCountsResult.counts.totalPayingCustomers,
       }
     : (period as MonthlyPeriodValues);
@@ -189,6 +195,26 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
   const isErrorStatus = Boolean(
     query.status && !["saved", "copied", "no-previous"].includes(query.status),
   );
+
+  const historyTrustNotice = payingCustomersDerived && !newCustomersDerived ? (
+    <div className={trustStyles.trustNotice} role="status">
+      <strong>إجمالي العملاء الذين دفعوا خلال الشهر محسوب تلقائيًا</strong>
+      <span className={trustStyles.trustValue} dir="ltr">
+        {customerCountsResult.counts.totalPayingCustomers}
+      </span>
+      <p>
+        «العملاء الجدد» يظل إدخالًا يدويًا لأن ميزان لم يتلقَّ تأكيدًا بأن سجل المعاملات مرفوع من بداية البزنس. هذا يمنع اعتبار عميل قديم اشترى Upsell عميلًا جديدًا.
+      </p>
+      {canManage && (
+        <Link
+          className={trustStyles.trustLink}
+          href={`/businesses/${businessId}/customers/import`}
+        >
+          مراجعة وتأكيد اكتمال سجل المعاملات
+        </Link>
+      )}
+    </div>
+  ) : null;
 
   return (
     <div className="page-stack">
@@ -307,17 +333,18 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
           <form
             key={`monthly-form-${selectedMonth.monthKey}`}
             action={saveMonthlyActuals}
-            className={styles.monthForm}
+            className={`${styles.monthForm} ${payingCustomersDerived && !newCustomersDerived ? trustStyles.payingDerivedOnly : ""}`}
           >
             <input type="hidden" name="business_id" value={businessId} />
             <input type="hidden" name="month" value={selectedMonth.monthKey} />
+            {historyTrustNotice}
             <MonthlyEntryForm
               editable
               currency={business.base_currency}
               revenueRows={revenueRows}
               expenseRows={expenseRows}
               period={effectivePeriod}
-              customerCountsDerived={customerCountsDerived}
+              customerCountsDerived={newCustomersDerived}
             />
             <div className={`${styles.saveBar} ${saveBarStyles.mobileSafeSaveBar}`}>
               <div>
@@ -329,13 +356,14 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
           </form>
         ) : (
           <div key={`monthly-read-${selectedMonth.monthKey}`} className={styles.monthForm}>
+            {historyTrustNotice}
             <MonthlyEntryForm
               editable={false}
               currency={business.base_currency}
               revenueRows={revenueRows}
               expenseRows={expenseRows}
               period={effectivePeriod}
-              customerCountsDerived={customerCountsDerived}
+              customerCountsDerived={newCustomersDerived}
             />
           </div>
         ))}

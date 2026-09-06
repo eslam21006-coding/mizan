@@ -1,0 +1,45 @@
+.payingDerivedOnly :global(label:has(input[name="total_paying_customers"])) {
+  display: none;
+}
+
+.payingDerivedOnly :global(section:has(input[name="new_customers"]) > div:has(input[name="new_customers"])) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.payingDerivedOnly :global(section:has(input[name="new_customers"]) > p) {
+  display: none;
+}
+
+.trustNotice {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.trustNotice strong,
+.trustNotice p {
+  margin: 0;
+}
+
+.trustNotice p {
+  color: var(--text-soft);
+  line-height: 1.7;
+}
+
+.trustValue {
+  display: inline-flex;
+  width: fit-content;
+  gap: 6px;
+  align-items: baseline;
+  font-weight: 800;
+}
+
+.trustLink {
+  color: var(--brand);
+  font-weight: 750;
+  text-decoration: none;
+}
