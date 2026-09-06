@@ -89,9 +89,10 @@ test("Decision dashboard fails closed when the comparison evidence is insufficie
   assert.ok(model.evaluations.some((evaluation) => evaluation.status === "insufficient"));
 });
 
-test("Decision Engine route is user-facing, RTL-ready, and preserves locked product wording", () => {
+test("Decision Engine route is user-facing, load-safe, and preserves locked product wording", () => {
   const navigation = fs.readFileSync("src/lib/navigation.ts", "utf8");
   const page = fs.readFileSync("src/app/(app)/insights/page.tsx", "utf8");
+  const loader = fs.readFileSync("src/lib/business/decision-dashboard.ts", "utf8");
   const panel = fs.readFileSync(
     "src/app/(app)/insights/decision-insights-panel.tsx",
     "utf8",
@@ -99,6 +100,10 @@ test("Decision Engine route is user-facing, RTL-ready, and preserves locked prod
 
   assert.match(navigation, /label: "أهم الملاحظات", href: "\/insights"/);
   assert.match(page, /loadDecisionDashboard/);
+  assert.match(page, /!decision\.currentPeriodLoadError && !decision\.currentPeriodExists/);
+  assert.match(page, /!decision\.previousPeriodLoadError/);
+  assert.match(loader, /currentPeriodLoadError/);
+  assert.match(loader, /previousPeriodLoadError/);
   assert.match(panel, /أهم 3 ملاحظات/);
   assert.match(panel, /التكلفة الكاملة للبزنس لكل عميل جديد/);
   assert.match(panel, /لا توجد استنتاجات مولدة أو أرقام مفترضة/);
