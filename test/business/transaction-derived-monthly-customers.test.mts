@@ -12,6 +12,8 @@ type Filter = (row: Row) => boolean;
 type FakeDatabase = Record<string, Row[]>;
 
 class FakeQuery implements PromiseLike<{ data: Row[] | null; error: Error | null; count: number | null }> {
+  private readonly rows: Row[];
+  private readonly forcedError: Error | null;
   private readonly filters: Filter[] = [];
   private selectedColumns: string[] | null = null;
   private wantsCount = false;
@@ -21,7 +23,10 @@ class FakeQuery implements PromiseLike<{ data: Row[] | null; error: Error | null
   private rangeStart: number | null = null;
   private rangeEnd: number | null = null;
 
-  constructor(private readonly rows: Row[], private readonly forcedError: Error | null = null) {}
+  constructor(rows: Row[], forcedError: Error | null = null) {
+    this.rows = rows;
+    this.forcedError = forcedError;
+  }
 
   select(columns: string, options?: { count?: string; head?: boolean }) {
     this.selectedColumns = columns.split(",").map((column) => column.trim());
@@ -102,10 +107,13 @@ class FakeQuery implements PromiseLike<{ data: Row[] | null; error: Error | null
 }
 
 class FakeSupabase {
-  constructor(
-    private readonly database: FakeDatabase,
-    private readonly errorTables = new Set<string>(),
-  ) {}
+  private readonly database: FakeDatabase;
+  private readonly errorTables: Set<string>;
+
+  constructor(database: FakeDatabase, errorTables = new Set<string>()) {
+    this.database = database;
+    this.errorTables = errorTables;
+  }
 
   from(table: string) {
     return new FakeQuery(
