@@ -5,7 +5,7 @@ import {
   calculateCoreFinancials,
   type CoreCalculationInput,
 } from "../../src/lib/business/calculations.ts";
-import { buildDecisionDashboardModel } from "../../src/lib/business/decision-dashboard.ts";
+import { buildDecisionDashboardModel } from "../../src/lib/business/decision-dashboard-model.ts";
 import { calculateFunnelMetrics } from "../../src/lib/business/funnel-calculations.ts";
 
 function businessMonth({ revenue, overhead }: { revenue: string; overhead: string }) {
