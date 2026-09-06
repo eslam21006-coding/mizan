@@ -10,6 +10,7 @@ import {
 
 const TRANSACTION_HEADER_COLUMN_LIMIT = 100_000;
 
+/** Rejects file metadata or bytes that fall outside the supported transaction-import boundary. */
 function assertSourceBoundary(fileSize: number, buffer: ArrayBuffer) {
   if (
     !Number.isSafeInteger(fileSize) ||
@@ -21,6 +22,7 @@ function assertSourceBoundary(fileSize: number, buffer: ArrayBuffer) {
   }
 }
 
+/** Returns the lowercase file extension used to choose the transaction source parser. */
 function extensionOf(fileName: string) {
   const normalized = fileName.trim().toLowerCase();
   const dot = normalized.lastIndexOf(".");
@@ -113,6 +115,30 @@ function firstNonEmptyCsvRow(text: string, delimiter: string) {
   return null;
 }
 
+/**
+ * Materializes a sparse worksheet row only when it contains real content.
+ * Blank sparse rows therefore never allocate a dense array up to a far-right XLSX column.
+ */
+export function materializeTransactionHeaderRow(
+  cells: ReadonlyMap<number, string>,
+  maxColumn: number,
+  rowHasContent: boolean,
+) {
+  if (!rowHasContent || maxColumn < 0) return null;
+  if (!Number.isSafeInteger(maxColumn) || maxColumn >= TRANSACTION_HEADER_COLUMN_LIMIT) {
+    throw new RangeError("Transaction XLSX header exceeds the supported column limit.");
+  }
+
+  const values = Array.from({ length: maxColumn + 1 }, () => "");
+  for (const [column, value] of cells) {
+    if (!Number.isSafeInteger(column) || column < 0 || column > maxColumn) {
+      throw new RangeError("Transaction XLSX header contains an invalid column position.");
+    }
+    values[column] = value;
+  }
+  return values;
+}
+
 /** Returns the first non-empty XLSX worksheet row with sparse column positions preserved. */
 function firstNonEmptyWorksheetRow(source: Awaited<ReturnType<typeof readFirstXlsxWorksheet>>) {
   const rowPattern =
@@ -120,7 +146,8 @@ function firstNonEmptyWorksheetRow(source: Awaited<ReturnType<typeof readFirstXl
 
   for (const rowMatch of source.worksheetXml.matchAll(rowPattern)) {
     const rowBody = rowMatch[2] ?? "";
-    const values: string[] = [];
+    const cells = new Map<number, string>();
+    let maxColumn = -1;
     let rowHasContent = false;
     let sequentialColumn = 0;
     const cellPattern =
@@ -142,13 +169,16 @@ function firstNonEmptyWorksheetRow(source: Awaited<ReturnType<typeof readFirstXl
         source.styles,
         source.date1904,
       );
-      while (values.length <= column) values.push("");
-      values[column] = value;
-      rowHasContent ||= value !== "";
+      maxColumn = Math.max(maxColumn, column);
+      if (value !== "") {
+        cells.set(column, value);
+        rowHasContent = true;
+      }
       sequentialColumn = column + 1;
     }
 
-    if (rowHasContent) return values;
+    const values = materializeTransactionHeaderRow(cells, maxColumn, rowHasContent);
+    if (values) return values;
   }
 
   return null;
