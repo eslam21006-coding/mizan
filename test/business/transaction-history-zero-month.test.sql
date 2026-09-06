@@ -13,6 +13,35 @@ values (
   '77777777-bbbb-4777-8777-777777777777'
 );
 
+insert into public.customer_transaction_sources (business_id, source, created_by_user_id)
+values (
+  '77777777-aaaa-4777-8777-777777777777',
+  'stripe',
+  '77777777-7777-4777-8777-777777777777'
+);
+
+insert into public.customer_transactions (
+  id, business_id, source, source_transaction_id, import_row_token, customer_email,
+  transaction_date, source_transaction_at, transaction_at, amount_collected,
+  transaction_type, normalized_outcome, currency, source_row_number, imported_by_user_id
+) values (
+  '77000000-0000-4000-8000-000000000010',
+  '77777777-aaaa-4777-8777-777777777777',
+  'stripe',
+  'history-zero-prior-purchase',
+  '77000000-0000-4000-8000-000000000011',
+  'priorbuyer@example.test',
+  '2026-08-05',
+  '2026-08-05T12:00:00+03:00',
+  '2026-08-05T09:00:00Z',
+  100,
+  'collection',
+  'successful',
+  'USD',
+  1,
+  '77777777-7777-4777-8777-777777777777'
+);
+
 set local role authenticated;
 set local request.jwt.claims =
   '{"sub":"77777777-7777-4777-8777-777777777777","role":"authenticated","app_metadata":{"role":"mentee"}}';
@@ -81,13 +110,6 @@ select public.set_transaction_history_complete(
 
 reset role;
 
-insert into public.customer_transaction_sources (business_id, source, created_by_user_id)
-values (
-  '77777777-aaaa-4777-8777-777777777777',
-  'stripe',
-  '77777777-7777-4777-8777-777777777777'
-);
-
 insert into public.customer_transactions (
   id, business_id, source, source_transaction_id, import_row_token, customer_email,
   transaction_date, source_transaction_at, transaction_at, amount_collected,
@@ -106,7 +128,7 @@ insert into public.customer_transactions (
   'collection',
   'successful',
   'USD',
-  1,
+  2,
   '77777777-7777-4777-8777-777777777777'
 );
 

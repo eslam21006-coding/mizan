@@ -72,10 +72,19 @@ runPsqlFile(
   "supabase/migrations/20260906123000_transaction_history_completeness_guard.sql",
   environment,
 );
+runPsqlFile(
+  "test/business/transaction-history-completion-integrity-preexisting.fixture.sql",
+  environment,
+);
+runPsqlFile(
+  "supabase/migrations/20260906184600_transaction_history_completion_integrity.sql",
+  environment,
+);
+runPsqlFile("test/business/transaction-history-completion-integrity.test.sql", environment);
 runPsqlFile("test/business/transaction-history-completeness.test.sql", environment);
 runPsqlFile("test/business/transaction-history-confirmer-delete.test.sql", environment);
 runPsqlFile("test/business/transaction-history-zero-month.test.sql", environment);
 
 console.log(
-  "Transaction-history completeness guard passed default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, and manual-count conflict tests.",
+  "Transaction-history completeness guard passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, and manual-count conflict tests.",
 );
