@@ -25,6 +25,7 @@ export const menteeNavigation: NavigationItem[] = [
   { label: "الفانلز", href: "/funnels", icon: "funnel" },
   { label: "المحاكي", href: "/simulator", icon: "simulator" },
   { label: "خطة الوصول للهدف", href: "/target-plan", icon: "target" },
+  { label: "أهم الملاحظات", href: "/insights", icon: "analytics" },
   { label: "التحليلات", href: "/analytics", icon: "analytics" },
   { label: "الإعدادات", href: "/settings", icon: "settings" },
 ];

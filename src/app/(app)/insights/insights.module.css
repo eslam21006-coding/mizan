@@ -1,0 +1,343 @@
+.page {
+  display: grid;
+  gap: 22px;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.secondaryAction,
+.primaryAction {
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.secondaryAction {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.primaryAction {
+  background: var(--brand);
+  color: #fff;
+}
+
+.controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(190px, 0.7fr);
+  gap: 14px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  padding: 16px;
+}
+
+.controlForm {
+  display: flex;
+  align-items: end;
+  gap: 10px;
+}
+
+.controlForm label {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 6px;
+}
+
+.periodBadge span,
+.controlForm label > span {
+  color: var(--text-soft);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.controlForm select,
+.controlForm input,
+.controlForm button {
+  min-height: 42px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  font: inherit;
+}
+
+.controlForm select,
+.controlForm input {
+  min-width: 0;
+  width: 100%;
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 10px;
+}
+
+.controlForm button {
+  cursor: pointer;
+  background: var(--brand);
+  color: #fff;
+  padding: 8px 14px;
+  font-weight: 700;
+}
+
+.periodBadge {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 10px 13px;
+}
+
+.periodBadge strong {
+  font-size: 0.95rem;
+}
+
+.periodBadge small {
+  color: var(--text-soft);
+}
+
+.panel {
+  display: grid;
+  gap: 18px;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface);
+  padding: clamp(18px, 2.5vw, 28px);
+  box-shadow: 0 12px 30px rgb(24 49 39 / 5%);
+}
+
+.headingRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.headingRow > div {
+  min-width: 0;
+}
+
+.kicker {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--brand);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+}
+
+.headingRow h2 {
+  margin: 0;
+  font-size: clamp(1.4rem, 2vw, 1.85rem);
+}
+
+.headingRow p {
+  max-width: 760px;
+  margin: 8px 0 0;
+  color: var(--text-soft);
+  line-height: 1.8;
+}
+
+.countBadge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: var(--surface-soft);
+  color: var(--brand-strong);
+  padding: 7px 11px;
+  font-weight: 800;
+}
+
+.insightList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.insightCard {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-soft);
+  padding: 16px;
+}
+
+.insightCard[data-severity="critical"] {
+  border-inline-start: 4px solid var(--danger);
+}
+
+.insightCard[data-severity="warning"] {
+  border-inline-start: 4px solid #b8791d;
+}
+
+.insightCard[data-severity="context"] {
+  border-inline-start: 4px solid var(--brand);
+}
+
+.cardTopline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.rank,
+.severity,
+.subject {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.rank {
+  justify-content: center;
+  min-width: 26px;
+  background: var(--brand);
+  color: #fff;
+}
+
+.severity {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.subject {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  background: rgb(39 103 80 / 10%);
+  color: var(--brand-strong);
+}
+
+.insightCard h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.55;
+}
+
+.insightCard p {
+  margin: 0;
+  color: var(--text-soft);
+  line-height: 1.8;
+}
+
+.fallback,
+.errorPanel,
+.emptyState {
+  border-radius: 16px;
+  padding: 18px;
+}
+
+.fallback {
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-soft);
+}
+
+.fallback strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.fallback p,
+.errorPanel p,
+.emptyState p {
+  margin: 7px 0 0;
+  color: var(--text-soft);
+  line-height: 1.75;
+}
+
+.errorPanel {
+  border: 1px solid rgb(166 59 53 / 25%);
+  background: rgb(166 59 53 / 7%);
+}
+
+.emptyState {
+  border: 1px dashed var(--border-strong);
+  background: var(--surface);
+}
+
+.emptyState h2 {
+  margin: 5px 0 0;
+}
+
+.definitionNote {
+  margin: 0;
+  border-radius: 12px;
+  background: rgb(39 103 80 / 7%);
+  color: var(--text-soft);
+  padding: 10px 12px;
+  line-height: 1.75;
+}
+
+@media (max-width: 1000px) {
+  .controls {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .periodBadge {
+    grid-column: 1 / -1;
+  }
+
+  .insightList {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 680px) {
+  .header,
+  .headingRow {
+    flex-direction: column;
+  }
+
+  .headerActions,
+  .headerActions a,
+  .controls,
+  .controlForm {
+    width: 100%;
+  }
+
+  .controls {
+    grid-template-columns: 1fr;
+  }
+
+  .periodBadge {
+    grid-column: auto;
+  }
+
+  .controlForm {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .controlForm button {
+    width: 100%;
+  }
+
+  .countBadge {
+    align-self: flex-start;
+  }
+}
