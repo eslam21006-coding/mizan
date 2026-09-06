@@ -175,6 +175,7 @@ export function parseStoredTransactionColumnMapping(
   return inspectTransactionColumnMapping(mapping).isComplete ? mapping : null;
 }
 
+/** Builds bounded native column choices while sampling only the preview-visible columns. */
 export function buildTransactionColumnChoices(input: {
   totalColumns: number;
   previewRows: readonly (readonly string[])[];
@@ -208,6 +209,7 @@ export function buildTransactionColumnChoices(input: {
   });
 }
 
+/** Reports whether required fields are complete and whether any source column is assigned twice. */
 export function inspectTransactionColumnMapping(
   mapping: TransactionColumnMapping,
 ): TransactionColumnMappingState {
@@ -226,6 +228,7 @@ export function inspectTransactionColumnMapping(
   };
 }
 
+/** Returns a new mapping with one field assigned to a validated zero-based source column. */
 export function setTransactionFieldColumn(
   mapping: TransactionColumnMapping,
   field: TransactionMappingField,
