@@ -293,7 +293,10 @@ function partsInTimezone(timestamp: number, timezone: string): DateTimeParts | n
 }
 
 function utcWallClock(parts: DateTimeParts) {
-  return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+  const value = new Date(0);
+  value.setUTCHours(parts.hour, parts.minute, parts.second, 0);
+  value.setUTCFullYear(parts.year, parts.month - 1, parts.day);
+  return value.getTime();
 }
 
 function sameDateTimeParts(left: DateTimeParts | null, right: DateTimeParts) {

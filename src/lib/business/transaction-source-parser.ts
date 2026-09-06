@@ -24,6 +24,7 @@ export class TransactionSourceParseError extends Error {
 
 export type XlsxStyles = {
   dateStyleIndexes: Set<number>;
+  timeStyleIndexes?: Set<number>;
 };
 
 export type FirstXlsxWorksheet = {
@@ -54,6 +55,7 @@ const BUILTIN_DATE_FORMAT_IDS = new Set([
   14, 15, 16, 17, 22, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 50, 51, 52, 53, 54, 55, 56,
   57, 58,
 ]);
+const BUILTIN_TIME_FORMAT_IDS = new Set([18, 19, 20, 21, 45, 47]);
 const CRC32_TABLE = Array.from({ length: 256 }, (_, index) => {
   let value = index;
   for (let bit = 0; bit < 8; bit += 1) {
@@ -744,9 +746,21 @@ function customFormatLooksLikeDate(formatCode: string) {
   return /m/.test(stripped);
 }
 
+function customFormatLooksLikeTime(formatCode: string) {
+  const withoutLiterals = formatCode.replace(/"[^"]*"/g, "").replace(/\./g, "");
+  if (/\[(?:h+|m+|s+)\]/i.test(withoutLiterals)) return false;
+  const stripped = withoutLiterals
+    .replace(/\[[^\]]*]/g, "")
+    .replace(/_.|\*./g, "")
+    .toLowerCase();
+  if (/[yd]/.test(stripped)) return false;
+  return /[hs]/.test(stripped);
+}
+
 function parseStyles(xml: string | null): XlsxStyles {
   const dateFormatIds = new Set(BUILTIN_DATE_FORMAT_IDS);
-  if (!xml) return { dateStyleIndexes: new Set() };
+  const timeFormatIds = new Set(BUILTIN_TIME_FORMAT_IDS);
+  if (!xml) return { dateStyleIndexes: new Set(), timeStyleIndexes: new Set() };
 
   const sourceXml = stripXmlCommentsOutsideCdata(xml);
   const searchableXml = maskXmlCdataContents(sourceXml);
@@ -757,21 +771,25 @@ function parseStyles(xml: string | null): XlsxStyles {
   for (const tag of customFormats) {
     const id = Number(attributeValue(tag, "numFmtId"));
     const code = attributeValue(tag, "formatCode");
-    if (Number.isInteger(id) && code && customFormatLooksLikeDate(code)) dateFormatIds.add(id);
+    if (!Number.isInteger(id) || !code) continue;
+    if (customFormatLooksLikeDate(code)) dateFormatIds.add(id);
+    else if (customFormatLooksLikeTime(code)) timeFormatIds.add(id);
   }
 
   const cellXfs = searchableXml.match(
     /<(?:[A-Za-z_][\w.-]*:)?cellXfs\b[^>]*>([\s\S]*?)<\/(?:[A-Za-z_][\w.-]*:)?cellXfs>/i,
   )?.[1];
   const dateStyleIndexes = new Set<number>();
-  if (!cellXfs) return { dateStyleIndexes };
+  const timeStyleIndexes = new Set<number>();
+  if (!cellXfs) return { dateStyleIndexes, timeStyleIndexes };
 
   const xfTags = cellXfs.match(/<(?:[A-Za-z_][\w.-]*:)?xf\b[^>]*\/?\s*>/gi) ?? [];
   xfTags.forEach((tag, index) => {
     const numFmtId = Number(attributeValue(tag, "numFmtId") ?? 0);
     if (dateFormatIds.has(numFmtId)) dateStyleIndexes.add(index);
+    else if (timeFormatIds.has(numFmtId)) timeStyleIndexes.add(index);
   });
-  return { dateStyleIndexes };
+  return { dateStyleIndexes, timeStyleIndexes };
 }
 
 export function columnIndexFromReference(reference: string | null) {
@@ -802,6 +820,17 @@ function excelDateString(serialText: string, date1904: boolean) {
   return iso.endsWith("T00:00:00.000Z")
     ? iso.slice(0, 10)
     : iso.replace("T", " ").replace(/\.000Z$/, "Z");
+}
+
+function excelTimeString(serialText: string) {
+  const serial = Number(serialText);
+  if (!Number.isFinite(serial) || serial < 0 || serial >= 1) return serialText;
+  const secondsInDay = 86_400;
+  const roundedSeconds = Math.round(serial * secondsInDay) % secondsInDay;
+  const hour = Math.floor(roundedSeconds / 3_600);
+  const minute = Math.floor((roundedSeconds % 3_600) / 60);
+  const second = roundedSeconds % 60;
+  return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}:${String(second).padStart(2, "0")}`;
 }
 
 function textFragments(xml: string) {
@@ -843,6 +872,9 @@ export function cellDisplayValue(
   const styleIndex = Number(attributeValue(tag, "s") ?? -1);
   if (Number.isInteger(styleIndex) && styles.dateStyleIndexes.has(styleIndex)) {
     return excelDateString(value, date1904);
+  }
+  if (Number.isInteger(styleIndex) && styles.timeStyleIndexes?.has(styleIndex)) {
+    return excelTimeString(value);
   }
   return value;
 }
