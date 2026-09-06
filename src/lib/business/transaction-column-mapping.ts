@@ -152,12 +152,12 @@ export function autoMapTransactionHeaderRow(row: readonly unknown[]): Transactio
     }
   }
 
-
   // Legacy exports can label their only combined ISO timestamp as Transaction time or Payment time.
-  // Reinterpret it as the required date/timestamp only when no separate date header was recognized.
+  // Reinterpret it as the required date/timestamp only when no separate date or timezone header exists.
   if (
     mapping.transactionDate === null &&
     mapping.transactionTime !== null &&
+    mapping.timezone === null &&
     !ambiguousFields.includes("transactionDate")
   ) {
     const combinedTimestampColumn = mapping.transactionTime;
