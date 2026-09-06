@@ -145,6 +145,46 @@ begin
   end if;
 end $$;
 
+select public.import_customer_transactions(
+  '51515151-aaaa-4515-8515-515151515151',
+  'stripe',
+  '[{"row_number":6,"transaction_id":"tx-dave-august","import_row_token":"62000000-0000-4000-8000-000000000006","customer_email":"dave@example.test","transaction_date":"2026-08-03T12:00:00+03:00","amount_collected":"25","transaction_type":"collection","normalized_outcome":"successful","currency":"USD"}]'::jsonb
+);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from public.monthly_periods
+    where business_id = '51515151-aaaa-4515-8515-515151515151'
+      and month_start = '2026-08-01'
+      and new_customers = 1
+      and total_paying_customers = 1
+  ) then
+    raise exception 'Import did not refresh a previously manual monthly period';
+  end if;
+end $$;
+
+select public.import_customer_transactions(
+  '51515151-aaaa-4515-8515-515151515151',
+  'stripe',
+  '[{"row_number":7,"transaction_id":"tx-alice-backdated","import_row_token":"62000000-0000-4000-8000-000000000007","customer_email":"alice@example.test","transaction_date":"2026-06-05T12:00:00+03:00","amount_collected":"10","transaction_type":"collection","normalized_outcome":"successful","currency":"USD"}]'::jsonb
+);
+
+do $$
+begin
+  if not exists (
+    select 1
+    from public.monthly_periods
+    where business_id = '51515151-aaaa-4515-8515-515151515151'
+      and month_start = '2026-07-01'
+      and new_customers = 0
+      and total_paying_customers = 2
+  ) then
+    raise exception 'Backdated import did not refresh acquisition counts for an existing later period';
+  end if;
+end $$;
+
 reset role;
 set local role authenticated;
 set local request.jwt.claims =
@@ -173,15 +213,42 @@ end $$;
 reset role;
 
 do $$
+declare
+  import_definition text;
 begin
   if not exists (
     select 1
-    from pg_trigger
-    where tgname = 'lock_customer_transaction_monthly_counts'
-      and tgrelid = 'public.customer_transactions'::regclass
-      and not tgisinternal
+    from pg_catalog.pg_trigger as trigger
+    join pg_catalog.pg_proc as procedure on procedure.oid = trigger.tgfoid
+    join pg_catalog.pg_namespace as namespace on namespace.oid = procedure.pronamespace
+    where trigger.tgname = 'lock_customer_transaction_monthly_counts'
+      and trigger.tgrelid = 'public.customer_transactions'::regclass
+      and not trigger.tgisinternal
+      and namespace.nspname = 'private'
+      and procedure.proname = 'lock_customer_transaction_monthly_counts'
+      and pg_catalog.pg_get_functiondef(procedure.oid) like '%pg_advisory_xact_lock%'
+      and pg_catalog.pg_get_functiondef(procedure.oid) like '%monthly-customer-counts:%'
   ) then
-    raise exception 'customer transaction serialization trigger is missing';
+    raise exception 'customer transaction serialization trigger or shared advisory-lock key is missing';
+  end if;
+
+  import_definition :=
+    pg_catalog.pg_get_functiondef('public.import_customer_transactions(uuid,text,jsonb)'::regprocedure);
+
+  if position('monthly-customer-counts:' in import_definition) = 0
+     or position('private.refresh_monthly_customer_counts_for_business' in import_definition) = 0 then
+    raise exception 'transaction import wrapper does not retain the shared lock through monthly refresh';
+  end if;
+
+  if not exists (
+    select 1
+    from pg_catalog.pg_proc as procedure
+    join pg_catalog.pg_namespace as namespace on namespace.oid = procedure.pronamespace
+    where namespace.nspname = 'private'
+      and procedure.proname = 'refresh_monthly_customer_counts_for_business'
+      and pg_catalog.pg_get_function_identity_arguments(procedure.oid) = 'target_business_id uuid'
+  ) then
+    raise exception 'private monthly customer-count refresh worker is missing';
   end if;
 end $$;
 

@@ -240,13 +240,23 @@ test("customer-count data errors fail closed rather than falling back to stale m
   assert.equal(result.available, false);
 });
 
-test("monthly UI and dashboard read derived counts while the database save RPC remains authoritative", async () => {
-  const [pageSource, formSource, actionSource, dashboardSource, migrationSource] = await Promise.all([
+test("monthly UI and dashboard read derived counts while the database save and import paths remain authoritative", async () => {
+  const [
+    pageSource,
+    formSource,
+    actionSource,
+    dashboardSource,
+    migrationSource,
+    packageSource,
+    matrixSource,
+  ] = await Promise.all([
     readFile("src/app/(app)/businesses/[businessId]/monthly/page.tsx", "utf8"),
     readFile("src/app/(app)/businesses/[businessId]/monthly/monthly-entry-form.tsx", "utf8"),
     readFile("src/app/(app)/businesses/[businessId]/monthly/actions.ts", "utf8"),
     readFile("src/lib/business/dashboard-month.ts", "utf8"),
     readFile("supabase/migrations/20260906064500_transaction_derived_monthly_customer_counts.sql", "utf8"),
+    readFile("package.json", "utf8"),
+    readFile("test/rls/run-transaction-derived-monthly-matrix.mjs", "utf8"),
   ]);
 
   assert.match(pageSource, /loadTransactionDerivedMonthlyCustomerCounts/);
@@ -260,6 +270,14 @@ test("monthly UI and dashboard read derived counts while the database save RPC r
   assert.match(dashboardSource, /total_paying_customers: derivedCustomerCounts\.counts\.totalPayingCustomers/);
   assert.match(migrationSource, /monthly-customer-counts:/);
   assert.match(migrationSource, /create trigger lock_customer_transaction_monthly_counts/);
+  assert.match(migrationSource, /alter function public\.import_customer_transactions\(uuid, text, jsonb\)/);
+  assert.match(migrationSource, /refresh_monthly_customer_counts_for_business/);
   assert.match(migrationSource, /effective_new_customers := derived_new_customers/);
   assert.match(migrationSource, /effective_total_paying_customers/);
+  assert.match(packageSource, /run-transaction-derived-monthly-matrix\.mjs/);
+  assert.match(matrixSource, /20260906064500_transaction_derived_monthly_customer_counts\.sql/);
+  assert.match(matrixSource, /transaction-derived-monthly-customers\.test\.sql/);
+  assert.match(matrixSource, /MIZAN_SAVE_LOCK_HELD/);
+  assert.match(matrixSource, /MIZAN_INSERT_LOCK_HELD/);
+  assert.match(matrixSource, /wait_event = 'advisory'/);
 });

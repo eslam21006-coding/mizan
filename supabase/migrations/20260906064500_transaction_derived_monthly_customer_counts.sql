@@ -24,6 +24,104 @@ create trigger lock_customer_transaction_monthly_counts
   before insert on public.customer_transactions
   for each row execute function private.lock_customer_transaction_monthly_counts();
 
+create or replace function private.refresh_monthly_customer_counts_for_business(
+  target_business_id uuid
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  with positive_collections as (
+    select transaction.customer_email, transaction.transaction_date
+    from public.customer_transactions as transaction
+    where transaction.business_id = target_business_id
+      and transaction.normalized_outcome = 'successful'
+      and transaction.transaction_type = 'collection'
+      and transaction.amount_collected > 0
+  ),
+  first_collection as (
+    select
+      collection.customer_email,
+      min(collection.transaction_date) as acquisition_date
+    from positive_collections as collection
+    group by collection.customer_email
+  ),
+  monthly_counts as (
+    select
+      date_trunc('month', collection.transaction_date)::date as month_start,
+      count(distinct collection.customer_email)::integer as total_paying_customers,
+      count(distinct collection.customer_email) filter (
+        where date_trunc('month', acquired.acquisition_date)::date
+          = date_trunc('month', collection.transaction_date)::date
+      )::integer as new_customers
+    from positive_collections as collection
+    join first_collection as acquired using (customer_email)
+    group by date_trunc('month', collection.transaction_date)::date
+  )
+  update public.monthly_periods as period
+  set
+    new_customers = counts.new_customers,
+    total_paying_customers = counts.total_paying_customers
+  from monthly_counts as counts
+  where period.business_id = target_business_id
+    and period.month_start = counts.month_start;
+end;
+$$;
+
+revoke all on function private.refresh_monthly_customer_counts_for_business(uuid) from public;
+revoke all on function private.refresh_monthly_customer_counts_for_business(uuid) from anon;
+revoke all on function private.refresh_monthly_customer_counts_for_business(uuid) from authenticated;
+revoke all on function private.refresh_monthly_customer_counts_for_business(uuid) from service_role;
+
+alter function public.import_customer_transactions(uuid, text, jsonb)
+  set schema private;
+
+revoke all on function private.import_customer_transactions(uuid, text, jsonb) from public;
+revoke all on function private.import_customer_transactions(uuid, text, jsonb) from anon;
+revoke all on function private.import_customer_transactions(uuid, text, jsonb) from authenticated;
+revoke all on function private.import_customer_transactions(uuid, text, jsonb) from service_role;
+
+create function public.import_customer_transactions(
+  p_business_id uuid,
+  p_source text,
+  p_rows jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  import_result jsonb;
+begin
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(
+      'monthly-customer-counts:' || p_business_id::text,
+      0
+    )
+  );
+
+  import_result := private.import_customer_transactions(
+    p_business_id,
+    p_source,
+    p_rows
+  );
+
+  perform private.refresh_monthly_customer_counts_for_business(p_business_id);
+
+  return import_result;
+end;
+$$;
+
+revoke all on function public.import_customer_transactions(uuid, text, jsonb) from public;
+revoke all on function public.import_customer_transactions(uuid, text, jsonb) from anon;
+revoke all on function public.import_customer_transactions(uuid, text, jsonb) from authenticated;
+revoke all on function public.import_customer_transactions(uuid, text, jsonb) from service_role;
+grant execute on function public.import_customer_transactions(uuid, text, jsonb) to authenticated;
+grant execute on function public.import_customer_transactions(uuid, text, jsonb) to service_role;
+
 create or replace function private.save_monthly_actuals_preserve_missing(
   target_business_id uuid,
   target_month_start date,
