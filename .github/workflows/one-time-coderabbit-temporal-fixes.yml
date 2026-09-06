@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   patch:
-    if: github.event.head_commit.message == 'Retry CodeRabbit temporal import fixes'
+    if: github.event.head_commit.message == 'Retry CodeRabbit temporal fixes 2'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,8 +26,9 @@ jobs:
           def replace_once(path, old, new):
               p = Path(path)
               text = p.read_text()
-              if text.count(old) != 1:
-                  raise SystemExit(f"Expected one marker in {path}: {old[:80]!r}")
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f"Expected one marker in {path}, found {count}: {old[:100]!r}")
               p.write_text(text.replace(old, new, 1))
 
           def replace_between(path, start, end, replacement):
@@ -41,6 +42,7 @@ jobs:
                   raise SystemExit(f"Missing end marker in {path}: {end!r}")
               p.write_text(text[:start_index] + replacement + text[end_index:])
 
+          # 1) Preserve legacy auto-mapping where a sole combined timestamp header is named "Transaction time".
           mapping = "src/lib/business/transaction-column-mapping.ts"
           marker = "\n  const state = inspectTransactionColumnMapping(mapping);"
           legacy_fallback = '''
@@ -61,6 +63,7 @@ jobs:
             }'''
           replace_once(mapping, marker, legacy_fallback + marker)
 
+          # 2) Preserve ISO years 0001-0099 when making a wall-clock timestamp.
           validation = "src/lib/business/transaction-import-validation.ts"
           replace_between(
               validation,
@@ -73,6 +76,7 @@ jobs:
             return value.getTime();''',
           )
 
+          # 3) Decode native XLSX time-formatted numeric cells before clock parsing.
           parser = "src/lib/business/transaction-source-parser.ts"
           replace_once(
               parser,
@@ -130,6 +134,7 @@ jobs:
             });
             return { dateStyleIndexes, timeStyleIndexes };
           }
+
           '''
           replace_between(
               parser,
@@ -151,21 +156,22 @@ jobs:
 
           '''
           replace_once(parser, "function textFragments(xml: string) {", excel_time + "function textFragments(xml: string) {")
-          replace_once(
+
+          replace_between(
               parser,
-              '''  if (Number.isInteger(styleIndex) && styles.dateStyleIndexes.has(styleIndex)) {
-            return excelDateString(value, date1904);
-          }
-          return value;''',
-              '''  if (Number.isInteger(styleIndex) && styles.dateStyleIndexes.has(styleIndex)) {
-            return excelDateString(value, date1904);
-          }
-          if (Number.isInteger(styleIndex) && styles.timeStyleIndexes?.has(styleIndex)) {
-            return excelTimeString(value);
-          }
-          return value;''',
+              '  const styleIndex = Number(attributeValue(tag, "s") ?? -1);',
+              "\n}\n\nexport async function readFirstXlsxWorksheet",
+              '''  const styleIndex = Number(attributeValue(tag, "s") ?? -1);
+            if (Number.isInteger(styleIndex) && styles.dateStyleIndexes.has(styleIndex)) {
+              return excelDateString(value, date1904);
+            }
+            if (Number.isInteger(styleIndex) && styles.timeStyleIndexes?.has(styleIndex)) {
+              return excelTimeString(value);
+            }
+            return value;''',
           )
 
+          # Remove this one-off workflow from the product branch before committing.
           Path(".github/workflows/one-time-coderabbit-temporal-fixes.yml").unlink()
           PY
       - name: Commit fixes
