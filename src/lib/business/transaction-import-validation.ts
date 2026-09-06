@@ -100,6 +100,7 @@ const BASIC_EMAIL_PATTERN = /^[^\s@]+@[^\s@]+$/;
 const ISO_DATE_PATTERN = /^(\d{4})-(\d{2})-(\d{2})$/;
 const ISO_DATE_TIME_PATTERN =
   /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,9})?)?(?:Z|[+-]\d{2}:\d{2})?$/;
+const ISO_ZONED_DATE_TIME_PATTERN = /(?:Z|[+-]\d{2}:\d{2})$/;
 const GATEWAY_DATE_PATTERN = /^(\d{1,2})-([A-Za-z]{3})-(\d{2}|\d{4})$/;
 const TIME_12_HOUR_PATTERN = /^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i;
 const TIME_24_HOUR_PATTERN = /^(\d{1,2}):(\d{2})(?::(\d{2}))?$/;
@@ -595,7 +596,7 @@ function rowIssues(
       parseTransactionTime(transactionTime) &&
       normalizeTransactionTimezone(timezone) &&
       isValidTransactionDate(transactionDate) &&
-      !ISO_DATE_TIME_PATTERN.test(transactionDate) &&
+      !ISO_ZONED_DATE_TIME_PATTERN.test(transactionDate) &&
       normalizeTransactionDateTimeForImport(transactionDate, transactionTime, timezone) === null
     ) {
       issues.push({ rowNumber: row.rowNumber, field: "transactionTime", code: "TRANSACTION_TIME_INVALID", rawValue: row.transactionTime ?? "" });
