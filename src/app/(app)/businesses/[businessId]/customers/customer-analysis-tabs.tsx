@@ -21,6 +21,7 @@ export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
   const [visitedIndexes, setVisitedIndexes] = useState(() => new Set([0]));
   const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
+  /** Selects a tab, records it as visited for lazy content mounting, and optionally moves focus. */
   const selectTab = (index: number, focus = false) => {
     const normalizedIndex = (index + panels.length) % panels.length;
     setActiveIndex(normalizedIndex);
@@ -33,6 +34,7 @@ export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
     if (focus) tabRefs.current[normalizedIndex]?.focus();
   };
 
+  /** Applies horizontal RTL keyboard behavior plus Home/End navigation to the tab list. */
   const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
@@ -88,21 +90,18 @@ export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
       </div>
 
       <div className={styles.analysisPanelShell}>
-        {panels.map((panel, index) => {
-          if (!visitedIndexes.has(index)) return null;
-          return (
-            <div
-              key={panel.id}
-              id={`${instanceId}-${panel.id}-panel`}
-              role="tabpanel"
-              aria-labelledby={`${instanceId}-${panel.id}-tab`}
-              hidden={activeIndex !== index}
-              className={styles.analysisPanel}
-            >
-              {panel.content}
-            </div>
-          );
-        })}
+        {panels.map((panel, index) => (
+          <div
+            key={panel.id}
+            id={`${instanceId}-${panel.id}-panel`}
+            role="tabpanel"
+            aria-labelledby={`${instanceId}-${panel.id}-tab`}
+            hidden={activeIndex !== index}
+            className={styles.analysisPanel}
+          >
+            {visitedIndexes.has(index) ? panel.content : null}
+          </div>
+        ))}
       </div>
     </section>
   );
