@@ -72,7 +72,17 @@ export async function loadDashboardMonth(
     loadTransactionDerivedMonthlyCustomerCounts(supabase, businessId, monthStart),
   ]);
 
-  if (revenueResult.error || expenseResult.error || derivedCustomerCounts.dataLoadError) {
+  if (revenueResult.error || expenseResult.error) {
+    return {
+      periodExists: true,
+      result: null,
+      calculationInput: null,
+      dataLoadError: true,
+      calculationError: false,
+    };
+  }
+
+  if (derivedCustomerCounts.dataLoadError) {
     return {
       periodExists: true,
       result: null,
