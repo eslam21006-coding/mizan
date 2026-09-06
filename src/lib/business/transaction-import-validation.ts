@@ -56,6 +56,7 @@ export type TransactionImportValidationResult = {
   collapsedSourceRows: number;
   ignoredNonCashRows: number;
   ignoredNonCashTransactions: number;
+  ignoredDetailRows: number;
   issueCount: number;
   issues: TransactionValidationIssue[];
   issuesTruncated: boolean;
@@ -68,6 +69,7 @@ export type GatewayTransactionNormalizationResult = {
   collapsedSourceRows: number;
   ignoredNonCashRows: number;
   ignoredNonCashTransactions: number;
+  ignoredDetailRows: number;
 };
 
 type TransactionGroupConflictField =
@@ -467,6 +469,10 @@ function normalizeTemporalRow(row: TransactionValidationInputRow): TransactionVa
   };
 }
 
+function isIgnorableDetailRow(row: TransactionValidationInputRow) {
+  return !row.transactionDate.trim() && !row.amountCollected.trim();
+}
+
 export function normalizeGatewayTransactionRows(
   rows: readonly TransactionValidationInputRow[],
   options: { skipFirstRow?: boolean } = {},
@@ -504,9 +510,14 @@ export function normalizeGatewayTransactionRows(
   let collapsedSourceRows = 0;
   let ignoredNonCashRows = 0;
   let ignoredNonCashTransactions = 0;
+  let ignoredDetailRows = 0;
 
   for (const item of order) {
     if (item.kind === "row") {
+      if (isIgnorableDetailRow(item.row)) {
+        ignoredDetailRows += 1;
+        continue;
+      }
       normalizedRows.push(normalizeTemporalRow(item.row));
       continue;
     }
@@ -551,6 +562,7 @@ export function normalizeGatewayTransactionRows(
     collapsedSourceRows,
     ignoredNonCashRows,
     ignoredNonCashTransactions,
+    ignoredDetailRows,
   };
 }
 
@@ -662,6 +674,7 @@ export function validateTransactionImportRows(
     collapsedSourceRows: normalized.collapsedSourceRows,
     ignoredNonCashRows: normalized.ignoredNonCashRows,
     ignoredNonCashTransactions: normalized.ignoredNonCashTransactions,
+    ignoredDetailRows: normalized.ignoredDetailRows,
     issueCount,
     issues,
     issuesTruncated: issueCount > issues.length,
