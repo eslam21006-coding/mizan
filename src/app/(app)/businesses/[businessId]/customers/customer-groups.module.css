@@ -166,18 +166,18 @@
   display: none;
 }
 
-.setupDisclosure > summary > span:first-child {
+.setupSummaryText {
   min-width: 0;
   display: grid;
   gap: 3px;
 }
 
-.setupDisclosure > summary strong {
+.setupSummaryTitle {
   color: var(--text);
   font-size: 12px;
 }
 
-.setupDisclosure > summary small {
+.setupSummaryDescription {
   color: var(--text-soft);
   font-size: 10px;
   line-height: 1.5;
