@@ -14,7 +14,7 @@ type CustomerAnalysisTabsProps = {
   panels: CustomerAnalysisPanel[];
 };
 
-/** Keeps deep customer analyses available without stacking four full tables on one page. */
+/** Keeps deeper customer analyses available without stacking full tables on one page. */
 export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
   const instanceId = useId().replaceAll(":", "");
   const [activeIndex, setActiveIndex] = useState(0);
@@ -55,11 +55,9 @@ export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
     <section className={styles.analysisSection} aria-labelledby="customer-analysis-title">
       <div className={styles.sectionHeading}>
         <div>
-          <span className={styles.kicker}>من الصورة العامة إلى التفاصيل</span>
-          <h2 id="customer-analysis-title">تحليل العملاء</h2>
-          <p>
-            ابدأ بقيمة العميل المحققة، ثم انتقل لمصدر الإيراد وربح المساهمة أو تفاصيل العملاء عند الحاجة.
-          </p>
+          <span className={styles.kicker}>التفاصيل عند الحاجة</span>
+          <h2 id="customer-analysis-title">اختر التحليل الذي تحتاجه</h2>
+          <p>ابدأ بقيمة العميل مع الوقت، وانتقل لباقي التفاصيل فقط عندما تحتاجها.</p>
         </div>
       </div>
 
@@ -82,8 +80,8 @@ export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
               onClick={() => selectTab(index)}
               onKeyDown={(event) => onTabKeyDown(event, index)}
             >
-              <span>{panel.eyebrow}</span>
               <strong>{panel.label}</strong>
+              <span>{panel.eyebrow}</span>
             </button>
           );
         })}
