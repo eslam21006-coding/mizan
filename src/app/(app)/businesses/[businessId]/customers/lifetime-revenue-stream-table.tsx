@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import styles from "./customer-groups.module.css";
 
@@ -25,6 +26,7 @@ type Props = {
   baseCurrency: string;
 };
 
+/** Maps the stored revenue-stream type to its founder-facing label. */
 function streamTypeLabel(value: LifetimeRevenueStreamRow["revenue_stream_type"]) {
   if (value === "front_end") return "Front-End";
   if (value === "backend") return "Backend";
@@ -32,15 +34,13 @@ function streamTypeLabel(value: LifetimeRevenueStreamRow["revenue_stream_type"])
   return "غير منسوب";
 }
 
-function money(value: string, currency: string) {
-  return `${value} ${currency}`;
-}
-
+/** Renders lifetime realized cash by explicitly attributed revenue stream. */
 export function LifetimeRevenueStreamTable({ businessId, baseCurrency }: Props) {
   const [rows, setRows] = useState<LifetimeRevenueStreamRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /** Loads the authorized lifetime revenue-stream analysis for the selected business. */
   const loadRows = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -102,10 +102,8 @@ export function LifetimeRevenueStreamTable({ businessId, baseCurrency }: Props) 
       <div className={styles.groupHeading}>
         <div>
           <span className={styles.kicker}>القيمة المحققة حسب مصدر الإيراد</span>
-          <h2 id="lifetime-stream-title">تحليل مصادر الإيراد مدى الحياة</h2>
-          <p>
-            يعتمد فقط على ربط صريح للمعاملات. ميزان لا يخمّن مصدر الإيراد من بوابة الدفع أو قيمة المعاملة.
-          </p>
+          <h2 id="lifetime-stream-title">من أين جاء التحصيل؟</h2>
+          <p>يعتمد هذا التحليل فقط على الربط الصريح للمعاملات. ميزان لا يخمّن مصدر الإيراد.</p>
         </div>
         <Link className={styles.retryButton} href={`/businesses/${businessId}/customers/revenue-stream-attribution`}>
           ربط المعاملات
@@ -114,7 +112,7 @@ export function LifetimeRevenueStreamTable({ businessId, baseCurrency }: Props) 
 
       {unattributed && (
         <div className={styles.mappingHint}>
-          يوجد صافي تحصيل غير منسوب بقيمة {money(unattributed.net_cash_collected_text, unattributed.currency ?? baseCurrency)}.
+          يوجد صافي تحصيل غير منسوب بقيمة {formatMoneyText(unattributed.net_cash_collected_text, unattributed.currency ?? baseCurrency)}.
         </div>
       )}
 
@@ -141,11 +139,11 @@ export function LifetimeRevenueStreamTable({ businessId, baseCurrency }: Props) 
                     {row.is_unattributed && <small>يحتاج ربطًا يدويًا</small>}
                   </td>
                   <td>{streamTypeLabel(row.revenue_stream_type)}</td>
-                  <td dir="ltr">{String(row.customers_with_activity)}</td>
-                  <td dir="ltr">{String(row.transaction_count)}</td>
-                  <td dir="ltr">{money(row.gross_cash_collected_text, currency)}</td>
-                  <td dir="ltr">{money(row.refunds_text, currency)}</td>
-                  <td dir="ltr"><strong>{money(row.net_cash_collected_text, currency)}</strong></td>
+                  <td dir="ltr">{formatCountText(row.customers_with_activity)}</td>
+                  <td dir="ltr">{formatCountText(row.transaction_count)}</td>
+                  <td dir="ltr">{formatMoneyText(row.gross_cash_collected_text, currency)}</td>
+                  <td dir="ltr">{formatMoneyText(row.refunds_text, currency)}</td>
+                  <td dir="ltr"><strong>{formatMoneyText(row.net_cash_collected_text, currency)}</strong></td>
                 </tr>
               );
             })}

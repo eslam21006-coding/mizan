@@ -87,12 +87,13 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
 
     await page.goto("/customers");
     const businessCard = page.locator("article").filter({ hasText: businessName });
-    await businessCard.getByRole("link", { name: "تجميع العملاء" }).click();
+    await businessCard.getByRole("link", { name: "عرض تحليل العملاء" }).click();
 
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await expect(page.getByRole("heading", { name: `عملاء ${businessName}` })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "العملاء", level: 2 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "العملاء و LTV" })).toBeVisible();
+    await page.getByRole("tab", { name: /سجل العملاء/ }).click();
+    await expect(page.getByRole("heading", { name: "من دفع ومتى؟", level: 2 })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "إجمالي التحصيل" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "الاسترجاعات" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "صافي التحصيل" })).toBeVisible();
@@ -103,7 +104,6 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
     await expect(page.getByText("30 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("120 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("-5 EGP", { exact: true })).toBeVisible();
-    await expect(page.getByText(/يُجمع كل بريد إلكتروني كعميل واحد/)).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() =>

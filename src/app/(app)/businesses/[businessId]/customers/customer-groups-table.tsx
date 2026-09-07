@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import styles from "./customer-groups.module.css";
 
@@ -28,15 +29,7 @@ type CustomerGroupsTableProps = {
   timezone: string;
 };
 
-function exactDisplay(value: number | string | null | undefined) {
-  if (value === null || value === undefined) return "—";
-  return String(value);
-}
-
-function moneyDisplay(value: string, currency: string) {
-  return `${value} ${currency}`;
-}
-
+/** Formats an optional transaction timestamp in the business reporting timezone. */
 function timestampDisplay(value: string | null, timezone: string) {
   if (!value) return "—";
   const date = new Date(value);
@@ -48,6 +41,7 @@ function timestampDisplay(value: string | null, timezone: string) {
   }).format(date);
 }
 
+/** Renders the paginated customer transaction ledger without changing stored transaction semantics. */
 export function CustomerGroupsTable({
   businessId,
   baseCurrency,
@@ -59,6 +53,7 @@ export function CustomerGroupsTable({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /** Loads one authorized customer-ledger page from the RLS-protected transaction-group view. */
   const loadRows = useCallback(
     async (isActive: () => boolean = () => true) => {
       setIsLoading(true);
@@ -150,13 +145,13 @@ export function CustomerGroupsTable({
     <section className={styles.groupPanel} aria-labelledby="customer-groups-title">
       <div className={styles.groupHeading}>
         <div>
-          <span className={styles.kicker}>العملاء</span>
-          <h2 id="customer-groups-title">العملاء</h2>
-          <p>يُجمع كل بريد إلكتروني كعميل واحد داخل هذا البزنس، مع إبقاء التحصيلات والاسترجاعات منفصلة وواضحة.</p>
+          <span className={styles.kicker}>سجل العملاء</span>
+          <h2 id="customer-groups-title">من دفع ومتى؟</h2>
+          <p>كل بريد إلكتروني يمثل عميلًا واحدًا داخل هذا البزنس، مع التحصيلات والاسترجاعات وصافي التحصيل.</p>
         </div>
         <div className={styles.identityCount}>
           <span>عدد العملاء</span>
-          <strong>{totalCount ?? rows.length}</strong>
+          <strong>{formatCountText(totalCount ?? rows.length)}</strong>
         </div>
       </div>
 
@@ -181,7 +176,7 @@ export function CustomerGroupsTable({
                   <td>
                     <strong dir="ltr">{row.customer_email}</strong>
                     <small>
-                      {exactDisplay(row.collection_count)} تحصيل · {exactDisplay(row.refund_count)} استرجاع
+                      {formatCountText(row.collection_count)} تحصيل · {formatCountText(row.refund_count)} استرجاع
                     </small>
                   </td>
                   <td>
@@ -194,11 +189,11 @@ export function CustomerGroupsTable({
                       <span className={styles.notAcquired}>لم يتم اكتساب العميل بعد</span>
                     )}
                   </td>
-                  <td dir="ltr">{exactDisplay(row.transaction_count)}</td>
-                  <td dir="ltr">{moneyDisplay(row.gross_cash_collected_text, currency)}</td>
-                  <td dir="ltr">{moneyDisplay(row.refunds_text, currency)}</td>
+                  <td dir="ltr">{formatCountText(row.transaction_count)}</td>
+                  <td dir="ltr">{formatMoneyText(row.gross_cash_collected_text, currency)}</td>
+                  <td dir="ltr">{formatMoneyText(row.refunds_text, currency)}</td>
                   <td dir="ltr">
-                    <strong>{moneyDisplay(row.net_cash_collected_text, currency)}</strong>
+                    <strong>{formatMoneyText(row.net_cash_collected_text, currency)}</strong>
                   </td>
                   <td>{timestampDisplay(row.last_transaction_at, timezone)}</td>
                 </tr>
@@ -217,8 +212,8 @@ export function CustomerGroupsTable({
           الصفحة السابقة
         </button>
         <span>
-          الصفحة {page + 1}
-          {pageCount !== null ? ` من ${pageCount}` : ""}
+          الصفحة {formatCountText(page + 1)}
+          {pageCount !== null ? ` من ${formatCountText(pageCount)}` : ""}
         </span>
         <button
           type="button"
