@@ -56,8 +56,8 @@ export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
       <div className={styles.sectionHeading}>
         <div>
           <span className={styles.kicker}>التفاصيل عند الحاجة</span>
-          <h2 id="customer-analysis-title">اختر التحليل الذي تحتاجه</h2>
-          <p>ابدأ بقيمة العميل مع الوقت، وانتقل لباقي التفاصيل فقط عندما تحتاجها.</p>
+          <h2 id="customer-analysis-title">اختر ما تريد معرفته عن عملائك</h2>
+          <p>ابدأ بمتوسط ما دفعه العميل منذ أول شراء، ثم افتح باقي التفاصيل عندما تحتاجها.</p>
         </div>
       </div>
 
