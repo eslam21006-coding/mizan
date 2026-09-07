@@ -26,6 +26,7 @@ type Props = {
   baseCurrency: string;
 };
 
+/** Maps the stored revenue-stream type to its founder-facing label. */
 function streamTypeLabel(value: LifetimeRevenueStreamRow["revenue_stream_type"]) {
   if (value === "front_end") return "Front-End";
   if (value === "backend") return "Backend";
@@ -33,11 +34,13 @@ function streamTypeLabel(value: LifetimeRevenueStreamRow["revenue_stream_type"])
   return "غير منسوب";
 }
 
+/** Renders lifetime realized cash by explicitly attributed revenue stream. */
 export function LifetimeRevenueStreamTable({ businessId, baseCurrency }: Props) {
   const [rows, setRows] = useState<LifetimeRevenueStreamRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /** Loads the authorized lifetime revenue-stream analysis for the selected business. */
   const loadRows = useCallback(async () => {
     setIsLoading(true);
     setError(null);
