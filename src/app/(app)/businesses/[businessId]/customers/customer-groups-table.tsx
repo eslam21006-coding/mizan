@@ -29,6 +29,7 @@ type CustomerGroupsTableProps = {
   timezone: string;
 };
 
+/** Formats an optional transaction timestamp in the business reporting timezone. */
 function timestampDisplay(value: string | null, timezone: string) {
   if (!value) return "—";
   const date = new Date(value);
@@ -40,6 +41,7 @@ function timestampDisplay(value: string | null, timezone: string) {
   }).format(date);
 }
 
+/** Renders the paginated customer transaction ledger without changing stored transaction semantics. */
 export function CustomerGroupsTable({
   businessId,
   baseCurrency,
@@ -51,6 +53,7 @@ export function CustomerGroupsTable({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /** Loads one authorized customer-ledger page from the RLS-protected transaction-group view. */
   const loadRows = useCallback(
     async (isActive: () => boolean = () => true) => {
       setIsLoading(true);
