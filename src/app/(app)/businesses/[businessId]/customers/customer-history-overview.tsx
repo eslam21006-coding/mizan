@@ -90,7 +90,7 @@ export function CustomerHistoryOverview({
         </article>
 
         <article className={styles.metricCard}>
-          <span>متوسط صافي التحصيل لكل عميل</span>
+          <span>صافي التحصيل لكل عميل دافع</span>
           <strong dir="ltr">{revenuePerPayingCustomer}</strong>
           <small>Net Cash ÷ العملاء الدافعين · ليس LTV</small>
         </article>
@@ -104,7 +104,7 @@ export function CustomerHistoryOverview({
       )}
 
       <p className={styles.ltvNote}>
-        <strong>Observed LTV / قيمة العميل المحققة حتى الآن</strong> يُحسب لكل كوهورت في التحليل أدناه، وليس من متوسط صافي التحصيل لكل عميل.
+        <strong>Observed LTV / قيمة العميل المحققة حتى الآن</strong> يُحسب لكل كوهورت في التحليل أدناه، وليس من صافي التحصيل لكل عميل دافع.
       </p>
     </section>
   );
