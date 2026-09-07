@@ -205,6 +205,47 @@ begin
   end;
 end $$;
 
+-- Browser validation accepts up to 100,000 non-empty source rows, so every accepted
+-- transaction token set must remain verifiable after persistence.
+do $$
+declare
+  tokens uuid[];
+  summary jsonb;
+begin
+  select array_agg(lpad(to_hex(i), 32, '0')::uuid order by i)
+  into tokens
+  from generate_series(1, 100000) as i;
+
+  summary := public.transaction_import_completion_summary(
+    '91919191-aaaa-4919-8919-919191919191',
+    tokens
+  );
+
+  if summary ->> 'requested_token_count' <> '100000'
+    or summary ->> 'persisted_inserted_count' <> '0' then
+    raise exception 'completion verification did not accept the full 100000-row source boundary';
+  end if;
+end $$;
+
+do $$
+declare
+  tokens uuid[];
+begin
+  select array_agg(lpad(to_hex(i), 32, '0')::uuid order by i)
+  into tokens
+  from generate_series(1, 100001) as i;
+
+  begin
+    perform public.transaction_import_completion_summary(
+      '91919191-aaaa-4919-8919-919191919191',
+      tokens
+    );
+    raise exception 'completion verification accepted more tokens than the source reader permits';
+  exception when invalid_parameter_value then
+    null;
+  end;
+end $$;
+
 set local request.jwt.claims =
   '{"sub":"92929292-9292-4929-8929-929292929292","role":"authenticated","app_metadata":{"role":"mentee"}}';
 
