@@ -12,6 +12,22 @@ begin
     return new;
   end if;
 
+  -- Serialize every use of one definitive gateway ID before looking for either an existing ID or
+  -- a legacy no-ID row. This keeps concurrent retries on different signatures from racing into the
+  -- partial unique source-ID index while preserving the guarded RPC's ON CONFLICT behavior.
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtextextended(
+      concat_ws(
+        E'\x1f',
+        'source-transaction-id',
+        new.business_id::text,
+        new.source,
+        new.source_transaction_id
+      ),
+      0
+    )
+  );
+
   -- A stable source ID already stored for this business/source remains the definitive duplicate key.
   if exists (
     select 1
@@ -43,7 +59,7 @@ begin
     pg_catalog.hashtextextended('legacy-transaction-id:' || reconciliation_lock_key, 0)
   );
 
-  -- Recheck the definitive key after taking the reconciliation lock.
+  -- Recheck the definitive key after taking both reconciliation locks.
   if exists (
     select 1
     from public.customer_transactions as existing
