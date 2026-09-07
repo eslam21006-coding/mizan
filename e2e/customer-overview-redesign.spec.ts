@@ -19,7 +19,7 @@ test.describe("Customer and LTV overview redesign", () => {
     await expect(historyOverview.getByText("العملاء المكتسبون")).toBeVisible();
     await expect(historyOverview.getByText("صافي التحصيل", { exact: true })).toBeVisible();
     await expect(historyOverview.getByText("العملاء المتكررون")).toBeVisible();
-    await expect(historyOverview.getByText("متوسط صافي التحصيل لكل عميل")).toBeVisible();
+    await expect(historyOverview.getByText("صافي التحصيل لكل عميل دافع", { exact: true })).toBeVisible();
     await expect(historyOverview.getByText("1,260", { exact: true })).toBeVisible();
     await expect(historyOverview.getByText("321,575.88 USD", { exact: true })).toBeVisible();
     await expect(historyOverview.getByText("262", { exact: true })).toBeVisible();
