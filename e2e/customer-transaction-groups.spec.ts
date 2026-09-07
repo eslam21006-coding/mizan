@@ -117,7 +117,7 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
     const requestsBeforeFilter = customerGroupRequests.length;
     await page.getByLabel("اعرض").selectOption("repeat");
     await expect.poll(() => customerGroupRequests.length).toBeGreaterThan(requestsBeforeFilter);
-    await expect.poll(() => customerGroupRequests.at(-1)?.searchParams.get("transaction_count")).toBe("gt.1");
+    await expect.poll(() => customerGroupRequests.at(-1)?.searchParams.get("collection_count")).toBe("gt.1");
 
     const requestsBeforeSort = customerGroupRequests.length;
     await page.getByLabel("رتّب حسب").selectOption("net_cash_desc");
