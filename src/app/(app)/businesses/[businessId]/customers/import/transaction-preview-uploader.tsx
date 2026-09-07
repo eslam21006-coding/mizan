@@ -10,6 +10,7 @@ import {
 } from "@/lib/business/transaction-preview";
 import { TRANSACTION_VALIDATION_SOURCE_LIMITS } from "@/lib/business/transaction-validation-source";
 import { TransactionColumnMapper } from "./transaction-column-mapper";
+import { TransactionImportReviewGuide } from "./transaction-import-review-guide";
 import styles from "./transaction-import.module.css";
 
 type TransactionPreviewUploaderProps = {
@@ -36,7 +37,7 @@ const WORKFLOW_STEPS = [
   "رفع الملف",
   "معاينة الملف",
   "مطابقة الأعمدة",
-  "مراجعة وحفظ",
+  "مراجعة ثم حفظ",
 ] as const;
 
 /** Formats a file byte count for the upload metadata card. */
@@ -302,15 +303,18 @@ export function TransactionPreviewUploader({
           </section>
 
           {canManage && fileBuffer && preview.previewRows.length > 0 && visibleColumns > 0 && (
-            <TransactionColumnMapper
-              key={`${fileSelectionId}:${preview.fileName}:${preview.fileSize}:${preview.totalRows}:${preview.totalColumns}`}
-              businessId={businessId}
-              baseCurrency={baseCurrency}
-              preview={preview}
-              fileBuffer={fileBuffer}
-              importBusy={importBusy}
-              onImportBusyChange={setImportBusy}
-            />
+            <>
+              <TransactionColumnMapper
+                key={`${fileSelectionId}:${preview.fileName}:${preview.fileSize}:${preview.totalRows}:${preview.totalColumns}`}
+                businessId={businessId}
+                baseCurrency={baseCurrency}
+                preview={preview}
+                fileBuffer={fileBuffer}
+                importBusy={importBusy}
+                onImportBusyChange={setImportBusy}
+              />
+              <TransactionImportReviewGuide />
+            </>
           )}
         </>
       )}
