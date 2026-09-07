@@ -15,41 +15,41 @@ export default function CustomerOverviewE2eFixturePage() {
       <CustomerOverviewShell
         businessId={FIXTURE_BUSINESS_ID}
         businessName="بزنس الاختبار"
-        baseCurrency="EGP"
+        baseCurrency="USD"
         timezone="Africa/Cairo"
         historyOverview={
           <CustomerHistoryOverview
-            baseCurrency="EGP"
+            baseCurrency="USD"
             summary={{
-              payingCustomerCountText: "3",
-              repeatCustomerCountText: "1",
-              netCashCollectedText: "2700",
-              revenuePerPayingCustomerText: "900",
+              payingCustomerCountText: "1260",
+              repeatCustomerCountText: "262",
+              netCashCollectedText: "321575.88",
+              revenuePerPayingCustomerText: "255.218952380952381",
             }}
           />
         }
         observedLtv={
           <section aria-label="لوحة قيمة العميل المحققة">
             <h2>Observed LTV / قيمة العميل المحققة حتى الآن</h2>
-            <p>1,700 EGP قيمة محققة من سجل المعاملات.</p>
+            <p>قيمة محققة من سجل المعاملات.</p>
           </section>
         }
         revenueStreams={
           <section aria-label="لوحة مصادر الإيراد">
             <h2>تحليل مصادر الإيراد مدى الحياة</h2>
-            <p>Front-End 1,200 EGP · Backend 500 EGP</p>
+            <p>Front-End وBackend حسب الربط الصريح.</p>
           </section>
         }
         contribution={
           <section aria-label="لوحة ربح المساهمة">
             <h2>Lifetime Contribution Profit / ربح المساهمة مدى الحياة</h2>
-            <p>1,050 EGP بعد التكاليف المرتبطة بالعميل.</p>
+            <p>بعد التكاليف المرتبطة بالعميل.</p>
           </section>
         }
         customers={
           <section aria-label="لوحة سجل العملاء">
             <h2>العملاء</h2>
-            <p>عميلان · خمس معاملات محفوظة.</p>
+            <p>المعاملات محفوظة حسب العميل.</p>
           </section>
         }
       />
