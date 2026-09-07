@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("transaction import review clarity", () => {
-  test("makes review, correction, and persistence actions explicit without mobile overflow", async ({
+  test("makes partial import, skipped rows, and persistence actions explicit without mobile overflow", async ({
     page,
   }) => {
     const browserErrors: string[] = [];
@@ -16,8 +16,9 @@ test.describe("transaction import review clarity", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByRole("heading", { name: "المراجعة وحدها لا تحفظ أي معاملات" })).toBeVisible();
-    await expect(page.getByText("إذا كان عدد الصفوف غير الصالحة أكبر من صفر، يتوقف الحفظ بالكامل.")).toBeVisible();
-    await expect(page.getByText(/لا يستورد الصفوف الصالحة وحدها ولا يتجاهل الأخطاء تلقائيًا/)).toBeVisible();
+    await expect(page.getByText(/وجود صفوف غير صالحة لا يوقف باقي الملف/)).toBeVisible();
+    await expect(page.getByText(/يستورد الصفوف السليمة فقط/)).toBeVisible();
+    await expect(page.getByText(/لا يخمن مبلغًا مفقودًا ولا يحول عملة مختلفة/)).toBeVisible();
     await expect(page.getByText(/هذا هو الإجراء الذي يحفظ المعاملات فعلًا/)).toBeVisible();
 
     await expect(page.getByRole("link", { name: "اختيار ملف مصحح" })).toHaveAttribute(
