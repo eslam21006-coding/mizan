@@ -90,7 +90,9 @@ test("import completion UX verifies persistence and links directly to Customers 
   );
 
   assert.match(importer, /transaction_import_completion_summary/);
-  assert.match(importer, /persistedInsertedCount !== outcome\.result\.insertedCount/);
+  assert.match(importer, /persistedInsertedCount !== session\.expectedResult\.insertedCount/);
+  assert.match(importer, /if \(pendingVerification\)/);
+  assert.match(importer, /await finalizeVerification\(pendingVerification\)/);
   assert.match(importer, /TransactionImportCompletionCard/);
   assert.match(completionCard, /تم حفظ معاملاتك والتحقق منها/);
   assert.match(completionCard, /لم تتم إضافة معاملات جديدة/);
