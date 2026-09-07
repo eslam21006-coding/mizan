@@ -36,7 +36,7 @@ export function CustomerOverviewShell({
           <p>
             اعرف كم دفع عملاؤك فعلًا، كم منهم اشترى مرة أخرى، وكيف تتطور قيمة العميل المحققة مع الوقت.
           </p>
-          <div className={styles.heroMeta} aria-label="سياق البزنس">
+          <div className={styles.heroMeta} role="group" aria-label="سياق البزنس">
             <span>{businessName}</span>
             <span dir="ltr">{baseCurrency}</span>
             <span dir="ltr">{timezone}</span>
@@ -63,9 +63,11 @@ export function CustomerOverviewShell({
 
       <details className={styles.setupDisclosure}>
         <summary>
-          <span>
-            <strong>إعدادات التحليل المتقدمة</strong>
-            <small>ربط مصادر الإيراد وإضافة التكاليف المرتبطة بالعميل عند الحاجة.</small>
+          <span className={styles.setupSummaryText}>
+            <strong className={styles.setupSummaryTitle}>إعدادات التحليل المتقدمة</strong>
+            <small className={styles.setupSummaryDescription}>
+              ربط مصادر الإيراد وإضافة التكاليف المرتبطة بالعميل عند الحاجة.
+            </small>
           </span>
           <span className={styles.disclosureAction}>عرض الإعدادات</span>
         </summary>
