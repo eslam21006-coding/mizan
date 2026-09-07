@@ -27,8 +27,8 @@ type CustomerCohortLtvTableProps = {
   baseCurrency: string;
 };
 
-/** Converts a stored cohort month into a founder-facing Arabic month label. */
-function cohortLabel(value: string) {
+/** Converts a stored acquisition-group month into a founder-facing Arabic month label. */
+function acquisitionMonthLabel(value: string) {
   const [yearText, monthText] = value.split("-");
   const year = Number(yearText);
   const month = Number(monthText);
@@ -41,18 +41,18 @@ function cohortLabel(value: string) {
   }).format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
-/** Converts a cohort-age month count into concise Arabic founder-facing wording. */
-function cohortAgeLabel(value: number | string) {
+/** Converts months since first purchase into concise Arabic founder-facing wording. */
+function elapsedSinceFirstPurchaseLabel(value: number | string) {
   const age = typeof value === "number" ? value : Number(value);
   if (!Number.isSafeInteger(age) || age < 0) return String(value);
-  if (age === 0) return "شهر الاكتساب";
+  if (age === 0) return "في شهر أول شراء";
   if (age === 1) return "بعد شهر";
   if (age === 2) return "بعد شهرين";
   if (age >= 3 && age <= 10) return `بعد ${formatCountText(age)} أشهر`;
   return `بعد ${formatCountText(age)} شهرًا`;
 }
 
-/** Shows one year of acquisition cohorts per page with founder-facing labels and rounded display values. */
+/** Shows one year of first-purchase customer groups per page with plain labels and rounded display values. */
 export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCohortLtvTableProps) {
   const [rows, setRows] = useState<CustomerObservedLtv[]>([]);
   const [page, setPage] = useState(0);
@@ -60,7 +60,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /** Loads the current cohort page and ignores stale responses after the caller becomes inactive. */
+  /** Loads the current first-purchase-month page and ignores stale responses after the caller becomes inactive. */
   const loadRows = useCallback(
     async (isActive: () => boolean = () => true) => {
       setIsLoading(true);
@@ -82,7 +82,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
       if (loadError) {
         setRows([]);
         setTotalCount(null);
-        setError("تعذر تحميل كوهورتات العملاء وقيمة العميل المحققة. حاول مرة أخرى. إذا استمرت المشكلة، تحقق من تطبيق تحديثات قاعدة البيانات الخاصة بالكوهورتات.");
+        setError("تعذر تحميل مجموعات العملاء حسب شهر أول شراء وقيمة العميل المحققة. حاول مرة أخرى.");
       } else {
         setRows((data ?? []) as CustomerObservedLtv[]);
         setTotalCount(count ?? null);
@@ -128,7 +128,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
   if (rows.length === 0 && page === 0) {
     return (
       <section className={styles.compactEmptyPanel}>
-        <strong>لا توجد كوهورتات مكتسبة بعد.</strong>
+        <strong>لا توجد مجموعات عملاء حسب شهر أول شراء بعد.</strong>
         <span>ستظهر هنا بعد وجود أول تحصيل ناجح لعميل واحد على الأقل.</span>
       </section>
     );
@@ -139,26 +139,26 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
       <div className={styles.groupHeading}>
         <div>
           <span className={styles.kicker}>Observed LTV / قيمة العميل المحققة حتى الآن</span>
-          <h2 id="observed-ltv-title">كيف تتغير قيمة العميل مع الوقت؟</h2>
+          <h2 id="observed-ltv-title">كم دفع عملاء كل شهر حتى الآن؟</h2>
           <p>
-            هذه قيمة محققة حتى الآن وليست توقعًا للقيمة النهائية للعميل. كل صف يمثل العملاء الذين اشتروا لأول مرة في شهر واحد. قيمة العميل المحققة = صافي التحصيل التراكمي ÷ عدد عملاء الكوهورت الأصليين.
+            نقسم العملاء حسب شهر أول شراء فقط للمقارنة. مثال: صف أغسطس 2026 يعني كل العملاء الذين كان أول شراء لهم في أغسطس. قيمة العميل المحققة = صافي ما دفعته هذه المجموعة حتى اليوم ÷ عدد العملاء الذين بدأوا في ذلك الشهر. هذا رقم محقق من المعاملات الفعلية، وليس توقعًا للمستقبل.
           </p>
         </div>
         <div className={styles.identityCount}>
-          <span>الكوهورتات</span>
+          <span>أشهر أول شراء</span>
           <strong>{formatCountText(totalCount ?? rows.length)}</strong>
         </div>
       </div>
 
       <div className={styles.tableShell}>
-        <table className={`${styles.groupsTable} ${styles.ltvTable}`} aria-label="جدول الكوهورتات وObserved LTV">
+        <table className={`${styles.groupsTable} ${styles.ltvTable}`} aria-label="قيمة العميل حسب شهر أول شراء">
           <thead>
             <tr>
-              <th scope="col">شهر الاكتساب</th>
-              <th scope="col">العملاء</th>
-              <th scope="col">العمر</th>
-              <th scope="col">صافي التحصيل</th>
-              <th scope="col">قيمة العميل المحققة</th>
+              <th scope="col">شهر أول شراء</th>
+              <th scope="col">عدد العملاء</th>
+              <th scope="col">مرّ منذ أول شراء</th>
+              <th scope="col">صافي ما دفعته المجموعة</th>
+              <th scope="col">متوسط قيمة العميل حتى الآن</th>
             </tr>
           </thead>
           <tbody>
@@ -167,15 +167,15 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
               return (
                 <tr key={`${row.business_id}:${row.cohort_month}`}>
                   <td>
-                    <strong>{cohortLabel(row.cohort_month)}</strong>
+                    <strong>{acquisitionMonthLabel(row.cohort_month)}</strong>
                     <small dir="ltr">{row.cohort_month}</small>
                   </td>
                   <td dir="ltr">
                     <strong>{formatCountText(row.original_cohort_size)}</strong>
-                    <small>عميل أصلي</small>
+                    <small>بدأوا الشراء في هذا الشهر</small>
                   </td>
                   <td>
-                    <strong>{cohortAgeLabel(row.cohort_age_months)}</strong>
+                    <strong>{elapsedSinceFirstPurchaseLabel(row.cohort_age_months)}</strong>
                     <small dir="ltr">حتى {row.observation_cutoff_date}</small>
                   </td>
                   <td dir="ltr">
@@ -186,7 +186,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
                   </td>
                   <td dir="ltr">
                     <strong className={styles.primaryMetric}>{formatMoneyText(row.observed_ltv_text, currency)}</strong>
-                    <small>لكل عميل أصلي</small>
+                    <small>لكل عميل بدأ في هذا الشهر</small>
                   </td>
                 </tr>
               );
@@ -195,7 +195,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
         </table>
       </div>
 
-      <nav className={styles.pagination} aria-label="التنقل بين صفحات الكوهورتات">
+      <nav className={styles.pagination} aria-label="التنقل بين صفحات أشهر أول شراء">
         <button
           type="button"
           disabled={page === 0}
