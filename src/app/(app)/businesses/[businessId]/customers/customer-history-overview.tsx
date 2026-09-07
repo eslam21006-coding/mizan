@@ -92,7 +92,7 @@ export function CustomerHistoryOverview({
         <article className={styles.metricCard}>
           <span>صافي التحصيل لكل عميل دافع</span>
           <strong dir="ltr">{revenuePerPayingCustomer}</strong>
-          <small>Net Cash ÷ العملاء الدافعين · ليس LTV</small>
+          <small>Net Cash ÷ العملاء الدافعين · هذا ليس LTV</small>
         </article>
       </div>
 
