@@ -69,7 +69,7 @@ test("customer ledger exposes server-side search filters and sorting without cha
   assert.match(customerGroupsSource, /ابحث بالبريد الإلكتروني/);
   assert.match(customerGroupsSource, /اشتروا أكثر من مرة/);
   assert.match(customerGroupsSource, /أعلى صافي تحصيل/);
-  assert.match(customerGroupsSource, /\.gt\("transaction_count", 1\)/);
+  assert.match(customerGroupsSource, /\.gt\("collection_count", 1\)/);
   assert.match(customerGroupsSource, /\.ilike\("customer_email"/);
   assert.match(customerGroupsSource, /\.order\("net_cash_collected"/);
   assert.match(customerGroupsSource, /<th scope="col">البريد الإلكتروني<\/th>/);
