@@ -5,6 +5,7 @@ import {
   autoMapTransactionHeaderRow,
   buildTransactionColumnChoices,
   EMPTY_TRANSACTION_COLUMN_MAPPING,
+  enrichStoredTransactionIdMapping,
   fingerprintTransactionHeaderRow,
   inspectTransactionColumnMapping,
   normalizeTransactionHeaderRow,
@@ -145,6 +146,72 @@ test("gateway headers from the founder fixture auto-map without manual column se
     transactionId: 0,
     currency: 2,
   });
+});
+
+test("older saved founder mapping recovers the detected Internal transaction id without moving saved fields", () => {
+  const detected = autoMapTransactionHeaderRow([
+    "Internal transaction id",
+    "Customer id",
+    "Customer name",
+    "Customer email",
+    "Customer phone",
+    "Country",
+    "Currency",
+    "Product",
+    "Total amount paid",
+    "Fees",
+    "Net",
+    "Status",
+    "Payment method",
+    "Reference",
+    "Created at",
+    "Transaction date",
+    "Transaction time",
+    "Timezone",
+  ]);
+  const saved = {
+    customerEmail: 3,
+    transactionDate: 15,
+    amountCollected: 8,
+    transactionTime: 16,
+    timezone: 17,
+    transactionId: null,
+    currency: 6,
+  };
+
+  const enriched = enrichStoredTransactionIdMapping(saved, detected.mapping);
+  assert.deepEqual(enriched, { ...saved, transactionId: 0 });
+  assert.equal(enriched.customerEmail, 3);
+  assert.equal(enriched.transactionDate, 15);
+  assert.equal(enriched.amountCollected, 8);
+});
+
+test("saved Transaction ID mapping wins over a newly detected ID", () => {
+  const saved = {
+    customerEmail: 3,
+    transactionDate: 15,
+    amountCollected: 8,
+    transactionTime: 16,
+    timezone: 17,
+    transactionId: 4,
+    currency: 6,
+  };
+  const detected = { ...saved, transactionId: 0 };
+  assert.strictEqual(enrichStoredTransactionIdMapping(saved, detected), saved);
+});
+
+test("detected Transaction ID is not added when its column is already used by the saved mapping", () => {
+  const saved = {
+    customerEmail: 0,
+    transactionDate: 15,
+    amountCollected: 8,
+    transactionTime: 16,
+    timezone: 17,
+    transactionId: null,
+    currency: 6,
+  };
+  const detected = { ...saved, customerEmail: 3, transactionId: 0 };
+  assert.strictEqual(enrichStoredTransactionIdMapping(saved, detected), saved);
 });
 
 test("legacy combined Transaction time header still maps as the required timestamp when no timezone exists", () => {
