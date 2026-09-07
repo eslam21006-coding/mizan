@@ -3,6 +3,7 @@ import { PageHeading } from "@/components/page-heading";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import styles from "../businesses/businesses.module.css";
 
+/** Lists accessible businesses and routes users to automatic customer-history analysis or import. */
 export default async function CustomersPage() {
   const supabase = await createSupabaseServerClient();
   const { data: businesses, error } = await supabase
