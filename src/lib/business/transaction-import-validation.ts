@@ -618,7 +618,10 @@ function rowIssues(
 
   if (!amountCollected) {
     issues.push({ rowNumber: row.rowNumber, field: "amountCollected", code: "AMOUNT_REQUIRED", rawValue: row.amountCollected });
-  } else if (parseTransactionAmount(amountCollected) === null) {
+  } else if (
+    parseTransactionAmount(amountCollected) === null ||
+    canonicalDecimalKey(amountCollected) === "0"
+  ) {
     issues.push({ rowNumber: row.rowNumber, field: "amountCollected", code: "AMOUNT_INVALID", rawValue: row.amountCollected });
   }
 
