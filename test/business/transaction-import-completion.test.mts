@@ -84,13 +84,18 @@ test("import completion UX verifies persistence and links directly to Customers 
     "src/app/(app)/businesses/[businessId]/customers/import/transaction-import-validator.tsx",
     "utf8",
   );
+  const completionCard = fs.readFileSync(
+    "src/app/(app)/businesses/[businessId]/customers/import/transaction-import-completion-card.tsx",
+    "utf8",
+  );
 
   assert.match(importer, /transaction_import_completion_summary/);
   assert.match(importer, /persistedInsertedCount !== outcome\.result\.insertedCount/);
-  assert.match(importer, /تم حفظ معاملاتك والتحقق منها/);
-  assert.match(importer, /لم تتم إضافة معاملات جديدة/);
-  assert.match(importer, /صفوف تفاصيل تم تجاهلها/);
-  assert.match(importer, /صفوف غير صالحة/);
-  assert.match(importer, /عرض تحليل العملاء/);
-  assert.match(importer, /\/businesses\/\$\{businessId\}\/customers/);
+  assert.match(importer, /TransactionImportCompletionCard/);
+  assert.match(completionCard, /تم حفظ معاملاتك والتحقق منها/);
+  assert.match(completionCard, /لم تتم إضافة معاملات جديدة/);
+  assert.match(completionCard, /صفوف تفاصيل تم تجاهلها/);
+  assert.match(completionCard, /صفوف غير صالحة/);
+  assert.match(completionCard, /عرض تحليل العملاء/);
+  assert.match(completionCard, /\/businesses\/\$\{businessId\}\/customers/);
 });
