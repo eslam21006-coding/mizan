@@ -135,10 +135,10 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
     <section className={styles.groupPanel} aria-labelledby="observed-ltv-title">
       <div className={styles.groupHeading}>
         <div>
-          <span className={styles.kicker}>Observed LTV · قيمة محققة وليست توقعًا</span>
+          <span className={styles.kicker}>Observed LTV / قيمة العميل المحققة حتى الآن</span>
           <h2 id="observed-ltv-title">كيف تتغير قيمة العميل مع الوقت؟</h2>
           <p>
-            كل صف يمثل العملاء الذين اشتروا لأول مرة في شهر واحد. قيمة العميل المحققة = صافي التحصيل التراكمي ÷ عدد عملاء الكوهورت الأصليين.
+            هذه قيمة محققة وليست توقعًا. كل صف يمثل العملاء الذين اشتروا لأول مرة في شهر واحد. قيمة العميل المحققة = صافي التحصيل التراكمي ÷ عدد عملاء الكوهورت الأصليين.
           </p>
         </div>
         <div className={styles.identityCount}>
