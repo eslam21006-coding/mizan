@@ -46,7 +46,11 @@ test("customer overview keeps all four existing analyses behind one focused work
 test("customer redesign preserves locked financial meaning while removing cohort jargon from the main value view", () => {
   assert.match(observedLtvSource, /Observed LTV \/ قيمة العميل المحققة حتى الآن/);
   assert.match(observedLtvSource, /هذا رقم محقق من المعاملات الفعلية، وليس توقعًا للمستقبل/);
-  assert.match(observedLtvSource, /قيمة العميل المحققة = صافي ما دفعته هذه المجموعة حتى اليوم/);
+  assert.match(
+    observedLtvSource,
+    /قيمة العميل المحققة = صافي ما دفعته هذه المجموعة حتى تاريخ الملاحظة الظاهر في الصف/,
+  );
+  assert.match(observedLtvSource, /observation_cutoff_date/);
   assert.doesNotMatch(observedLtvSource, /كوهورت/);
   assert.match(contributionSource, /المصاريف العامة الثابتة غير داخلة في هذا المقياس/);
   assert.match(shellSource, /ميزان لا يعتبر إيراد فترة واحدة LTV/);
@@ -65,12 +69,16 @@ test("analysis navigation is an accessible RTL tab interface with a strong activ
   assert.doesNotMatch(tabsSource, /createSupabase/);
 });
 
-test("customer ledger exposes server-side search filters and sorting without changing customer identity", () => {
+test("customer ledger exposes literal server-side email search filters and sorting without changing customer identity", () => {
   assert.match(customerGroupsSource, /ابحث بالبريد الإلكتروني/);
   assert.match(customerGroupsSource, /اشتروا أكثر من مرة/);
   assert.match(customerGroupsSource, /أعلى صافي تحصيل/);
   assert.match(customerGroupsSource, /\.gt\("collection_count", 1\)/);
-  assert.match(customerGroupsSource, /\.ilike\("customer_email"/);
+  assert.match(customerGroupsSource, /function escapeIlikeLiteral/);
+  assert.match(customerGroupsSource, /replaceAll\("\\\\", "\\\\\\\\"\)/);
+  assert.match(customerGroupsSource, /replaceAll\("%", "\\\\%"\)/);
+  assert.match(customerGroupsSource, /replaceAll\("_", "\\\\_"\)/);
+  assert.match(customerGroupsSource, /\.ilike\("customer_email", `%\$\{escapeIlikeLiteral\(search\)\}%`\)/);
   assert.match(customerGroupsSource, /\.order\("net_cash_collected"/);
   assert.match(customerGroupsSource, /<th scope="col">البريد الإلكتروني<\/th>/);
   assert.doesNotMatch(customerGroupsSource, /customer_name/);
