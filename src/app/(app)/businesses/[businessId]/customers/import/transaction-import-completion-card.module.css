@@ -1,0 +1,170 @@
+.completionPanel {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, #067647 32%, var(--border));
+  border-radius: 18px;
+  background: color-mix(in srgb, #067647 5%, var(--surface));
+  padding: 18px;
+}
+
+.completionPanel[data-new-rows="false"] {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.heading > div {
+  min-width: 0;
+}
+
+.kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: #067647;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.completionPanel[data-new-rows="false"] .kicker {
+  color: var(--text-soft);
+}
+
+.heading h3 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.heading p {
+  max-width: 760px;
+  margin: 7px 0 0;
+  color: var(--text-soft);
+  line-height: 1.75;
+}
+
+.verifiedBadge {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: color-mix(in srgb, #067647 10%, var(--surface));
+  color: #067647;
+  padding: 6px 10px;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.summaryGrid > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.summaryGrid span {
+  color: var(--text-soft);
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
+.summaryGrid strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 1.08rem;
+}
+
+.sessionNote {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+  padding: 11px 13px;
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.sessionNote strong {
+  color: var(--text);
+}
+
+.nextStep {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+
+.nextStep > div {
+  min-width: 0;
+}
+
+.nextStep p {
+  margin: 4px 0 0;
+  color: var(--text-soft);
+  line-height: 1.65;
+}
+
+.primaryAction {
+  display: inline-flex;
+  flex: 0 0 auto;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: var(--text);
+  color: var(--surface);
+  padding: 10px 16px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.primaryAction:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--brand) 35%, transparent);
+  outline-offset: 2px;
+}
+
+@media (max-width: 920px) {
+  .summaryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .completionPanel {
+    padding: 14px;
+  }
+
+  .heading,
+  .nextStep {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .verifiedBadge {
+    align-self: flex-start;
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .primaryAction {
+    width: 100%;
+  }
+}
