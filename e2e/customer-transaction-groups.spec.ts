@@ -24,9 +24,10 @@ async function login(page: import("@playwright/test").Page) {
 test.describe("Task 21 customer identity and transaction grouping", () => {
   test.skip(!hasLiveAuth, "Requires live Mizan Supabase credentials or a one-use invite token");
 
-  test("renders grouped customer facts in Arabic RTL", async ({ page }) => {
+  test("renders searchable sortable customer facts in Arabic RTL", async ({ page }) => {
     test.setTimeout(120_000);
     const browserErrors: string[] = [];
+    const customerGroupRequests: URL[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") browserErrors.push(`console: ${message.text()}`);
     });
@@ -48,6 +49,7 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
     await expect(page).toHaveURL(/\/businesses\?status=created$/);
 
     await page.route("**/rest/v1/customer_transaction_groups**", async (route) => {
+      customerGroupRequests.push(new URL(route.request().url()));
       await route.fulfill({
         status: 200,
         contentType: "application/json",
@@ -91,19 +93,47 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
 
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await expect(page.getByRole("heading", { name: "العملاء و LTV" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "العملاء وقيمة العميل" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: /متوسط ما دفعه العميل/ })).toHaveAttribute("aria-selected", "true");
     await page.getByRole("tab", { name: /سجل العملاء/ }).click();
+    await expect(page.getByRole("tab", { name: /سجل العملاء/ })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("heading", { name: "من دفع ومتى؟", level: 2 })).toBeVisible();
+    await expect(page.getByLabel("ابحث بالبريد الإلكتروني")).toBeVisible();
+    await expect(page.getByLabel("اعرض")).toBeVisible();
+    await expect(page.getByLabel("رتّب حسب")).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "البريد الإلكتروني" })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "أول شراء" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "إجمالي التحصيل" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "الاسترجاعات" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "صافي التحصيل" })).toBeVisible();
     await expect(page.getByText("buyer@example.com", { exact: true })).toBeVisible();
     await expect(page.getByText("refund-only@example.com", { exact: true })).toBeVisible();
-    await expect(page.getByText("لم يتم اكتساب العميل بعد", { exact: true })).toBeVisible();
+    await expect(page.getByText("لا يوجد تحصيل ناجح بعد", { exact: true })).toBeVisible();
     await expect(page.getByText("150 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("30 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("120 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("-5 EGP", { exact: true })).toBeVisible();
+
+    const requestsBeforeFilter = customerGroupRequests.length;
+    await page.getByLabel("اعرض").selectOption("repeat");
+    await expect.poll(() => customerGroupRequests.length).toBeGreaterThan(requestsBeforeFilter);
+    await expect.poll(() => customerGroupRequests.at(-1)?.searchParams.get("transaction_count")).toBe("gt.1");
+
+    const requestsBeforeSort = customerGroupRequests.length;
+    await page.getByLabel("رتّب حسب").selectOption("net_cash_desc");
+    await expect.poll(() => customerGroupRequests.length).toBeGreaterThan(requestsBeforeSort);
+    await expect.poll(() => customerGroupRequests.at(-1)?.searchParams.get("order") ?? "").toContain("net_cash_collected.desc");
+
+    await page.getByLabel("ابحث بالبريد الإلكتروني").fill("buyer@example.com");
+    const requestsBeforeSearch = customerGroupRequests.length;
+    await page.getByRole("button", { name: "بحث" }).click();
+    await expect.poll(() => customerGroupRequests.length).toBeGreaterThan(requestsBeforeSearch);
+    await expect.poll(() => customerGroupRequests.at(-1)?.searchParams.get("customer_email") ?? "").toContain("buyer@example.com");
+
+    await page.getByRole("button", { name: "مسح الفلاتر" }).click();
+    await expect(page.getByLabel("اعرض")).toHaveValue("all");
+    await expect(page.getByLabel("رتّب حسب")).toHaveValue("acquisition_desc");
+    await expect(page.getByLabel("ابحث بالبريد الإلكتروني")).toHaveValue("");
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() =>
