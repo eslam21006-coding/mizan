@@ -23,7 +23,7 @@ const completionCardSource = readFileSync(
 test("review guidance distinguishes validation from persistence and keeps invalid imports fail-closed", () => {
   assert.match(reviewGuideSource, /المراجعة وحدها لا تحفظ أي معاملات/);
   assert.match(reviewGuideSource, /إذا كان عدد الصفوف غير الصالحة أكبر من صفر، يتوقف الحفظ بالكامل/);
-  assert.match(reviewGuideSource, /لا يستورد الصفوف الصالحة وحدها ولا يتجاهل الأخطاء تلقائيًا/);
+  assert.match(reviewGuideSource, /لا يستورد الصفوف الصالحة وحدها ولا يتجاهل الأخطاء\s+تلقائيًا/);
   assert.match(reviewGuideSource, /هذا هو الإجراء الذي يحفظ المعاملات فعلًا/);
   assert.match(reviewGuideSource, /href="#transaction-file"/);
   assert.match(reviewGuideSource, /href="#transaction-validation-title"/);
