@@ -69,7 +69,7 @@ export function CustomerOverviewShell({
               ربط مصادر الإيراد وإضافة التكاليف المرتبطة بالعميل عند الحاجة.
             </small>
           </span>
-          <span className={styles.disclosureAction}>عرض الإعدادات</span>
+          <span className={styles.disclosureAction}>إعدادات التحليل</span>
         </summary>
         <div className={styles.workflowGrid}>
           <article className={styles.workflowCard}>
