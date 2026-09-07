@@ -27,6 +27,7 @@ type CustomerCohortLtvTableProps = {
   baseCurrency: string;
 };
 
+/** Converts a stored cohort month into a founder-facing Arabic month label. */
 function cohortLabel(value: string) {
   const [yearText, monthText] = value.split("-");
   const year = Number(yearText);
@@ -40,6 +41,7 @@ function cohortLabel(value: string) {
   }).format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
+/** Converts a cohort-age month count into concise Arabic founder-facing wording. */
 function cohortAgeLabel(value: number | string) {
   const age = typeof value === "number" ? value : Number(value);
   if (!Number.isSafeInteger(age) || age < 0) return String(value);
@@ -58,6 +60,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /** Loads the current cohort page and ignores stale responses after the caller becomes inactive. */
   const loadRows = useCallback(
     async (isActive: () => boolean = () => true) => {
       setIsLoading(true);
