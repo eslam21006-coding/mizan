@@ -2,15 +2,15 @@
   display: grid;
   gap: 16px;
   min-width: 0;
-  border: 1px solid color-mix(in srgb, #067647 32%, var(--border-subtle));
+  border: 1px solid color-mix(in srgb, #067647 32%, var(--border));
   border-radius: 18px;
-  background: color-mix(in srgb, #067647 5%, var(--surface-primary));
+  background: color-mix(in srgb, #067647 5%, var(--surface));
   padding: 18px;
 }
 
 .completionPanel[data-new-rows="false"] {
-  border-color: var(--border-subtle);
-  background: var(--surface-primary);
+  border-color: var(--border);
+  background: var(--surface);
 }
 
 .heading {
@@ -33,7 +33,7 @@
 }
 
 .completionPanel[data-new-rows="false"] .kicker {
-  color: var(--text-secondary);
+  color: var(--text-soft);
 }
 
 .heading h3 {
@@ -44,14 +44,14 @@
 .heading p {
   max-width: 760px;
   margin: 7px 0 0;
-  color: var(--text-secondary);
+  color: var(--text-soft);
   line-height: 1.75;
 }
 
 .verifiedBadge {
   flex: 0 0 auto;
   border-radius: 999px;
-  background: color-mix(in srgb, #067647 10%, var(--surface-primary));
+  background: color-mix(in srgb, #067647 10%, var(--surface));
   color: #067647;
   padding: 6px 10px;
   font-size: 0.76rem;
@@ -68,14 +68,14 @@
   display: grid;
   gap: 5px;
   min-width: 0;
-  border: 1px solid var(--border-subtle);
+  border: 1px solid var(--border);
   border-radius: 13px;
-  background: var(--surface-primary);
+  background: var(--surface);
   padding: 12px;
 }
 
 .summaryGrid span {
-  color: var(--text-secondary);
+  color: var(--text-soft);
   font-size: 0.76rem;
   line-height: 1.5;
 }
@@ -91,14 +91,14 @@
   flex-wrap: wrap;
   gap: 8px 14px;
   border-radius: 12px;
-  background: var(--surface-secondary);
+  background: var(--surface-soft);
   padding: 11px 13px;
-  color: var(--text-secondary);
+  color: var(--text-soft);
   line-height: 1.6;
 }
 
 .sessionNote strong {
-  color: var(--text-primary);
+  color: var(--text);
 }
 
 .nextStep {
@@ -106,7 +106,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  border-top: 1px solid var(--border-subtle);
+  border-top: 1px solid var(--border);
   padding-top: 14px;
 }
 
@@ -116,7 +116,7 @@
 
 .nextStep p {
   margin: 4px 0 0;
-  color: var(--text-secondary);
+  color: var(--text-soft);
   line-height: 1.65;
 }
 
@@ -127,15 +127,15 @@
   align-items: center;
   justify-content: center;
   border-radius: 12px;
-  background: var(--text-primary);
-  color: var(--surface-primary);
+  background: var(--text);
+  color: var(--surface);
   padding: 10px 16px;
   font-weight: 800;
   text-decoration: none;
 }
 
 .primaryAction:focus-visible {
-  outline: 3px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
+  outline: 3px solid color-mix(in srgb, var(--brand) 35%, transparent);
   outline-offset: 2px;
 }
 
