@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import uxStyles from "./customer-analysis-ux.module.css";
 import styles from "./customer-groups.module.css";
 
 const PAGE_SIZE = 50;
@@ -163,7 +164,7 @@ export function CustomerGroupsTable({
       <section className={styles.emptyPanel}>
         <span>لا توجد معاملات عملاء بعد</span>
         <h2>استورد معاملاتك لبدء تحليل العملاء</h2>
-        <p>بعد الاستيراد، سيجمع ميزان كل بريد إلكتروني كعميل واحد ويحدد أول تحصيل ناجح كتاريخ اكتساب.</p>
+        <p>بعد الاستيراد، سيجمع ميزان كل بريد إلكتروني كعميل واحد ويحدد أول تحصيل ناجح كتاريخ أول شراء.</p>
         <div className={styles.emptyActions}>
           <Link className={styles.emptyAction} href={`/businesses/${businessId}/customers/import`}>
             استيراد معاملات
@@ -194,8 +195,8 @@ export function CustomerGroupsTable({
         </div>
       </div>
 
-      <div className={styles.customerControls}>
-        <form className={styles.customerSearch} onSubmit={submitSearch} role="search">
+      <div className={uxStyles.customerControls}>
+        <form className={uxStyles.customerSearch} onSubmit={submitSearch} role="search">
           <label htmlFor="customer-email-search">ابحث بالبريد الإلكتروني</label>
           <div>
             <input
@@ -210,7 +211,7 @@ export function CustomerGroupsTable({
           </div>
         </form>
 
-        <label className={styles.customerControlField}>
+        <label className={uxStyles.customerControlField}>
           <span>اعرض</span>
           <select
             value={customerFilter}
@@ -226,7 +227,7 @@ export function CustomerGroupsTable({
           </select>
         </label>
 
-        <label className={styles.customerControlField}>
+        <label className={uxStyles.customerControlField}>
           <span>رتّب حسب</span>
           <select
             value={sort}
@@ -242,13 +243,13 @@ export function CustomerGroupsTable({
           </select>
         </label>
 
-        <button className={styles.clearCustomerControls} type="button" onClick={clearControls}>
+        <button className={uxStyles.clearCustomerControls} type="button" onClick={clearControls}>
           مسح الفلاتر
         </button>
       </div>
 
       {rows.length === 0 ? (
-        <div className={styles.noFilterResults} role="status">
+        <div className={uxStyles.noFilterResults} role="status">
           لا توجد نتائج مطابقة للبحث أو الفلتر الحالي.
         </div>
       ) : (
