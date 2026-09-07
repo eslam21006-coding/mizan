@@ -32,9 +32,9 @@ export function CustomerOverviewShell({
       <section className={styles.heroShell} aria-labelledby="customer-overview-title">
         <div className={styles.heroCopy}>
           <span className={styles.kicker}>اقتصاديات العميل · {businessName}</span>
-          <h1 id="customer-overview-title">العملاء و LTV</h1>
+          <h1 id="customer-overview-title">العملاء وقيمة العميل</h1>
           <p>
-            اعرف كم دفع عملاؤك فعلًا، كم منهم اشترى مرة أخرى، وكيف تتطور قيمة العميل المحققة مع الوقت. ميزان لا يحوّل إيراد فترة واحدة إلى LTV؛ القيمة المحققة تأتي من تاريخ معاملات العميل والكوهورتات.
+            اعرف كم دفع عملاؤك فعلًا، من اشترى أكثر من مرة، ومتوسط ما دفعه العملاء منذ أول شراء. ميزان لا يعتبر إيراد فترة واحدة LTV؛ قيمة العميل المحققة تعتمد على تاريخ المعاملات الفعلي.
           </p>
           <div className={styles.heroMeta}>
             <span>{businessName}</span>
@@ -78,7 +78,7 @@ export function CustomerOverviewShell({
               <span className={styles.workflowTag}>المعاملات</span>
             </div>
             <h3>استيراد التحصيلات والاسترجاعات</h3>
-            <p>سجل بوابة الدفع هو المصدر الأساسي لتاريخ اكتساب العميل وصافي التحصيل.</p>
+            <p>سجل بوابة الدفع هو المصدر الأساسي لتاريخ أول شراء وصافي التحصيل.</p>
             <Link className={styles.workflowLink} href={`/businesses/${businessId}/customers/import`}>
               فتح الاستيراد
             </Link>
@@ -120,8 +120,8 @@ export function CustomerOverviewShell({
         panels={[
           {
             id: "observed-ltv",
-            eyebrow: "Observed LTV",
-            label: "قيمة العميل مع الوقت",
+            eyebrow: "منذ أول شراء",
+            label: "متوسط ما دفعه العميل",
             content: observedLtv,
           },
           {
@@ -138,7 +138,7 @@ export function CustomerOverviewShell({
           },
           {
             id: "customers",
-            eyebrow: "المعاملات حسب العميل",
+            eyebrow: "بحث، فلترة وترتيب",
             label: "سجل العملاء",
             content: customers,
           },
