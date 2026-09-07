@@ -75,6 +75,11 @@ type ProcessingOutcome = {
   remainingRows: PreparedTransactionImportRow[];
 };
 
+type VerificationSession = {
+  rows: PreparedTransactionImportRow[];
+  expectedResult: ImportResult;
+};
+
 class TransactionImportProcessError extends Error {
   readonly confirmed: ImportResult;
 
@@ -173,10 +178,12 @@ function mappedColumns(mapping: TransactionColumnMapping) {
   return { columns, transactionTimeValueIndex, timezoneValueIndex, transactionIdValueIndex, currencyValueIndex };
 }
 
+/** Parses non-negative counters returned by the import RPC without coercion. */
 function parseNonNegativeInteger(value: unknown) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
+/** Parses and validates the import RPC result before any progress is trusted by the UI. */
 function parseRpcResult(data: unknown): RpcImportResult | null {
   if (!data || typeof data !== "object" || Array.isArray(data)) return null;
   const record = data as Record<string, unknown>;
@@ -205,10 +212,12 @@ function parseRpcResult(data: unknown): RpcImportResult | null {
   };
 }
 
+/** Creates an empty cumulative import result for a brand-new import session. */
 function zeroImportResult(): ImportResult {
   return { insertedCount: 0, duplicateCount: 0, candidateCount: 0 };
 }
 
+/** Validates, imports, resolves duplicates, and verifies persisted customer transactions. */
 export function TransactionImportValidator({
   businessId,
   baseCurrency,
@@ -235,6 +244,8 @@ export function TransactionImportValidator({
   const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const [completionSummary, setCompletionSummary] =
     useState<TransactionImportCompletionSummary | null>(null);
+  const [pendingVerification, setPendingVerification] = useState<VerificationSession | null>(null);
+  const [sessionRows, setSessionRows] = useState<PreparedTransactionImportRow[] | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
   const [pendingCandidates, setPendingCandidates] = useState<PendingCandidate[]>([]);
   const [candidateDecisions, setCandidateDecisions] = useState<
@@ -285,9 +296,12 @@ export function TransactionImportValidator({
     };
   }, [businessId]);
 
+  /** Clears every import-session state when the validated source or import configuration changes. */
   const resetImportProgress = () => {
     setImportResult(null);
     setCompletionSummary(null);
+    setPendingVerification(null);
+    setSessionRows(null);
     setImportError(null);
     setPendingCandidates([]);
     setCandidateDecisions({});
@@ -386,6 +400,7 @@ export function TransactionImportValidator({
     setIsCreatingSource(false);
   };
 
+  /** Sends rows in bounded chunks and pauses on the first unresolved candidate collision. */
   const processRows = async (
     rows: PreparedTransactionImportRow[],
     baseResult: ImportResult,
@@ -441,11 +456,9 @@ export function TransactionImportValidator({
     };
   };
 
-  const verifyImportCompletion = async (
-    rows: readonly PreparedTransactionImportRow[],
-    outcome: ProcessingOutcome,
-  ) => {
-    const tokens = Array.from(new Set(rows.map((row) => row.import_row_token)));
+  /** Reads the token-scoped persisted rows and requires their inserted count to match the cumulative session result. */
+  const verifyImportCompletion = async (session: VerificationSession) => {
+    const tokens = Array.from(new Set(session.rows.map((row) => row.import_row_token)));
     if (tokens.length === 0) return null;
 
     const supabase = createSupabaseBrowserClient();
@@ -461,37 +474,65 @@ export function TransactionImportValidator({
     const summary = parseTransactionImportCompletionSummary(data);
     if (!summary) return null;
     if (summary.requestedTokenCount !== tokens.length) return null;
-    if (summary.persistedInsertedCount !== outcome.result.insertedCount) return null;
+    if (summary.persistedInsertedCount !== session.expectedResult.insertedCount) return null;
     return summary;
   };
 
+  /** Retries only persistence verification after import processing is already complete. */
+  const finalizeVerification = async (session: VerificationSession) => {
+    setPendingVerification(session);
+    const summary = await verifyImportCompletion(session);
+    if (!summary) {
+      setCompletionSummary(null);
+      setImportError(
+        "تمت معالجة الاستيراد، لكن تعذر التحقق من الصفوف المحفوظة في قاعدة البيانات. لن يعرض ميزان رسالة إتمام قبل نجاح التحقق؛ اضغط إعادة التحقق من الحفظ دون إعادة استيراد الملف.",
+      );
+      onImportBusyChange(false);
+      return false;
+    }
+
+    setCompletionSummary(summary);
+    setPendingVerification(null);
+    setRetryRows(null);
+    setRetryBaseResult(null);
+    onImportBusyChange(false);
+    return true;
+  };
+
+  /** Applies a processing outcome and verifies persisted rows only after every candidate is resolved. */
   const applyOutcome = async (
     outcome: ProcessingOutcome,
-    sessionRows: readonly PreparedTransactionImportRow[],
+    verificationRows: readonly PreparedTransactionImportRow[],
   ) => {
     setImportResult(outcome.result);
     setCompletionSummary(null);
     setPendingCandidates(outcome.pendingCandidates);
     setCandidateDecisions({});
     setRemainingRows(outcome.remainingRows);
-    setRetryBaseResult(null);
     if (outcome.pendingCandidates.length > 0) return;
 
-    const summary = await verifyImportCompletion(sessionRows, outcome);
-    if (!summary) {
-      setImportError(
-        "تمت معالجة الاستيراد، لكن تعذر التحقق من الصفوف المحفوظة في قاعدة البيانات. لن يعرض ميزان رسالة إتمام قبل نجاح التحقق؛ حدّث الصفحة وتحقق من سجل العملاء قبل إعادة الاستيراد.",
-      );
-      onImportBusyChange(false);
+    const verificationSession: VerificationSession = {
+      rows: [...verificationRows],
+      expectedResult: outcome.result,
+    };
+    await finalizeVerification(verificationSession);
+  };
+
+  /** Imports a fresh/retry batch, or retries only verification when the rows were already fully processed. */
+  const importTransactions = async () => {
+    if (pendingVerification) {
+      setIsImporting(true);
+      onImportBusyChange(true);
+      setCompletionSummary(null);
+      setImportError(null);
+      try {
+        await finalizeVerification(pendingVerification);
+      } finally {
+        setIsImporting(false);
+      }
       return;
     }
 
-    setCompletionSummary(summary);
-    setRetryRows(null);
-    onImportBusyChange(false);
-  };
-
-  const importTransactions = async () => {
     if (!result?.isValid || !validatedRows) {
       setImportError("راجع الملف بنجاح قبل الاستيراد.");
       return;
@@ -522,6 +563,7 @@ export function TransactionImportValidator({
           baseCurrency,
           createImportRowToken: () => crypto.randomUUID(),
         });
+        setSessionRows(prepared);
         setRetryRows(prepared);
         setRetryBaseResult(null);
       } catch (caught) {
@@ -541,6 +583,7 @@ export function TransactionImportValidator({
       return;
     }
 
+    const verificationRows = sessionRows ?? prepared;
     setIsImporting(true);
     onImportBusyChange(true);
     setImportResult(null);
@@ -552,12 +595,16 @@ export function TransactionImportValidator({
 
     try {
       const outcome = await processRows(prepared, retryBaseResult ?? zeroImportResult());
-      await applyOutcome(outcome, prepared);
+      await applyOutcome(outcome, verificationRows);
     } catch (caught) {
       const confirmed =
         caught instanceof TransactionImportProcessError ? caught.confirmed : zeroImportResult();
-      if (confirmed.insertedCount + confirmed.duplicateCount > 0) setImportResult(confirmed);
+      if (confirmed.insertedCount + confirmed.duplicateCount > 0) {
+        setImportResult(confirmed);
+        setRetryBaseResult(confirmed);
+      }
       setCompletionSummary(null);
+      setPendingVerification(null);
       setImportError(
         confirmed.insertedCount + confirmed.duplicateCount > 0
           ? `توقف الاستيراد بعد تأكيد معالجة ${confirmed.insertedCount + confirmed.duplicateCount} صف. تمت إضافة ${confirmed.insertedCount} وتأكيد ${confirmed.duplicateCount} مكرر. أعد المحاولة؛ لن يضيف ميزان صفًا تم حفظه بالفعل مرة ثانية.`
@@ -569,6 +616,7 @@ export function TransactionImportValidator({
     }
   };
 
+  /** Applies explicit candidate decisions and preserves the original verification session through continuations. */
   const resolveCandidates = async () => {
     if (pendingCandidates.length === 0 || !importResult) return;
     const allResolved = pendingCandidates.every(
@@ -584,10 +632,11 @@ export function TransactionImportValidator({
       candidate_resolution: candidateDecisions[candidate.row.row_number] as CandidateDuplicateResolution,
       candidate_resolution_id: candidate.resolutionId,
     }));
-    const sessionRows = retryRows ?? [...resolvedRows, ...remainingRows];
+    const verificationRows = sessionRows ?? retryRows ?? [...resolvedRows, ...remainingRows];
 
     setIsImporting(true);
     setCompletionSummary(null);
+    setPendingVerification(null);
     setImportError(null);
     let resolutionsApplied = false;
     let continuationBase = importResult;
@@ -607,12 +656,12 @@ export function TransactionImportValidator({
       setCandidateDecisions({});
 
       if (remainingRows.length === 0) {
-        await applyOutcome(resolutionOutcome, sessionRows);
+        await applyOutcome(resolutionOutcome, verificationRows);
         return;
       }
 
       const continuation = await processRows(remainingRows, resolutionOutcome.result);
-      await applyOutcome(continuation, sessionRows);
+      await applyOutcome(continuation, verificationRows);
     } catch (caught) {
       const confirmed =
         caught instanceof TransactionImportProcessError ? caught.confirmed : null;
@@ -632,6 +681,7 @@ export function TransactionImportValidator({
         onImportBusyChange(false);
       }
       setCompletionSummary(null);
+      setPendingVerification(null);
       setImportError(
         confirmed
           ? `تم تأكيد التقدم حتى الآن: ${confirmed.insertedCount} مضافة و${confirmed.duplicateCount} مكررة. تعذر إكمال الطلب التالي؛ أعد الاستيراد بأمان لإكمال الصفوف المتبقية.`
@@ -832,7 +882,13 @@ export function TransactionImportValidator({
                   disabled={workflowLocked || !source || !transactionType || !successfulOnlyConfirmed || !currencyReady || isLoadingSources || isCreatingSource}
                   onClick={() => void importTransactions()}
                 >
-                  {isImporting ? "جاري الاستيراد…" : "استيراد المعاملات"}
+                  {isImporting
+                    ? pendingVerification
+                      ? "جاري التحقق من الحفظ…"
+                      : "جاري الاستيراد…"
+                    : pendingVerification
+                      ? "إعادة التحقق من الحفظ"
+                      : "استيراد المعاملات"}
                 </button>
 
                 {completionSummary && importResult ? (
@@ -840,7 +896,9 @@ export function TransactionImportValidator({
                     businessId={businessId}
                     baseCurrency={baseCurrency}
                     insertedCount={completionSummary.persistedInsertedCount}
-                    duplicateCount={importResult.duplicateCount}
+                    duplicateCount={
+                      completionSummary.requestedTokenCount - completionSummary.persistedInsertedCount
+                    }
                     ignoredDetailRows={result.ignoredDetailRows}
                     invalidRows={result.invalidRows}
                     summary={completionSummary}
@@ -854,7 +912,9 @@ export function TransactionImportValidator({
                     </div>
                     {importResult.candidateCount > 0
                       ? " تم إيقاف الاستيراد عند أول معاملات متشابهة تحتاج قرارك، حتى لا نحذف شراءً حقيقيًا أو نكرر معاملة موجودة."
-                      : " هذه أرقام تقدم أكدها السيرفر، لكن ميزان لم يعتمد إتمام الاستيراد حتى ينجح التحقق من الصفوف المحفوظة في قاعدة البيانات."}
+                      : pendingVerification
+                        ? " تمت معالجة كل الصفوف. المتبقي فقط هو إعادة التحقق من الحفظ؛ لن يعيد ميزان استيراد المعاملات عند الضغط على الزر."
+                        : " هذه أرقام تقدم أكدها السيرفر، لكن ميزان لم يعتمد إتمام الاستيراد حتى ينجح التحقق من الصفوف المحفوظة في قاعدة البيانات."}
                   </div>
                 ) : null}
 
