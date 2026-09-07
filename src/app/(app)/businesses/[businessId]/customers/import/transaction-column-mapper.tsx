@@ -5,6 +5,7 @@ import {
   autoMapTransactionHeaderRow,
   buildTransactionColumnChoices,
   EMPTY_TRANSACTION_COLUMN_MAPPING,
+  enrichStoredTransactionIdMapping,
   fingerprintTransactionHeaderRow,
   inspectTransactionColumnMapping,
   normalizeTransactionHeaderRow,
@@ -175,7 +176,7 @@ export function TransactionColumnMapper({
 
         if (!mappingTouchedRef.current) {
           if (savedMapping) {
-            setMapping(savedMapping);
+            setMapping(enrichStoredTransactionIdMapping(savedMapping, automatic.mapping));
             setMappingOrigin("saved");
           } else if (automatic.detected) {
             setMapping(automatic.mapping);
