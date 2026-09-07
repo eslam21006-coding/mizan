@@ -29,10 +29,12 @@ type Props = {
   baseCurrency: string;
 };
 
+/** Formats an optional exact money value while preserving unavailable values as an em dash. */
 function money(value: string | null, currency: string) {
   return value === null ? "—" : formatMoneyText(value, currency);
 }
 
+/** Converts a stored cohort month into a founder-facing Arabic month label. */
 function cohortLabel(value: string) {
   const [yearText, monthText] = value.split("-");
   const year = Number(yearText);
@@ -43,11 +45,13 @@ function cohortLabel(value: string) {
   );
 }
 
+/** Renders cohort-level Lifetime Contribution Profit without including fixed overhead. */
 export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
   const [rows, setRows] = useState<LifetimeContributionRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  /** Loads the authorized cohort contribution rows for the selected business. */
   const loadRows = useCallback(async () => {
     setIsLoading(true);
     setError(null);
