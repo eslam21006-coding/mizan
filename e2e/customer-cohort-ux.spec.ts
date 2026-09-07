@@ -28,7 +28,7 @@ const cohortRows = Array.from({ length: 24 }, (_, index) => {
   };
 });
 
-/** Serves deterministic paginated cohort rows to the browser fixture, including CORS preflight handling. */
+/** Serves deterministic paginated first-purchase groups to the browser fixture, including CORS preflight handling. */
 async function fulfillCohorts(route: Route) {
   if (route.request().method() === "OPTIONS") {
     await route.fulfill({ status: 204, headers: corsHeaders, body: "" });
@@ -48,8 +48,8 @@ async function fulfillCohorts(route: Route) {
   });
 }
 
-test.describe("Customer cohort UX", () => {
-  test("shows one year per page with readable amounts and age labels", async ({ page }) => {
+test.describe("Customer first-purchase-group UX", () => {
+  test("shows one year per page with readable amounts and plain age labels", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") browserErrors.push(message.text());
@@ -61,10 +61,10 @@ test.describe("Customer cohort UX", () => {
 
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await expect(page.getByRole("heading", { name: "كيف تتغير قيمة العميل مع الوقت؟" })).toBeVisible();
-    await expect(page.getByText(/قيمة العميل المحققة = صافي التحصيل التراكمي/)).toBeVisible();
+    await expect(page.getByRole("heading", { name: "كم دفع عملاء كل شهر حتى الآن؟" })).toBeVisible();
+    await expect(page.getByText(/نقسم العملاء حسب شهر أول شراء فقط للمقارنة/)).toBeVisible();
 
-    const table = page.getByRole("table", { name: "جدول الكوهورتات وObserved LTV" });
+    const table = page.getByRole("table", { name: "قيمة العميل حسب شهر أول شراء" });
     await expect(table.getByRole("columnheader")).toHaveCount(5);
     await expect(table.locator("tbody tr")).toHaveCount(12);
     await expect(table.getByText("1,260", { exact: true })).toBeVisible();
@@ -73,6 +73,7 @@ test.describe("Customer cohort UX", () => {
     await expect(table.getByText("بعد شهر", { exact: true }).first()).toBeVisible();
     await expect(table.getByText(/^M1$/)).toHaveCount(0);
     await expect(page.getByText("الصفحة 1 من 2", { exact: true })).toBeVisible();
+    await expect(page.getByText(/كوهورت/)).toHaveCount(0);
 
     await page.getByRole("button", { name: "الصفحة التالية" }).click();
     await expect(page.getByText("الصفحة 2 من 2", { exact: true })).toBeVisible();
