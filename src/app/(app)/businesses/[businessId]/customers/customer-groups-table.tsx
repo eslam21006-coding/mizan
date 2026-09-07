@@ -33,6 +33,11 @@ type CustomerGroupsTableProps = {
 type CustomerFilter = "all" | "repeat" | "single" | "refunded";
 type CustomerSort = "acquisition_desc" | "last_transaction_desc" | "net_cash_desc" | "transactions_desc";
 
+/** Escapes PostgreSQL ILIKE metacharacters so user-entered email text is matched literally. */
+function escapeIlikeLiteral(value: string) {
+  return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
+}
+
 /** Formats an optional transaction timestamp in the business reporting timezone. */
 function timestampDisplay(value: string | null, timezone: string) {
   if (!value) return "—";
@@ -77,7 +82,9 @@ export function CustomerGroupsTable({
         )
         .eq("business_id", businessId);
 
-      if (search) query = query.ilike("customer_email", `%${search}%`);
+      if (search) {
+        query = query.ilike("customer_email", `%${escapeIlikeLiteral(search)}%`);
+      }
       if (customerFilter === "repeat") query = query.gt("collection_count", 1);
       if (customerFilter === "single") query = query.eq("transaction_count", 1);
       if (customerFilter === "refunded") query = query.gt("refund_count", 0);
