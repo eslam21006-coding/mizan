@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test.describe("Customer and LTV overview redesign", () => {
+test.describe("Customer value overview redesign", () => {
   test("prioritizes readable KPIs, collapses setup, and keeps analysis tabs accessible in Arabic RTL", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {
@@ -12,7 +12,7 @@ test.describe("Customer and LTV overview redesign", () => {
 
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await expect(page.getByRole("heading", { name: "العملاء و LTV" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "العملاء وقيمة العميل" })).toBeVisible();
 
     const historyOverview = page.getByRole("region", { name: "ملخص العملاء" });
     await expect(historyOverview).toBeVisible();
@@ -52,7 +52,7 @@ test.describe("Customer and LTV overview redesign", () => {
     );
 
     const tabList = page.getByRole("tablist", { name: "أقسام تحليل العملاء" });
-    const observedTab = tabList.getByRole("tab", { name: /قيمة العميل مع الوقت/ });
+    const observedTab = tabList.getByRole("tab", { name: /متوسط ما دفعه العميل/ });
     const revenueTab = tabList.getByRole("tab", { name: /مصادر الإيراد/ });
     const contributionTab = tabList.getByRole("tab", { name: /ربح المساهمة/ });
     const customersTab = tabList.getByRole("tab", { name: /سجل العملاء/ });
