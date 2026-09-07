@@ -78,7 +78,7 @@ export function CustomerGroupsTable({
         .eq("business_id", businessId);
 
       if (search) query = query.ilike("customer_email", `%${search}%`);
-      if (customerFilter === "repeat") query = query.gt("transaction_count", 1);
+      if (customerFilter === "repeat") query = query.gt("collection_count", 1);
       if (customerFilter === "single") query = query.eq("transaction_count", 1);
       if (customerFilter === "refunded") query = query.gt("refund_count", 0);
 
