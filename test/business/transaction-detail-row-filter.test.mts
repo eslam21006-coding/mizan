@@ -118,7 +118,7 @@ test("a file containing only detail rows remains invalid because it has no trans
   assert.equal(result.isValid, false);
 });
 
-test("Arabic import review tells the user how many detail rows were ignored", async () => {
+test("Arabic import review tells the user how many detail rows were ignored and keeps them separate from invalid transactions", async () => {
   const validatorPath = fileURLToPath(
     new URL(
       "../../src/app/(app)/businesses/[businessId]/customers/import/transaction-import-validator.tsx",
@@ -129,5 +129,6 @@ test("Arabic import review tells the user how many detail rows were ignored", as
 
   assert.match(source, /result\.ignoredDetailRows > 0/);
   assert.match(source, /تم تجاهل \{result\.ignoredDetailRows\} صف تفاصيل/);
-  assert.match(source, /لم يُحسب كمعاملة/);
+  assert.match(source, /هذه ليست ضمن \{result\.invalidRows\} صف غير صالح/);
+  assert.match(source, /ولم تُحسب كمعاملات/);
 });

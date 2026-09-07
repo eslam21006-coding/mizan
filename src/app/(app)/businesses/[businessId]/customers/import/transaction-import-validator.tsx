@@ -141,6 +141,46 @@ function issueValue(issue: TransactionValidationIssue) {
   return value ? value.slice(0, 96) : "—";
 }
 
+function ValidationIssueTable({ result }: { result: TransactionImportValidationResult }) {
+  if (result.issueCount === 0) return null;
+
+  return (
+    <div className={styles.validationIssues}>
+      <h3>الصفوف التي سيتم تجاهلها</h3>
+      <p className={styles.validationNote}>
+        عدد المشكلات ({result.issueCount}) قد يكون أكبر من عدد الصفوف غير الصالحة ({result.invalidRows}) لأن الصف الواحد يمكن أن يحتوي على أكثر من مشكلة.
+      </p>
+      <div className={styles.tableShell}>
+        <table className={styles.issueTable} aria-label="جدول أخطاء معاملات العملاء">
+          <thead>
+            <tr>
+              <th scope="col">الصف</th>
+              <th scope="col">الحقل</th>
+              <th scope="col">المشكلة</th>
+              <th scope="col">القيمة</th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.issues.map((issue) => (
+              <tr key={`${issue.rowNumber}:${issue.field}:${issue.code}`}>
+                <td>{issue.rowNumber}</td>
+                <td>{FIELD_LABELS[issue.field]}</td>
+                <td>{ISSUE_MESSAGES[issue.code]}</td>
+                <td dir="auto">{issueValue(issue)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {result.issuesTruncated && (
+        <p className={styles.validationNote}>
+          تم عرض عينة من المشكلات فقط. إجمالي المشكلات المكتشفة: {result.issueCount}.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function mappedColumns(mapping: TransactionColumnMapping) {
   const required = [mapping.customerEmail, mapping.transactionDate, mapping.amountCollected];
   if (!required.every((column): column is number => column !== null)) return null;
@@ -259,6 +299,7 @@ export function TransactionImportValidator({
   const workflowLocked = isImporting || hasPendingCandidates;
   const currencyMapped = mapping.currency !== null && mapping.currency !== undefined;
   const currencyReady = currencyMapped || baseCurrencyConfirmed;
+  const canImportValidRows = Boolean(result && result.validRows > 0 && validatedRows?.length);
 
   useEffect(() => {
     let active = true;
@@ -356,7 +397,9 @@ export function TransactionImportValidator({
       }));
       const validationResult = validateTransactionImportRows(rows, { skipFirstRow, baseCurrency });
       setResult(validationResult);
-      setValidatedRows(validationResult.isValid ? rows : null);
+      setValidatedRows(
+        validationResult.importableRows.length > 0 ? validationResult.importableRows : null,
+      );
     } catch (caught) {
       if (caught instanceof TransactionValidationSourceError) {
         setError(SOURCE_ERROR_MESSAGES[caught.code]);
@@ -533,8 +576,8 @@ export function TransactionImportValidator({
       return;
     }
 
-    if (!result?.isValid || !validatedRows) {
-      setImportError("راجع الملف بنجاح قبل الاستيراد.");
+    if (!result || result.validRows < 1 || !validatedRows) {
+      setImportError("لا توجد معاملات صالحة للاستيراد بعد المراجعة.");
       return;
     }
     if (!source || !sources.includes(source)) {
@@ -558,7 +601,8 @@ export function TransactionImportValidator({
     if (!prepared) {
       try {
         prepared = prepareTransactionImportRows(validatedRows, {
-          skipFirstRow,
+          // Validation already removed a selected header row and excluded every invalid row.
+          skipFirstRow: false,
           transactionType,
           baseCurrency,
           createImportRowToken: () => crypto.randomUUID(),
@@ -711,12 +755,16 @@ export function TransactionImportValidator({
           <span className={styles.kicker}>الخطوة 5</span>
           <h2 id="transaction-validation-title">راجع البيانات قبل الحفظ</h2>
           <p>
-            يفحص ميزان الملف كاملًا قبل الاستيراد ويوقف أي معاملة متشابهة لا يمكن الجزم بأنها مكررة حتى تقرر أنت.
+            يفحص ميزان الملف كاملًا قبل الاستيراد. الصف غير القابل للاستيراد يُعرض لك ويُتجاهل، بينما تظل الصفوف السليمة جاهزة للحفظ.
           </p>
         </div>
         {result && (
-          <span className={result.isValid ? styles.validationReady : styles.validationBlocked}>
-            {result.isValid ? "المراجعة ناجحة" : "تحتاج إلى تعديل"}
+          <span className={canImportValidRows ? styles.validationReady : styles.validationBlocked}>
+            {result.isValid
+              ? "المراجعة ناجحة"
+              : canImportValidRows
+                ? `جاهز مع تجاهل ${result.invalidRows} صف`
+                : "لا توجد معاملات صالحة"}
           </span>
         )}
       </div>
@@ -768,9 +816,9 @@ export function TransactionImportValidator({
         <>
           <div className={styles.validationSummary} role="status" aria-live="polite" aria-atomic="true">
             <div><span>صفوف تم فحصها</span><strong>{result.checkedRows}</strong></div>
-            <div><span>صفوف صالحة</span><strong>{result.validRows}</strong></div>
-            <div><span>صفوف غير صالحة</span><strong>{result.invalidRows}</strong></div>
-            <div><span>مشكلات مكتشفة</span><strong>{result.issueCount}</strong></div>
+            <div><span>جاهزة للاستيراد</span><strong>{result.validRows}</strong></div>
+            <div><span>صفوف سيتم تجاهلها</span><strong>{result.invalidRows}</strong></div>
+            <div><span>مشكلات داخل الصفوف المتجاهلة</span><strong>{result.issueCount}</strong></div>
           </div>
 
           {result.skippedHeaderRows > 0 && (
@@ -779,20 +827,43 @@ export function TransactionImportValidator({
 
           {result.ignoredDetailRows > 0 && (
             <p className={styles.validationNote}>
-              تم تجاهل {result.ignoredDetailRows} صف تفاصيل لا يحتوي على تاريخ معاملة ولا مبلغ محصل؛ لم يُحسب كمعاملة.
+              تم تجاهل {result.ignoredDetailRows} صف تفاصيل إضافي لا يحتوي على تاريخ معاملة ولا مبلغ محصل؛ هذه ليست ضمن {result.invalidRows} صف غير صالح ولم تُحسب كمعاملات.
             </p>
           )}
 
-          {result.isValid ? (
+          {result.checkedRows === 0 ? (
+            <div className={styles.mappingError} role="alert">
+              {result.ignoredDetailRows > 0
+                ? `تم تجاهل ${result.ignoredDetailRows} صف تفاصيل لا يحتوي على تاريخ معاملة ولا مبلغ محصل، ولا توجد معاملات مكتملة قابلة للمراجعة في الملف.`
+                : skipFirstRow
+                  ? "لا توجد معاملات قابلة للمراجعة بعد استبعاد أول صف باعتباره عناوين الأعمدة."
+                  : "لا توجد صفوف معاملات قابلة للمراجعة في الملف."}
+            </div>
+          ) : canImportValidRows ? (
             <>
-              <div className={styles.validationSuccess}>
-                كل الصفوف الصالحة للمراجعة سليمة. أكمل مصدر المعاملات ونوع الملف وعملته، ثم أكد الاستيراد.
-              </div>
+              {result.invalidRows > 0 ? (
+                <>
+                  <div className={styles.validationSuccess} role="status">
+                    سيتم استيراد {result.validRows} صفًا صالحًا وتجاهل {result.invalidRows} صف غير صالح فقط. الصفوف المتجاهلة لن تُحفظ ولن تدخل في حسابات العملاء، ولن تمنع استيراد باقي الملف.
+                  </div>
+                  <ValidationIssueTable result={result} />
+                </>
+              ) : (
+                <div className={styles.validationSuccess}>
+                  كل الصفوف القابلة للمراجعة سليمة. أكمل مصدر المعاملات ونوع الملف وعملته، ثم أكد الاستيراد.
+                </div>
+              )}
+
               <fieldset className={task20Styles.importPanel}>
                 <legend className={task20Styles.importLegend}>تأكيد الاستيراد</legend>
                 <p>
                   إذا توفر رقم المعاملة، يستخدمه ميزان لاكتشاف التكرار بدقة. وإذا لم يتوفر، يقارن البريد والتوقيت والمبلغ والمصدر ونوع المعاملة، ويطلب قرارك عندما لا يكون التكرار مؤكدًا.
                 </p>
+                {result.invalidRows > 0 && (
+                  <p>
+                    سيُرسل ميزان إلى قاعدة البيانات الصفوف الـ{result.validRows} التي اجتازت المراجعة فقط. لا يخمن مبلغًا مفقودًا ولا يحول عملة مختلفة إلى {baseCurrency} تلقائيًا.
+                  </p>
+                )}
 
                 <div className={task20Styles.sourceField}>
                   <label htmlFor="transaction-import-source">مصدر المعاملات</label>
@@ -888,7 +959,7 @@ export function TransactionImportValidator({
                       : "جاري الاستيراد…"
                     : pendingVerification
                       ? "إعادة التحقق من الحفظ"
-                      : "استيراد المعاملات"}
+                      : `استيراد ${result.validRows} معاملة صالحة`}
                 </button>
 
                 {completionSummary && importResult ? (
@@ -967,29 +1038,13 @@ export function TransactionImportValidator({
                 {importError && <div role="alert" className={task20Styles.importError}>{importError}</div>}
               </fieldset>
             </>
-          ) : result.checkedRows === 0 ? (
-            <div className={styles.mappingError} role="alert">
-              {result.ignoredDetailRows > 0
-                ? `تم تجاهل ${result.ignoredDetailRows} صف تفاصيل لا يحتوي على تاريخ معاملة ولا مبلغ محصل، ولا توجد معاملات مكتملة قابلة للمراجعة في الملف.`
-                : skipFirstRow
-                  ? "لا توجد معاملات قابلة للمراجعة بعد استبعاد أول صف باعتباره عناوين الأعمدة."
-                  : "لا توجد صفوف معاملات قابلة للمراجعة في الملف."}
-            </div>
           ) : (
-            <div className={styles.validationIssues}>
-              <h3>أول المشكلات المكتشفة</h3>
-              <div className={styles.tableShell}>
-                <table className={styles.issueTable} aria-label="جدول أخطاء معاملات العملاء">
-                  <thead><tr><th scope="col">الصف</th><th scope="col">الحقل</th><th scope="col">المشكلة</th><th scope="col">القيمة</th></tr></thead>
-                  <tbody>
-                    {result.issues.map((issue) => (
-                      <tr key={`${issue.rowNumber}:${issue.field}:${issue.code}`}><td>{issue.rowNumber}</td><td>{FIELD_LABELS[issue.field]}</td><td>{ISSUE_MESSAGES[issue.code]}</td><td dir="auto">{issueValue(issue)}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
+            <>
+              <div className={styles.mappingError} role="alert">
+                لا توجد معاملات صالحة للاستيراد. تم تجاهل كل الصفوف غير الصالحة؛ صحح البيانات إذا أردت استيرادها.
               </div>
-              {result.issuesTruncated && <p className={styles.validationNote}>تم عرض عينة من المشكلات فقط. إجمالي المشكلات المكتشفة: {result.issueCount}.</p>}
-            </div>
+              <ValidationIssueTable result={result} />
+            </>
           )}
         </>
       )}

@@ -121,11 +121,9 @@ export function prepareTransactionImportRows(
       !amountHasValidSign ||
       (rowCurrency !== undefined && rowCurrency !== baseCurrency)
     ) {
-      throw new TransactionImportPreparationError(
-        "ROW_NOT_VALIDATED",
-        row.rowNumber,
-        "Only validated successful transactions in the business base currency can be prepared for import.",
-      );
+      // Row-level validation failures must never abort otherwise valid transactions in the same file.
+      // Structural preparation failures still throw below/above and remain fail-closed.
+      continue;
     }
 
     const importRowToken = options.createImportRowToken();

@@ -63,7 +63,7 @@ export function TransactionImportCompletionCard({
           <strong>{ignoredDetailRows}</strong>
         </div>
         <div>
-          <span>صفوف غير صالحة</span>
+          <span>صفوف غير صالحة تم تجاهلها</span>
           <strong>{invalidRows}</strong>
         </div>
         <div>
@@ -87,6 +87,13 @@ export function TransactionImportCompletionCard({
           </strong>
         </div>
       </div>
+
+      {invalidRows > 0 && (
+        <div className={styles.sessionNote}>
+          <strong>الصفوف غير الصالحة لم تدخل في الاستيراد.</strong>
+          <span>لم تُحفظ ولم تدخل في أي حسابات للعملاء أو التحصيل.</span>
+        </div>
+      )}
 
       {hasNewRows && (
         <div className={styles.sessionNote}>

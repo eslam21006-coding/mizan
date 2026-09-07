@@ -122,25 +122,38 @@ test("Task 20 preserves non-zero decimals below JavaScript Number range", () => 
   assert.equal(refund[0]?.amount_collected, "1e-324");
 });
 
-test("Task 20 rejects negative collections and zero-value rows before import", () => {
-  for (const amountCollected of ["-10", "0"]) {
-    assert.throws(
-      () =>
-        prepareTransactionImportRows(
-          [
-            {
-              rowNumber: 4,
-              customerEmail: "buyer@example.com",
-              transactionDate: "2026-08-24",
-              amountCollected,
-            },
-          ],
-          prepareOptions(),
-        ),
-      (error: unknown) =>
-        error instanceof TransactionImportPreparationError && error.code === "ROW_NOT_VALIDATED",
-    );
-  }
+test("Task 20 skips type-invalid amounts without aborting valid rows", () => {
+  let token = 0;
+  const rows = prepareTransactionImportRows(
+    [
+      {
+        rowNumber: 3,
+        customerEmail: "valid@example.com",
+        transactionDate: "2026-08-24",
+        amountCollected: "10",
+      },
+      {
+        rowNumber: 4,
+        customerEmail: "zero@example.com",
+        transactionDate: "2026-08-24",
+        amountCollected: "0",
+      },
+      {
+        rowNumber: 5,
+        customerEmail: "negative@example.com",
+        transactionDate: "2026-08-24",
+        amountCollected: "-10",
+      },
+    ],
+    {
+      ...prepareOptions(),
+      createImportRowToken: () => `token-${++token}`,
+    },
+  );
+
+  assert.deepEqual(rows.map((row) => row.row_number), [3]);
+  assert.equal(rows[0]?.amount_collected, "10");
+  assert.equal(token, 1);
 });
 
 test("Task 20 applies explicit header skipping before preparing rows", () => {
@@ -171,23 +184,20 @@ test("Task 20 applies explicit header skipping before preparing rows", () => {
   assert.equal(rows[0]?.row_number, 2);
 });
 
-test("Task 20 refuses rows that have not passed the required validation contract", () => {
-  assert.throws(
-    () =>
-      prepareTransactionImportRows(
-        [
-          {
-            rowNumber: 1,
-            customerEmail: "not-an-email",
-            transactionDate: "2026-08-24",
-            amountCollected: "10",
-          },
-        ],
-        prepareOptions(),
-      ),
-    (error: unknown) =>
-      error instanceof TransactionImportPreparationError && error.code === "ROW_NOT_VALIDATED",
+test("Task 20 skips rows that have not passed the required validation contract", () => {
+  const rows = prepareTransactionImportRows(
+    [
+      {
+        rowNumber: 1,
+        customerEmail: "not-an-email",
+        transactionDate: "2026-08-24",
+        amountCollected: "10",
+      },
+    ],
+    prepareOptions(),
   );
+
+  assert.deepEqual(rows, []);
 });
 
 test("Task 20 rejects emails beyond the database storage boundary during validation", () => {

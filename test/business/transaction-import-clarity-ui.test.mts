@@ -20,19 +20,26 @@ const completionCardSource = readFileSync(
   "utf8",
 );
 
-test("review guidance distinguishes validation from persistence and keeps invalid imports fail-closed", () => {
+test("review guidance distinguishes validation from persistence and explicitly skips only invalid rows", () => {
   assert.match(reviewGuideSource, /المراجعة وحدها لا تحفظ أي معاملات/);
-  assert.match(reviewGuideSource, /إذا كان عدد الصفوف غير الصالحة أكبر من صفر، يتوقف الحفظ بالكامل/);
-  assert.match(reviewGuideSource, /لا يستورد الصفوف الصالحة وحدها ولا يتجاهل الأخطاء\s+تلقائيًا/);
+  assert.match(reviewGuideSource, /وجود صفوف غير صالحة لا يوقف باقي الملف/);
+  assert.match(reviewGuideSource, /يستورد\s+الصفوف السليمة فقط/);
+  assert.match(reviewGuideSource, /لا يخمن مبلغًا\s+مفقودًا ولا يحول عملة مختلفة/);
   assert.match(reviewGuideSource, /هذا هو الإجراء الذي يحفظ المعاملات فعلًا/);
   assert.match(reviewGuideSource, /href="#transaction-file"/);
   assert.match(reviewGuideSource, /href="#transaction-validation-title"/);
 
   assert.match(
     validatorSource,
-    /setValidatedRows\(validationResult\.isValid \? rows : null\)/,
-    "invalid validation must continue to block the entire import rather than partially saving rows",
+    /validationResult\.importableRows\.length > 0 \? validationResult\.importableRows : null/,
+    "only rows that passed the complete validator may reach transaction preparation",
   );
+  assert.match(
+    validatorSource,
+    /skipFirstRow: false/,
+    "validated importable rows must not lose the first real transaction by applying header removal twice",
+  );
+  assert.match(validatorSource, /الصفوف غير الصالحة لم تُحفظ|الصفوف المتجاهلة لن تُحفظ/);
 });
 
 test("the upload workflow places the clarity guide after review and names review then save as separate actions", () => {
@@ -50,4 +57,5 @@ test("customer navigation describes automatic grouping and uses an analysis acti
   assert.match(customersPageSource, />\s*عرض تحليل العملاء\s*<\/Link>/);
   assert.doesNotMatch(customersPageSource, />\s*تجميع العملاء\s*<\/Link>/);
   assert.match(completionCardSource, />\s*عرض تحليل العملاء\s*<\/a>/);
+  assert.match(completionCardSource, /صفوف غير صالحة تم تجاهلها/);
 });

@@ -52,6 +52,7 @@ export type TransactionImportValidationResult = {
   checkedRows: number;
   validRows: number;
   invalidRows: number;
+  importableRows: TransactionValidationInputRow[];
   skippedHeaderRows: number;
   collapsedSourceRows: number;
   ignoredNonCashRows: number;
@@ -617,7 +618,10 @@ function rowIssues(
 
   if (!amountCollected) {
     issues.push({ rowNumber: row.rowNumber, field: "amountCollected", code: "AMOUNT_REQUIRED", rawValue: row.amountCollected });
-  } else if (parseTransactionAmount(amountCollected) === null) {
+  } else if (
+    parseTransactionAmount(amountCollected) === null ||
+    canonicalDecimalKey(amountCollected) === "0"
+  ) {
     issues.push({ rowNumber: row.rowNumber, field: "amountCollected", code: "AMOUNT_INVALID", rawValue: row.amountCollected });
   }
 
@@ -651,11 +655,13 @@ export function validateTransactionImportRows(
   let invalidRows = 0;
   let issueCount = 0;
   const issues: TransactionValidationIssue[] = [];
+  const importableRows: TransactionValidationInputRow[] = [];
 
   for (const row of normalized.rows) {
     const currentIssues = rowIssues(row, options.baseCurrency);
     if (currentIssues.length === 0) {
       validRows += 1;
+      importableRows.push(row);
       continue;
     }
     invalidRows += 1;
@@ -670,6 +676,7 @@ export function validateTransactionImportRows(
     checkedRows: normalized.rows.length,
     validRows,
     invalidRows,
+    importableRows,
     skippedHeaderRows: normalized.skippedHeaderRows,
     collapsedSourceRows: normalized.collapsedSourceRows,
     ignoredNonCashRows: normalized.ignoredNonCashRows,
