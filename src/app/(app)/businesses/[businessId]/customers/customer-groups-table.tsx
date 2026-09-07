@@ -196,7 +196,7 @@ export function CustomerGroupsTable({
       </div>
 
       <div className={uxStyles.customerControls}>
-        <form className={uxStyles.customerSearch} onSubmit={submitSearch} role="search">
+        <form className={uxStyles.customerSearch} onSubmit={submitSearch}>
           <label htmlFor="customer-email-search">ابحث بالبريد الإلكتروني</label>
           <div>
             <input
