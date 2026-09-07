@@ -1,0 +1,128 @@
+.analysisTabEmphasis {
+  border-color: var(--border);
+  background: var(--surface);
+}
+
+.analysisTabEmphasis:hover {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+  border-color: var(--brand);
+}
+
+.analysisTabActiveEmphasis {
+  color: var(--surface) !important;
+  background: var(--brand-strong) !important;
+  border-color: var(--brand-strong) !important;
+  box-shadow: var(--shadow-soft);
+}
+
+.analysisTabActiveEmphasis span {
+  color: color-mix(in srgb, var(--surface) 78%, transparent) !important;
+}
+
+.customerControls {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.5fr) repeat(2, minmax(170px, 0.75fr)) auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+}
+
+.customerSearch,
+.customerControlField {
+  display: grid;
+  gap: 6px;
+}
+
+.customerSearch label,
+.customerControlField span {
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.customerSearch > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+}
+
+.customerSearch input,
+.customerControlField select {
+  width: 100%;
+  min-height: 40px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font: inherit;
+  font-size: 11px;
+}
+
+.customerSearch input:focus-visible,
+.customerControlField select:focus-visible,
+.customerSearch button:focus-visible,
+.clearCustomerControls:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.customerSearch button,
+.clearCustomerControls {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 9px;
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.customerSearch button {
+  color: var(--surface);
+  background: var(--brand-strong);
+  border: 1px solid var(--brand-strong);
+}
+
+.clearCustomerControls {
+  color: var(--brand-strong);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.noFilterResults {
+  margin-top: 14px;
+  padding: 18px;
+  color: var(--text-soft);
+  background: var(--surface-soft);
+  border: 1px dashed var(--border);
+  border-radius: 11px;
+  font-size: 11px;
+  text-align: center;
+}
+
+@media (max-width: 920px) {
+  .customerControls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .customerControls {
+    grid-template-columns: 1fr;
+  }
+
+  .customerSearch > div {
+    grid-template-columns: 1fr;
+  }
+
+  .customerSearch button,
+  .clearCustomerControls {
+    width: 100%;
+  }
+}
