@@ -13,17 +13,15 @@ begin
   end if;
 
   -- Serialize every use of one definitive gateway ID before looking for either an existing ID or
-  -- a legacy no-ID row. This keeps concurrent retries on different signatures from racing into the
-  -- partial unique source-ID index while preserving the guarded RPC's ON CONFLICT behavior.
+  -- a legacy no-ID row. JSON preserves component boundaries and explicit nulls in the lock identity.
   perform pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended(
-      concat_ws(
-        E'\x1f',
+      pg_catalog.jsonb_build_array(
         'source-transaction-id',
-        new.business_id::text,
+        new.business_id,
         new.source,
         new.source_transaction_id
-      ),
+      )::text,
       0
     )
   );
@@ -39,14 +37,13 @@ begin
     return new;
   end if;
 
-  -- Serialize legacy reconciliation on the exact source row + transaction facts. The source-row
-  -- constraint keeps this repair scoped to a re-import of the same gateway row instead of treating
-  -- a legitimate later same-value purchase as a duplicate merely because its signature is similar.
-  reconciliation_lock_key := concat_ws(
-    E'\x1f',
-    new.business_id::text,
+  -- Serialize legacy reconciliation on the exact source row + transaction facts. source_transaction_at
+  -- is intentionally preserved as source text; transaction_at is rendered in UTC so its identity is
+  -- independent of the database session TimeZone. JSON keeps nulls and delimiters unambiguous.
+  reconciliation_lock_key := pg_catalog.jsonb_build_array(
+    new.business_id,
     new.source,
-    new.source_row_number::text,
+    new.source_row_number,
     new.customer_email,
     new.source_transaction_at,
     to_char(new.transaction_at at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US'),
@@ -54,7 +51,7 @@ begin
     new.transaction_type,
     new.currency,
     new.normalized_outcome
-  );
+  )::text;
   perform pg_catalog.pg_advisory_xact_lock(
     pg_catalog.hashtextextended('legacy-transaction-id:' || reconciliation_lock_key, 0)
   );
