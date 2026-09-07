@@ -12,10 +12,12 @@ export type TransactionImportCompletionSummary = {
   businessNetCashCollected: string;
 };
 
+/** Parses a transport value as a non-negative safe integer. */
 function parseNonNegativeInteger(value: unknown) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : null;
 }
 
+/** Parses a nullable canonical ISO calendar date without normalizing malformed values. */
 function parseNullableIsoDate(value: unknown) {
   if (value === null) return null;
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return undefined;
@@ -25,6 +27,7 @@ function parseNullableIsoDate(value: unknown) {
     : value;
 }
 
+/** Preserves canonical exact decimal text instead of converting financial values to floating point. */
 function parseDecimalText(value: unknown) {
   if (typeof value !== "string" || !/^-?(?:0|[1-9]\d*)(?:\.\d+)?$/.test(value)) return null;
   return value;
@@ -71,6 +74,20 @@ export function parseTransactionImportCompletionSummary(
   if ((persistedInsertedCount === 0) !== (sessionLastTransactionDate === null)) return null;
   if ((businessTransactionCount === 0) !== (businessFirstTransactionDate === null)) return null;
   if ((businessTransactionCount === 0) !== (businessLastTransactionDate === null)) return null;
+  if (
+    sessionFirstTransactionDate &&
+    sessionLastTransactionDate &&
+    sessionFirstTransactionDate > sessionLastTransactionDate
+  ) {
+    return null;
+  }
+  if (
+    businessFirstTransactionDate &&
+    businessLastTransactionDate &&
+    businessFirstTransactionDate > businessLastTransactionDate
+  ) {
+    return null;
+  }
 
   return {
     requestedTokenCount,
