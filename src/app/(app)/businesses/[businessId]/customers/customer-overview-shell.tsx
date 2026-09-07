@@ -15,7 +15,7 @@ type CustomerOverviewShellProps = {
   customers: ReactNode;
 };
 
-/** Presents the customer-economics workflows and analyses without changing their underlying calculations. */
+/** Presents customer economics with a compact summary first and deeper analysis on demand. */
 export function CustomerOverviewShell({
   businessId,
   businessName,
@@ -31,12 +31,16 @@ export function CustomerOverviewShell({
     <div className={styles.customerWorkspace}>
       <section className={styles.heroShell} aria-labelledby="customer-overview-title">
         <div className={styles.heroCopy}>
-          <span className={styles.kicker}>اقتصاديات العميل</span>
-          <h1 id="customer-overview-title">العملاء و LTV — {businessName}</h1>
+          <span className={styles.kicker}>اقتصاديات العميل · {businessName}</span>
+          <h1 id="customer-overview-title">العملاء و LTV</h1>
           <p>
-            ابدأ من التحصيلات الفعلية، ثم راقب قيمة العميل المحققة ومصادر الإيراد وربح المساهمة عبر عمر العميل.
-            ميزان لا يحوّل إيراد فترة واحدة إلى LTV.
+            اعرف كم دفع عملاؤك فعلًا، كم منهم اشترى مرة أخرى، وكيف تتطور قيمة العميل المحققة مع الوقت.
           </p>
+          <div className={styles.heroMeta} aria-label="سياق البزنس">
+            <span>{businessName}</span>
+            <span dir="ltr">{baseCurrency}</span>
+            <span dir="ltr">{timezone}</span>
+          </div>
         </div>
         <div className={styles.heroActions}>
           <Link className={styles.primaryAction} href={`/businesses/${businessId}/customers/import`}>
@@ -55,52 +59,36 @@ export function CustomerOverviewShell({
         </div>
       </section>
 
-      <section className={styles.businessStrip} aria-label="سياق البزنس">
-        <div>
-          <span>البزنس</span>
-          <strong>{businessName}</strong>
-        </div>
-        <div>
-          <span>العملة الأساسية</span>
-          <strong dir="ltr">{baseCurrency}</strong>
-        </div>
-        <div>
-          <span>منطقة التقارير</span>
-          <strong dir="ltr">{timezone}</strong>
-        </div>
-      </section>
-
       {historyOverview}
 
-      <section className={styles.workflowSection} aria-labelledby="customer-workflow-title">
-        <div className={styles.sectionHeading}>
-          <div>
-            <span className={styles.kicker}>جهّز التحليل بالترتيب الصحيح</span>
-            <h2 id="customer-workflow-title">مسار بيانات العملاء</h2>
-            <p>كل خطوة تضيف طبقة تحليل أعمق، بينما تظل المعاملات الفعلية هي المصدر الأساسي.</p>
-          </div>
-        </div>
-
+      <details className={styles.setupDisclosure}>
+        <summary>
+          <span>
+            <strong>إعدادات التحليل المتقدمة</strong>
+            <small>ربط مصادر الإيراد وإضافة التكاليف المرتبطة بالعميل عند الحاجة.</small>
+          </span>
+          <span className={styles.disclosureAction}>عرض الإعدادات</span>
+        </summary>
         <div className={styles.workflowGrid}>
           <article className={styles.workflowCard}>
             <div className={styles.workflowCardTop}>
               <span className={styles.stepBadge}>1</span>
-              <span className={styles.workflowTag}>الأساس</span>
+              <span className={styles.workflowTag}>المعاملات</span>
             </div>
-            <h3>استورد التحصيلات والاسترجاعات</h3>
-            <p>من سجل بوابة الدفع الفعلي. منه يتحدد العميل وتاريخ اكتسابه والكوهورت وصافي التحصيل.</p>
+            <h3>استيراد التحصيلات والاسترجاعات</h3>
+            <p>سجل بوابة الدفع هو المصدر الأساسي لتاريخ اكتساب العميل وصافي التحصيل.</p>
             <Link className={styles.workflowLink} href={`/businesses/${businessId}/customers/import`}>
-              فتح استيراد المعاملات
+              فتح الاستيراد
             </Link>
           </article>
 
           <article className={styles.workflowCard}>
             <div className={styles.workflowCardTop}>
               <span className={styles.stepBadge}>2</span>
-              <span className={styles.workflowTag}>تحليل الإيراد</span>
+              <span className={styles.workflowTag}>مصدر القيمة</span>
             </div>
-            <h3>اربط المعاملات بمصادر الإيراد</h3>
-            <p>Front-End أو Backend أو مصادر أخرى. الربط صريح؛ ميزان لا يخمّن Attribution من قيمة المعاملة.</p>
+            <h3>ربط مصادر الإيراد</h3>
+            <p>اربط Front-End وBackend والمصادر الأخرى يدويًا؛ ميزان لا يخمّن Attribution.</p>
             <Link
               className={styles.workflowLink}
               href={`/businesses/${businessId}/customers/revenue-stream-attribution`}
@@ -114,29 +102,29 @@ export function CustomerOverviewShell({
               <span className={styles.stepBadge}>3</span>
               <span className={styles.workflowTag}>ربحية العميل</span>
             </div>
-            <h3>أكمل التكاليف المرتبطة بالعميل</h3>
-            <p>أضف تكاليف الاكتساب والتكاليف المتغيرة المرتبطة بالكوهورت لحساب ربح المساهمة مدى الحياة.</p>
+            <h3>إضافة التكاليف المرتبطة</h3>
+            <p>أكمل تكاليف الاكتساب والتكاليف المتغيرة لحساب ربح المساهمة مدى الحياة.</p>
             <Link
               className={styles.workflowLink}
               href={`/businesses/${businessId}/customers/lifetime-contribution`}
             >
-              إدخال تكاليف المساهمة
+              إدخال التكاليف
             </Link>
           </article>
         </div>
-      </section>
+      </details>
 
       <CustomerAnalysisTabs
         panels={[
           {
             id: "observed-ltv",
-            eyebrow: "القيمة المحققة",
-            label: "Observed LTV",
+            eyebrow: "Observed LTV",
+            label: "قيمة العميل مع الوقت",
             content: observedLtv,
           },
           {
             id: "revenue-streams",
-            eyebrow: "من أين جاءت القيمة؟",
+            eyebrow: "من أين جاء التحصيل؟",
             label: "مصادر الإيراد",
             content: revenueStreams,
           },
@@ -148,7 +136,7 @@ export function CustomerOverviewShell({
           },
           {
             id: "customers",
-            eyebrow: "من دفع ومتى؟",
+            eyebrow: "المعاملات حسب العميل",
             label: "سجل العملاء",
             content: customers,
           },
