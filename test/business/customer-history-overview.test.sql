@@ -5,13 +5,14 @@ values
   ('71717171-7171-4717-8717-717171717001', 'history-owner-a@example.test', '{"role":"mentee"}'::jsonb, now(), now()),
   ('71717171-7171-4717-8717-717171717002', 'history-owner-b@example.test', '{"role":"mentee"}'::jsonb, now(), now()),
   ('71717171-7171-4717-8717-717171717003', 'history-member@example.test', '{"role":"mentee"}'::jsonb, now(), now()),
-  ('71717171-7171-4717-8717-717171717004', 'history-outsider@example.test', '{"role":"mentee"}'::jsonb, now(), now()),
+  ('71717171-7171-4717-8717-717171717004', 'history-owner-empty@example.test', '{"role":"mentee"}'::jsonb, now(), now()),
   ('71717171-7171-4717-8717-717171717005', 'history-admin@example.test', '{"role":"admin"}'::jsonb, now(), now());
 
 insert into public.businesses (id, name, base_currency, timezone, owner_user_id, creation_request_id)
 values
   ('71717171-aaaa-4717-8717-717171717001', 'History Overview A', 'USD', 'Africa/Cairo', '71717171-7171-4717-8717-717171717001', '71717171-bbbb-4717-8717-717171717001'),
-  ('71717171-aaaa-4717-8717-717171717002', 'History Overview B', 'SAR', 'Asia/Riyadh', '71717171-7171-4717-8717-717171717002', '71717171-bbbb-4717-8717-717171717002');
+  ('71717171-aaaa-4717-8717-717171717002', 'History Overview B', 'SAR', 'Asia/Riyadh', '71717171-7171-4717-8717-717171717002', '71717171-bbbb-4717-8717-717171717002'),
+  ('71717171-aaaa-4717-8717-717171717003', 'History Overview Empty', 'EGP', 'Africa/Cairo', '71717171-7171-4717-8717-717171717004', '71717171-bbbb-4717-8717-717171717003');
 
 insert into public.business_memberships (business_id, user_id, membership_role)
 values ('71717171-aaaa-4717-8717-717171717001', '71717171-7171-4717-8717-717171717003', 'member');
@@ -103,9 +104,32 @@ set local request.jwt.claims =
   '{"sub":"71717171-7171-4717-8717-717171717004","role":"authenticated","app_metadata":{"role":"mentee"}}';
 
 do $$
+declare
+  overview public.customer_history_overview%rowtype;
 begin
-  if (select count(*) from public.customer_history_overview) <> 0 then
-    raise exception 'unrelated mentee can read customer history overview rows';
+  if (select count(*) from public.customer_history_overview where business_id in (
+    '71717171-aaaa-4717-8717-717171717001',
+    '71717171-aaaa-4717-8717-717171717002'
+  )) <> 0 then
+    raise exception 'empty-business owner can read another business overview';
+  end if;
+
+  select * into overview
+  from public.customer_history_overview
+  where business_id = '71717171-aaaa-4717-8717-717171717003';
+
+  if not found then
+    raise exception 'business with no transactions lost its zero overview row';
+  end if;
+  if overview.paying_customer_count <> 0
+    or overview.repeat_customer_count <> 0
+    or overview.net_cash_collected <> 0
+    or overview.revenue_per_paying_customer is not null
+    or overview.paying_customer_count_text <> '0'
+    or overview.repeat_customer_count_text <> '0'
+    or overview.net_cash_collected_text <> '0'
+    or overview.revenue_per_paying_customer_text is not null then
+    raise exception 'zero-transaction overview invented customer value or denominator economics';
   end if;
 end $$;
 
@@ -116,9 +140,10 @@ do $$
 begin
   if (select count(*) from public.customer_history_overview where business_id in (
     '71717171-aaaa-4717-8717-717171717001',
-    '71717171-aaaa-4717-8717-717171717002'
-  )) <> 2 then
-    raise exception 'admin cannot read both authorized business overviews';
+    '71717171-aaaa-4717-8717-717171717002',
+    '71717171-aaaa-4717-8717-717171717003'
+  )) <> 3 then
+    raise exception 'admin cannot read all authorized business overviews';
   end if;
 end $$;
 
