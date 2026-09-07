@@ -34,7 +34,7 @@ export function CustomerOverviewShell({
           <span className={styles.kicker}>اقتصاديات العميل · {businessName}</span>
           <h1 id="customer-overview-title">العملاء و LTV</h1>
           <p>
-            اعرف كم دفع عملاؤك فعلًا، كم منهم اشترى مرة أخرى، وكيف تتطور قيمة العميل المحققة مع الوقت.
+            اعرف كم دفع عملاؤك فعلًا، كم منهم اشترى مرة أخرى، وكيف تتطور قيمة العميل المحققة مع الوقت. ميزان لا يحوّل إيراد فترة واحدة إلى LTV؛ القيمة المحققة تأتي من تاريخ معاملات العميل والكوهورتات.
           </p>
           <div className={styles.heroMeta}>
             <span>{businessName}</span>
