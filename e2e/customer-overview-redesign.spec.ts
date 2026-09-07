@@ -1,7 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Customer and LTV overview redesign", () => {
-  test("keeps the customer workflow clear and switches analysis tabs accessibly in Arabic RTL", async ({ page }) => {
+  test("shows simple customer-history KPIs before deeper analyses and keeps tabs accessible in Arabic RTL", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") browserErrors.push(message.text());
@@ -13,6 +13,20 @@ test.describe("Customer and LTV overview redesign", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByRole("heading", { name: "العملاء و LTV — بزنس الاختبار" })).toBeVisible();
+
+    const historyOverview = page.getByRole("region", { name: "ماذا يقول تاريخ معاملاتك؟" });
+    await expect(historyOverview).toBeVisible();
+    await expect(historyOverview.getByText("العملاء المكتسبون")).toBeVisible();
+    await expect(historyOverview.getByText("صافي التحصيل التاريخي")).toBeVisible();
+    await expect(historyOverview.getByText("العملاء المتكررون")).toBeVisible();
+    await expect(historyOverview.getByText("صافي التحصيل لكل عميل دافع")).toBeVisible();
+    await expect(historyOverview.getByText("2700 EGP", { exact: true })).toBeVisible();
+    await expect(historyOverview.getByText("900 EGP", { exact: true })).toBeVisible();
+    await expect(historyOverview.getByText("هذا ليس LTV", { exact: false })).toBeVisible();
+    await expect(
+      historyOverview.getByText("Observed LTV / قيمة العميل المحققة حتى الآن", { exact: true }),
+    ).toBeVisible();
+
     await expect(page.getByRole("heading", { name: "مسار بيانات العملاء" })).toBeVisible();
     await expect(page.getByText("استورد التحصيلات والاسترجاعات")).toBeVisible();
     await expect(page.getByText("اربط المعاملات بمصادر الإيراد")).toBeVisible();
@@ -66,6 +80,7 @@ test.describe("Customer and LTV overview redesign", () => {
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
       .toBe(true);
+    await expect(historyOverview).toBeVisible();
     await expect(page.getByRole("tablist", { name: "أقسام تحليل العملاء" })).toBeVisible();
     expect(browserErrors).toEqual([]);
   });
