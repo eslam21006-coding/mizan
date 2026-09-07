@@ -1,4 +1,9 @@
 import type { CustomerHistoryOverviewSummary } from "@/lib/business/customer-history-overview";
+import {
+  formatCountRatioPercent,
+  formatCountText,
+  formatMoneyText,
+} from "@/lib/financial-display";
 import styles from "./customer-history-overview.module.css";
 
 type CustomerHistoryOverviewProps = {
@@ -7,7 +12,7 @@ type CustomerHistoryOverviewProps = {
   loadError?: boolean;
 };
 
-/** Presents exact business-level customer-history facts without relabeling period revenue as LTV. */
+/** Presents business-level customer-history facts in a compact founder-facing summary. */
 export function CustomerHistoryOverview({
   baseCurrency,
   summary,
@@ -18,8 +23,8 @@ export function CustomerHistoryOverview({
       <section className={styles.shell} aria-labelledby="customer-history-overview-title">
         <div className={styles.heading}>
           <div>
-            <span className={styles.kicker}>ملخص سجل العملاء</span>
-            <h2 id="customer-history-overview-title">ماذا يقول تاريخ معاملاتك؟</h2>
+            <span className={styles.kicker}>نظرة عامة</span>
+            <h2 id="customer-history-overview-title">ملخص العملاء</h2>
           </div>
         </div>
         <div className={styles.errorState} role="alert">
@@ -35,61 +40,71 @@ export function CustomerHistoryOverview({
       <section className={styles.shell} aria-labelledby="customer-history-overview-title">
         <div className={styles.heading}>
           <div>
-            <span className={styles.kicker}>ملخص سجل العملاء</span>
-            <h2 id="customer-history-overview-title">ماذا يقول تاريخ معاملاتك؟</h2>
+            <span className={styles.kicker}>نظرة عامة</span>
+            <h2 id="customer-history-overview-title">ملخص العملاء</h2>
           </div>
         </div>
         <div className={styles.emptyState}>
           <strong>لا توجد بيانات معاملات كافية بعد</strong>
-          <p>بعد استيراد أول معاملات محفوظة سيظهر هنا ملخص بسيط قبل الدخول إلى الكوهورتات والتحليلات التفصيلية.</p>
+          <p>بعد استيراد أول معاملات محفوظة سيظهر هنا عدد العملاء وصافي التحصيل وتكرار الشراء.</p>
         </div>
       </section>
     );
   }
 
-  const money = (value: string) => `${value} ${baseCurrency}`;
   const revenuePerPayingCustomer = summary.revenuePerPayingCustomerText
-    ? money(summary.revenuePerPayingCustomerText)
+    ? formatMoneyText(summary.revenuePerPayingCustomerText, baseCurrency)
     : "غير متاح";
+  const repeatRate = formatCountRatioPercent(
+    summary.repeatCustomerCountText,
+    summary.payingCustomerCountText,
+  );
 
   return (
     <section className={styles.shell} aria-labelledby="customer-history-overview-title">
       <div className={styles.heading}>
         <div>
-          <span className={styles.kicker}>ملخص سجل العملاء</span>
-          <h2 id="customer-history-overview-title">ماذا يقول تاريخ معاملاتك؟</h2>
-          <p>أرقام مباشرة من سجل المعاملات المحفوظ، قبل الدخول إلى الكوهورتات والتحليلات الأعمق.</p>
+          <span className={styles.kicker}>نظرة عامة</span>
+          <h2 id="customer-history-overview-title">ملخص العملاء</h2>
+          <p>أهم ما تحتاج معرفته من سجل المعاملات قبل الدخول في التحليل التفصيلي.</p>
         </div>
       </div>
 
       <div className={styles.metricGrid}>
         <article className={styles.metricCard}>
           <span>العملاء المكتسبون</span>
-          <strong>{summary.payingCustomerCountText}</strong>
+          <strong dir="ltr">{formatCountText(summary.payingCustomerCountText)}</strong>
           <small>لديهم تحصيل ناجح واحد على الأقل</small>
         </article>
 
         <article className={styles.metricCard}>
-          <span>صافي التحصيل التاريخي</span>
-          <strong dir="ltr">{money(summary.netCashCollectedText)}</strong>
+          <span>صافي التحصيل</span>
+          <strong dir="ltr">{formatMoneyText(summary.netCashCollectedText, baseCurrency)}</strong>
           <small>كل التحصيلات − الاسترجاعات</small>
         </article>
 
         <article className={styles.metricCard}>
           <span>العملاء المتكررون</span>
-          <strong>{summary.repeatCustomerCountText}</strong>
-          <small>أكثر من تحصيل ناجح لنفس العميل</small>
+          <strong dir="ltr">{formatCountText(summary.repeatCustomerCountText)}</strong>
+          <small>اشتروا أكثر من مرة</small>
         </article>
 
         <article className={styles.metricCard}>
-          <span>صافي التحصيل لكل عميل دافع</span>
+          <span>متوسط صافي التحصيل لكل عميل</span>
           <strong dir="ltr">{revenuePerPayingCustomer}</strong>
-          <small>Net Cash ÷ العملاء الدافعين · هذا ليس LTV</small>
+          <small>Net Cash ÷ العملاء الدافعين · ليس LTV</small>
         </article>
       </div>
 
+      {repeatRate && (
+        <div className={styles.insight} role="note">
+          <strong dir="ltr">{repeatRate}</strong>
+          <span>من عملائك اشتروا أكثر من مرة.</span>
+        </div>
+      )}
+
       <p className={styles.ltvNote}>
-        <strong>Observed LTV / قيمة العميل المحققة حتى الآن</strong> يظل محسوبًا لكل كوهورت في التحليل أدناه؛ ميزان لا يصنع رقم LTV واحدًا للبزنس من هذا الملخص.
+        <strong>Observed LTV / قيمة العميل المحققة حتى الآن</strong> يُحسب لكل كوهورت في التحليل أدناه، وليس من متوسط صافي التحصيل لكل عميل.
       </p>
     </section>
   );
