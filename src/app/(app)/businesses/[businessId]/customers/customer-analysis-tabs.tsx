@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import styles from "./customer-groups.module.css";
+import uxStyles from "./customer-analysis-ux.module.css";
 
 type CustomerAnalysisPanel = {
   id: "observed-ltv" | "revenue-streams" | "contribution" | "customers";
@@ -76,7 +77,7 @@ export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
               aria-selected={selected}
               aria-controls={`${instanceId}-${panel.id}-panel`}
               tabIndex={selected ? 0 : -1}
-              className={`${styles.analysisTab} ${selected ? styles.analysisTabActive : ""}`}
+              className={`${styles.analysisTab} ${uxStyles.analysisTabEmphasis} ${selected ? `${styles.analysisTabActive} ${uxStyles.analysisTabActiveEmphasis}` : ""}`}
               onClick={() => selectTab(index)}
               onKeyDown={(event) => onTabKeyDown(event, index)}
             >
