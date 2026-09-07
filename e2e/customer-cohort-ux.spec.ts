@@ -28,6 +28,7 @@ const cohortRows = Array.from({ length: 24 }, (_, index) => {
   };
 });
 
+/** Serves deterministic paginated cohort rows to the browser fixture, including CORS preflight handling. */
 async function fulfillCohorts(route: Route) {
   if (route.request().method() === "OPTIONS") {
     await route.fulfill({ status: 204, headers: corsHeaders, body: "" });
