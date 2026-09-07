@@ -69,7 +69,7 @@ test.describe("Customer cohort UX", () => {
     await expect(table.getByText("1,260", { exact: true })).toBeVisible();
     await expect(table.getByText("321,575.88 USD", { exact: true }).first()).toBeVisible();
     await expect(table.getByText("255.22 USD", { exact: true })).toBeVisible();
-    await expect(table.getByText("بعد شهر", { exact: true })).toBeVisible();
+    await expect(table.getByText("بعد شهر", { exact: true }).first()).toBeVisible();
     await expect(table.getByText(/^M1$/)).toHaveCount(0);
     await expect(page.getByText("الصفحة 1 من 2", { exact: true })).toBeVisible();
 
