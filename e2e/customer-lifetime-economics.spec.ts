@@ -52,7 +52,7 @@ test.describe("Tasks 24-25 lifetime customer economics", () => {
     await expect(page.getByRole("heading", { name: "اختبار اقتصاديات العملاء" })).toBeVisible();
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await expect(page.getByRole("heading", { name: "تحليل مصادر الإيراد مدى الحياة" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "من أين جاء التحصيل؟" })).toBeVisible();
 
     const revenueStreamTable = page.getByRole("table", {
       name: "جدول تحليل مصادر الإيراد مدى الحياة",
@@ -62,22 +62,21 @@ test.describe("Tasks 24-25 lifetime customer economics", () => {
     const otherRow = revenueStreamTable.getByRole("row").filter({ hasText: "Other Revenue" });
     const unattributedRow = revenueStreamTable.getByRole("row").filter({ hasText: "يحتاج ربطًا يدويًا" });
 
-    await expect(coreRow.locator("td").nth(6)).toHaveText("1700 EGP");
+    await expect(coreRow.locator("td").nth(6)).toHaveText("1,700 EGP");
     await expect(backendRow.locator("td").nth(6)).toHaveText("500 EGP");
     await expect(otherRow.locator("td").nth(1)).toHaveText("أخرى");
     await expect(otherRow.locator("td").nth(6)).toHaveText("150 EGP");
     await expect(unattributedRow.locator("td").nth(0)).toContainText("غير منسوب");
     await expect(unattributedRow.locator("td").nth(6)).toHaveText("200 EGP");
 
-    await expect(
-      page.getByRole("heading", { name: "Lifetime Contribution Profit / ربح المساهمة مدى الحياة" }),
-    ).toBeVisible();
+    await expect(page.getByRole("heading", { name: "ربح المساهمة مدى الحياة" })).toBeVisible();
     const contributionTable = page.getByRole("table", {
       name: "جدول ربح المساهمة مدى الحياة",
     });
     const contributionRow = contributionTable.getByRole("row").filter({ hasText: "2026-01-01" });
-    await expect(contributionRow.locator("td").nth(3)).toHaveText("5700 EGP");
-    await expect(contributionRow.locator("td").nth(5)).toHaveText("يتضمن توزيعًا يدويًا");
+    await expect(contributionRow.locator("td").nth(2)).toHaveText("10,000 EGP");
+    await expect(contributionRow.locator("td").nth(4)).toHaveText("5,700 EGP");
+    await expect(contributionRow.locator("td").nth(6)).toHaveText("يتضمن توزيعًا يدويًا");
     await expect(page.getByText(/المصاريف العامة الثابتة غير داخلة/)).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
