@@ -46,8 +46,8 @@ begin
   from pg_catalog.unnest(p_import_row_tokens) as token
   where token is not null;
 
-  if session_token_count < 1 or session_token_count > 20000 then
-    raise invalid_parameter_value using message = 'Import completion verification requires between 1 and 20000 unique row tokens.';
+  if session_token_count < 1 or session_token_count > 100000 then
+    raise invalid_parameter_value using message = 'Import completion verification requires between 1 and 100000 unique row tokens.';
   end if;
 
   select
