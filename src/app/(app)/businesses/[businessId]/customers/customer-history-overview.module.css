@@ -1,7 +1,7 @@
 .shell {
   display: grid;
-  gap: 14px;
-  padding: 20px;
+  gap: 12px;
+  padding: 18px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: calc(var(--radius-md) + 2px);
@@ -16,37 +16,37 @@
 }
 
 .heading h2 {
-  margin: 5px 0 0;
+  margin: 4px 0 0;
   color: var(--text);
-  font-size: 21px;
+  font-size: 20px;
 }
 
 .heading p {
   max-width: 740px;
-  margin: 6px 0 0;
+  margin: 5px 0 0;
   color: var(--text-soft);
-  font-size: 13px;
-  line-height: 1.75;
+  font-size: 12px;
+  line-height: 1.7;
 }
 
 .kicker {
   color: var(--brand);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 900;
 }
 
 .metricGrid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 9px;
 }
 
 .metricCard {
   min-width: 0;
   display: grid;
   align-content: start;
-  gap: 7px;
-  padding: 16px;
+  gap: 6px;
+  padding: 14px;
   background: var(--surface-soft);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -54,32 +54,50 @@
 
 .metricCard > span {
   color: var(--text-soft);
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
 }
 
 .metricCard > strong {
   min-width: 0;
   color: var(--text);
-  font-size: clamp(20px, 2vw, 27px);
-  line-height: 1.25;
-  overflow-wrap: anywhere;
+  font-size: clamp(20px, 2vw, 26px);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: normal;
+  word-break: normal;
 }
 
 .metricCard > small {
   color: var(--text-faint);
-  font-size: 10px;
-  line-height: 1.65;
+  font-size: 9.5px;
+  line-height: 1.55;
 }
 
-.ltvNote {
-  margin: 0;
-  padding: 11px 13px;
+.insight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
   color: var(--text-soft);
   background: var(--brand-soft);
   border-radius: 10px;
   font-size: 11px;
-  line-height: 1.8;
+}
+
+.insight strong {
+  color: var(--brand-strong);
+  font-size: 16px;
+}
+
+.ltvNote {
+  margin: 0;
+  padding: 9px 11px;
+  color: var(--text-soft);
+  background: color-mix(in srgb, var(--brand-soft) 65%, var(--surface));
+  border-radius: 9px;
+  font-size: 10px;
+  line-height: 1.7;
 }
 
 .ltvNote strong {
@@ -88,7 +106,7 @@
 
 .emptyState,
 .errorState {
-  padding: 16px;
+  padding: 15px;
   border-radius: var(--radius-md);
 }
 
@@ -124,10 +142,14 @@
 
 @media (max-width: 560px) {
   .shell {
-    padding: 16px;
+    padding: 15px;
   }
 
   .metricGrid {
     grid-template-columns: 1fr;
+  }
+
+  .metricCard > strong {
+    font-size: 23px;
   }
 }
