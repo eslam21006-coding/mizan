@@ -1,11 +1,5 @@
+import type { CustomerHistoryOverviewSummary } from "@/lib/business/customer-history-overview";
 import styles from "./customer-history-overview.module.css";
-
-export type CustomerHistoryOverviewSummary = {
-  payingCustomerCountText: string;
-  repeatCustomerCountText: string;
-  netCashCollectedText: string;
-  revenuePerPayingCustomerText: string | null;
-};
 
 type CustomerHistoryOverviewProps = {
   baseCurrency: string;
