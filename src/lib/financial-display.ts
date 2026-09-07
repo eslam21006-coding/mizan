@@ -1,10 +1,12 @@
 const DECIMAL_TEXT = /^([+-]?)(\d+)(?:\.(\d+))?$/;
 const INTEGER_TEXT = /^(?:0|[1-9]\d*)$/;
 
+/** Adds thousands separators to a normalized integer digit string without numeric coercion. */
 function groupedInteger(digits: string) {
   return digits.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
+/** Removes redundant leading zeroes while preserving an exact zero value. */
 function trimLeadingZeros(digits: string) {
   const trimmed = digits.replace(/^0+(?=\d)/, "");
   return trimmed || "0";
