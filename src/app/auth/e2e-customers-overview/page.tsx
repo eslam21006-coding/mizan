@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { CustomerHistoryOverview } from "@/app/(app)/businesses/[businessId]/customers/customer-history-overview";
 import { CustomerOverviewShell } from "@/app/(app)/businesses/[businessId]/customers/customer-overview-shell";
 
 const FIXTURE_BUSINESS_ID = "00000000-0000-4000-8000-000000000057";
@@ -16,6 +17,17 @@ export default function CustomerOverviewE2eFixturePage() {
         businessName="بزنس الاختبار"
         baseCurrency="EGP"
         timezone="Africa/Cairo"
+        historyOverview={
+          <CustomerHistoryOverview
+            baseCurrency="EGP"
+            summary={{
+              payingCustomerCountText: "3",
+              repeatCustomerCountText: "1",
+              netCashCollectedText: "2700",
+              revenuePerPayingCustomerText: "900",
+            }}
+          />
+        }
         observedLtv={
           <section aria-label="لوحة قيمة العميل المحققة">
             <h2>Observed LTV / قيمة العميل المحققة حتى الآن</h2>

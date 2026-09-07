@@ -1,0 +1,133 @@
+.shell {
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-md) + 2px);
+  box-shadow: var(--shadow-soft);
+}
+
+.heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.heading h2 {
+  margin: 5px 0 0;
+  color: var(--text);
+  font-size: 21px;
+}
+
+.heading p {
+  max-width: 740px;
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.kicker {
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.metricGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.metricCard {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 16px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.metricCard > span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.metricCard > strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: clamp(20px, 2vw, 27px);
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.metricCard > small {
+  color: var(--text-faint);
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.ltvNote {
+  margin: 0;
+  padding: 11px 13px;
+  color: var(--text-soft);
+  background: var(--brand-soft);
+  border-radius: 10px;
+  font-size: 11px;
+  line-height: 1.8;
+}
+
+.ltvNote strong {
+  color: var(--brand-strong);
+}
+
+.emptyState,
+.errorState {
+  padding: 16px;
+  border-radius: var(--radius-md);
+}
+
+.emptyState {
+  background: var(--surface-soft);
+  border: 1px dashed var(--border-strong);
+}
+
+.errorState {
+  background: color-mix(in srgb, var(--danger) 7%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--danger) 24%, var(--border));
+}
+
+.emptyState strong,
+.errorState strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.emptyState p,
+.errorState p {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+@media (max-width: 980px) {
+  .metricGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .shell {
+    padding: 16px;
+  }
+
+  .metricGrid {
+    grid-template-columns: 1fr;
+  }
+}

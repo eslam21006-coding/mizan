@@ -8,6 +8,7 @@ type CustomerOverviewShellProps = {
   businessName: string;
   baseCurrency: string;
   timezone: string;
+  historyOverview: ReactNode;
   observedLtv: ReactNode;
   revenueStreams: ReactNode;
   contribution: ReactNode;
@@ -20,6 +21,7 @@ export function CustomerOverviewShell({
   businessName,
   baseCurrency,
   timezone,
+  historyOverview,
   observedLtv,
   revenueStreams,
   contribution,
@@ -67,6 +69,8 @@ export function CustomerOverviewShell({
           <strong dir="ltr">{timezone}</strong>
         </div>
       </section>
+
+      {historyOverview}
 
       <section className={styles.workflowSection} aria-labelledby="customer-workflow-title">
         <div className={styles.sectionHeading}>
