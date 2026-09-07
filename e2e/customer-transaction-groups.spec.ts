@@ -124,11 +124,13 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
     await expect.poll(() => customerGroupRequests.length).toBeGreaterThan(requestsBeforeSort);
     await expect.poll(() => customerGroupRequests.at(-1)?.searchParams.get("order") ?? "").toContain("net_cash_collected.desc");
 
-    await page.getByLabel("ابحث بالبريد الإلكتروني").fill("buyer@example.com");
+    await page.getByLabel("ابحث بالبريد الإلكتروني").fill("buyer_50%@example.com");
     const requestsBeforeSearch = customerGroupRequests.length;
     await page.getByRole("button", { name: "بحث" }).click();
     await expect.poll(() => customerGroupRequests.length).toBeGreaterThan(requestsBeforeSearch);
-    await expect.poll(() => customerGroupRequests.at(-1)?.searchParams.get("customer_email") ?? "").toContain("buyer@example.com");
+    await expect
+      .poll(() => customerGroupRequests.at(-1)?.searchParams.get("customer_email") ?? "")
+      .toContain("buyer\\_50\\%@example.com");
 
     await page.getByRole("button", { name: "مسح الفلاتر" }).click();
     await expect(page.getByLabel("اعرض")).toHaveValue("all");
