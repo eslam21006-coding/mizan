@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
+import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import styles from "./customer-groups.module.css";
 
@@ -29,7 +30,7 @@ type Props = {
 };
 
 function money(value: string | null, currency: string) {
-  return value === null ? "—" : `${value} ${currency}`;
+  return value === null ? "—" : formatMoneyText(value, currency);
 }
 
 function cohortLabel(value: string) {
@@ -101,10 +102,10 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
     <section className={styles.groupPanel} aria-labelledby="lifetime-contribution-title">
       <div className={styles.groupHeading}>
         <div>
-          <span className={styles.kicker}>اقتصاديات العميل بعد التكاليف المرتبطة به</span>
-          <h2 id="lifetime-contribution-title">Lifetime Contribution Profit / ربح المساهمة مدى الحياة</h2>
+          <span className={styles.kicker}>بعد التكاليف المرتبطة بالعميل</span>
+          <h2 id="lifetime-contribution-title">ربح المساهمة مدى الحياة</h2>
           <p>
-            صافي التحصيل المحقق ناقص تكاليف الاكتساب والوفاء المتغيرة والتكاليف المتغيرة الأخرى ورسوم الدفع القابلة للتخصيص. المصاريف العامة الثابتة غير داخلة في هذا المقياس.
+            صافي التحصيل المحقق ناقص تكاليف الاكتساب والتكاليف المتغيرة المرتبطة بالعميل. المصاريف العامة الثابتة غير داخلة في هذا المقياس.
           </p>
         </div>
         <Link className={styles.retryButton} href={`/businesses/${businessId}/customers/lifetime-contribution`}>
@@ -117,6 +118,7 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
           <thead>
             <tr>
               <th scope="col">الكوهورت</th>
+              <th scope="col">العملاء</th>
               <th scope="col">صافي التحصيل مدى الحياة</th>
               <th scope="col">التكاليف المرتبطة</th>
               <th scope="col">ربح المساهمة</th>
@@ -133,6 +135,7 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
                     <strong>{cohortLabel(row.cohort_month)}</strong>
                     <small dir="ltr">{row.cohort_month}</small>
                   </td>
+                  <td dir="ltr">{formatCountText(row.original_cohort_size)}</td>
                   <td dir="ltr">{money(row.lifetime_net_cash_text, currency)}</td>
                   <td dir="ltr">{row.allocation_complete ? money(row.attributable_costs_text, currency) : "—"}</td>
                   <td dir="ltr">
