@@ -209,6 +209,29 @@ export function parseStoredTransactionColumnMapping(
   return inspectTransactionColumnMapping(mapping).isComplete ? mapping : null;
 }
 
+/**
+ * Repairs an older saved mapping that omitted Transaction ID when the current header has one
+ * unambiguous known ID alias. Existing saved assignments always win, and a detected ID is ignored
+ * if its source column is already used by another saved field.
+ */
+export function enrichStoredTransactionIdMapping(
+  savedMapping: TransactionColumnMapping,
+  detectedMapping: TransactionColumnMapping,
+): TransactionColumnMapping {
+  if ((savedMapping.transactionId ?? null) !== null) return savedMapping;
+
+  const detectedTransactionId = detectedMapping.transactionId ?? null;
+  if (detectedTransactionId === null) return savedMapping;
+
+  const columnAlreadyUsed = TRANSACTION_MAPPING_FIELDS.some((field) => {
+    if (field === "transactionId") return false;
+    return (savedMapping[field] ?? null) === detectedTransactionId;
+  });
+  if (columnAlreadyUsed) return savedMapping;
+
+  return setTransactionFieldColumn(savedMapping, "transactionId", detectedTransactionId);
+}
+
 /** Builds bounded native column choices while sampling only the preview-visible columns. */
 export function buildTransactionColumnChoices(input: {
   totalColumns: number;
