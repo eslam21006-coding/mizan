@@ -36,7 +36,7 @@ export function CustomerOverviewShell({
           <p>
             اعرف كم دفع عملاؤك فعلًا، كم منهم اشترى مرة أخرى، وكيف تتطور قيمة العميل المحققة مع الوقت.
           </p>
-          <div className={styles.heroMeta} role="group" aria-label="سياق البزنس">
+          <div className={styles.heroMeta}>
             <span>{businessName}</span>
             <span dir="ltr">{baseCurrency}</span>
             <span dir="ltr">{timezone}</span>
