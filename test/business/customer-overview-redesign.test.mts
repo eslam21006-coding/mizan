@@ -69,8 +69,8 @@ test("analysis navigation is an accessible RTL tab interface with a strong activ
   assert.doesNotMatch(tabsSource, /createSupabase/);
 });
 
-test("customer ledger exposes literal server-side email search filters and sorting without changing customer identity", () => {
-  assert.match(customerGroupsSource, /ابحث بالبريد الإلكتروني/);
+test("customer ledger exposes literal server-side name-or-email search filters and sorting without changing customer identity", () => {
+  assert.match(customerGroupsSource, /ابحث بالاسم أو البريد الإلكتروني/);
   assert.match(customerGroupsSource, /اشتروا أكثر من مرة/);
   assert.match(customerGroupsSource, /أعلى صافي تحصيل/);
   assert.match(customerGroupsSource, /\.gt\("collection_count", 1\)/);
@@ -78,7 +78,7 @@ test("customer ledger exposes literal server-side email search filters and sorti
   assert.match(customerGroupsSource, /replaceAll\("\\\\", "\\\\\\\\"\)/);
   assert.match(customerGroupsSource, /replaceAll\("%", "\\\\%"\)/);
   assert.match(customerGroupsSource, /replaceAll\("_", "\\\\_"\)/);
-  assert.match(customerGroupsSource, /\.ilike\("customer_email", `%\$\{escapeIlikeLiteral\(search\)\}%`\)/);
+  assert.match(customerGroupsSource, /\.ilike\("customer_search_text", `%\$\{escapeIlikeLiteral\(search\)\}%`\)/);
   assert.match(customerGroupsSource, /\.order\("net_cash_collected"/);
   assert.match(customerGroupsSource, /<th scope="col">العميل<\/th>/);
   assert.match(customerGroupsSource, /customer_name/);
