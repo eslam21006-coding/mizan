@@ -186,10 +186,17 @@ function mappedColumns(mapping: TransactionColumnMapping) {
   if (!required.every((column): column is number => column !== null)) return null;
 
   const columns = [...required];
+  let customerNameValueIndex: number | null = null;
   let transactionTimeValueIndex: number | null = null;
   let timezoneValueIndex: number | null = null;
   let transactionIdValueIndex: number | null = null;
   let currencyValueIndex: number | null = null;
+
+  const customerName = mapping.customerName ?? null;
+  if (customerName !== null) {
+    customerNameValueIndex = columns.length;
+    columns.push(customerName);
+  }
 
   const transactionTime = mapping.transactionTime ?? null;
   if (transactionTime !== null) {
@@ -215,7 +222,7 @@ function mappedColumns(mapping: TransactionColumnMapping) {
     columns.push(currency);
   }
 
-  return { columns, transactionTimeValueIndex, timezoneValueIndex, transactionIdValueIndex, currencyValueIndex };
+  return { columns, customerNameValueIndex, transactionTimeValueIndex, timezoneValueIndex, transactionIdValueIndex, currencyValueIndex };
 }
 
 /** Parses non-negative counters returned by the import RPC without coercion. */
@@ -376,6 +383,10 @@ export function TransactionImportValidator({
       const rows = sourceRows.rows.map((row) => ({
         rowNumber: row.rowNumber,
         customerEmail: row.values[0] ?? "",
+        customerName:
+          selected.customerNameValueIndex === null
+            ? undefined
+            : (row.values[selected.customerNameValueIndex] ?? ""),
         transactionDate: row.values[1] ?? "",
         amountCollected: row.values[2] ?? "",
         transactionTime:
@@ -463,6 +474,13 @@ export function TransactionImportValidator({
 
       const parsed = parseRpcResult(data);
       if (!parsed) throw new TransactionImportProcessError(confirmed);
+
+      const { error: nameError } = await supabase.rpc("apply_customer_transaction_names", {
+        p_business_id: businessId,
+        p_source: source,
+        p_rows: chunk,
+      });
+      if (nameError) throw new TransactionImportProcessError(confirmed);
 
       confirmed = {
         insertedCount: confirmed.insertedCount + parsed.inserted_count,

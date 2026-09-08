@@ -7,6 +7,7 @@ export const REQUIRED_TRANSACTION_FIELDS = [
 ] as const;
 
 export const OPTIONAL_TRANSACTION_FIELDS = [
+  "customerName",
   "transactionTime",
   "timezone",
   "transactionId",
@@ -24,6 +25,7 @@ export type OptionalTransactionField = (typeof OPTIONAL_TRANSACTION_FIELDS)[numb
 export type TransactionMappingField = (typeof TRANSACTION_MAPPING_FIELDS)[number];
 
 export type TransactionColumnMapping = Record<RequiredTransactionField, number | null> & {
+  customerName?: number | null;
   transactionTime?: number | null;
   timezone?: number | null;
   transactionId?: number | null;
@@ -34,6 +36,7 @@ export const EMPTY_TRANSACTION_COLUMN_MAPPING: TransactionColumnMapping = {
   customerEmail: null,
   transactionDate: null,
   amountCollected: null,
+  customerName: null,
   transactionTime: null,
   timezone: null,
   transactionId: null,
@@ -44,6 +47,7 @@ export const TRANSACTION_FIELD_LABELS: Record<TransactionMappingField, string> =
   customerEmail: "Customer Email",
   transactionDate: "Transaction Date",
   amountCollected: "Amount Collected",
+  customerName: "Customer Name",
   transactionTime: "Transaction Time",
   timezone: "Timezone",
   transactionId: "Transaction ID",
@@ -59,6 +63,7 @@ const TRANSACTION_HEADER_ALIASES: Record<TransactionMappingField, readonly strin
     "email address",
     "customer email address",
   ],
+  customerName: ["customer name", "customer_name", "full name", "customer full name", "name"],
   transactionDate: ["transaction date", "transaction_date", "payment date", "paid date"],
   amountCollected: [
     "amount collected",
@@ -230,6 +235,25 @@ export function enrichStoredTransactionIdMapping(
   if (columnAlreadyUsed) return savedMapping;
 
   return setTransactionFieldColumn(savedMapping, "transactionId", detectedTransactionId);
+}
+
+/**
+ * Repairs an older saved mapping that omitted optional customer-name metadata when the current
+ * header has one unambiguous known name alias. Existing saved assignments always win.
+ */
+export function enrichStoredCustomerNameMapping(
+  savedMapping: TransactionColumnMapping,
+  detectedMapping: TransactionColumnMapping,
+): TransactionColumnMapping {
+  if ((savedMapping.customerName ?? null) !== null) return savedMapping;
+  const detectedCustomerName = detectedMapping.customerName ?? null;
+  if (detectedCustomerName === null) return savedMapping;
+  const columnAlreadyUsed = TRANSACTION_MAPPING_FIELDS.some((field) => {
+    if (field === "customerName") return false;
+    return (savedMapping[field] ?? null) === detectedCustomerName;
+  });
+  if (columnAlreadyUsed) return savedMapping;
+  return setTransactionFieldColumn(savedMapping, "customerName", detectedCustomerName);
 }
 
 /** Builds bounded native column choices while sampling only the preview-visible columns. */

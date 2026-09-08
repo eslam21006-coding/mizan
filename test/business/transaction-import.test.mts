@@ -55,6 +55,7 @@ test("Task 20 prepares validated collection rows with stable retry identity", ()
       {
         rowNumber: 1,
         customerEmail: " Buyer@Example.com ",
+        customerName: "  Ahmed Buyer  ",
         transactionDate: "2026-08-24T14:30:00Z",
         amountCollected: "+1,250.50",
         transactionId: " txn_123 ",
@@ -69,6 +70,7 @@ test("Task 20 prepares validated collection rows with stable retry identity", ()
       transaction_id: "txn_123",
       import_row_token: TOKEN_1,
       customer_email: "buyer@example.com",
+      customer_name: "Ahmed Buyer",
       transaction_date: "2026-08-24T14:30:00Z",
       amount_collected: "1250.50",
       transaction_type: "collection",

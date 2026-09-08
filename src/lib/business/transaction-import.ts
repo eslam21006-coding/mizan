@@ -2,6 +2,7 @@ import {
   isValidTransactionDate,
   isValidTransactionEmail,
   normalizeGatewayTransactionRows,
+  normalizeTransactionCustomerName,
   normalizeTransactionDateForImport,
   normalizeTransactionEmail,
   parseTransactionAmount,
@@ -23,6 +24,7 @@ export type PreparedTransactionImportRow = {
   transaction_id: string | null;
   import_row_token: string;
   customer_email: string;
+  customer_name?: string;
   transaction_date: string;
   amount_collected: string;
   transaction_type: NormalizedTransactionType;
@@ -106,6 +108,7 @@ export function prepareTransactionImportRows(
     }
 
     const email = normalizeTransactionEmail(row.customerEmail);
+    const customerName = normalizeTransactionCustomerName(row.customerName);
     const transactionDate = normalizeTransactionDateForImport(row.transactionDate);
     const amount = parseTransactionAmount(row.amountCollected);
     const amountSign = exactDecimalSign(row.amountCollected);
@@ -140,6 +143,7 @@ export function prepareTransactionImportRows(
       transaction_id: transactionId,
       import_row_token: importRowToken,
       customer_email: email,
+      ...(customerName ? { customer_name: customerName } : {}),
       transaction_date: transactionDate,
       amount_collected: normalizedAmountText(row.amountCollected, options.transactionType),
       transaction_type: options.transactionType,
