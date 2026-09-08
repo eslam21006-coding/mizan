@@ -34,12 +34,26 @@ async function installLifetimeEconomicsMocks(page: Page) {
   await page.route("**/rest/v1/customer_lifetime_contribution_profit_display**", (route) =>
     fulfillSupabaseJson(route, [
       { business_id: "mock", cohort_month: "2026-01-01", observation_cutoff_date: "2026-08-26", original_cohort_size: 1, lifetime_net_cash_text: "10000", attributable_costs_text: "4300", acquisition_costs_text: "2500", variable_fulfillment_costs_text: "1000", other_variable_costs_text: "500", payment_processing_costs_text: "300", allocation_complete: true, uses_explicit_allocation: true, lifetime_contribution_profit_text: "5700", lifetime_contribution_profit_per_customer_text: "5700", currency: "EGP" },
+      { business_id: "mock", cohort_month: "2026-08-01", observation_cutoff_date: "2026-08-31", original_cohort_size: 1, lifetime_net_cash_text: "6829", attributable_costs_text: "9008.41", acquisition_costs_text: "2580", variable_fulfillment_costs_text: "6000", other_variable_costs_text: "0", payment_processing_costs_text: "428.41", allocation_complete: true, uses_explicit_allocation: true, lifetime_contribution_profit_text: "-2179.41", lifetime_contribution_profit_per_customer_text: "-2179.41", currency: "EGP" },
+    ]),
+  );
+
+  await page.route("**/rest/v1/customer_cohort_cost_allocation_display**", (route) =>
+    fulfillSupabaseJson(route, [
+      { business_id: "mock", cohort_month: "2026-01-01", cost_type: "acquisition", amount_text: "2500", attribution_method: "direct_actual", note: "Acquisition", eligibility_confirmed: true },
+      { business_id: "mock", cohort_month: "2026-01-01", cost_type: "variable_fulfillment", amount_text: "1000", attribution_method: "explicit_allocation", note: "Variable fulfillment", eligibility_confirmed: true },
+      { business_id: "mock", cohort_month: "2026-01-01", cost_type: "other_variable", amount_text: "500", attribution_method: "direct_actual", note: "Other variable", eligibility_confirmed: true },
+      { business_id: "mock", cohort_month: "2026-01-01", cost_type: "payment_processing", amount_text: "300", attribution_method: "direct_actual", note: "Processor", eligibility_confirmed: true },
+      { business_id: "mock", cohort_month: "2026-08-01", cost_type: "acquisition", amount_text: "2580", attribution_method: "direct_actual", note: "Meta Ads", eligibility_confirmed: true },
+      { business_id: "mock", cohort_month: "2026-08-01", cost_type: "variable_fulfillment", amount_text: "6000", attribution_method: "explicit_allocation", note: "Reviewed variable example", eligibility_confirmed: true },
+      { business_id: "mock", cohort_month: "2026-08-01", cost_type: "other_variable", amount_text: "0", attribution_method: "direct_actual", note: null, eligibility_confirmed: false },
+      { business_id: "mock", cohort_month: "2026-08-01", cost_type: "payment_processing", amount_text: "428.41", attribution_method: "direct_actual", note: "Stripe", eligibility_confirmed: true },
     ]),
   );
 }
 
 test.describe("Tasks 24-25 lifetime customer economics", () => {
-  test("shows lifetime revenue streams and contribution profit in Arabic RTL", async ({ page }) => {
+  test("shows founder-facing lifetime profitability without cohort jargon or negative-profit wording", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") browserErrors.push(message.text());
@@ -69,15 +83,34 @@ test.describe("Tasks 24-25 lifetime customer economics", () => {
     await expect(unattributedRow.locator("td").nth(0)).toContainText("غير منسوب");
     await expect(unattributedRow.locator("td").nth(6)).toHaveText("200 EGP");
 
-    await expect(page.getByRole("heading", { name: "ربح المساهمة مدى الحياة" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "ربحية العملاء بعد التكاليف" })).toBeVisible();
     const contributionTable = page.getByRole("table", {
-      name: "جدول ربح المساهمة مدى الحياة",
+      name: "جدول ربحية العملاء بعد التكاليف",
     });
-    const contributionRow = contributionTable.getByRole("row").filter({ hasText: "2026-01-01" });
-    await expect(contributionRow.locator("td").nth(2)).toHaveText("10,000 EGP");
-    await expect(contributionRow.locator("td").nth(4)).toHaveText("5,700 EGP");
-    await expect(contributionRow.locator("td").nth(6)).toHaveText("يتضمن توزيعًا يدويًا");
-    await expect(page.getByText(/المصاريف العامة الثابتة غير داخلة/)).toBeVisible();
+    const positiveRow = contributionTable.getByRole("row").filter({ hasText: "2026-01-01" });
+    const lossRow = contributionTable.getByRole("row").filter({ hasText: "2026-08-01" });
+    await expect(positiveRow.locator("td").nth(2)).toHaveText("10,000 EGP");
+    await expect(positiveRow.locator("td").nth(4)).toHaveText("ربح 5,700 EGP");
+    await expect(positiveRow.locator("td").nth(6)).toContainText("توزيعًا تقديريًا صريحًا");
+    await expect(lossRow.locator("td").nth(2)).toHaveText("6,829 EGP");
+    await expect(lossRow.locator("td").nth(4)).toHaveText("خسارة 2,179.41 EGP");
+    await expect(lossRow.locator("td").nth(5)).toHaveText("خسارة 2,179.41 EGP");
+    await expect(page.getByText(/الرواتب الشهرية الثابتة/).first()).toBeVisible();
+
+    await expect(page.getByRole("heading", { name: "راجع التكاليف حسب شهر أول شراء" })).toBeVisible();
+    const augustCard = page.locator("article").filter({ hasText: "2026-08-01" });
+    await expect(augustCard.getByText("خسارة بعد التكاليف حتى الآن")).toBeVisible();
+    await expect(augustCard.getByText("2,179.41 EGP", { exact: true })).toBeVisible();
+
+    const variableCostInput = page.getByLabel("تكاليف خدمة العميل المتغيرة 2026-08-01");
+    await variableCostInput.fill("6001");
+    const saveButton = augustCard.getByRole("button", { name: "حفظ التكاليف بعد المراجعة" });
+    await expect(saveButton).toBeDisabled();
+    await expect(augustCard.getByText(/لم تتم مراجعة أهليته/)).toBeVisible();
+    await page.getByLabel("تأكيد أهلية تكاليف خدمة العميل المتغيرة 2026-08-01").check();
+    await expect(saveButton).toBeEnabled();
+
+    await expect(page.getByText(/كوهورت/)).toHaveCount(0);
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
