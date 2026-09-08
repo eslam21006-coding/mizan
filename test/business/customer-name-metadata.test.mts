@@ -10,6 +10,7 @@ import { prepareTransactionImportRows } from "../../src/lib/business/transaction
 test("customer name is optional display metadata and does not change email identity", () => {
   assert.equal(normalizeTransactionCustomerName("  Ahmed Buyer  "), "Ahmed Buyer");
   assert.equal(normalizeTransactionCustomerName("\t\n"), null);
+  assert.equal(normalizeTransactionCustomerName("\r\n"), null);
   assert.equal(normalizeTransactionCustomerName(" \tAhmed Buyer\n "), "Ahmed Buyer");
   assert.equal(
     normalizeTransactionCustomerName("x".repeat(TRANSACTION_CUSTOMER_NAME_MAX_LENGTH + 1)),
