@@ -1,0 +1,24 @@
+name: Apply nonblocking customer name patch
+on:
+  push:
+    branches:
+      - agent/customer-name-metadata
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/customer-name-metadata
+      - name: Apply patch
+        run: python scripts/agent-customer-name-nonblocking-patch.py
+      - name: Commit implementation
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "fix: keep optional customer names nonblocking"
+          git push origin HEAD:agent/customer-name-metadata
