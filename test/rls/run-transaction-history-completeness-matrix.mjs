@@ -89,7 +89,11 @@ runPsqlFile(
   environment,
 );
 runPsqlFile("test/business/transaction-import-completion-summary.test.sql", environment);
+runPsqlFile("supabase/migrations/20260908100000_customer_name_metadata.sql", environment);
+runPsqlFile("supabase/migrations/20260908173000_customer_name_email_search.sql", environment);
+runPsqlFile("test/business/customer-name-metadata.test.sql", environment);
+runPsqlFile("test/business/customer-name-search.test.sql", environment);
 
 console.log(
-  "Transaction-history and import-completion matrix passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, manual-count conflict tests, exact Net Cash summary, persisted-row verification, and completion-summary authorization.",
+  "Transaction-history and import-completion matrix passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, manual-count conflict tests, exact Net Cash summary, persisted-row verification, completion-summary authorization, customer-name metadata, name-or-email search, and customer-search tenant isolation.",
 );

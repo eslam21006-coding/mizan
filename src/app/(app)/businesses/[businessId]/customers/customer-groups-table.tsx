@@ -34,7 +34,7 @@ type CustomerGroupsTableProps = {
 type CustomerFilter = "all" | "repeat" | "single" | "refunded";
 type CustomerSort = "acquisition_desc" | "last_transaction_desc" | "net_cash_desc" | "transactions_desc";
 
-/** Escapes PostgreSQL ILIKE metacharacters so user-entered email text is matched literally. */
+/** Escapes PostgreSQL ILIKE metacharacters so user-entered customer search text is matched literally. */
 function escapeIlikeLiteral(value: string) {
   return value.replaceAll("\\", "\\\\").replaceAll("%", "\\%").replaceAll("_", "\\_");
 }
@@ -84,7 +84,7 @@ export function CustomerGroupsTable({
         .eq("business_id", businessId);
 
       if (search) {
-        query = query.ilike("customer_email", `%${escapeIlikeLiteral(search)}%`);
+        query = query.ilike("customer_search_text", `%${escapeIlikeLiteral(search)}%`);
       }
       if (customerFilter === "repeat") query = query.gt("collection_count", 1);
       if (customerFilter === "single") query = query.eq("transaction_count", 1);
@@ -131,7 +131,7 @@ export function CustomerGroupsTable({
     return Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   }, [totalCount]);
 
-  /** Applies the typed email search without issuing a request on every keystroke. */
+  /** Applies the typed customer name-or-email search without issuing a request on every keystroke. */
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setPage(0);
@@ -205,15 +205,15 @@ export function CustomerGroupsTable({
 
       <div className={uxStyles.customerControls}>
         <form className={uxStyles.customerSearch} onSubmit={submitSearch}>
-          <label htmlFor="customer-email-search">ابحث بالبريد الإلكتروني</label>
+          <label htmlFor="customer-search">ابحث بالاسم أو البريد الإلكتروني</label>
           <div>
             <input
-              id="customer-email-search"
+              id="customer-search"
               type="search"
-              dir="ltr"
+              dir="auto"
               value={searchDraft}
               onChange={(event) => setSearchDraft(event.currentTarget.value)}
-              placeholder="name@example.com"
+              placeholder="الاسم أو البريد الإلكتروني"
             />
             <button type="submit">بحث</button>
           </div>
