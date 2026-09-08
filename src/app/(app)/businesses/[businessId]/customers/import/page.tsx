@@ -1,107 +1,121 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/auth/require-user";
-import { resolveBusinessRouteAccess } from "@/lib/business/route-access";
+import { notFound } from "next/navigation";
+import { PageHeading } from "@/components/page-heading";
+import { requireAuthContext } from "@/lib/auth/context";
+import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { setTransactionHistoryCompletenessAction } from "./actions";
-import { TransactionPreviewUploader } from "./transaction-preview-uploader";
 import styles from "./transaction-import.module.css";
+import { TransactionPreviewUploader } from "./transaction-preview-uploader";
 
 type TransactionImportPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+  searchParams: Promise<{ historyStatus?: string }>;
 };
 
-function firstSearchParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value;
+const IMPORT_THEME_ALIASES = {
+  "--text-primary": "var(--text)",
+  "--text-secondary": "var(--text-soft)",
+  "--surface-primary": "var(--surface)",
+  "--surface-secondary": "var(--surface-soft)",
+  "--border-subtle": "var(--border)",
+  "--accent-primary": "var(--brand)",
+} as CSSProperties;
+
+/** Returns the user-facing status copy for a history-completeness transition. */
+function historyStatusMessage(status: string | undefined) {
+  if (status === "complete") return "تم تأكيد اكتمال سجل المعاملات. يمكن لميزان الآن تحديد العملاء الجدد تلقائيًا.";
+  if (status === "incomplete") return "تم إلغاء تأكيد اكتمال السجل. العملاء الجدد سيبقون إدخالًا يدويًا حتى تعيد التأكيد.";
+  if (status === "confirmation-required") return "يجب تأكيد أنك رفعت كل تاريخ المعاملات قبل تفعيل الحساب التلقائي للعملاء الجدد.";
+  if (status === "transactions-required") return "لا يمكن تأكيد اكتمال السجل قبل حفظ عملية شراء ناجحة واحدة على الأقل. رفع الملف أو مراجعته لا يحفظ المعاملات؛ أكمل الاستيراد أولًا.";
+  if (status === "update-failed") return "تعذر تحديث حالة سجل المعاملات. لم يتم تغيير الحالة الحالية.";
+  return null;
 }
 
-/** Renders the transaction import workflow and the history-completeness control for one authorized business. */
-export default async function TransactionImportPage({ params, searchParams }: TransactionImportPageProps) {
-  const user = await requireUser();
-  const { businessId } = await params;
-  const query = await searchParams;
-  const routeAccess = await resolveBusinessRouteAccess(businessId, user);
-  if (!routeAccess) redirect("/businesses");
+/** Renders the import workflow and gates history completion on persisted qualifying purchases. */
+export default async function TransactionImportPage({
+  params,
+  searchParams,
+}: TransactionImportPageProps) {
+  const [{ businessId: rawBusinessId }, query] = await Promise.all([params, searchParams]);
+  const businessId = parseResourceId(rawBusinessId);
+  if (!businessId) notFound();
 
+  const auth = await requireAuthContext();
   const supabase = await createSupabaseServerClient();
-  const [{ data: business }, { data: historyStatus, error: historyStatusError }] = await Promise.all([
+  const { data: business, error } = await supabase
+    .from("businesses")
+    .select("id,name,base_currency,timezone,owner_user_id")
+    .eq("id", businessId)
+    .maybeSingle();
+
+  if (error || !business) notFound();
+
+  const [historyStatusResult, savedPurchaseResult] = await Promise.all([
     supabase
-      .from("businesses")
-      .select("id,name,base_currency,timezone,owner_user_id")
-      .eq("id", businessId)
-      .single(),
-    supabase
-      .from("customer_transaction_history_status")
-      .select("business_id,history_complete,confirmed_at,confirmed_by_user_id")
+      .from("business_transaction_history_status")
+      .select("is_complete,confirmed_at")
       .eq("business_id", businessId)
       .maybeSingle(),
+    supabase
+      .from("customer_transactions")
+      .select("id", { count: "exact", head: true })
+      .eq("business_id", businessId)
+      .eq("normalized_outcome", "successful")
+      .eq("transaction_type", "collection")
+      .gt("amount_collected", 0),
   ]);
 
-  if (!business) redirect("/businesses");
-
-  const { data: completionSummary, error: completionSummaryError } = await supabase.rpc(
-    "transaction_import_completion_summary",
-    {
-      p_business_id: business.id,
-      p_import_row_tokens: [],
-    },
-  );
-
-  const savedPurchaseCount =
-    completionSummary && typeof completionSummary === "object" && !Array.isArray(completionSummary)
-      ? Number((completionSummary as Record<string, unknown>).saved_purchase_count ?? 0)
-      : 0;
-  const hasSavedCustomerPurchase =
-    !completionSummaryError && Number.isSafeInteger(savedPurchaseCount) && savedPurchaseCount > 0;
-  const transactionHistoryComplete = Boolean(historyStatus?.history_complete && hasSavedCustomerPurchase);
-  const historyIntegrityMismatch = Boolean(historyStatus?.history_complete && !hasSavedCustomerPurchase);
-  const canManage = routeAccess.canManage;
-  const status = firstSearchParam(query.status);
-  const statusMessage =
-    status === "history-complete"
-      ? "تم تأكيد اكتمال سجل المعاملات. سيستخدم ميزان أقدم تحصيل ناجح لكل بريد لتحديد العملاء الجدد والـCohorts."
-      : status === "history-incomplete"
-        ? "تم إلغاء تأكيد اكتمال السجل. سيعود العملاء الجدد للإدخال اليدوي حتى يكتمل التاريخ."
-        : null;
+  const historyStatus = historyStatusResult.data;
+  const historyStatusError = historyStatusResult.error;
+  const savedPurchaseCount = savedPurchaseResult.count ?? 0;
+  const savedPurchaseCountError = savedPurchaseResult.error;
+  const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
+  const hasSavedCustomerPurchase = !savedPurchaseCountError && savedPurchaseCount > 0;
+  const storedTransactionHistoryComplete = historyStatus?.is_complete === true;
+  const transactionHistoryComplete = storedTransactionHistoryComplete && hasSavedCustomerPurchase;
+  const historyIntegrityMismatch =
+    storedTransactionHistoryComplete && !savedPurchaseCountError && !hasSavedCustomerPurchase;
+  const statusMessage = historyStatusMessage(query.historyStatus);
 
   return (
-    <main className={styles.page} dir="rtl">
-      <div className={styles.headerRow}>
-        <div>
-          <Link className={styles.backLink} href={`/businesses/${business.id}/customers`}>
-            العودة إلى العملاء
+    <div className="page-stack" style={IMPORT_THEME_ALIASES}>
+      <div className={styles.headingRow}>
+        <PageHeading
+          title="استيراد معاملات العملاء"
+          description="ارفع ملف CSV أو XLSX من بوابة الدفع، ثم راجع البيانات قبل حفظها في ميزان."
+        />
+        <div className={styles.headingLinks}>
+          <a
+            className={`${styles.backLink} ${styles.templateLink}`}
+            href="/mizan-transactions-template.csv"
+            download="mizan-transactions-template.csv"
+          >
+            تنزيل نموذج CSV
+          </a>
+          <Link className={styles.backLink} href="/customers">
+            العملاء و LTV
           </Link>
-          <span className={styles.eyebrow}>Customer Transactions</span>
-          <h1>استيراد معاملات العملاء</h1>
-          <p>
-            ارفع ملف CSV أو XLSX من بوابة الدفع. راجع البيانات أولًا، ثم استورد المعاملات الصالحة فقط بدون اختراع قيم ناقصة أو تحويل عملات تلقائيًا.
-          </p>
-        </div>
-        <div className={styles.headerMeta}>
-          <span>{business.name}</span>
-          <strong>{business.base_currency}</strong>
+          <Link className={styles.backLink} href={`/?business=${business.id}`}>
+            الداشبورد
+          </Link>
         </div>
       </div>
 
-      <section className={styles.historyPanel} aria-labelledby="transaction-history-title">
-        <div className={styles.historyHeading}>
+      <section className={styles.importGuide} aria-labelledby="history-completeness-title">
+        <div className={styles.guideHeading}>
           <div>
-            <span className={styles.kicker}>سجل المعاملات</span>
-            <h2 id="transaction-history-title">هل رفعت كل تاريخ الدفع المتاح؟</h2>
+            <span className={transactionHistoryComplete ? styles.requiredBadge : styles.optionalBadge}>
+              {transactionHistoryComplete ? "السجل مكتمل" : "السجل غير مؤكد كمكتمل"}
+            </span>
+            <h2 id="history-completeness-title">هل رفعت تاريخ المعاملات من بداية البزنس؟</h2>
           </div>
-          <span className={transactionHistoryComplete ? styles.historyComplete : styles.historyIncomplete}>
-            {transactionHistoryComplete ? "السجل مكتمل" : "السجل غير مؤكد"}
-          </span>
         </div>
 
-        {completionSummaryError ? (
+        {historyStatusError || savedPurchaseCountError ? (
           <p className={styles.splitNote}>
-            تعذر التحقق من وجود معاملات محفوظة. لن يسمح ميزان بتأكيد اكتمال السجل حتى ينجح هذا التحقق.
-          </p>
-        ) : historyStatusError ? (
-          <p className={styles.splitNote}>
-            تعذر قراءة حالة اكتمال سجل المعاملات. أعد تحميل الصفحة قبل تغيير التأكيد.
+            تعذر التحقق من حالة السجل والمعاملات المحفوظة. لن يسمح ميزان بتأكيد اكتمال التاريخ حتى يمكن التحقق من وجود عملية شراء ناجحة محفوظة.
           </p>
         ) : historyIntegrityMismatch ? (
           <p className={styles.splitNote}>
@@ -259,18 +273,16 @@ export default async function TransactionImportPage({ params, searchParams }: Tr
           <span>المنطقة الزمنية</span>
           <strong dir="ltr">{business.timezone}</strong>
         </div>
+        <p className={styles.businessContextNote}>
+          لن تُحفظ أي معاملة قبل مراجعة الملف وتأكيد الاستيراد.
+        </p>
       </section>
 
-      {canManage ? (
-        <TransactionPreviewUploader
-          businessId={business.id}
-          baseCurrency={business.base_currency}
-        />
-      ) : (
-        <section className={styles.splitNote}>
-          يمكنك مراجعة سجل العملاء، لكن استيراد المعاملات وتغيير حالة اكتمال التاريخ متاحان لمالك البزنس أو الأدمن فقط.
-        </section>
-      )}
-    </main>
+      <TransactionPreviewUploader
+        businessId={business.id}
+        baseCurrency={business.base_currency}
+        canManage={canManage}
+      />
+    </div>
   );
 }
