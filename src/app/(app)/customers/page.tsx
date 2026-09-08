@@ -14,8 +14,8 @@ export default async function CustomersPage() {
   return (
     <div className="page-stack">
       <PageHeading
-        title="العملاء و LTV"
-        description="استورد معاملات العملاء، ثم افتح تحليل العملاء لمراجعة سجل كل عميل والـ Cohorts وObserved LTV / قيمة العميل المحققة حتى الآن من سجل المعاملات الفعلي. تجميع معاملات العميل يتم تلقائيًا داخل ميزان."
+        title="العملاء وقيمة العميل"
+        description="استورد معاملات العملاء، ثم افتح التحليل لمعرفة سجل كل عميل، من اشترى أكثر من مرة، ومتوسط ما دفعه العملاء منذ أول شراء. Observed LTV / قيمة العميل المحققة حتى الآن تأتي من سجل المعاملات الفعلي، وتجميع معاملات العميل يتم تلقائيًا داخل ميزان."
       />
 
       {error ? (
@@ -34,8 +34,7 @@ export default async function CustomersPage() {
               <h2>{business.name}</h2>
               <div className={styles.nextStep}>
                 <p>
-                  استورد سجل المعاملات أو افتح تحليل العملاء لمراجعة سجل كل عميل والكوهورت وObserved LTV
-                  المحقق حتى الآن داخل هذا البزنس. لا توجد خطوة تجميع يدوية؛ ميزان يجمع معاملات العميل تلقائيًا.
+                  افتح تحليل العملاء لمراجعة سجل كل عميل وقيمة العملاء حسب شهر أول شراء وObserved LTV المحقق حتى الآن. لا توجد خطوة تجميع يدوية؛ ميزان يجمع معاملات العميل تلقائيًا.
                 </p>
                 <div className={styles.manageLinks}>
                   <Link className={styles.manageLink} href={`/businesses/${business.id}/customers`}>

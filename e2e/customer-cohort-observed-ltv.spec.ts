@@ -21,10 +21,10 @@ async function login(page: import("@playwright/test").Page) {
   await expect(page).toHaveURL(/\/$/);
 }
 
-test.describe("Tasks 22-23 cohorts and Observed LTV", () => {
+test.describe("Tasks 22-23 acquisition groups and Observed LTV", () => {
   test.skip(!hasLiveAuth, "Requires live Mizan Supabase credentials or a one-use invite token");
 
-  test("renders realized cohort value with founder-facing age labels in Arabic RTL", async ({ page }) => {
+  test("renders realized customer value with founder-facing first-purchase labels in Arabic RTL", async ({ page }) => {
     test.setTimeout(120_000);
     const browserErrors: string[] = [];
     page.on("console", (message) => {
@@ -101,17 +101,18 @@ test.describe("Tasks 22-23 cohorts and Observed LTV", () => {
 
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await expect(page.getByRole("heading", { name: "العملاء و LTV" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "كيف تتغير قيمة العميل مع الوقت؟" })).toBeVisible();
-    const cohortTable = page.getByRole("table", { name: "جدول الكوهورتات وObserved LTV" });
-    await expect(cohortTable.getByText("2026-01-01", { exact: true })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "العملاء وقيمة العميل" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "كم دفع عملاء كل شهر حتى الآن؟" })).toBeVisible();
+    const customerValueTable = page.getByRole("table", { name: "قيمة العميل حسب شهر أول شراء" });
+    await expect(customerValueTable.getByText("2026-01-01", { exact: true })).toBeVisible();
     await expect(page.getByText("500 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("80 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("420 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("105 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("بعد شهرين", { exact: true })).toBeVisible();
     await expect(page.getByText("2026-03-31", { exact: false })).toBeVisible();
-    await expect(page.getByText(/قيمة محققة وليست توقعًا/)).toBeVisible();
+    await expect(page.getByText(/هذا رقم محقق من المعاملات الفعلية، وليس توقعًا للمستقبل/)).toBeVisible();
+    await expect(page.getByText(/كوهورت/)).toHaveCount(0);
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect

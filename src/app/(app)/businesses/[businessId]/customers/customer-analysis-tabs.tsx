@@ -2,6 +2,7 @@
 
 import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import styles from "./customer-groups.module.css";
+import uxStyles from "./customer-analysis-ux.module.css";
 
 type CustomerAnalysisPanel = {
   id: "observed-ltv" | "revenue-streams" | "contribution" | "customers";
@@ -56,8 +57,8 @@ export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
       <div className={styles.sectionHeading}>
         <div>
           <span className={styles.kicker}>التفاصيل عند الحاجة</span>
-          <h2 id="customer-analysis-title">اختر التحليل الذي تحتاجه</h2>
-          <p>ابدأ بقيمة العميل مع الوقت، وانتقل لباقي التفاصيل فقط عندما تحتاجها.</p>
+          <h2 id="customer-analysis-title">اختر ما تريد معرفته عن عملائك</h2>
+          <p>ابدأ بمتوسط ما دفعه العميل منذ أول شراء، ثم افتح باقي التفاصيل عندما تحتاجها.</p>
         </div>
       </div>
 
@@ -76,7 +77,7 @@ export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
               aria-selected={selected}
               aria-controls={`${instanceId}-${panel.id}-panel`}
               tabIndex={selected ? 0 : -1}
-              className={`${styles.analysisTab} ${selected ? styles.analysisTabActive : ""}`}
+              className={`${styles.analysisTab} ${uxStyles.analysisTabEmphasis} ${selected ? `${styles.analysisTabActive} ${uxStyles.analysisTabActiveEmphasis}` : ""}`}
               onClick={() => selectTab(index)}
               onKeyDown={(event) => onTabKeyDown(event, index)}
             >
