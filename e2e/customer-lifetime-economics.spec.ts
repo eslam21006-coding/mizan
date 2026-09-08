@@ -102,12 +102,20 @@ test.describe("Tasks 24-25 lifetime customer economics", () => {
     await expect(augustCard.getByText("خسارة بعد التكاليف حتى الآن")).toBeVisible();
     await expect(augustCard.getByText("2,179.41 EGP", { exact: true })).toBeVisible();
 
-    const variableCostInput = page.getByLabel("تكاليف خدمة العميل المتغيرة 2026-08-01");
+    const variableCostInput = page.getByRole("textbox", {
+      name: "تكاليف خدمة العميل المتغيرة 2026-08-01",
+      exact: true,
+    });
     await variableCostInput.fill("6001");
     const saveButton = augustCard.getByRole("button", { name: "حفظ التكاليف بعد المراجعة" });
     await expect(saveButton).toBeDisabled();
     await expect(augustCard.getByText(/لم تتم مراجعة أهليته/)).toBeVisible();
-    await page.getByLabel("تأكيد أهلية تكاليف خدمة العميل المتغيرة 2026-08-01").check();
+    await page
+      .getByRole("checkbox", {
+        name: "تأكيد أهلية تكاليف خدمة العميل المتغيرة 2026-08-01",
+        exact: true,
+      })
+      .check();
     await expect(saveButton).toBeEnabled();
 
     await expect(page.getByText(/كوهورت/)).toHaveCount(0);
