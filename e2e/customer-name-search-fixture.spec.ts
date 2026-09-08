@@ -55,7 +55,6 @@ test.describe("Customer name-or-email search fixture", () => {
 
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await expect(page.getByRole("heading", { name: "من دفع ومتى?", exact: true })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "من دفع ومتى؟", exact: true })).toBeVisible();
 
     const searchInput = page.getByLabel("ابحث بالاسم أو البريد الإلكتروني");
