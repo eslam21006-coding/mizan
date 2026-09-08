@@ -30,6 +30,14 @@ const contributionSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/customers/lifetime-contribution-table.tsx",
   "utf8",
 );
+const contributionManagerSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/customers/lifetime-contribution/lifetime-contribution-allocation-manager.tsx",
+  "utf8",
+);
+const contributionPageSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/customers/lifetime-contribution/page.tsx",
+  "utf8",
+);
 
 test("customer overview keeps all four existing analyses behind one focused workspace", () => {
   assert.match(pageSource, /CustomerOverviewShell/);
@@ -43,7 +51,7 @@ test("customer overview keeps all four existing analyses behind one focused work
   assert.match(shellSource, /id: "customers"/);
 });
 
-test("customer redesign preserves locked financial meaning while removing cohort jargon from the main value view", () => {
+test("customer redesign preserves locked financial meaning while removing cohort jargon from founder-facing value views", () => {
   assert.match(observedLtvSource, /Observed LTV \/ قيمة العميل المحققة حتى الآن/);
   assert.match(observedLtvSource, /هذا رقم محقق من المعاملات الفعلية، وليس توقعًا للمستقبل/);
   assert.match(
@@ -52,7 +60,14 @@ test("customer redesign preserves locked financial meaning while removing cohort
   );
   assert.match(observedLtvSource, /observation_cutoff_date/);
   assert.doesNotMatch(observedLtvSource, /كوهورت/);
-  assert.match(contributionSource, /المصاريف العامة الثابتة غير داخلة في هذا المقياس/);
+  assert.doesNotMatch(contributionSource, /كوهورت/);
+  assert.doesNotMatch(contributionManagerSource, /كوهورت/);
+  assert.doesNotMatch(contributionPageSource, /كوهورت/);
+  assert.match(contributionSource, /الرواتب الشهرية الثابتة والإيجار والإدارة وأي Fixed Monthly لا تدخل هنا/);
+  assert.match(contributionManagerSource, /ليست راتبًا شهريًا ثابتًا أو تكلفة Fixed Monthly/);
+  assert.match(contributionManagerSource, /توزيع من تكلفة مشتركة \(تقديري\)/);
+  assert.match(contributionManagerSource, /خسارة بعد التكاليف حتى الآن/);
+  assert.match(shellSource, /ربحية العميل بعد التكاليف/);
   assert.match(shellSource, /ميزان لا يعتبر إيراد فترة واحدة LTV/);
 });
 
