@@ -39,7 +39,7 @@ test.describe("Customer value overview redesign", () => {
     await expect(setup).toHaveAttribute("open", "");
     await expect(setup.getByText("فتح الاستيراد", { exact: true })).toBeVisible();
     await expect(setup.getByText("ربط مصادر الإيراد", { exact: true }).last()).toBeVisible();
-    await expect(setup.getByText("إدخال التكاليف", { exact: true })).toBeVisible();
+    await expect(setup.getByText("مراجعة التكاليف", { exact: true })).toBeVisible();
 
     const importLink = page.getByRole("link", { name: "استيراد معاملات" });
     await expect(importLink).toHaveAttribute(
@@ -54,7 +54,7 @@ test.describe("Customer value overview redesign", () => {
     const tabList = page.getByRole("tablist", { name: "أقسام تحليل العملاء" });
     const observedTab = tabList.getByRole("tab", { name: /متوسط ما دفعه العميل/ });
     const revenueTab = tabList.getByRole("tab", { name: /مصادر الإيراد/ });
-    const contributionTab = tabList.getByRole("tab", { name: /ربح المساهمة/ });
+    const contributionTab = tabList.getByRole("tab", { name: /ربحية العميل بعد التكاليف/ });
     const customersTab = tabList.getByRole("tab", { name: /سجل العملاء/ });
 
     await expect(observedTab).toHaveAttribute("aria-selected", "true");
