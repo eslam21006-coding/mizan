@@ -34,8 +34,8 @@ function money(value: string | null, currency: string) {
   return value === null ? "—" : formatMoneyText(value, currency);
 }
 
-/** Converts a stored cohort month into a founder-facing Arabic month label. */
-function cohortLabel(value: string) {
+/** Converts a stored acquisition month into a founder-facing Arabic first-purchase month label. */
+function firstPurchaseMonthLabel(value: string) {
   const [yearText, monthText] = value.split("-");
   const year = Number(yearText);
   const month = Number(monthText);
@@ -45,13 +45,25 @@ function cohortLabel(value: string) {
   );
 }
 
-/** Renders cohort-level Lifetime Contribution Profit without including fixed overhead. */
+/** Presents an exact signed result as profit, break-even, or loss without calling a negative value profit. */
+function profitabilityResult(value: string | null, currency: string) {
+  if (value === null) return "—";
+  const exact = value.trim();
+  const hasNonZeroDigit = /[1-9]/.test(exact);
+  if (exact.startsWith("-") && hasNonZeroDigit) {
+    return `خسارة ${formatMoneyText(exact.slice(1), currency)}`;
+  }
+  if (!hasNonZeroDigit) return `تعادل ${formatMoneyText(exact, currency)}`;
+  return `ربح ${formatMoneyText(exact, currency)}`;
+}
+
+/** Renders customer-group Lifetime Contribution Profit without including fixed monthly overhead. */
 export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
   const [rows, setRows] = useState<LifetimeContributionRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /** Loads the authorized cohort contribution rows for the selected business. */
+  /** Loads the authorized lifetime-profitability rows for the selected business. */
   const loadRows = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -66,7 +78,7 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
 
     if (loadError) {
       setRows([]);
-      setError("تعذر تحميل ربح المساهمة مدى الحياة. حاول مرة أخرى.");
+      setError("تعذر تحميل ربحية العملاء بعد التكاليف. حاول مرة أخرى.");
     } else {
       setRows((data ?? []) as LifetimeContributionRow[]);
     }
@@ -78,13 +90,13 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
   }, [loadRows]);
 
   if (isLoading) {
-    return <section className={styles.statusPanel}>جاري حساب ربح المساهمة مدى الحياة…</section>;
+    return <section className={styles.statusPanel}>جاري حساب ربحية العملاء بعد التكاليف…</section>;
   }
 
   if (error) {
     return (
       <section className={styles.errorPanel} role="alert">
-        <strong>تعذر تحميل ربح المساهمة مدى الحياة</strong>
+        <strong>تعذر تحميل ربحية العملاء بعد التكاليف</strong>
         <p>{error}</p>
         <button className={styles.retryButton} type="button" onClick={() => void loadRows()}>
           إعادة المحاولة
@@ -96,7 +108,7 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
   if (rows.length === 0) {
     return (
       <section className={styles.compactEmptyPanel}>
-        <strong>لا توجد كوهورتات مكتسبة لحساب ربح المساهمة بعد.</strong>
+        <strong>لا توجد مجموعات عملاء مكتسبة لحساب الربحية بعد.</strong>
         <span>يبدأ الحساب بعد وجود سجل معاملات واكتساب عملاء فعلي.</span>
       </section>
     );
@@ -107,27 +119,27 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
       <div className={styles.groupHeading}>
         <div>
           <span className={styles.kicker}>بعد التكاليف المرتبطة بالعميل</span>
-          <h2 id="lifetime-contribution-title">ربح المساهمة مدى الحياة</h2>
+          <h2 id="lifetime-contribution-title">ربحية العملاء بعد التكاليف</h2>
           <p>
-            صافي التحصيل المحقق ناقص تكاليف الاكتساب والتكاليف المتغيرة المرتبطة بالعميل. المصاريف العامة الثابتة غير داخلة في هذا المقياس.
+            Lifetime Contribution Profit = صافي التحصيل المحقق ناقص تكلفة الاكتساب والتكاليف المتغيرة المرتبطة بالعميل ورسوم الدفع القابلة للتخصيص. الرواتب الشهرية الثابتة والإيجار والإدارة وأي Fixed Monthly لا تدخل هنا.
           </p>
         </div>
         <Link className={styles.retryButton} href={`/businesses/${businessId}/customers/lifetime-contribution`}>
-          إدخال التكاليف المرتبطة
+          مراجعة التكاليف المرتبطة
         </Link>
       </div>
 
       <div className={styles.tableShell}>
-        <table className={styles.groupsTable} aria-label="جدول ربح المساهمة مدى الحياة">
+        <table className={styles.groupsTable} aria-label="جدول ربحية العملاء بعد التكاليف">
           <thead>
             <tr>
-              <th scope="col">الكوهورت</th>
+              <th scope="col">شهر أول شراء</th>
               <th scope="col">العملاء</th>
-              <th scope="col">صافي التحصيل مدى الحياة</th>
-              <th scope="col">التكاليف المرتبطة</th>
-              <th scope="col">ربح المساهمة</th>
-              <th scope="col">لكل عميل أصلي</th>
-              <th scope="col">جودة التخصيص</th>
+              <th scope="col">صافي التحصيل حتى الآن</th>
+              <th scope="col">التكاليف المؤهلة</th>
+              <th scope="col">النتيجة بعد التكاليف</th>
+              <th scope="col">النتيجة لكل عميل</th>
+              <th scope="col">حالة التكاليف</th>
             </tr>
           </thead>
           <tbody>
@@ -136,28 +148,30 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
               return (
                 <tr key={`${row.business_id}:${row.cohort_month}`}>
                   <td>
-                    <strong>{cohortLabel(row.cohort_month)}</strong>
+                    <strong>{firstPurchaseMonthLabel(row.cohort_month)}</strong>
                     <small dir="ltr">{row.cohort_month}</small>
                   </td>
                   <td dir="ltr">{formatCountText(row.original_cohort_size)}</td>
                   <td dir="ltr">{money(row.lifetime_net_cash_text, currency)}</td>
                   <td dir="ltr">{row.allocation_complete ? money(row.attributable_costs_text, currency) : "—"}</td>
-                  <td dir="ltr">
+                  <td>
                     {row.allocation_complete ? (
-                      <strong>{money(row.lifetime_contribution_profit_text, currency)}</strong>
+                      <strong>{profitabilityResult(row.lifetime_contribution_profit_text, currency)}</strong>
                     ) : (
-                      <span>غير متاح</span>
+                      <span>تحتاج مراجعة التكاليف</span>
                     )}
                   </td>
-                  <td dir="ltr">
-                    {row.allocation_complete ? money(row.lifetime_contribution_profit_per_customer_text, currency) : "—"}
+                  <td>
+                    {row.allocation_complete
+                      ? profitabilityResult(row.lifetime_contribution_profit_per_customer_text, currency)
+                      : "—"}
                   </td>
                   <td>
                     {row.allocation_complete
                       ? row.uses_explicit_allocation
-                        ? "يتضمن توزيعًا يدويًا"
-                        : "تكاليف مباشرة"
-                      : "أكمل التكاليف الأربعة"}
+                        ? "مراجَعة — تتضمن توزيعًا تقديريًا صريحًا"
+                        : "مراجَعة — تكاليف مرتبطة مباشرة"
+                      : "راجع أهلية التكاليف قبل اعتماد النتيجة"}
                   </td>
                 </tr>
               );
