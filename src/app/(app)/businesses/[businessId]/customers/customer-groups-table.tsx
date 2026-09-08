@@ -12,6 +12,7 @@ const PAGE_SIZE = 50;
 type CustomerTransactionGroup = {
   business_id: string;
   customer_email: string;
+  customer_name: string | null;
   acquisition_at: string | null;
   acquisition_date: string | null;
   transaction_count: number | string;
@@ -77,7 +78,7 @@ export function CustomerGroupsTable({
       let query = supabase
         .from("customer_transaction_groups")
         .select(
-          "business_id,customer_email,acquisition_at,acquisition_date,transaction_count,collection_count,refund_count,gross_cash_collected_text,refunds_text,net_cash_collected_text,last_transaction_at,currency",
+          "business_id,customer_email,customer_name,acquisition_at,acquisition_date,transaction_count,collection_count,refund_count,gross_cash_collected_text,refunds_text,net_cash_collected_text,last_transaction_at,currency",
           { count: "exact" },
         )
         .eq("business_id", businessId);
@@ -264,7 +265,7 @@ export function CustomerGroupsTable({
           <table className={styles.groupsTable} aria-label="جدول العملاء ومعاملاتهم">
             <thead>
               <tr>
-                <th scope="col">البريد الإلكتروني</th>
+                <th scope="col">العميل</th>
                 <th scope="col">أول شراء</th>
                 <th scope="col">المعاملات</th>
                 <th scope="col">إجمالي التحصيل</th>
@@ -279,7 +280,14 @@ export function CustomerGroupsTable({
                 return (
                   <tr key={`${row.business_id}:${row.customer_email}`}>
                     <td>
-                      <strong dir="ltr">{row.customer_email}</strong>
+                      {row.customer_name ? (
+                        <>
+                          <strong>{row.customer_name}</strong>
+                          <small dir="ltr">{row.customer_email}</small>
+                        </>
+                      ) : (
+                        <strong dir="ltr">{row.customer_email}</strong>
+                      )}
                       <small>
                         {formatCountText(row.collection_count)} تحصيل · {formatCountText(row.refund_count)} استرجاع
                       </small>

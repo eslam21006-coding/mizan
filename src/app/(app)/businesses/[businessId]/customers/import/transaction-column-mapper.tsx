@@ -5,6 +5,7 @@ import {
   autoMapTransactionHeaderRow,
   buildTransactionColumnChoices,
   EMPTY_TRANSACTION_COLUMN_MAPPING,
+  enrichStoredCustomerNameMapping,
   enrichStoredTransactionIdMapping,
   fingerprintTransactionHeaderRow,
   inspectTransactionColumnMapping,
@@ -40,14 +41,17 @@ const FIELD_LABELS: Record<TransactionMappingField, string> = {
   customerEmail: "البريد الإلكتروني للعميل",
   transactionDate: "تاريخ المعاملة",
   amountCollected: "المبلغ المحصل",
+  customerName: "اسم العميل",
   transactionTime: "وقت المعاملة",
   timezone: "المنطقة الزمنية",
   transactionId: "رقم المعاملة",
   currency: "العملة",
 };
 
+/** Returns the Arabic guidance shown for one transaction mapping field. */
 function fieldDescription(field: TransactionMappingField, baseCurrency: string) {
   if (field === "customerEmail") return "اختر العمود الذي يحتوي على بريد العميل.";
+  if (field === "customerName") return "اختياري. اسم العميل للعرض فقط؛ البريد الإلكتروني يظل هو هوية العميل.";
   if (field === "transactionDate") return "اختر عمود التاريخ فقط، مثل 28-Aug-26 أو 2026-08-28.";
   if (field === "transactionTime") {
     return "اختياري. اختر عمود الساعة المنفصل، مثل 5:34 PM أو 17:34.";
@@ -62,11 +66,13 @@ function fieldDescription(field: TransactionMappingField, baseCurrency: string) 
   return `اختياري. إذا لم يوجد عمود للعملة، ستؤكد أن جميع المعاملات بعملة ${baseCurrency}.`;
 }
 
+/** Returns the empty-select label for required and optional transaction fields. */
 function emptyOptionLabel(field: TransactionMappingField, required: boolean) {
   if (required) return "اختر العمود";
   if (field === "transactionTime") return "لا يوجد عمود وقت منفصل";
   if (field === "timezone") return "لا يوجد عمود منطقة زمنية";
   if (field === "transactionId") return "لا يوجد رقم معاملة";
+  if (field === "customerName") return "لا يوجد اسم عميل";
   return "لا يوجد عمود للعملة";
 }
 
@@ -176,7 +182,12 @@ export function TransactionColumnMapper({
 
         if (!mappingTouchedRef.current) {
           if (savedMapping) {
-            setMapping(enrichStoredTransactionIdMapping(savedMapping, automatic.mapping));
+            setMapping(
+              enrichStoredCustomerNameMapping(
+                enrichStoredTransactionIdMapping(savedMapping, automatic.mapping),
+                automatic.mapping,
+              ),
+            );
             setMappingOrigin("saved");
           } else if (automatic.detected) {
             setMapping(automatic.mapping);
@@ -278,7 +289,7 @@ export function TransactionColumnMapper({
   };
 
   const validationKey = mappingState.isComplete
-    ? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.transactionTime ?? "none"}:${mapping.timezone ?? "none"}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}`
+    ? `${mapping.customerEmail}:${mapping.customerName ?? "none"}:${mapping.transactionDate}:${mapping.transactionTime ?? "none"}:${mapping.timezone ?? "none"}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}`
     : "incomplete";
 
   return (
@@ -302,7 +313,7 @@ export function TransactionColumnMapper({
         )}
         {mappingOrigin === "automatic" && autoMappingDetected && (
           <p className={styles.mappingHint}>
-            تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.transactionTime != null ? " والوقت" : ""}{mapping.timezone != null ? " والمنطقة الزمنية" : ""}{mapping.transactionId != null ? " ورقم المعاملة" : ""}{mapping.currency != null ? " والعملة" : ""} من أول صف غير فارغ.
+            تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.customerName != null ? " واسم العميل" : ""}{mapping.transactionTime != null ? " والوقت" : ""}{mapping.timezone != null ? " والمنطقة الزمنية" : ""}{mapping.transactionId != null ? " ورقم المعاملة" : ""}{mapping.currency != null ? " والعملة" : ""} من أول صف غير فارغ.
           </p>
         )}
         {mappingMemoryError && (
@@ -400,6 +411,14 @@ export function TransactionColumnMapper({
                 <strong>العمود {transactionColumnLabel(mapping[field] as number)}</strong>
               </div>
             ))}
+            <div>
+              <span>{FIELD_LABELS.customerName}</span>
+              <strong>
+                {mapping.customerName === null || mapping.customerName === undefined
+                  ? "لا يوجد اسم عميل"
+                  : `العمود ${transactionColumnLabel(mapping.customerName)}`}
+              </strong>
+            </div>
             <div>
               <span>{FIELD_LABELS.transactionTime}</span>
               <strong>

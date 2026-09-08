@@ -223,6 +223,11 @@ export default async function TransactionImportPage({
             <span className={styles.optionalBadge}>اختياري</span>
             <ul>
               <li>
+                <strong>اسم العميل</strong>
+                <small dir="ltr">Customer Name / Name</small>
+                <small>للعرض فقط؛ البريد الإلكتروني يظل هو هوية العميل داخل ميزان.</small>
+              </li>
+              <li>
                 <strong>وقت المعاملة</strong>
                 <small dir="ltr">Transaction Time</small>
                 <small dir="ltr">مثال: 5:34 PM أو 17:34</small>
@@ -248,7 +253,7 @@ export default async function TransactionImportPage({
         </div>
 
         <p className={styles.guideNote}>
-          ميزان يحاول التعرف على أعمدة بوابة الدفع تلقائيًا، بما فيها Date وTime وTimezone عندما تكون منفصلة. إذا احتجت تعديل المطابقة يدويًا، يحفظها لنفس ترتيب الأعمدة في هذا البزنس.
+          ميزان يحاول التعرف على أعمدة بوابة الدفع تلقائيًا، بما فيها Customer Name وDate وTime وTimezone عندما تكون موجودة أو منفصلة. إذا احتجت تعديل المطابقة يدويًا، يحفظها لنفس ترتيب الأعمدة في هذا البزنس.
         </p>
         <p className={styles.splitNote}>
           يجب أن يحتوي الملف الواحد على تحصيلات أو استرجاعات فقط. إذا كان التصدير يحتوي على النوعين، افصلهما إلى ملفين ثم ارفع كل ملف على حدة.

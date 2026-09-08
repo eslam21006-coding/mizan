@@ -58,6 +58,7 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
           {
             business_id: "browser-business",
             customer_email: "buyer@example.com",
+            customer_name: "Ahmed Buyer",
             acquisition_at: "2026-01-02T10:00:00+00:00",
             acquisition_date: "2026-01-02",
             transaction_count: 4,
@@ -72,6 +73,7 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
           {
             business_id: "browser-business",
             customer_email: "refund-only@example.com",
+            customer_name: null,
             acquisition_at: null,
             acquisition_date: null,
             transaction_count: 1,
@@ -101,11 +103,12 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
     await expect(page.getByLabel("ابحث بالبريد الإلكتروني")).toBeVisible();
     await expect(page.getByLabel("اعرض")).toBeVisible();
     await expect(page.getByLabel("رتّب حسب")).toBeVisible();
-    await expect(page.getByRole("columnheader", { name: "البريد الإلكتروني" })).toBeVisible();
+    await expect(page.getByRole("columnheader", { name: "العميل" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "أول شراء" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "إجمالي التحصيل" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "الاسترجاعات" })).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "صافي التحصيل" })).toBeVisible();
+    await expect(page.getByText("Ahmed Buyer", { exact: true })).toBeVisible();
     await expect(page.getByText("buyer@example.com", { exact: true })).toBeVisible();
     await expect(page.getByText("refund-only@example.com", { exact: true })).toBeVisible();
     await expect(page.getByText("لا يوجد تحصيل ناجح بعد", { exact: true })).toBeVisible();

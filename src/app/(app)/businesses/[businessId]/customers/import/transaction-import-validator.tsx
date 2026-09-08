@@ -181,15 +181,23 @@ function ValidationIssueTable({ result }: { result: TransactionImportValidationR
   );
 }
 
+/** Builds the ordered source-column read plan and value indexes for the active mapping. */
 function mappedColumns(mapping: TransactionColumnMapping) {
   const required = [mapping.customerEmail, mapping.transactionDate, mapping.amountCollected];
   if (!required.every((column): column is number => column !== null)) return null;
 
   const columns = [...required];
+  let customerNameValueIndex: number | null = null;
   let transactionTimeValueIndex: number | null = null;
   let timezoneValueIndex: number | null = null;
   let transactionIdValueIndex: number | null = null;
   let currencyValueIndex: number | null = null;
+
+  const customerName = mapping.customerName ?? null;
+  if (customerName !== null) {
+    customerNameValueIndex = columns.length;
+    columns.push(customerName);
+  }
 
   const transactionTime = mapping.transactionTime ?? null;
   if (transactionTime !== null) {
@@ -215,7 +223,7 @@ function mappedColumns(mapping: TransactionColumnMapping) {
     columns.push(currency);
   }
 
-  return { columns, transactionTimeValueIndex, timezoneValueIndex, transactionIdValueIndex, currencyValueIndex };
+  return { columns, customerNameValueIndex, transactionTimeValueIndex, timezoneValueIndex, transactionIdValueIndex, currencyValueIndex };
 }
 
 /** Parses non-negative counters returned by the import RPC without coercion. */
@@ -287,6 +295,7 @@ export function TransactionImportValidator({
   const [pendingVerification, setPendingVerification] = useState<VerificationSession | null>(null);
   const [sessionRows, setSessionRows] = useState<PreparedTransactionImportRow[] | null>(null);
   const [importError, setImportError] = useState<string | null>(null);
+  const [nameImportWarning, setNameImportWarning] = useState<string | null>(null);
   const [pendingCandidates, setPendingCandidates] = useState<PendingCandidate[]>([]);
   const [candidateDecisions, setCandidateDecisions] = useState<
     Record<number, CandidateDuplicateResolution | undefined>
@@ -344,6 +353,7 @@ export function TransactionImportValidator({
     setPendingVerification(null);
     setSessionRows(null);
     setImportError(null);
+    setNameImportWarning(null);
     setPendingCandidates([]);
     setCandidateDecisions({});
     setRemainingRows([]);
@@ -376,6 +386,10 @@ export function TransactionImportValidator({
       const rows = sourceRows.rows.map((row) => ({
         rowNumber: row.rowNumber,
         customerEmail: row.values[0] ?? "",
+        customerName:
+          selected.customerNameValueIndex === null
+            ? undefined
+            : (row.values[selected.customerNameValueIndex] ?? ""),
         transactionDate: row.values[1] ?? "",
         amountCollected: row.values[2] ?? "",
         transactionTime:
@@ -464,11 +478,26 @@ export function TransactionImportValidator({
       const parsed = parseRpcResult(data);
       if (!parsed) throw new TransactionImportProcessError(confirmed);
 
+      // Financial persistence is authoritative. Optional customer-name metadata must never block
+      // the import after the core transaction RPC has committed successfully.
       confirmed = {
         insertedCount: confirmed.insertedCount + parsed.inserted_count,
         duplicateCount: confirmed.duplicateCount + parsed.duplicate_count,
         candidateCount: parsed.candidate_count,
       };
+
+      if (chunk.some((row) => row.customer_name)) {
+        const { error: nameError } = await supabase.rpc("apply_customer_transaction_names", {
+          p_business_id: businessId,
+          p_source: source,
+          p_rows: chunk,
+        });
+        if (nameError) {
+          setNameImportWarning(
+            "تم حفظ المعاملات المالية، لكن تعذر حفظ بعض أسماء العملاء الاختيارية. لن تتأثر أرقام العملاء أو التحصيل، ويمكن إعادة استيراد الملف لاحقًا لمحاولة إضافة الأسماء بدون تكرار المعاملات.",
+          );
+        }
+      }
 
       if (parsed.candidate_count > 0) {
         const rowsByNumber = new Map(chunk.map((row) => [row.row_number, row]));
@@ -961,6 +990,12 @@ export function TransactionImportValidator({
                       ? "إعادة التحقق من الحفظ"
                       : `استيراد ${result.validRows} معاملة صالحة`}
                 </button>
+
+                {nameImportWarning && (
+                  <div className={task20Styles.importError} role="status">
+                    {nameImportWarning}
+                  </div>
+                )}
 
                 {completionSummary && importResult ? (
                   <TransactionImportCompletionCard

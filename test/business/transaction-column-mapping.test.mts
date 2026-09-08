@@ -5,6 +5,7 @@ import {
   autoMapTransactionHeaderRow,
   buildTransactionColumnChoices,
   EMPTY_TRANSACTION_COLUMN_MAPPING,
+  enrichStoredCustomerNameMapping,
   enrichStoredTransactionIdMapping,
   fingerprintTransactionHeaderRow,
   inspectTransactionColumnMapping,
@@ -141,6 +142,7 @@ test("gateway headers from the founder fixture auto-map without manual column se
     customerEmail: 1,
     transactionDate: 5,
     amountCollected: 3,
+    customerName: null,
     transactionTime: null,
     timezone: null,
     transactionId: 0,
@@ -173,14 +175,18 @@ test("older saved founder mapping recovers the detected Internal transaction id 
     customerEmail: 3,
     transactionDate: 15,
     amountCollected: 8,
+    customerName: null,
     transactionTime: 16,
     timezone: 17,
     transactionId: null,
     currency: 6,
   };
 
-  const enriched = enrichStoredTransactionIdMapping(saved, detected.mapping);
-  assert.deepEqual(enriched, { ...saved, transactionId: 0 });
+  const enriched = enrichStoredCustomerNameMapping(
+    enrichStoredTransactionIdMapping(saved, detected.mapping),
+    detected.mapping,
+  );
+  assert.deepEqual(enriched, { ...saved, transactionId: 0, customerName: 2 });
   assert.equal(enriched.customerEmail, 3);
   assert.equal(enriched.transactionDate, 15);
   assert.equal(enriched.amountCollected, 8);
@@ -286,6 +292,7 @@ test("stored mappings are accepted only when complete and within the current fil
     customerEmail: 1,
     transactionDate: 5,
     amountCollected: 3,
+    customerName: null,
     transactionTime: null,
     timezone: null,
     transactionId: 0,

@@ -1,5 +1,6 @@
 export const TRANSACTION_VALIDATION_ERROR_SAMPLE_LIMIT = 25;
 export const TRANSACTION_EMAIL_MAX_LENGTH = 320;
+export const TRANSACTION_CUSTOMER_NAME_MAX_LENGTH = 200;
 export const TRANSACTION_ID_MAX_LENGTH = 512;
 
 export const TRANSACTION_VALIDATION_FIELDS = [
@@ -17,6 +18,7 @@ export type TransactionValidationField = (typeof TRANSACTION_VALIDATION_FIELDS)[
 export type TransactionValidationInputRow = {
   rowNumber: number;
   customerEmail: string;
+  customerName?: string;
   transactionDate: string;
   transactionTime?: string;
   timezone?: string;
@@ -131,6 +133,13 @@ function unicodeCharacterLength(value: string) {
 
 export function normalizeTransactionEmail(value: string) {
   return value.trim().toLowerCase();
+}
+
+/** Normalizes optional descriptive customer-name metadata without affecting customer identity. */
+export function normalizeTransactionCustomerName(value: string | undefined) {
+  const normalized = value?.trim() ?? "";
+  if (!normalized || unicodeCharacterLength(normalized) > TRANSACTION_CUSTOMER_NAME_MAX_LENGTH) return null;
+  return normalized;
 }
 
 export function isValidTransactionEmail(value: string) {
@@ -458,14 +467,26 @@ function groupedFieldValue(
   return values.values().next().value ?? "";
 }
 
+/** Returns the first valid optional customer name from grouped gateway rows. */
+function firstValidCustomerName(group: readonly TransactionValidationInputRow[]) {
+  for (const row of group) {
+    const normalized = normalizeTransactionCustomerName(row.customerName);
+    if (normalized) return normalized;
+  }
+  return undefined;
+}
+
+/** Canonicalizes one row timestamp while preserving valid optional customer-name metadata. */
 function normalizeTemporalRow(row: TransactionValidationInputRow): TransactionValidationInputRow {
   const canonical = normalizeTransactionDateTimeForImport(
     row.transactionDate,
     row.transactionTime,
     row.timezone,
   );
+  const customerName = normalizeTransactionCustomerName(row.customerName);
   return {
     ...row,
+    ...(customerName ? { customerName } : {}),
     transactionDate: canonical ?? row.transactionDate.trim(),
   };
 }
@@ -474,6 +495,7 @@ function isIgnorableDetailRow(row: TransactionValidationInputRow) {
   return !row.transactionDate.trim() && !row.amountCollected.trim();
 }
 
+/** Collapses gateway line items into transaction rows without inventing missing cash data. */
 export function normalizeGatewayTransactionRows(
   rows: readonly TransactionValidationInputRow[],
   options: { skipFirstRow?: boolean } = {},
@@ -541,6 +563,7 @@ export function normalizeGatewayTransactionRows(
       normalizeTemporalRow({
         rowNumber: group[0].rowNumber,
         customerEmail: groupedFieldValue(group, item.transactionId, "customerEmail"),
+        ...(firstValidCustomerName(group) ? { customerName: firstValidCustomerName(group) } : {}),
         transactionDate: groupedFieldValue(group, item.transactionId, "transactionDate"),
         transactionTime: timeWasMapped
           ? groupedFieldValue(group, item.transactionId, "transactionTime")
