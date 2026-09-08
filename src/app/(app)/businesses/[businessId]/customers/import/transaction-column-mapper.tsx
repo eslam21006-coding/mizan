@@ -48,6 +48,7 @@ const FIELD_LABELS: Record<TransactionMappingField, string> = {
   currency: "العملة",
 };
 
+/** Returns the Arabic guidance shown for one transaction mapping field. */
 function fieldDescription(field: TransactionMappingField, baseCurrency: string) {
   if (field === "customerEmail") return "اختر العمود الذي يحتوي على بريد العميل.";
   if (field === "customerName") return "اختياري. اسم العميل للعرض فقط؛ البريد الإلكتروني يظل هو هوية العميل.";
@@ -65,6 +66,7 @@ function fieldDescription(field: TransactionMappingField, baseCurrency: string) 
   return `اختياري. إذا لم يوجد عمود للعملة، ستؤكد أن جميع المعاملات بعملة ${baseCurrency}.`;
 }
 
+/** Returns the empty-select label for required and optional transaction fields. */
 function emptyOptionLabel(field: TransactionMappingField, required: boolean) {
   if (required) return "اختر العمود";
   if (field === "transactionTime") return "لا يوجد عمود وقت منفصل";

@@ -467,6 +467,7 @@ function groupedFieldValue(
   return values.values().next().value ?? "";
 }
 
+/** Returns the first valid optional customer name from grouped gateway rows. */
 function firstValidCustomerName(group: readonly TransactionValidationInputRow[]) {
   for (const row of group) {
     const normalized = normalizeTransactionCustomerName(row.customerName);
@@ -475,6 +476,7 @@ function firstValidCustomerName(group: readonly TransactionValidationInputRow[])
   return undefined;
 }
 
+/** Canonicalizes one row timestamp while preserving valid optional customer-name metadata. */
 function normalizeTemporalRow(row: TransactionValidationInputRow): TransactionValidationInputRow {
   const canonical = normalizeTransactionDateTimeForImport(
     row.transactionDate,
@@ -493,6 +495,7 @@ function isIgnorableDetailRow(row: TransactionValidationInputRow) {
   return !row.transactionDate.trim() && !row.amountCollected.trim();
 }
 
+/** Collapses gateway line items into transaction rows without inventing missing cash data. */
 export function normalizeGatewayTransactionRows(
   rows: readonly TransactionValidationInputRow[],
   options: { skipFirstRow?: boolean } = {},

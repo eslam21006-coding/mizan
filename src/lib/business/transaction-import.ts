@@ -81,6 +81,7 @@ function exactDecimalSign(value: string) {
   return normalized.startsWith("-") ? -1 : 1;
 }
 
+/** Prepares validated gateway rows for the bounded transaction-import RPC contract. */
 export function prepareTransactionImportRows(
   rows: readonly TransactionDuplicateInputRow[],
   options: {

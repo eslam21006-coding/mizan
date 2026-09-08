@@ -181,6 +181,7 @@ function ValidationIssueTable({ result }: { result: TransactionImportValidationR
   );
 }
 
+/** Builds the ordered source-column read plan and value indexes for the active mapping. */
 function mappedColumns(mapping: TransactionColumnMapping) {
   const required = [mapping.customerEmail, mapping.transactionDate, mapping.amountCollected];
   if (!required.every((column): column is number => column !== null)) return null;
