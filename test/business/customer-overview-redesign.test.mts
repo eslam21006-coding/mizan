@@ -80,6 +80,7 @@ test("customer ledger exposes literal server-side email search filters and sorti
   assert.match(customerGroupsSource, /replaceAll\("_", "\\\\_"\)/);
   assert.match(customerGroupsSource, /\.ilike\("customer_email", `%\$\{escapeIlikeLiteral\(search\)\}%`\)/);
   assert.match(customerGroupsSource, /\.order\("net_cash_collected"/);
-  assert.match(customerGroupsSource, /<th scope="col">البريد الإلكتروني<\/th>/);
-  assert.doesNotMatch(customerGroupsSource, /customer_name/);
+  assert.match(customerGroupsSource, /<th scope="col">العميل<\/th>/);
+  assert.match(customerGroupsSource, /customer_name/);
+  assert.match(customerGroupsSource, /كل بريد إلكتروني يمثل عميلًا واحدًا داخل هذا البزنس/);
 });
