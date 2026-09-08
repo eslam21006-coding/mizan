@@ -3,7 +3,17 @@ add column customer_name text;
 
 alter table public.customer_transactions
 add constraint customer_transactions_customer_name_valid
-check (customer_name is null or (char_length(customer_name) between 1 and 200 and customer_name = btrim(customer_name)));
+check (
+  customer_name is null
+  or (
+    char_length(customer_name) between 1 and 200
+    and customer_name = regexp_replace(customer_name, '^[[:space:]]+|[[:space:]]+$', '', 'g')
+  )
+)
+not valid;
+
+alter table public.customer_transactions
+validate constraint customer_transactions_customer_name_valid;
 
 comment on column public.customer_transactions.customer_name is
   'Optional display-only customer name metadata. Customer identity remains normalized customer_email.';
@@ -53,7 +63,10 @@ begin
     if jsonb_typeof(source_row) is distinct from 'object' then
       raise invalid_parameter_value using message = 'Every customer-name row must be a JSON object.';
     end if;
-    customer_name_value := nullif(btrim(coalesce(source_row ->> 'customer_name', '')), '');
+    customer_name_value := nullif(
+      regexp_replace(coalesce(source_row ->> 'customer_name', ''), '^[[:space:]]+|[[:space:]]+$', '', 'g'),
+      ''
+    );
     if customer_name_value is null then continue; end if;
     if char_length(customer_name_value) > 200 then
       raise invalid_parameter_value using message = 'Customer name must be 200 characters or fewer.';
