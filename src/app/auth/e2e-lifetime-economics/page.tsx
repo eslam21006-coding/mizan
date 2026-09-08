@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { LifetimeContributionAllocationManager } from "@/app/(app)/businesses/[businessId]/customers/lifetime-contribution/lifetime-contribution-allocation-manager";
 import { LifetimeContributionTable } from "@/app/(app)/businesses/[businessId]/customers/lifetime-contribution-table";
 import { LifetimeRevenueStreamTable } from "@/app/(app)/businesses/[businessId]/customers/lifetime-revenue-stream-table";
 
@@ -14,6 +15,11 @@ export default function LifetimeEconomicsE2eFixturePage() {
       <h1>اختبار اقتصاديات العملاء</h1>
       <LifetimeRevenueStreamTable businessId={FIXTURE_BUSINESS_ID} baseCurrency="EGP" />
       <LifetimeContributionTable businessId={FIXTURE_BUSINESS_ID} baseCurrency="EGP" />
+      <LifetimeContributionAllocationManager
+        businessId={FIXTURE_BUSINESS_ID}
+        baseCurrency="EGP"
+        canManage
+      />
     </main>
   );
 }
