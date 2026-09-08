@@ -13,372 +13,338 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: agent/customer-name-metadata
-      - name: Apply focused source patches
+      - name: Apply customer name metadata implementation
         shell: bash
         run: |
           python - <<'PY'
           from pathlib import Path
 
-          def replace(path, old, new, expected=1):
+          def replace_once(path, old, new):
               p = Path(path)
               text = p.read_text()
-              count = text.count(old)
-              if count != expected:
-                  raise SystemExit(f"{path}: expected {expected} occurrences, found {count}: {old[:80]!r}")
-              p.write_text(text.replace(old, new, expected))
+              if old not in text:
+                  raise SystemExit(f"missing marker in {path}: {old[:100]!r}")
+              p.write_text(text.replace(old, new, 1))
 
           mapping = "src/lib/business/transaction-column-mapping.ts"
-          replace(mapping,
-          '''export const OPTIONAL_TRANSACTION_FIELDS = [
-            "transactionTime",
-            "timezone",
-            "transactionId",
-            "currency",
-          ] as const;''',
-          '''export const OPTIONAL_TRANSACTION_FIELDS = [
-            "customerName",
-            "transactionTime",
-            "timezone",
-            "transactionId",
-            "currency",
-          ] as const;''')
-          replace(mapping,
-          '''export type TransactionColumnMapping = Record<RequiredTransactionField, number | null> & {
-            transactionTime?: number | null;''',
-          '''export type TransactionColumnMapping = Record<RequiredTransactionField, number | null> & {
-            customerName?: number | null;
-            transactionTime?: number | null;''')
-          replace(mapping,
-          '''  amountCollected: null,
-            transactionTime: null,''',
-          '''  amountCollected: null,
-            customerName: null,
-            transactionTime: null,''')
-          replace(mapping,
-          '''  amountCollected: "Amount Collected",
-            transactionTime: "Transaction Time",''',
-          '''  amountCollected: "Amount Collected",
-            customerName: "Customer Name",
-            transactionTime: "Transaction Time",''')
-          replace(mapping,
-          '''  transactionDate: ["transaction date", "transaction_date", "payment date", "paid date"],
-            amountCollected: [''',
-          '''  customerName: ["customer name", "customer_name", "name", "full name", "customer full name"],
-            transactionDate: ["transaction date", "transaction_date", "payment date", "paid date"],
-            amountCollected: [''')
-          marker = '''/** Builds bounded native column choices while sampling only the preview-visible columns. */'''
+          replace_once(mapping, 'export const OPTIONAL_TRANSACTION_FIELDS = [\n  "transactionTime",', 'export const OPTIONAL_TRANSACTION_FIELDS = [\n  "customerName",\n  "transactionTime",')
+          replace_once(mapping, 'export type TransactionColumnMapping = Record<RequiredTransactionField, number | null> & {\n  transactionTime?: number | null;', 'export type TransactionColumnMapping = Record<RequiredTransactionField, number | null> & {\n  customerName?: number | null;\n  transactionTime?: number | null;')
+          replace_once(mapping, '  amountCollected: null,\n  transactionTime: null,', '  amountCollected: null,\n  customerName: null,\n  transactionTime: null,')
+          replace_once(mapping, '  amountCollected: "Amount Collected",\n  transactionTime: "Transaction Time",', '  amountCollected: "Amount Collected",\n  customerName: "Customer Name",\n  transactionTime: "Transaction Time",')
+          replace_once(mapping, '  transactionDate: ["transaction date", "transaction_date", "payment date", "paid date"],', '  customerName: ["customer name", "customer_name", "full name", "customer full name", "name"],\n  transactionDate: ["transaction date", "transaction_date", "payment date", "paid date"],')
+          marker = '/** Builds bounded native column choices while sampling only the preview-visible columns. */'
           helper = '''/**
-           * Repairs an older saved mapping that omitted optional customer name metadata when the current
-           * header has one unambiguous known name alias. Existing saved assignments always win.
-           */
-          export function enrichStoredCustomerNameMapping(
-            savedMapping: TransactionColumnMapping,
-            detectedMapping: TransactionColumnMapping,
-          ): TransactionColumnMapping {
-            if ((savedMapping.customerName ?? null) !== null) return savedMapping;
+ * Repairs an older saved mapping that omitted optional customer-name metadata when the current
+ * header has one unambiguous known name alias. Existing saved assignments always win.
+ */
+export function enrichStoredCustomerNameMapping(
+  savedMapping: TransactionColumnMapping,
+  detectedMapping: TransactionColumnMapping,
+): TransactionColumnMapping {
+  if ((savedMapping.customerName ?? null) !== null) return savedMapping;
+  const detectedCustomerName = detectedMapping.customerName ?? null;
+  if (detectedCustomerName === null) return savedMapping;
+  const columnAlreadyUsed = TRANSACTION_MAPPING_FIELDS.some((field) => {
+    if (field === "customerName") return false;
+    return (savedMapping[field] ?? null) === detectedCustomerName;
+  });
+  if (columnAlreadyUsed) return savedMapping;
+  return setTransactionFieldColumn(savedMapping, "customerName", detectedCustomerName);
+}
 
-            const detectedCustomerName = detectedMapping.customerName ?? null;
-            if (detectedCustomerName === null) return savedMapping;
-
-            const columnAlreadyUsed = TRANSACTION_MAPPING_FIELDS.some((field) => {
-              if (field === "customerName") return false;
-              return (savedMapping[field] ?? null) === detectedCustomerName;
-            });
-            if (columnAlreadyUsed) return savedMapping;
-
-            return setTransactionFieldColumn(savedMapping, "customerName", detectedCustomerName);
-          }
-
-          '''
-          replace(mapping, marker, helper + marker)
+'''
+          replace_once(mapping, marker, helper + marker)
 
           mapper = "src/app/(app)/businesses/[businessId]/customers/import/transaction-column-mapper.tsx"
-          replace(mapper,
-          '''  EMPTY_TRANSACTION_COLUMN_MAPPING,
-            enrichStoredTransactionIdMapping,''',
-          '''  EMPTY_TRANSACTION_COLUMN_MAPPING,
-            enrichStoredCustomerNameMapping,
-            enrichStoredTransactionIdMapping,''')
-          replace(mapper,
-          '''  amountCollected: "المبلغ المحصل",
-            transactionTime: "وقت المعاملة",''',
-          '''  amountCollected: "المبلغ المحصل",
-            customerName: "اسم العميل",
-            transactionTime: "وقت المعاملة",''')
-          replace(mapper,
-          '''  if (field === "customerEmail") return "اختر العمود الذي يحتوي على بريد العميل.";
-            if (field === "transactionDate")''',
-          '''  if (field === "customerEmail") return "اختر العمود الذي يحتوي على بريد العميل.";
-            if (field === "customerName") return "اختياري. اسم العميل للعرض فقط؛ البريد الإلكتروني يظل هو هوية العميل.";
-            if (field === "transactionDate")''')
-          replace(mapper,
-          '''  if (field === "transactionId") return "لا يوجد رقم معاملة";
-            return "لا يوجد عمود للعملة";''',
-          '''  if (field === "transactionId") return "لا يوجد رقم معاملة";
-            if (field === "customerName") return "لا يوجد اسم عميل";
-            return "لا يوجد عمود للعملة";''')
-          replace(mapper,
-          '''            setMapping(enrichStoredTransactionIdMapping(savedMapping, automatic.mapping));''',
-          '''            setMapping(
-              enrichStoredCustomerNameMapping(
-                enrichStoredTransactionIdMapping(savedMapping, automatic.mapping),
-                automatic.mapping,
-              ),
-            );''')
-          replace(mapper,
-          '''? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.transactionTime ?? "none"}:${mapping.timezone ?? "none"}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}`''',
-          '''? `${mapping.customerEmail}:${mapping.customerName ?? "none"}:${mapping.transactionDate}:${mapping.transactionTime ?? "none"}:${mapping.timezone ?? "none"}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}`''')
-          replace(mapper,
-          '''تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.transactionTime != null ? " والوقت" : ""}''',
-          '''تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.customerName != null ? " واسم العميل" : ""}{mapping.transactionTime != null ? " والوقت" : ""}''')
-          replace(mapper,
-          '''            <div>
-              <span>{FIELD_LABELS.transactionTime}</span>''',
-          '''            <div>
-              <span>{FIELD_LABELS.customerName}</span>
-              <strong>
-                {mapping.customerName === null || mapping.customerName === undefined
-                  ? "لا يوجد اسم عميل"
-                  : `العمود ${transactionColumnLabel(mapping.customerName)}`}
-              </strong>
-            </div>
-            <div>
-              <span>{FIELD_LABELS.transactionTime}</span>''')
+          replace_once(mapper, '  EMPTY_TRANSACTION_COLUMN_MAPPING,\n  enrichStoredTransactionIdMapping,', '  EMPTY_TRANSACTION_COLUMN_MAPPING,\n  enrichStoredCustomerNameMapping,\n  enrichStoredTransactionIdMapping,')
+          replace_once(mapper, '  amountCollected: "المبلغ المحصل",\n  transactionTime: "وقت المعاملة",', '  amountCollected: "المبلغ المحصل",\n  customerName: "اسم العميل",\n  transactionTime: "وقت المعاملة",')
+          replace_once(mapper, '  if (field === "customerEmail") return "اختر العمود الذي يحتوي على بريد العميل.";\n  if (field === "transactionDate")', '  if (field === "customerEmail") return "اختر العمود الذي يحتوي على بريد العميل.";\n  if (field === "customerName") return "اختياري. اسم العميل للعرض فقط؛ البريد الإلكتروني يظل هو هوية العميل.";\n  if (field === "transactionDate")')
+          replace_once(mapper, '  if (field === "transactionId") return "لا يوجد رقم معاملة";\n  return "لا يوجد عمود للعملة";', '  if (field === "transactionId") return "لا يوجد رقم معاملة";\n  if (field === "customerName") return "لا يوجد اسم عميل";\n  return "لا يوجد عمود للعملة";')
+          replace_once(mapper, '            setMapping(enrichStoredTransactionIdMapping(savedMapping, automatic.mapping));', '            setMapping(\n              enrichStoredCustomerNameMapping(\n                enrichStoredTransactionIdMapping(savedMapping, automatic.mapping),\n                automatic.mapping,\n              ),\n            );')
+          replace_once(mapper, '? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.transactionTime ?? "none"}:${mapping.timezone ?? "none"}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}`', '? `${mapping.customerEmail}:${mapping.customerName ?? "none"}:${mapping.transactionDate}:${mapping.transactionTime ?? "none"}:${mapping.timezone ?? "none"}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}`')
+          replace_once(mapper, 'تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.transactionTime != null ? " والوقت" : ""}', 'تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.customerName != null ? " واسم العميل" : ""}{mapping.transactionTime != null ? " والوقت" : ""}')
+          replace_once(mapper, '            <div>\n              <span>{FIELD_LABELS.transactionTime}</span>', '            <div>\n              <span>{FIELD_LABELS.customerName}</span>\n              <strong>\n                {mapping.customerName === null || mapping.customerName === undefined\n                  ? "لا يوجد اسم عميل"\n                  : `العمود ${transactionColumnLabel(mapping.customerName)}`}\n              </strong>\n            </div>\n            <div>\n              <span>{FIELD_LABELS.transactionTime}</span>')
 
           validation = "src/lib/business/transaction-import-validation.ts"
-          replace(validation,
-          '''export const TRANSACTION_EMAIL_MAX_LENGTH = 320;
-          export const TRANSACTION_ID_MAX_LENGTH = 512;''',
-          '''export const TRANSACTION_EMAIL_MAX_LENGTH = 320;
-          export const TRANSACTION_CUSTOMER_NAME_MAX_LENGTH = 200;
-          export const TRANSACTION_ID_MAX_LENGTH = 512;''')
-          replace(validation,
-          '''  customerEmail: string;
-            transactionDate: string;''',
-          '''  customerEmail: string;
-            customerName?: string;
-            transactionDate: string;''')
-          replace(validation,
-          '''export function normalizeTransactionEmail(value: string) {
-            return value.trim().toLowerCase();
-          }
-
-          export function isValidTransactionEmail''',
-          '''export function normalizeTransactionEmail(value: string) {
-            return value.trim().toLowerCase();
-          }
-
-          /** Normalizes optional descriptive customer-name metadata without affecting customer identity. */
-          export function normalizeTransactionCustomerName(value: string | undefined) {
-            const normalized = value?.trim() ?? "";
-            if (!normalized || unicodeCharacterLength(normalized) > TRANSACTION_CUSTOMER_NAME_MAX_LENGTH) {
-              return null;
-            }
-            return normalized;
-          }
-
-          export function isValidTransactionEmail''')
-          replace(validation,
-          '''function normalizeTemporalRow(row: TransactionValidationInputRow): TransactionValidationInputRow {''',
-          '''function firstValidCustomerName(group: readonly TransactionValidationInputRow[]) {
-            for (const row of group) {
-              const normalized = normalizeTransactionCustomerName(row.customerName);
-              if (normalized) return normalized;
-            }
-            return undefined;
-          }
-
-          function normalizeTemporalRow(row: TransactionValidationInputRow): TransactionValidationInputRow {''')
-          replace(validation,
-          '''        customerEmail: groupedFieldValue(group, item.transactionId, "customerEmail"),
-                transactionDate:''',
-          '''        customerEmail: groupedFieldValue(group, item.transactionId, "customerEmail"),
-                customerName: firstValidCustomerName(group),
-                transactionDate:''')
+          replace_once(validation, 'export const TRANSACTION_EMAIL_MAX_LENGTH = 320;\nexport const TRANSACTION_ID_MAX_LENGTH = 512;', 'export const TRANSACTION_EMAIL_MAX_LENGTH = 320;\nexport const TRANSACTION_CUSTOMER_NAME_MAX_LENGTH = 200;\nexport const TRANSACTION_ID_MAX_LENGTH = 512;')
+          replace_once(validation, '  customerEmail: string;\n  transactionDate: string;', '  customerEmail: string;\n  customerName?: string;\n  transactionDate: string;')
+          replace_once(validation, 'export function normalizeTransactionEmail(value: string) {\n  return value.trim().toLowerCase();\n}\n\nexport function isValidTransactionEmail', 'export function normalizeTransactionEmail(value: string) {\n  return value.trim().toLowerCase();\n}\n\n/** Normalizes optional descriptive customer-name metadata without affecting customer identity. */\nexport function normalizeTransactionCustomerName(value: string | undefined) {\n  const normalized = value?.trim() ?? "";\n  if (!normalized || unicodeCharacterLength(normalized) > TRANSACTION_CUSTOMER_NAME_MAX_LENGTH) return null;\n  return normalized;\n}\n\nexport function isValidTransactionEmail')
+          replace_once(validation, 'function normalizeTemporalRow(row: TransactionValidationInputRow): TransactionValidationInputRow {', 'function firstValidCustomerName(group: readonly TransactionValidationInputRow[]) {\n  for (const row of group) {\n    const normalized = normalizeTransactionCustomerName(row.customerName);\n    if (normalized) return normalized;\n  }\n  return undefined;\n}\n\nfunction normalizeTemporalRow(row: TransactionValidationInputRow): TransactionValidationInputRow {')
+          replace_once(validation, '  return {\n    ...row,\n    transactionDate: canonical ?? row.transactionDate.trim(),\n  };', '  const customerName = normalizeTransactionCustomerName(row.customerName);\n  return {\n    ...row,\n    ...(customerName ? { customerName } : {}),\n    transactionDate: canonical ?? row.transactionDate.trim(),\n  };')
+          replace_once(validation, '        customerEmail: groupedFieldValue(group, item.transactionId, "customerEmail"),\n        transactionDate:', '        customerEmail: groupedFieldValue(group, item.transactionId, "customerEmail"),\n        ...(firstValidCustomerName(group) ? { customerName: firstValidCustomerName(group) } : {}),\n        transactionDate:')
 
           importer = "src/lib/business/transaction-import.ts"
-          replace(importer,
-          '''  normalizeTransactionDateForImport,
-            normalizeTransactionEmail,''',
-          '''  normalizeTransactionCustomerName,
-            normalizeTransactionDateForImport,
-            normalizeTransactionEmail,''')
-          replace(importer,
-          '''  customer_email: string;
-            transaction_date: string;''',
-          '''  customer_email: string;
-            customer_name?: string;
-            transaction_date: string;''')
-          replace(importer,
-          '''    const email = normalizeTransactionEmail(row.customerEmail);
-            const transactionDate =''',
-          '''    const email = normalizeTransactionEmail(row.customerEmail);
-            const customerName = normalizeTransactionCustomerName(row.customerName);
-            const transactionDate =''')
-          replace(importer,
-          '''      customer_email: email,
-            transaction_date: transactionDate,''',
-          '''      customer_email: email,
-            ...(customerName ? { customer_name: customerName } : {}),
-            transaction_date: transactionDate,''')
+          replace_once(importer, '  normalizeTransactionDateForImport,\n  normalizeTransactionEmail,', '  normalizeTransactionCustomerName,\n  normalizeTransactionDateForImport,\n  normalizeTransactionEmail,')
+          replace_once(importer, '  customer_email: string;\n  transaction_date: string;', '  customer_email: string;\n  customer_name?: string;\n  transaction_date: string;')
+          replace_once(importer, '    const email = normalizeTransactionEmail(row.customerEmail);\n    const transactionDate =', '    const email = normalizeTransactionEmail(row.customerEmail);\n    const customerName = normalizeTransactionCustomerName(row.customerName);\n    const transactionDate =')
+          replace_once(importer, '      customer_email: email,\n      transaction_date: transactionDate,', '      customer_email: email,\n      ...(customerName ? { customer_name: customerName } : {}),\n      transaction_date: transactionDate,')
 
           validator = "src/app/(app)/businesses/[businessId]/customers/import/transaction-import-validator.tsx"
-          replace(validator,
-          '''  const columns = [...required];
-            let transactionTimeValueIndex: number | null = null;''',
-          '''  const columns = [...required];
-            let customerNameValueIndex: number | null = null;
-            let transactionTimeValueIndex: number | null = null;''')
-          replace(validator,
-          '''  const transactionTime = mapping.transactionTime ?? null;
-            if (transactionTime !== null) {''',
-          '''  const customerName = mapping.customerName ?? null;
-            if (customerName !== null) {
-              customerNameValueIndex = columns.length;
-              columns.push(customerName);
-            }
-
-            const transactionTime = mapping.transactionTime ?? null;
-            if (transactionTime !== null) {''')
-          replace(validator,
-          '''  return { columns, transactionTimeValueIndex, timezoneValueIndex, transactionIdValueIndex, currencyValueIndex };''',
-          '''  return {
-              columns,
-              customerNameValueIndex,
-              transactionTimeValueIndex,
-              timezoneValueIndex,
-              transactionIdValueIndex,
-              currencyValueIndex,
-            };''')
-          replace(validator,
-          '''        customerEmail: row.values[0] ?? "",
-                transactionDate: row.values[1] ?? "",''',
-          '''        customerEmail: row.values[0] ?? "",
-                customerName:
-                  selected.customerNameValueIndex === null
-                    ? undefined
-                    : (row.values[selected.customerNameValueIndex] ?? ""),
-                transactionDate: row.values[1] ?? "",''')
+          replace_once(validator, '  const columns = [...required];\n  let transactionTimeValueIndex: number | null = null;', '  const columns = [...required];\n  let customerNameValueIndex: number | null = null;\n  let transactionTimeValueIndex: number | null = null;')
+          replace_once(validator, '  const transactionTime = mapping.transactionTime ?? null;\n  if (transactionTime !== null) {', '  const customerName = mapping.customerName ?? null;\n  if (customerName !== null) {\n    customerNameValueIndex = columns.length;\n    columns.push(customerName);\n  }\n\n  const transactionTime = mapping.transactionTime ?? null;\n  if (transactionTime !== null) {')
+          replace_once(validator, '  return { columns, transactionTimeValueIndex, timezoneValueIndex, transactionIdValueIndex, currencyValueIndex };', '  return { columns, customerNameValueIndex, transactionTimeValueIndex, timezoneValueIndex, transactionIdValueIndex, currencyValueIndex };')
+          replace_once(validator, '        customerEmail: row.values[0] ?? "",\n        transactionDate: row.values[1] ?? "",', '        customerEmail: row.values[0] ?? "",\n        customerName:\n          selected.customerNameValueIndex === null\n            ? undefined\n            : (row.values[selected.customerNameValueIndex] ?? ""),\n        transactionDate: row.values[1] ?? "",')
+          replace_once(validator, '      const parsed = parseRpcResult(data);\n      if (!parsed) throw new TransactionImportProcessError(confirmed);', '      const parsed = parseRpcResult(data);\n      if (!parsed) throw new TransactionImportProcessError(confirmed);\n\n      const { error: nameError } = await supabase.rpc("apply_customer_transaction_names", {\n        p_business_id: businessId,\n        p_source: source,\n        p_rows: chunk,\n      });\n      if (nameError) throw new TransactionImportProcessError(confirmed);')
 
           ledger = "src/app/(app)/businesses/[businessId]/customers/customer-groups-table.tsx"
-          replace(ledger,
-          '''  customer_email: string;
-            acquisition_at:''',
-          '''  customer_email: string;
-            customer_name: string | null;
-            acquisition_at:''')
-          replace(ledger,
-          '''"business_id,customer_email,acquisition_at,acquisition_date,transaction_count,collection_count,refund_count,gross_cash_collected_text,refunds_text,net_cash_collected_text,last_transaction_at,currency"''',
-          '''"business_id,customer_email,customer_name,acquisition_at,acquisition_date,transaction_count,collection_count,refund_count,gross_cash_collected_text,refunds_text,net_cash_collected_text,last_transaction_at,currency"''')
-          replace(ledger,
-          '''<th scope="col">البريد الإلكتروني</th>''',
-          '''<th scope="col">العميل</th>''')
-          replace(ledger,
-          '''                    <td>
-                      <strong dir="ltr">{row.customer_email}</strong>
-                      <small>
-                        {formatCountText(row.collection_count)} تحصيل · {formatCountText(row.refund_count)} استرجاع
-                      </small>
-                    </td>''',
-          '''                    <td>
-                      {row.customer_name ? (
-                        <>
-                          <strong>{row.customer_name}</strong>
-                          <small dir="ltr">{row.customer_email}</small>
-                        </>
-                      ) : (
-                        <strong dir="ltr">{row.customer_email}</strong>
-                      )}
-                      <small>
-                        {formatCountText(row.collection_count)} تحصيل · {formatCountText(row.refund_count)} استرجاع
-                      </small>
-                    </td>''')
+          replace_once(ledger, '  customer_email: string;\n  acquisition_at:', '  customer_email: string;\n  customer_name: string | null;\n  acquisition_at:')
+          replace_once(ledger, '"business_id,customer_email,acquisition_at,acquisition_date,transaction_count,collection_count,refund_count,gross_cash_collected_text,refunds_text,net_cash_collected_text,last_transaction_at,currency"', '"business_id,customer_email,customer_name,acquisition_at,acquisition_date,transaction_count,collection_count,refund_count,gross_cash_collected_text,refunds_text,net_cash_collected_text,last_transaction_at,currency"')
+          replace_once(ledger, '<th scope="col">البريد الإلكتروني</th>', '<th scope="col">العميل</th>')
+          replace_once(ledger, '                    <td>\n                      <strong dir="ltr">{row.customer_email}</strong>\n                      <small>\n                        {formatCountText(row.collection_count)} تحصيل · {formatCountText(row.refund_count)} استرجاع\n                      </small>\n                    </td>', '                    <td>\n                      {row.customer_name ? (\n                        <>\n                          <strong>{row.customer_name}</strong>\n                          <small dir="ltr">{row.customer_email}</small>\n                        </>\n                      ) : (\n                        <strong dir="ltr">{row.customer_email}</strong>\n                      )}\n                      <small>\n                        {formatCountText(row.collection_count)} تحصيل · {formatCountText(row.refund_count)} استرجاع\n                      </small>\n                    </td>')
 
           mapping_test = "test/business/transaction-column-mapping.test.mts"
-          replace(mapping_test,
-          '''  enrichStoredTransactionIdMapping,
-            fingerprintTransactionHeaderRow,''',
-          '''  enrichStoredCustomerNameMapping,
-            enrichStoredTransactionIdMapping,
-            fingerprintTransactionHeaderRow,''')
-          replace(mapping_test,
-          '''    amountCollected: 3,
-            transactionTime: null,''',
-          '''    amountCollected: 3,
-            customerName: null,
-            transactionTime: null,''', expected=2)
-          replace(mapping_test,
-          '''    amountCollected: 8,
-            transactionTime: 16,
-            timezone: 17,
-            transactionId: null,
-            currency: 6,
-          };
+          replace_once(mapping_test, '  enrichStoredTransactionIdMapping,\n  fingerprintTransactionHeaderRow,', '  enrichStoredCustomerNameMapping,\n  enrichStoredTransactionIdMapping,\n  fingerprintTransactionHeaderRow,')
+          replace_once(mapping_test, '    amountCollected: 3,\n    transactionTime: null,\n    timezone: null,\n    transactionId: 0,\n    currency: 2,\n  });', '    amountCollected: 3,\n    customerName: null,\n    transactionTime: null,\n    timezone: null,\n    transactionId: 0,\n    currency: 2,\n  });')
+          replace_once(mapping_test, '    amountCollected: 8,\n    transactionTime: 16,\n    timezone: 17,\n    transactionId: null,\n    currency: 6,\n  };\n\n  const enriched = enrichStoredTransactionIdMapping(saved, detected.mapping);', '    amountCollected: 8,\n    customerName: null,\n    transactionTime: 16,\n    timezone: 17,\n    transactionId: null,\n    currency: 6,\n  };\n\n  const enriched = enrichStoredCustomerNameMapping(\n    enrichStoredTransactionIdMapping(saved, detected.mapping),\n    detected.mapping,\n  );')
+          replace_once(mapping_test, '  assert.deepEqual(enriched, { ...saved, transactionId: 0 });', '  assert.deepEqual(enriched, { ...saved, transactionId: 0, customerName: 2 });')
+          replace_once(mapping_test, '    amountCollected: 3,\n    transactionTime: null,\n    timezone: null,\n    transactionId: 0,\n    currency: 2,\n  });\n\n  assert.equal(\n    parseStoredTransactionColumnMapping', '    amountCollected: 3,\n    customerName: null,\n    transactionTime: null,\n    timezone: null,\n    transactionId: 0,\n    currency: 2,\n  });\n\n  assert.equal(\n    parseStoredTransactionColumnMapping')
 
-          const enriched = enrichStoredTransactionIdMapping(saved, detected.mapping);''',
-          '''    amountCollected: 8,
-            customerName: null,
-            transactionTime: 16,
-            timezone: 17,
-            transactionId: null,
-            currency: 6,
-          };
-
-          const enriched = enrichStoredCustomerNameMapping(
-            enrichStoredTransactionIdMapping(saved, detected.mapping),
-            detected.mapping,
-          );''')
-          replace(mapping_test,
-          '''  assert.deepEqual(enriched, { ...saved, transactionId: 0 });''',
-          '''  assert.deepEqual(enriched, { ...saved, transactionId: 0, customerName: 2 });''')
-          replace(mapping_test,
-          '''test("saved Transaction ID mapping wins over a newly detected ID", () => {''',
-          '''test("saved customer-name mapping wins over a newly detected name", () => {
-            const saved = {
-              customerEmail: 3,
-              transactionDate: 15,
-              amountCollected: 8,
-              customerName: 7,
-              transactionTime: 16,
-              timezone: 17,
-              transactionId: 0,
-              currency: 6,
-            };
-            const detected = { ...saved, customerName: 2 };
-            assert.strictEqual(enrichStoredCustomerNameMapping(saved, detected), saved);
-          });
-
-          test("saved Transaction ID mapping wins over a newly detected ID", () => {''')
+          import_test = "test/business/transaction-import.test.mts"
+          replace_once(import_test, '        customerEmail: " Buyer@Example.com ",\n        transactionDate: "2026-08-24T14:30:00Z",', '        customerEmail: " Buyer@Example.com ",\n        customerName: "  Ahmed Buyer  ",\n        transactionDate: "2026-08-24T14:30:00Z",')
+          replace_once(import_test, '      customer_email: "buyer@example.com",\n      transaction_date: "2026-08-24T14:30:00Z",', '      customer_email: "buyer@example.com",\n      customer_name: "Ahmed Buyer",\n      transaction_date: "2026-08-24T14:30:00Z",')
 
           e2e = "e2e/customer-transaction-groups.spec.ts"
-          replace(e2e,
-          '''            customer_email: "buyer@example.com",
-            acquisition_at:''',
-          '''            customer_email: "buyer@example.com",
-            customer_name: "Ahmed Buyer",
-            acquisition_at:''')
-          replace(e2e,
-          '''            customer_email: "refund-only@example.com",
-            acquisition_at:''',
-          '''            customer_email: "refund-only@example.com",
-            customer_name: null,
-            acquisition_at:''')
-          replace(e2e,
-          '''    await expect(page.getByRole("columnheader", { name: "البريد الإلكتروني" })).toBeVisible();''',
-          '''    await expect(page.getByRole("columnheader", { name: "العميل" })).toBeVisible();''')
-          replace(e2e,
-          '''    await expect(page.getByText("buyer@example.com", { exact: true })).toBeVisible();''',
-          '''    await expect(page.getByText("Ahmed Buyer", { exact: true })).toBeVisible();
-            await expect(page.getByText("buyer@example.com", { exact: true })).toBeVisible();''')
+          replace_once(e2e, '            customer_email: "buyer@example.com",\n            acquisition_at:', '            customer_email: "buyer@example.com",\n            customer_name: "Ahmed Buyer",\n            acquisition_at:')
+          replace_once(e2e, '            customer_email: "refund-only@example.com",\n            acquisition_at:', '            customer_email: "refund-only@example.com",\n            customer_name: null,\n            acquisition_at:')
+          replace_once(e2e, 'columnheader", { name: "البريد الإلكتروني" }', 'columnheader", { name: "العميل" }')
+          replace_once(e2e, '    await expect(page.getByText("buyer@example.com", { exact: true })).toBeVisible();', '    await expect(page.getByText("Ahmed Buyer", { exact: true })).toBeVisible();\n    await expect(page.getByText("buyer@example.com", { exact: true })).toBeVisible();')
 
-          # The workflow is a one-shot patch helper and must not remain in the PR diff.
+          Path("supabase/migrations/20260908100000_customer_name_metadata.sql").write_text(r'''alter table public.customer_transactions
+add column customer_name text;
+
+alter table public.customer_transactions
+add constraint customer_transactions_customer_name_valid
+check (
+  customer_name is null
+  or (char_length(customer_name) between 1 and 200 and customer_name = btrim(customer_name))
+);
+
+comment on column public.customer_transactions.customer_name is
+  'Optional display-only customer name metadata. Customer identity remains normalized customer_email.';
+
+create or replace function public.apply_customer_transaction_names(
+  p_business_id uuid,
+  p_source text,
+  p_rows jsonb
+) returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  normalized_source text := lower(btrim(coalesce(p_source, '')));
+  source_row jsonb;
+  import_row_token_value uuid;
+  source_transaction_id_value text;
+  customer_email_value text;
+  customer_name_value text;
+  affected_rows integer;
+  updated_count integer := 0;
+begin
+  if (select auth.uid()) is null then
+    raise insufficient_privilege using message = 'Authentication is required to apply customer names.';
+  end if;
+  if not ((select private.is_admin()) or exists (
+    select 1 from public.businesses as business
+    where business.id = p_business_id and business.owner_user_id = (select auth.uid())
+  )) then
+    raise insufficient_privilege using message = 'Only the business owner or an admin can apply customer names.';
+  end if;
+  if char_length(normalized_source) not between 1 and 80 then
+    raise invalid_parameter_value using message = 'Transaction source must be between 1 and 80 characters.';
+  end if;
+  if not exists (
+    select 1 from public.customer_transaction_sources as registered_source
+    where registered_source.business_id = p_business_id and registered_source.source = normalized_source
+  ) then
+    raise invalid_parameter_value using message = 'Select a registered transaction source before applying customer names.';
+  end if;
+  if jsonb_typeof(p_rows) is distinct from 'array' then
+    raise invalid_parameter_value using message = 'Customer-name rows must be a JSON array.';
+  end if;
+  if jsonb_array_length(p_rows) not between 1 and 500 then
+    raise invalid_parameter_value using message = 'Each customer-name chunk must contain between 1 and 500 rows.';
+  end if;
+  for source_row in select value from jsonb_array_elements(p_rows)
+  loop
+    if jsonb_typeof(source_row) is distinct from 'object' then
+      raise invalid_parameter_value using message = 'Every customer-name row must be a JSON object.';
+    end if;
+    customer_name_value := nullif(btrim(coalesce(source_row ->> 'customer_name', '')), '');
+    if customer_name_value is null then continue; end if;
+    if char_length(customer_name_value) > 200 then
+      raise invalid_parameter_value using message = 'Customer name must be 200 characters or fewer.';
+    end if;
+    begin
+      import_row_token_value := (source_row ->> 'import_row_token')::uuid;
+    exception when others then
+      raise invalid_parameter_value using message = 'Import row token must be a UUID.';
+    end;
+    if import_row_token_value is null then
+      raise invalid_parameter_value using message = 'Import row token is required.';
+    end if;
+    customer_email_value := lower(btrim(coalesce(source_row ->> 'customer_email', '')));
+    if char_length(customer_email_value) not between 3 and 320
+      or customer_email_value !~ '^[^[:space:]@]+@[^[:space:]@]+$' then
+      raise invalid_parameter_value using message = 'Customer email is invalid.';
+    end if;
+    source_transaction_id_value := nullif(btrim(coalesce(source_row ->> 'transaction_id', '')), '');
+    if source_transaction_id_value is not null and char_length(source_transaction_id_value) > 512 then
+      raise invalid_parameter_value using message = 'Transaction ID must be 512 characters or fewer.';
+    end if;
+    update public.customer_transactions as transaction
+    set customer_name = customer_name_value
+    where transaction.business_id = p_business_id
+      and transaction.import_row_token = import_row_token_value
+      and transaction.customer_email = customer_email_value
+      and transaction.customer_name is null;
+    get diagnostics affected_rows = row_count;
+    updated_count := updated_count + affected_rows;
+    if affected_rows = 0 and source_transaction_id_value is not null then
+      update public.customer_transactions as transaction
+      set customer_name = customer_name_value
+      where transaction.business_id = p_business_id
+        and transaction.source = normalized_source
+        and transaction.source_transaction_id = source_transaction_id_value
+        and transaction.customer_email = customer_email_value
+        and transaction.customer_name is null;
+      get diagnostics affected_rows = row_count;
+      updated_count := updated_count + affected_rows;
+    end if;
+  end loop;
+  return updated_count;
+end;
+$$;
+
+revoke all on function public.apply_customer_transaction_names(uuid, text, jsonb) from public;
+revoke all on function public.apply_customer_transaction_names(uuid, text, jsonb) from anon;
+grant execute on function public.apply_customer_transaction_names(uuid, text, jsonb) to authenticated;
+grant execute on function public.apply_customer_transaction_names(uuid, text, jsonb) to service_role;
+
+create or replace view public.customer_transaction_groups
+with (security_invoker = true, security_barrier = true) as
+with grouped as (
+  select
+    transaction.business_id,
+    transaction.customer_email,
+    min(transaction.transaction_at) filter (where transaction.normalized_outcome = 'successful' and transaction.transaction_type = 'collection' and transaction.amount_collected > 0) as acquisition_at,
+    min(transaction.transaction_date) filter (where transaction.normalized_outcome = 'successful' and transaction.transaction_type = 'collection' and transaction.amount_collected > 0) as acquisition_date,
+    count(*) filter (where transaction.normalized_outcome = 'successful') as transaction_count,
+    count(*) filter (where transaction.normalized_outcome = 'successful' and transaction.transaction_type = 'collection') as collection_count,
+    count(*) filter (where transaction.normalized_outcome = 'successful' and transaction.transaction_type = 'refund') as refund_count,
+    coalesce(sum(transaction.amount_collected) filter (where transaction.normalized_outcome = 'successful' and transaction.transaction_type = 'collection'), 0::numeric) as gross_cash_collected,
+    coalesce(sum(transaction.amount_collected) filter (where transaction.normalized_outcome = 'successful' and transaction.transaction_type = 'refund'), 0::numeric) as refunds,
+    coalesce(sum(case
+      when transaction.normalized_outcome = 'successful' and transaction.transaction_type = 'collection' then transaction.amount_collected
+      when transaction.normalized_outcome = 'successful' and transaction.transaction_type = 'refund' then -transaction.amount_collected
+      else 0::numeric
+    end), 0::numeric) as net_cash_collected,
+    max(transaction.transaction_at) filter (where transaction.normalized_outcome = 'successful') as last_transaction_at,
+    min(transaction.currency) filter (where transaction.normalized_outcome = 'successful') as currency,
+    (array_agg(transaction.customer_name order by transaction.transaction_at desc, transaction.created_at desc, transaction.id desc)
+      filter (where transaction.normalized_outcome = 'successful' and transaction.customer_name is not null))[1] as customer_name
+  from public.customer_transactions as transaction
+  group by transaction.business_id, transaction.customer_email
+)
+select
+  business_id,
+  customer_email,
+  acquisition_at,
+  acquisition_date,
+  transaction_count,
+  collection_count,
+  refund_count,
+  gross_cash_collected,
+  refunds,
+  net_cash_collected,
+  trim_scale(gross_cash_collected)::text as gross_cash_collected_text,
+  trim_scale(refunds)::text as refunds_text,
+  trim_scale(net_cash_collected)::text as net_cash_collected_text,
+  last_transaction_at,
+  currency,
+  customer_name
+from grouped;
+
+revoke all on public.customer_transaction_groups from anon;
+grant select on public.customer_transaction_groups to authenticated;
+grant select on public.customer_transaction_groups to service_role;
+''')
+
+          Path("test/business/customer-name-metadata.test.mts").write_text('''import assert from "node:assert/strict";
+import test from "node:test";
+import { normalizeTransactionCustomerName, TRANSACTION_CUSTOMER_NAME_MAX_LENGTH } from "../../src/lib/business/transaction-import-validation.ts";
+import { prepareTransactionImportRows } from "../../src/lib/business/transaction-import.ts";
+
+test("customer name is optional display metadata and does not change email identity", () => {
+  assert.equal(normalizeTransactionCustomerName("  Ahmed Buyer  "), "Ahmed Buyer");
+  assert.equal(normalizeTransactionCustomerName("   "), null);
+  assert.equal(normalizeTransactionCustomerName("x".repeat(TRANSACTION_CUSTOMER_NAME_MAX_LENGTH + 1)), null);
+  const rows = prepareTransactionImportRows([{ rowNumber: 1, customerEmail: " Buyer@Example.com ", customerName: " Ahmed Buyer ", transactionDate: "2026-09-08", amountCollected: "100", transactionId: "txn-name-1" }], { transactionType: "collection", baseCurrency: "EGP", createImportRowToken: () => "66666666-6666-4666-8666-666666666001" });
+  assert.equal(rows[0]?.customer_email, "buyer@example.com");
+  assert.equal(rows[0]?.customer_name, "Ahmed Buyer");
+});
+''')
+
+          Path("test/business/customer-name-metadata.test.sql").write_text(r'''begin;
+
+insert into auth.users (id, email, raw_app_meta_data, created_at, updated_at)
+values
+  ('66666666-6666-4666-8666-666666666001', 'name-owner-a@example.test', '{"role":"mentee"}'::jsonb, now(), now()),
+  ('66666666-6666-4666-8666-666666666002', 'name-owner-b@example.test', '{"role":"mentee"}'::jsonb, now(), now());
+
+insert into public.businesses (id, name, base_currency, timezone, owner_user_id, creation_request_id)
+values
+  ('66666666-6666-4666-8666-66666666a001', 'Name Metadata A', 'EGP', 'Africa/Cairo', '66666666-6666-4666-8666-666666666001', '66666666-6666-4666-8666-66666666c001'),
+  ('66666666-6666-4666-8666-66666666b002', 'Name Metadata B', 'EGP', 'Africa/Cairo', '66666666-6666-4666-8666-666666666002', '66666666-6666-4666-8666-66666666c002');
+
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"66666666-6666-4666-8666-666666666001","role":"authenticated","app_metadata":{"role":"mentee"}}';
+select public.create_customer_transaction_source('66666666-6666-4666-8666-66666666a001', 'stripe');
+select public.import_customer_transactions('66666666-6666-4666-8666-66666666a001', 'stripe', '[{"row_number":1,"transaction_id":"txn-name-1","import_row_token":"66666666-6666-4666-8666-66666666e001","customer_email":"buyer@example.com","transaction_date":"2026-09-08T10:00:00Z","amount_collected":"100","transaction_type":"collection","normalized_outcome":"successful","currency":"EGP"}]'::jsonb);
+select public.apply_customer_transaction_names('66666666-6666-4666-8666-66666666a001', 'stripe', '[{"transaction_id":"txn-name-1","import_row_token":"66666666-6666-4666-8666-66666666e001","customer_email":"buyer@example.com","customer_name":"Ahmed Buyer"}]'::jsonb);
+
+do $$
+declare grouped public.customer_transaction_groups%rowtype;
+begin
+  select * into grouped from public.customer_transaction_groups where business_id = '66666666-6666-4666-8666-66666666a001' and customer_email = 'buyer@example.com';
+  if grouped.customer_name <> 'Ahmed Buyer' then raise exception 'customer name metadata missing'; end if;
+  if grouped.transaction_count <> 1 or grouped.net_cash_collected <> 100 then raise exception 'name metadata changed financial grouping'; end if;
+end;
+$$;
+
+select public.apply_customer_transaction_names('66666666-6666-4666-8666-66666666a001', 'stripe', '[{"transaction_id":"txn-name-1","import_row_token":"66666666-6666-4666-8666-66666666e001","customer_email":"buyer@example.com","customer_name":"Different Name"}]'::jsonb);
+do $$ begin
+  if (select customer_name from public.customer_transactions where business_id = '66666666-6666-4666-8666-66666666a001' and source_transaction_id = 'txn-name-1') <> 'Ahmed Buyer' then raise exception 'name retry overwrote established metadata'; end if;
+end $$;
+
+set local request.jwt.claims = '{"sub":"66666666-6666-4666-8666-666666666002","role":"authenticated","app_metadata":{"role":"mentee"}}';
+do $$ begin
+  begin
+    perform public.apply_customer_transaction_names('66666666-6666-4666-8666-66666666a001', 'stripe', '[{"transaction_id":"txn-name-1","import_row_token":"66666666-6666-4666-8666-66666666e001","customer_email":"buyer@example.com","customer_name":"Unauthorized"}]'::jsonb);
+    raise exception 'other owner changed name metadata';
+  exception when insufficient_privilege then null; end;
+  if (select count(*) from public.customer_transaction_groups where business_id = '66666666-6666-4666-8666-66666666a001') <> 0 then raise exception 'other owner can read name metadata'; end if;
+end $$;
+
+set local role anon;
+set local request.jwt.claims = '{}';
+do $$ begin
+  begin
+    perform public.apply_customer_transaction_names('66666666-6666-4666-8666-66666666a001', 'stripe', '[]'::jsonb);
+    raise exception 'anon executed name RPC';
+  exception when insufficient_privilege then null; end;
+end $$;
+
+rollback;
+''')
+
           Path(".github/workflows/agent-customer-name-patch.yml").unlink()
           PY
-      - name: Commit patched sources
+      - name: Commit implementation
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A
-          git commit -m "Add optional customer name metadata flow"
+          git commit -m "feat: preserve customer name metadata"
           git push origin HEAD:agent/customer-name-metadata
