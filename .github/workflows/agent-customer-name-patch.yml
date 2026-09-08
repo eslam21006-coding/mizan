@@ -1,0 +1,384 @@
+name: Apply customer name metadata patch
+on:
+  push:
+    branches:
+      - agent/customer-name-metadata
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/customer-name-metadata
+      - name: Apply focused source patches
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new, expected=1):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != expected:
+                  raise SystemExit(f"{path}: expected {expected} occurrences, found {count}: {old[:80]!r}")
+              p.write_text(text.replace(old, new, expected))
+
+          mapping = "src/lib/business/transaction-column-mapping.ts"
+          replace(mapping,
+          '''export const OPTIONAL_TRANSACTION_FIELDS = [
+            "transactionTime",
+            "timezone",
+            "transactionId",
+            "currency",
+          ] as const;''',
+          '''export const OPTIONAL_TRANSACTION_FIELDS = [
+            "customerName",
+            "transactionTime",
+            "timezone",
+            "transactionId",
+            "currency",
+          ] as const;''')
+          replace(mapping,
+          '''export type TransactionColumnMapping = Record<RequiredTransactionField, number | null> & {
+            transactionTime?: number | null;''',
+          '''export type TransactionColumnMapping = Record<RequiredTransactionField, number | null> & {
+            customerName?: number | null;
+            transactionTime?: number | null;''')
+          replace(mapping,
+          '''  amountCollected: null,
+            transactionTime: null,''',
+          '''  amountCollected: null,
+            customerName: null,
+            transactionTime: null,''')
+          replace(mapping,
+          '''  amountCollected: "Amount Collected",
+            transactionTime: "Transaction Time",''',
+          '''  amountCollected: "Amount Collected",
+            customerName: "Customer Name",
+            transactionTime: "Transaction Time",''')
+          replace(mapping,
+          '''  transactionDate: ["transaction date", "transaction_date", "payment date", "paid date"],
+            amountCollected: [''',
+          '''  customerName: ["customer name", "customer_name", "name", "full name", "customer full name"],
+            transactionDate: ["transaction date", "transaction_date", "payment date", "paid date"],
+            amountCollected: [''')
+          marker = '''/** Builds bounded native column choices while sampling only the preview-visible columns. */'''
+          helper = '''/**
+           * Repairs an older saved mapping that omitted optional customer name metadata when the current
+           * header has one unambiguous known name alias. Existing saved assignments always win.
+           */
+          export function enrichStoredCustomerNameMapping(
+            savedMapping: TransactionColumnMapping,
+            detectedMapping: TransactionColumnMapping,
+          ): TransactionColumnMapping {
+            if ((savedMapping.customerName ?? null) !== null) return savedMapping;
+
+            const detectedCustomerName = detectedMapping.customerName ?? null;
+            if (detectedCustomerName === null) return savedMapping;
+
+            const columnAlreadyUsed = TRANSACTION_MAPPING_FIELDS.some((field) => {
+              if (field === "customerName") return false;
+              return (savedMapping[field] ?? null) === detectedCustomerName;
+            });
+            if (columnAlreadyUsed) return savedMapping;
+
+            return setTransactionFieldColumn(savedMapping, "customerName", detectedCustomerName);
+          }
+
+          '''
+          replace(mapping, marker, helper + marker)
+
+          mapper = "src/app/(app)/businesses/[businessId]/customers/import/transaction-column-mapper.tsx"
+          replace(mapper,
+          '''  EMPTY_TRANSACTION_COLUMN_MAPPING,
+            enrichStoredTransactionIdMapping,''',
+          '''  EMPTY_TRANSACTION_COLUMN_MAPPING,
+            enrichStoredCustomerNameMapping,
+            enrichStoredTransactionIdMapping,''')
+          replace(mapper,
+          '''  amountCollected: "المبلغ المحصل",
+            transactionTime: "وقت المعاملة",''',
+          '''  amountCollected: "المبلغ المحصل",
+            customerName: "اسم العميل",
+            transactionTime: "وقت المعاملة",''')
+          replace(mapper,
+          '''  if (field === "customerEmail") return "اختر العمود الذي يحتوي على بريد العميل.";
+            if (field === "transactionDate")''',
+          '''  if (field === "customerEmail") return "اختر العمود الذي يحتوي على بريد العميل.";
+            if (field === "customerName") return "اختياري. اسم العميل للعرض فقط؛ البريد الإلكتروني يظل هو هوية العميل.";
+            if (field === "transactionDate")''')
+          replace(mapper,
+          '''  if (field === "transactionId") return "لا يوجد رقم معاملة";
+            return "لا يوجد عمود للعملة";''',
+          '''  if (field === "transactionId") return "لا يوجد رقم معاملة";
+            if (field === "customerName") return "لا يوجد اسم عميل";
+            return "لا يوجد عمود للعملة";''')
+          replace(mapper,
+          '''            setMapping(enrichStoredTransactionIdMapping(savedMapping, automatic.mapping));''',
+          '''            setMapping(
+              enrichStoredCustomerNameMapping(
+                enrichStoredTransactionIdMapping(savedMapping, automatic.mapping),
+                automatic.mapping,
+              ),
+            );''')
+          replace(mapper,
+          '''? `${mapping.customerEmail}:${mapping.transactionDate}:${mapping.transactionTime ?? "none"}:${mapping.timezone ?? "none"}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}`''',
+          '''? `${mapping.customerEmail}:${mapping.customerName ?? "none"}:${mapping.transactionDate}:${mapping.transactionTime ?? "none"}:${mapping.timezone ?? "none"}:${mapping.amountCollected}:${mapping.transactionId ?? "none"}:${mapping.currency ?? "none"}`''')
+          replace(mapper,
+          '''تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.transactionTime != null ? " والوقت" : ""}''',
+          '''تم التعرف تلقائيًا على أعمدة البريد والتاريخ والمبلغ{mapping.customerName != null ? " واسم العميل" : ""}{mapping.transactionTime != null ? " والوقت" : ""}''')
+          replace(mapper,
+          '''            <div>
+              <span>{FIELD_LABELS.transactionTime}</span>''',
+          '''            <div>
+              <span>{FIELD_LABELS.customerName}</span>
+              <strong>
+                {mapping.customerName === null || mapping.customerName === undefined
+                  ? "لا يوجد اسم عميل"
+                  : `العمود ${transactionColumnLabel(mapping.customerName)}`}
+              </strong>
+            </div>
+            <div>
+              <span>{FIELD_LABELS.transactionTime}</span>''')
+
+          validation = "src/lib/business/transaction-import-validation.ts"
+          replace(validation,
+          '''export const TRANSACTION_EMAIL_MAX_LENGTH = 320;
+          export const TRANSACTION_ID_MAX_LENGTH = 512;''',
+          '''export const TRANSACTION_EMAIL_MAX_LENGTH = 320;
+          export const TRANSACTION_CUSTOMER_NAME_MAX_LENGTH = 200;
+          export const TRANSACTION_ID_MAX_LENGTH = 512;''')
+          replace(validation,
+          '''  customerEmail: string;
+            transactionDate: string;''',
+          '''  customerEmail: string;
+            customerName?: string;
+            transactionDate: string;''')
+          replace(validation,
+          '''export function normalizeTransactionEmail(value: string) {
+            return value.trim().toLowerCase();
+          }
+
+          export function isValidTransactionEmail''',
+          '''export function normalizeTransactionEmail(value: string) {
+            return value.trim().toLowerCase();
+          }
+
+          /** Normalizes optional descriptive customer-name metadata without affecting customer identity. */
+          export function normalizeTransactionCustomerName(value: string | undefined) {
+            const normalized = value?.trim() ?? "";
+            if (!normalized || unicodeCharacterLength(normalized) > TRANSACTION_CUSTOMER_NAME_MAX_LENGTH) {
+              return null;
+            }
+            return normalized;
+          }
+
+          export function isValidTransactionEmail''')
+          replace(validation,
+          '''function normalizeTemporalRow(row: TransactionValidationInputRow): TransactionValidationInputRow {''',
+          '''function firstValidCustomerName(group: readonly TransactionValidationInputRow[]) {
+            for (const row of group) {
+              const normalized = normalizeTransactionCustomerName(row.customerName);
+              if (normalized) return normalized;
+            }
+            return undefined;
+          }
+
+          function normalizeTemporalRow(row: TransactionValidationInputRow): TransactionValidationInputRow {''')
+          replace(validation,
+          '''        customerEmail: groupedFieldValue(group, item.transactionId, "customerEmail"),
+                transactionDate:''',
+          '''        customerEmail: groupedFieldValue(group, item.transactionId, "customerEmail"),
+                customerName: firstValidCustomerName(group),
+                transactionDate:''')
+
+          importer = "src/lib/business/transaction-import.ts"
+          replace(importer,
+          '''  normalizeTransactionDateForImport,
+            normalizeTransactionEmail,''',
+          '''  normalizeTransactionCustomerName,
+            normalizeTransactionDateForImport,
+            normalizeTransactionEmail,''')
+          replace(importer,
+          '''  customer_email: string;
+            transaction_date: string;''',
+          '''  customer_email: string;
+            customer_name?: string;
+            transaction_date: string;''')
+          replace(importer,
+          '''    const email = normalizeTransactionEmail(row.customerEmail);
+            const transactionDate =''',
+          '''    const email = normalizeTransactionEmail(row.customerEmail);
+            const customerName = normalizeTransactionCustomerName(row.customerName);
+            const transactionDate =''')
+          replace(importer,
+          '''      customer_email: email,
+            transaction_date: transactionDate,''',
+          '''      customer_email: email,
+            ...(customerName ? { customer_name: customerName } : {}),
+            transaction_date: transactionDate,''')
+
+          validator = "src/app/(app)/businesses/[businessId]/customers/import/transaction-import-validator.tsx"
+          replace(validator,
+          '''  const columns = [...required];
+            let transactionTimeValueIndex: number | null = null;''',
+          '''  const columns = [...required];
+            let customerNameValueIndex: number | null = null;
+            let transactionTimeValueIndex: number | null = null;''')
+          replace(validator,
+          '''  const transactionTime = mapping.transactionTime ?? null;
+            if (transactionTime !== null) {''',
+          '''  const customerName = mapping.customerName ?? null;
+            if (customerName !== null) {
+              customerNameValueIndex = columns.length;
+              columns.push(customerName);
+            }
+
+            const transactionTime = mapping.transactionTime ?? null;
+            if (transactionTime !== null) {''')
+          replace(validator,
+          '''  return { columns, transactionTimeValueIndex, timezoneValueIndex, transactionIdValueIndex, currencyValueIndex };''',
+          '''  return {
+              columns,
+              customerNameValueIndex,
+              transactionTimeValueIndex,
+              timezoneValueIndex,
+              transactionIdValueIndex,
+              currencyValueIndex,
+            };''')
+          replace(validator,
+          '''        customerEmail: row.values[0] ?? "",
+                transactionDate: row.values[1] ?? "",''',
+          '''        customerEmail: row.values[0] ?? "",
+                customerName:
+                  selected.customerNameValueIndex === null
+                    ? undefined
+                    : (row.values[selected.customerNameValueIndex] ?? ""),
+                transactionDate: row.values[1] ?? "",''')
+
+          ledger = "src/app/(app)/businesses/[businessId]/customers/customer-groups-table.tsx"
+          replace(ledger,
+          '''  customer_email: string;
+            acquisition_at:''',
+          '''  customer_email: string;
+            customer_name: string | null;
+            acquisition_at:''')
+          replace(ledger,
+          '''"business_id,customer_email,acquisition_at,acquisition_date,transaction_count,collection_count,refund_count,gross_cash_collected_text,refunds_text,net_cash_collected_text,last_transaction_at,currency"''',
+          '''"business_id,customer_email,customer_name,acquisition_at,acquisition_date,transaction_count,collection_count,refund_count,gross_cash_collected_text,refunds_text,net_cash_collected_text,last_transaction_at,currency"''')
+          replace(ledger,
+          '''<th scope="col">البريد الإلكتروني</th>''',
+          '''<th scope="col">العميل</th>''')
+          replace(ledger,
+          '''                    <td>
+                      <strong dir="ltr">{row.customer_email}</strong>
+                      <small>
+                        {formatCountText(row.collection_count)} تحصيل · {formatCountText(row.refund_count)} استرجاع
+                      </small>
+                    </td>''',
+          '''                    <td>
+                      {row.customer_name ? (
+                        <>
+                          <strong>{row.customer_name}</strong>
+                          <small dir="ltr">{row.customer_email}</small>
+                        </>
+                      ) : (
+                        <strong dir="ltr">{row.customer_email}</strong>
+                      )}
+                      <small>
+                        {formatCountText(row.collection_count)} تحصيل · {formatCountText(row.refund_count)} استرجاع
+                      </small>
+                    </td>''')
+
+          mapping_test = "test/business/transaction-column-mapping.test.mts"
+          replace(mapping_test,
+          '''  enrichStoredTransactionIdMapping,
+            fingerprintTransactionHeaderRow,''',
+          '''  enrichStoredCustomerNameMapping,
+            enrichStoredTransactionIdMapping,
+            fingerprintTransactionHeaderRow,''')
+          replace(mapping_test,
+          '''    amountCollected: 3,
+            transactionTime: null,''',
+          '''    amountCollected: 3,
+            customerName: null,
+            transactionTime: null,''', expected=2)
+          replace(mapping_test,
+          '''    amountCollected: 8,
+            transactionTime: 16,
+            timezone: 17,
+            transactionId: null,
+            currency: 6,
+          };
+
+          const enriched = enrichStoredTransactionIdMapping(saved, detected.mapping);''',
+          '''    amountCollected: 8,
+            customerName: null,
+            transactionTime: 16,
+            timezone: 17,
+            transactionId: null,
+            currency: 6,
+          };
+
+          const enriched = enrichStoredCustomerNameMapping(
+            enrichStoredTransactionIdMapping(saved, detected.mapping),
+            detected.mapping,
+          );''')
+          replace(mapping_test,
+          '''  assert.deepEqual(enriched, { ...saved, transactionId: 0 });''',
+          '''  assert.deepEqual(enriched, { ...saved, transactionId: 0, customerName: 2 });''')
+          replace(mapping_test,
+          '''test("saved Transaction ID mapping wins over a newly detected ID", () => {''',
+          '''test("saved customer-name mapping wins over a newly detected name", () => {
+            const saved = {
+              customerEmail: 3,
+              transactionDate: 15,
+              amountCollected: 8,
+              customerName: 7,
+              transactionTime: 16,
+              timezone: 17,
+              transactionId: 0,
+              currency: 6,
+            };
+            const detected = { ...saved, customerName: 2 };
+            assert.strictEqual(enrichStoredCustomerNameMapping(saved, detected), saved);
+          });
+
+          test("saved Transaction ID mapping wins over a newly detected ID", () => {''')
+
+          e2e = "e2e/customer-transaction-groups.spec.ts"
+          replace(e2e,
+          '''            customer_email: "buyer@example.com",
+            acquisition_at:''',
+          '''            customer_email: "buyer@example.com",
+            customer_name: "Ahmed Buyer",
+            acquisition_at:''')
+          replace(e2e,
+          '''            customer_email: "refund-only@example.com",
+            acquisition_at:''',
+          '''            customer_email: "refund-only@example.com",
+            customer_name: null,
+            acquisition_at:''')
+          replace(e2e,
+          '''    await expect(page.getByRole("columnheader", { name: "البريد الإلكتروني" })).toBeVisible();''',
+          '''    await expect(page.getByRole("columnheader", { name: "العميل" })).toBeVisible();''')
+          replace(e2e,
+          '''    await expect(page.getByText("buyer@example.com", { exact: true })).toBeVisible();''',
+          '''    await expect(page.getByText("Ahmed Buyer", { exact: true })).toBeVisible();
+            await expect(page.getByText("buyer@example.com", { exact: true })).toBeVisible();''')
+
+          # The workflow is a one-shot patch helper and must not remain in the PR diff.
+          Path(".github/workflows/agent-customer-name-patch.yml").unlink()
+          PY
+      - name: Commit patched sources
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add optional customer name metadata flow"
+          git push origin HEAD:agent/customer-name-metadata
