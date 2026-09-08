@@ -100,7 +100,7 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
     await page.getByRole("tab", { name: /سجل العملاء/ }).click();
     await expect(page.getByRole("tab", { name: /سجل العملاء/ })).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("heading", { name: "من دفع ومتى؟", level: 2 })).toBeVisible();
-    await expect(page.getByLabel("ابحث بالبريد الإلكتروني")).toBeVisible();
+    await expect(page.getByLabel("ابحث بالاسم أو البريد الإلكتروني")).toBeVisible();
     await expect(page.getByLabel("اعرض")).toBeVisible();
     await expect(page.getByLabel("رتّب حسب")).toBeVisible();
     await expect(page.getByRole("columnheader", { name: "العميل" })).toBeVisible();
@@ -127,18 +127,18 @@ test.describe("Task 21 customer identity and transaction grouping", () => {
     await expect.poll(() => customerGroupRequests.length).toBeGreaterThan(requestsBeforeSort);
     await expect.poll(() => customerGroupRequests.at(-1)?.searchParams.get("order") ?? "").toContain("net_cash_collected.desc");
 
-    await page.getByLabel("ابحث بالبريد الإلكتروني").fill("buyer_50%@example.com");
+    await page.getByLabel("ابحث بالاسم أو البريد الإلكتروني").fill("buyer_50%@example.com");
     const requestsBeforeSearch = customerGroupRequests.length;
     await page.getByRole("button", { name: "بحث" }).click();
     await expect.poll(() => customerGroupRequests.length).toBeGreaterThan(requestsBeforeSearch);
     await expect
-      .poll(() => customerGroupRequests.at(-1)?.searchParams.get("customer_email") ?? "")
+      .poll(() => customerGroupRequests.at(-1)?.searchParams.get("customer_search_text") ?? "")
       .toContain("buyer\\_50\\%@example.com");
 
     await page.getByRole("button", { name: "مسح الفلاتر" }).click();
     await expect(page.getByLabel("اعرض")).toHaveValue("all");
     await expect(page.getByLabel("رتّب حسب")).toHaveValue("acquisition_desc");
-    await expect(page.getByLabel("ابحث بالبريد الإلكتروني")).toHaveValue("");
+    await expect(page.getByLabel("ابحث بالاسم أو البريد الإلكتروني")).toHaveValue("");
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect.poll(() =>
