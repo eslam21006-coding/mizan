@@ -1,0 +1,79 @@
+name: Apply docstring coverage patch
+
+on:
+  push:
+    branches:
+      - agent/customer-name-metadata
+    paths:
+      - .github/workflows/agent-docstring-fix.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: agent/customer-name-metadata
+      - name: Add docstrings to touched helpers
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              Path("src/app/(app)/businesses/[businessId]/customers/import/transaction-column-mapper.tsx"): [
+                  (
+                      'function fieldDescription(field: TransactionMappingField, baseCurrency: string) {',
+                      '/** Returns the Arabic guidance shown for one transaction mapping field. */\nfunction fieldDescription(field: TransactionMappingField, baseCurrency: string) {',
+                  ),
+                  (
+                      'function emptyOptionLabel(field: TransactionMappingField, required: boolean) {',
+                      '/** Returns the empty-select label for required and optional transaction fields. */\nfunction emptyOptionLabel(field: TransactionMappingField, required: boolean) {',
+                  ),
+              ],
+              Path("src/app/(app)/businesses/[businessId]/customers/import/transaction-import-validator.tsx"): [
+                  (
+                      'function mappedColumns(mapping: TransactionColumnMapping) {',
+                      '/** Builds the ordered source-column read plan and value indexes for the active mapping. */\nfunction mappedColumns(mapping: TransactionColumnMapping) {',
+                  ),
+              ],
+              Path("src/lib/business/transaction-import-validation.ts"): [
+                  (
+                      'function firstValidCustomerName(group: readonly TransactionValidationInputRow[]) {',
+                      '/** Returns the first valid optional customer name from grouped gateway rows. */\nfunction firstValidCustomerName(group: readonly TransactionValidationInputRow[]) {',
+                  ),
+                  (
+                      'function normalizeTemporalRow(row: TransactionValidationInputRow): TransactionValidationInputRow {',
+                      '/** Canonicalizes one row timestamp while preserving valid optional customer-name metadata. */\nfunction normalizeTemporalRow(row: TransactionValidationInputRow): TransactionValidationInputRow {',
+                  ),
+                  (
+                      'export function normalizeGatewayTransactionRows(',
+                      '/** Collapses gateway line items into transaction rows without inventing missing cash data. */\nexport function normalizeGatewayTransactionRows(',
+                  ),
+              ],
+              Path("src/lib/business/transaction-import.ts"): [
+                  (
+                      'export function prepareTransactionImportRows(',
+                      '/** Prepares validated gateway rows for the bounded transaction-import RPC contract. */\nexport function prepareTransactionImportRows(',
+                  ),
+              ],
+          }
+
+          for path, pairs in replacements.items():
+              text = path.read_text()
+              for old, new in pairs:
+                  count = text.count(old)
+                  if count != 1:
+                      raise SystemExit(f"Expected exactly one match for {old!r} in {path}, found {count}")
+                  text = text.replace(old, new, 1)
+              path.write_text(text)
+          PY
+          rm .github/workflows/agent-docstring-fix.yml
+          git config user.name "eslam21006-coding"
+          git config user.email "eslam21006@gmail.com"
+          git add src .github/workflows/agent-docstring-fix.yml
+          git commit -m "docs: document touched import helpers"
+          git push origin HEAD:agent/customer-name-metadata
