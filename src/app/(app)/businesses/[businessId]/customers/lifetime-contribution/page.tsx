@@ -29,11 +29,11 @@ export default async function LifetimeContributionPage({ params }: Props) {
     <div className="page-stack">
       <div className={styles.headingRow}>
         <PageHeading
-          title="تكاليف ربح المساهمة مدى الحياة"
-          description="أدخل فقط التكاليف المرتبطة بالكوهورت: تكاليف مباشرة فعلية أو توزيع يدوي صريح. المصاريف العامة الثابتة غير داخلة."
+          title="التكاليف المرتبطة بربحية العملاء"
+          description="راجع فقط تكلفة اكتساب هؤلاء العملاء، والتكاليف التي تتغير فعلًا مع العميل، ورسوم بوابة الدفع القابلة للتخصيص. الرواتب الشهرية الثابتة والإيجار والإدارة وأي Fixed Monthly لا تدخل هنا؛ مكانها في Real Net Profit."
         />
         <Link className={styles.backLink} href={`/businesses/${business.id}/customers`}>
-          العودة إلى العملاء و LTV
+          العودة إلى العملاء وقيمة العميل
         </Link>
       </div>
       <LifetimeContributionAllocationManager

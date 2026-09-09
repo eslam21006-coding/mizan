@@ -104,13 +104,13 @@ export function CustomerOverviewShell({
               <span className={styles.stepBadge}>3</span>
               <span className={styles.workflowTag}>ربحية العميل</span>
             </div>
-            <h3>إضافة التكاليف المرتبطة</h3>
-            <p>أكمل تكاليف الاكتساب والتكاليف المتغيرة لحساب ربح المساهمة مدى الحياة.</p>
+            <h3>مراجعة التكاليف المرتبطة بالعميل</h3>
+            <p>راجع تكلفة الاكتساب والتكاليف المتغيرة المرتبطة بالعميل. التكاليف الشهرية الثابتة تبقى في Real Net Profit ولا تخصم هنا.</p>
             <Link
               className={styles.workflowLink}
               href={`/businesses/${businessId}/customers/lifetime-contribution`}
             >
-              إدخال التكاليف
+              مراجعة التكاليف
             </Link>
           </article>
         </div>
@@ -132,8 +132,8 @@ export function CustomerOverviewShell({
           },
           {
             id: "contribution",
-            eyebrow: "بعد التكاليف المتغيرة",
-            label: "ربح المساهمة",
+            eyebrow: "بعد التكاليف المرتبطة بالعميل",
+            label: "ربحية العميل بعد التكاليف",
             content: contribution,
           },
           {

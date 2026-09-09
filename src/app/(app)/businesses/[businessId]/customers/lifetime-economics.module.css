@@ -149,8 +149,17 @@
 
 .allocationGrid {
   display: grid;
-  gap: 12px;
+  gap: 14px;
   margin-bottom: 16px;
+}
+
+.costBlock {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
 }
 
 .allocationRow {
@@ -171,6 +180,32 @@
   font-size: 0.88rem;
 }
 
+.costGuidance {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.88rem;
+  line-height: 1.65;
+}
+
+.eligibilityCheck {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  font-weight: 650;
+  line-height: 1.6;
+}
+
+.eligibilityCheck input {
+  width: 18px;
+  height: 18px;
+  margin-top: 3px;
+  flex: 0 0 auto;
+}
+
 .noteField {
   min-width: 0;
 }
@@ -183,6 +218,10 @@
 
   .allocationRow {
     grid-template-columns: 1fr;
+  }
+
+  .costBlock {
+    padding: 12px;
   }
 
   .pagination {
