@@ -67,8 +67,6 @@ export const sqlFiles = Object.freeze([
   "supabase/migrations/20260826094500_task_25_lifetime_contribution_profit.sql",
   "supabase/migrations/20260826094700_task_25_exact_allocation_display.sql",
   "test/business/task-25-lifetime-contribution-profit.test.sql",
-  "supabase/migrations/20260908190000_lifetime_contribution_cost_eligibility.sql",
-  "test/business/lifetime-contribution-cost-eligibility.test.sql",
   "supabase/migrations/20260826202500_task_32_scenario_data_model.sql",
   "test/business/task-32-scenario-data-model.test.sql",
   "test/business/task-32-scenario-input-hardening.test.sql",
@@ -89,6 +87,8 @@ export const sqlFiles = Object.freeze([
   "test/business/transaction-column-mapping-memory.test.sql",
   "supabase/migrations/20260907120000_customer_history_overview.sql",
   "test/business/customer-history-overview.test.sql",
+  "supabase/migrations/20260908190000_lifetime_contribution_cost_eligibility.sql",
+  "test/business/lifetime-contribution-cost-eligibility.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
