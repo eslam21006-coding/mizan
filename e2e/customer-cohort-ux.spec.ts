@@ -134,9 +134,10 @@ test.describe("Customer first-purchase-group UX", () => {
     await expect(table.locator("tbody tr")).toHaveCount(12);
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(page.getByLabel("قيمة العميل حسب شهر أول شراء — عرض الهاتف")).toBeVisible();
+    const mobileList = page.getByRole("region", { name: "قيمة العميل حسب شهر أول شراء — عرض الهاتف" });
+    await expect(mobileList).toBeVisible();
     await expect(table).toBeHidden();
-    await expect(page.getByText("إجمالي ما دفعوه حتى الآن", { exact: true }).first()).toBeVisible();
+    await expect(mobileList.getByText("إجمالي ما دفعوه حتى الآن", { exact: true }).first()).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
       .toBe(true);
