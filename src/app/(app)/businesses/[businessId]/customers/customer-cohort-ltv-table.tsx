@@ -221,11 +221,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
         </table>
       </div>
 
-      <div
-        className={ltvStyles.mobileList}
-        role="region"
-        aria-label="قيمة العميل حسب شهر أول شراء — عرض الهاتف"
-      >
+      <section className={ltvStyles.mobileList} aria-label="قيمة العميل حسب شهر أول شراء — عرض الهاتف">
         {rows.map((row) => {
           const currency = row.currency ?? baseCurrency;
           return (
@@ -258,7 +254,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
             </article>
           );
         })}
-      </div>
+      </section>
 
       <nav className={styles.pagination} aria-label="التنقل بين صفحات أشهر أول شراء">
         <button
