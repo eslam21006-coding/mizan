@@ -114,7 +114,7 @@ test.describe("Tasks 22-23 acquisition groups and Observed LTV", () => {
     await expect(customerValueTable.getByText("105 EGP", { exact: true })).toBeVisible();
     await expect(page.getByText("مرّ منذ أول شراء", { exact: true })).toHaveCount(0);
     await expect(page.getByText("بعد شهرين", { exact: true })).toHaveCount(0);
-    await expect(page.getByText(/هذا رقم محقق من المعاملات الفعلية، وليس توقعًا للمستقبل/)).toBeVisible();
+    await expect(page.getByText(/رقم محقق من المعاملات الفعلية، وليس توقعًا للمستقبل/)).toBeVisible();
     await expect(page.getByText(/كوهورت/)).toHaveCount(0);
 
     await page.setViewportSize({ width: 390, height: 844 });
