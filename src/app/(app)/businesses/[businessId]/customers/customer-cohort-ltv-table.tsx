@@ -221,7 +221,11 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
         </table>
       </div>
 
-      <div className={ltvStyles.mobileList} aria-label="قيمة العميل حسب شهر أول شراء — عرض الهاتف">
+      <div
+        className={ltvStyles.mobileList}
+        role="region"
+        aria-label="قيمة العميل حسب شهر أول شراء — عرض الهاتف"
+      >
         {rows.map((row) => {
           const currency = row.currency ?? baseCurrency;
           return (
