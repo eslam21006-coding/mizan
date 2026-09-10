@@ -103,18 +103,23 @@ test.describe("Tasks 22-23 acquisition groups and Observed LTV", () => {
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByRole("heading", { name: "العملاء وقيمة العميل" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "كم دفع عملاء كل شهر حتى الآن؟" })).toBeVisible();
+    await expect(page.getByText(/كل صف يمثل العملاء الذين كانت أول دفعة لهم في الشهر الموضح/)).toBeVisible();
+    await expect(page.getByText(/البيانات محسوبة حتى/)).toHaveCount(1);
+
     const customerValueTable = page.getByRole("table", { name: "قيمة العميل حسب شهر أول شراء" });
-    await expect(customerValueTable.getByText("2026-01-01", { exact: true })).toBeVisible();
-    await expect(page.getByText("500 EGP", { exact: true })).toBeVisible();
-    await expect(page.getByText("80 EGP", { exact: true })).toBeVisible();
-    await expect(page.getByText("420 EGP", { exact: true })).toBeVisible();
-    await expect(page.getByText("105 EGP", { exact: true })).toBeVisible();
-    await expect(page.getByText("بعد شهرين", { exact: true })).toBeVisible();
-    await expect(page.getByText("2026-03-31", { exact: false })).toBeVisible();
+    await expect(customerValueTable.getByRole("columnheader")).toHaveCount(4);
+    await expect(customerValueTable.getByText("500 EGP", { exact: true })).toBeVisible();
+    await expect(customerValueTable.getByText("80 EGP", { exact: true })).toBeVisible();
+    await expect(customerValueTable.getByText("420 EGP", { exact: true })).toBeVisible();
+    await expect(customerValueTable.getByText("105 EGP", { exact: true })).toBeVisible();
+    await expect(page.getByText("مرّ منذ أول شراء", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("بعد شهرين", { exact: true })).toHaveCount(0);
     await expect(page.getByText(/هذا رقم محقق من المعاملات الفعلية، وليس توقعًا للمستقبل/)).toBeVisible();
     await expect(page.getByText(/كوهورت/)).toHaveCount(0);
 
     await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByLabel("قيمة العميل حسب شهر أول شراء — عرض الهاتف")).toBeVisible();
+    await expect(customerValueTable).toBeHidden();
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
       .toBe(true);
