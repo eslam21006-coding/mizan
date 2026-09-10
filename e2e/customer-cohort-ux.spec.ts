@@ -8,22 +8,57 @@ const corsHeaders = {
 };
 
 const cohortRows = Array.from({ length: 24 }, (_, index) => {
-  const absoluteMonth = 2026 * 12 + 11 - index;
+  const absoluteMonth = 2026 * 12 + 7 - index;
   const year = Math.floor(absoluteMonth / 12);
   const month = (absoluteMonth % 12) + 1;
   const monthText = String(month).padStart(2, "0");
+
+  if (index === 0) {
+    return {
+      business_id: "mock-business",
+      cohort_month: "2026-08-01",
+      observation_month: "2026-09-01",
+      observation_cutoff_date: "2026-09-10",
+      original_cohort_size: "45",
+      cumulative_gross_cash_collected_text: "6829",
+      cumulative_refunds_text: "0",
+      cumulative_net_cash_collected_text: "6829",
+      observed_ltv_text: "151.755555555555556",
+      cohort_age_months: 1,
+      months_observed: 2,
+      currency: "USD",
+    };
+  }
+
+  if (index === 1) {
+    return {
+      business_id: "mock-business",
+      cohort_month: "2026-07-01",
+      observation_month: "2026-09-01",
+      observation_cutoff_date: "2026-09-10",
+      original_cohort_size: "1",
+      cumulative_gross_cash_collected_text: "3500",
+      cumulative_refunds_text: "0",
+      cumulative_net_cash_collected_text: "3500",
+      observed_ltv_text: "3500",
+      cohort_age_months: 2,
+      months_observed: 3,
+      currency: "USD",
+    };
+  }
+
   return {
     business_id: "mock-business",
     cohort_month: `${year}-${monthText}-01`,
-    observation_month: "2026-12-01",
-    observation_cutoff_date: "2026-12-31",
-    original_cohort_size: index === 0 ? "1260" : String(index + 1),
-    cumulative_gross_cash_collected_text: index === 0 ? "321575.88" : String((index + 1) * 1000),
-    cumulative_refunds_text: index === 0 ? "0" : String(index),
-    cumulative_net_cash_collected_text: index === 0 ? "321575.88" : String((index + 1) * 1000 - index),
-    observed_ltv_text: index === 0 ? "255.218952380952381" : String(100 + index / 3),
-    cohort_age_months: index === 0 ? 1 : index,
-    months_observed: index + 1,
+    observation_month: "2026-09-01",
+    observation_cutoff_date: "2026-09-10",
+    original_cohort_size: String(index + 1),
+    cumulative_gross_cash_collected_text: String((index + 1) * 1000),
+    cumulative_refunds_text: String(index),
+    cumulative_net_cash_collected_text: String((index + 1) * 1000 - index),
+    observed_ltv_text: String(100 + index / 3),
+    cohort_age_months: index + 1,
+    months_observed: index + 2,
     currency: "USD",
   };
 });
@@ -49,7 +84,7 @@ async function fulfillCohorts(route: Route) {
 }
 
 test.describe("Customer first-purchase-group UX", () => {
-  test("shows one year per page with readable amounts and plain age labels", async ({ page }) => {
+  test("shows cumulative customer value in four clear columns without redundant month-age labels", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") browserErrors.push(message.text());
@@ -62,24 +97,46 @@ test.describe("Customer first-purchase-group UX", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
     await expect(page.getByRole("heading", { name: "كم دفع عملاء كل شهر حتى الآن؟" })).toBeVisible();
-    await expect(page.getByText(/نقسم العملاء حسب شهر أول شراء فقط للمقارنة/)).toBeVisible();
+    await expect(page.getByText(/كل صف يمثل العملاء الذين كانت أول دفعة لهم في الشهر الموضح/)).toBeVisible();
+    await expect(page.getByText(/وليس ما دفعوه داخل شهر البداية فقط/)).toBeVisible();
+    await expect(page.getByText(/البيانات محسوبة حتى/)).toHaveCount(1);
 
     const table = page.getByRole("table", { name: "قيمة العميل حسب شهر أول شراء" });
-    await expect(table.getByRole("columnheader")).toHaveCount(5);
+    await expect(table.getByRole("columnheader")).toHaveCount(4);
+    await expect(table.getByRole("columnheader", { name: "شهر أول شراء" })).toBeVisible();
+    await expect(table.getByRole("columnheader", { name: "العملاء الذين بدأوا في هذا الشهر" })).toBeVisible();
+    await expect(table.getByRole("columnheader", { name: "إجمالي ما دفعوه حتى الآن" })).toBeVisible();
+    await expect(table.getByRole("columnheader", { name: "متوسط ما دفعه العميل حتى الآن" })).toBeVisible();
     await expect(table.locator("tbody tr")).toHaveCount(12);
-    await expect(table.getByText("1,260", { exact: true })).toBeVisible();
-    await expect(table.getByText("321,575.88 USD", { exact: true }).first()).toBeVisible();
-    await expect(table.getByText("255.22 USD", { exact: true })).toBeVisible();
-    await expect(table.getByText("بعد شهر", { exact: true }).first()).toBeVisible();
-    await expect(table.getByText(/^M1$/)).toHaveCount(0);
-    await expect(page.getByText("الصفحة 1 من 2", { exact: true })).toBeVisible();
+
+    const augustRow = table.getByRole("row").filter({ hasText: "أغسطس" });
+    await expect(augustRow).toBeVisible();
+    await expect(augustRow.getByText("45", { exact: true })).toBeVisible();
+    await expect(augustRow.getByText("6,829 USD", { exact: true }).first()).toBeVisible();
+    await expect(augustRow.getByText("151.76 USD", { exact: true })).toBeVisible();
+    await expect(augustRow.getByText(/صافي التحصيل من أول شراء حتى تاريخ الحساب/)).toBeVisible();
+
+    const julyRow = table.getByRole("row").filter({ hasText: "يوليو" });
+    await expect(julyRow.getByText("1", { exact: true })).toBeVisible();
+    await expect(julyRow.getByText("3,500 USD", { exact: true }).first()).toBeVisible();
+    await expect(julyRow.getByText("3,500 USD", { exact: true }).last()).toBeVisible();
+
+    await expect(page.getByText("مرّ منذ أول شراء", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("بعد شهر", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("بعد شهرين", { exact: true })).toHaveCount(0);
+    await expect(page.getByText(/بعد 3 أشهر/)).toHaveCount(0);
     await expect(page.getByText(/كوهورت/)).toHaveCount(0);
+    await expect(page.getByText("2026-09-10", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("الصفحة 1 من 2", { exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: "الصفحة التالية" }).click();
     await expect(page.getByText("الصفحة 2 من 2", { exact: true })).toBeVisible();
     await expect(table.locator("tbody tr")).toHaveCount(12);
 
     await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.getByLabel("قيمة العميل حسب شهر أول شراء — عرض الهاتف")).toBeVisible();
+    await expect(table).toBeHidden();
+    await expect(page.getByText("إجمالي ما دفعوه حتى الآن", { exact: true }).first()).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
       .toBe(true);
