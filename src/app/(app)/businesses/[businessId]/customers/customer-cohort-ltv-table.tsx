@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import styles from "./customer-groups.module.css";
+import ltvStyles from "./observed-ltv-table.module.css";
 
 const PAGE_SIZE = 12;
 
@@ -160,23 +161,23 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
       </div>
 
       {sharedObservationCutoff && (
-        <p className={styles.observationNote}>
+        <p className={ltvStyles.observationNote}>
           البيانات محسوبة حتى <strong>{observationDateLabel(sharedObservationCutoff)}</strong>.
         </p>
       )}
       {hasVaryingObservationCutoffs && (
-        <p className={styles.observationNote}>
+        <p className={ltvStyles.observationNote}>
           تاريخ الحساب يختلف بين بعض الصفوف، لذلك يظهر تاريخ كل صف أسفل شهر أول شراء.
         </p>
       )}
 
-      <div className={`${styles.tableShell} ${styles.ltvDesktopTable}`}>
+      <div className={`${styles.tableShell} ${ltvStyles.desktopTable}`}>
         <table className={`${styles.groupsTable} ${styles.ltvTable}`} aria-label="قيمة العميل حسب شهر أول شراء">
           <colgroup>
-            <col className={styles.ltvMonthColumn} />
-            <col className={styles.ltvCustomerColumn} />
-            <col className={styles.ltvMoneyColumn} />
-            <col className={styles.ltvMoneyColumn} />
+            <col className={ltvStyles.monthColumn} />
+            <col className={ltvStyles.customerColumn} />
+            <col className={ltvStyles.moneyColumn} />
+            <col className={ltvStyles.moneyColumn} />
           </colgroup>
           <thead>
             <tr>
@@ -220,12 +221,12 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
         </table>
       </div>
 
-      <div className={styles.ltvMobileList} aria-label="قيمة العميل حسب شهر أول شراء — عرض الهاتف">
+      <div className={ltvStyles.mobileList} aria-label="قيمة العميل حسب شهر أول شراء — عرض الهاتف">
         {rows.map((row) => {
           const currency = row.currency ?? baseCurrency;
           return (
-            <article className={styles.ltvMobileCard} key={`mobile:${row.business_id}:${row.cohort_month}`}>
-              <div className={styles.ltvMobileCardHeader}>
+            <article className={ltvStyles.mobileCard} key={`mobile:${row.business_id}:${row.cohort_month}`}>
+              <div className={ltvStyles.mobileCardHeader}>
                 <div>
                   <span>شهر أول شراء</span>
                   <strong>{acquisitionMonthLabel(row.cohort_month)}</strong>
@@ -236,9 +237,9 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
                 </div>
               </div>
               {hasVaryingObservationCutoffs && (
-                <small className={styles.ltvMobileCutoff}>محسوب حتى {observationDateLabel(row.observation_cutoff_date)}</small>
+                <small className={ltvStyles.mobileCutoff}>محسوب حتى {observationDateLabel(row.observation_cutoff_date)}</small>
               )}
-              <dl className={styles.ltvMobileMetrics}>
+              <dl className={ltvStyles.mobileMetrics}>
                 <div>
                   <dt>إجمالي ما دفعوه حتى الآن</dt>
                   <dd dir="ltr">{formatMoneyText(row.cumulative_net_cash_collected_text, currency)}</dd>
