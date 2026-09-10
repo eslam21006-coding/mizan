@@ -47,16 +47,18 @@ const cohortRows = Array.from({ length: 24 }, (_, index) => {
     };
   }
 
+  const customerCount = index + 1;
+  const cumulativeNetCash = customerCount * 1000;
   return {
     business_id: "mock-business",
     cohort_month: `${year}-${monthText}-01`,
     observation_month: "2026-09-01",
     observation_cutoff_date: "2026-09-10",
-    original_cohort_size: String(index + 1),
-    cumulative_gross_cash_collected_text: String((index + 1) * 1000),
-    cumulative_refunds_text: String(index),
-    cumulative_net_cash_collected_text: String((index + 1) * 1000 - index),
-    observed_ltv_text: String(100 + index / 3),
+    original_cohort_size: String(customerCount),
+    cumulative_gross_cash_collected_text: String(cumulativeNetCash),
+    cumulative_refunds_text: "0",
+    cumulative_net_cash_collected_text: String(cumulativeNetCash),
+    observed_ltv_text: "1000",
     cohort_age_months: index + 1,
     months_observed: index + 2,
     currency: "USD",
