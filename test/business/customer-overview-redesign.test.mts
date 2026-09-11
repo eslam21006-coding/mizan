@@ -51,15 +51,23 @@ test("customer overview keeps all four existing analyses behind one focused work
   assert.match(shellSource, /id: "customers"/);
 });
 
-test("customer redesign preserves locked financial meaning while removing cohort jargon from founder-facing value views", () => {
+test("customer redesign preserves locked financial meaning while removing redundant cohort-age language", () => {
   assert.match(observedLtvSource, /Observed LTV \/ قيمة العميل المحققة حتى الآن/);
-  assert.match(observedLtvSource, /هذا رقم محقق من المعاملات الفعلية، وليس توقعًا للمستقبل/);
+  assert.match(observedLtvSource, /رقم محقق من المعاملات الفعلية، وليس توقعًا للمستقبل/);
   assert.match(
     observedLtvSource,
-    /قيمة العميل المحققة = صافي ما دفعته هذه المجموعة حتى تاريخ الملاحظة الظاهر في الصف/,
+    /إجمالي صافي ما دفعوه من أول شراء وحتى تاريخ الحساب، وليس ما دفعوه داخل شهر البداية فقط/,
   );
+  assert.match(observedLtvSource, /البيانات محسوبة حتى/);
+  assert.match(observedLtvSource, /العملاء الذين بدأوا في هذا الشهر/);
+  assert.match(observedLtvSource, /إجمالي ما دفعوه حتى الآن/);
+  assert.match(observedLtvSource, /متوسط ما دفعه العميل حتى الآن/);
   assert.match(observedLtvSource, /observation_cutoff_date/);
   assert.doesNotMatch(observedLtvSource, /كوهورت/);
+  assert.doesNotMatch(observedLtvSource, /مرّ منذ أول شراء/);
+  assert.doesNotMatch(observedLtvSource, /بعد شهرين/);
+  assert.doesNotMatch(observedLtvSource, /cohort_age_months/);
+  assert.doesNotMatch(observedLtvSource, /months_observed/);
   assert.doesNotMatch(contributionSource, /كوهورت/);
   assert.doesNotMatch(contributionManagerSource, /كوهورت/);
   assert.doesNotMatch(contributionPageSource, /كوهورت/);

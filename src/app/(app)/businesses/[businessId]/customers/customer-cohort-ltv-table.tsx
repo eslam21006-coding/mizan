@@ -4,21 +4,19 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import styles from "./customer-groups.module.css";
+import ltvStyles from "./observed-ltv-table.module.css";
 
 const PAGE_SIZE = 12;
 
 type CustomerObservedLtv = {
   business_id: string;
   cohort_month: string;
-  observation_month: string;
   observation_cutoff_date: string;
   original_cohort_size: number | string;
   cumulative_gross_cash_collected_text: string;
   cumulative_refunds_text: string;
   cumulative_net_cash_collected_text: string;
   observed_ltv_text: string;
-  cohort_age_months: number | string;
-  months_observed: number | string;
   currency: string | null;
 };
 
@@ -27,7 +25,7 @@ type CustomerCohortLtvTableProps = {
   baseCurrency: string;
 };
 
-/** Converts a stored acquisition-group month into a founder-facing Arabic month label. */
+/** Converts a stored first-purchase month into a founder-facing Arabic month label. */
 function acquisitionMonthLabel(value: string) {
   const [yearText, monthText] = value.split("-");
   const year = Number(yearText);
@@ -41,18 +39,23 @@ function acquisitionMonthLabel(value: string) {
   }).format(new Date(Date.UTC(year, month - 1, 1)));
 }
 
-/** Converts months since first purchase into concise Arabic founder-facing wording. */
-function elapsedSinceFirstPurchaseLabel(value: number | string) {
-  const age = typeof value === "number" ? value : Number(value);
-  if (!Number.isSafeInteger(age) || age < 0) return String(value);
-  if (age === 0) return "في شهر أول شراء";
-  if (age === 1) return "بعد شهر";
-  if (age === 2) return "بعد شهرين";
-  if (age >= 3 && age <= 10) return `بعد ${formatCountText(age)} أشهر`;
-  return `بعد ${formatCountText(age)} شهرًا`;
+/** Formats a stored observation cutoff without changing its date through local timezone conversion. */
+function observationDateLabel(value: string) {
+  const [yearText, monthText, dayText] = value.split("-");
+  const year = Number(yearText);
+  const month = Number(monthText);
+  const day = Number(dayText);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return value;
+
+  return new Intl.DateTimeFormat("ar-EG", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
-/** Shows one year of first-purchase customer groups per page with plain labels and rounded display values. */
+/** Shows one year of first-purchase customer groups per page with cumulative realized customer value. */
 export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCohortLtvTableProps) {
   const [rows, setRows] = useState<CustomerObservedLtv[]>([]);
   const [page, setPage] = useState(0);
@@ -71,7 +74,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
       const { data, error: loadError, count } = await supabase
         .from("customer_observed_ltv")
         .select(
-          "business_id,cohort_month,observation_month,observation_cutoff_date,original_cohort_size,cumulative_gross_cash_collected_text,cumulative_refunds_text,cumulative_net_cash_collected_text,observed_ltv_text,cohort_age_months,months_observed,currency",
+          "business_id,cohort_month,observation_cutoff_date,original_cohort_size,cumulative_gross_cash_collected_text,cumulative_refunds_text,cumulative_net_cash_collected_text,observed_ltv_text,currency",
           { count: "exact" },
         )
         .eq("business_id", businessId)
@@ -104,6 +107,13 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
     if (totalCount === null) return null;
     return Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   }, [totalCount]);
+
+  const observationCutoffs = useMemo(
+    () => Array.from(new Set(rows.map((row) => row.observation_cutoff_date).filter(Boolean))),
+    [rows],
+  );
+  const sharedObservationCutoff = observationCutoffs.length === 1 ? observationCutoffs[0] : null;
+  const hasVaryingObservationCutoffs = observationCutoffs.length > 1;
 
   if (isLoading) {
     return (
@@ -141,7 +151,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
           <span className={styles.kicker}>Observed LTV / قيمة العميل المحققة حتى الآن</span>
           <h2 id="observed-ltv-title">كم دفع عملاء كل شهر حتى الآن؟</h2>
           <p>
-            نقسم العملاء حسب شهر أول شراء فقط للمقارنة. مثال: صف أغسطس 2026 يعني كل العملاء الذين كان أول شراء لهم في أغسطس. قيمة العميل المحققة = صافي ما دفعته هذه المجموعة حتى تاريخ الملاحظة الظاهر في الصف ÷ عدد العملاء الذين بدأوا في ذلك الشهر. هذا رقم محقق من المعاملات الفعلية، وليس توقعًا للمستقبل.
+            كل صف يمثل العملاء الذين كانت أول دفعة لهم في الشهر الموضح. نعرض إجمالي صافي ما دفعوه من أول شراء وحتى تاريخ الحساب، وليس ما دفعوه داخل شهر البداية فقط. متوسط قيمة العميل رقم محقق من المعاملات الفعلية، وليس توقعًا للمستقبل.
           </p>
         </div>
         <div className={styles.identityCount}>
@@ -150,15 +160,31 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
         </div>
       </div>
 
-      <div className={styles.tableShell}>
+      {sharedObservationCutoff && (
+        <p className={ltvStyles.observationNote}>
+          البيانات محسوبة حتى <strong>{observationDateLabel(sharedObservationCutoff)}</strong>.
+        </p>
+      )}
+      {hasVaryingObservationCutoffs && (
+        <p className={ltvStyles.observationNote}>
+          تاريخ الحساب يختلف بين بعض الصفوف، لذلك يظهر تاريخ كل صف أسفل شهر أول شراء.
+        </p>
+      )}
+
+      <div className={`${styles.tableShell} ${ltvStyles.desktopTable}`}>
         <table className={`${styles.groupsTable} ${styles.ltvTable}`} aria-label="قيمة العميل حسب شهر أول شراء">
+          <colgroup>
+            <col className={ltvStyles.monthColumn} />
+            <col className={ltvStyles.customerColumn} />
+            <col className={ltvStyles.moneyColumn} />
+            <col className={ltvStyles.moneyColumn} />
+          </colgroup>
           <thead>
             <tr>
               <th scope="col">شهر أول شراء</th>
-              <th scope="col">عدد العملاء</th>
-              <th scope="col">مرّ منذ أول شراء</th>
-              <th scope="col">صافي ما دفعته المجموعة</th>
-              <th scope="col">متوسط قيمة العميل حتى الآن</th>
+              <th scope="col">العملاء الذين بدأوا في هذا الشهر</th>
+              <th scope="col">إجمالي ما دفعوه حتى الآن</th>
+              <th scope="col">متوسط ما دفعه العميل حتى الآن</th>
             </tr>
           </thead>
           <tbody>
@@ -168,25 +194,25 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
                 <tr key={`${row.business_id}:${row.cohort_month}`}>
                   <td>
                     <strong>{acquisitionMonthLabel(row.cohort_month)}</strong>
-                    <small dir="ltr">{row.cohort_month}</small>
+                    <small>كانت أول دفعة لهم في هذا الشهر</small>
+                    {hasVaryingObservationCutoffs && (
+                      <small>محسوب حتى {observationDateLabel(row.observation_cutoff_date)}</small>
+                    )}
                   </td>
                   <td dir="ltr">
                     <strong>{formatCountText(row.original_cohort_size)}</strong>
-                    <small>بدأوا الشراء في هذا الشهر</small>
-                  </td>
-                  <td>
-                    <strong>{elapsedSinceFirstPurchaseLabel(row.cohort_age_months)}</strong>
-                    <small dir="ltr">حتى {row.observation_cutoff_date}</small>
+                    <small dir="rtl">عميلًا كانت أول دفعة لهم في هذا الشهر</small>
                   </td>
                   <td dir="ltr">
                     <strong>{formatMoneyText(row.cumulative_net_cash_collected_text, currency)}</strong>
-                    <small>
+                    <small dir="rtl">صافي التحصيل من أول شراء حتى تاريخ الحساب</small>
+                    <small dir="rtl">
                       تحصيل {formatMoneyText(row.cumulative_gross_cash_collected_text, currency)} · استرجاع {formatMoneyText(row.cumulative_refunds_text, currency)}
                     </small>
                   </td>
                   <td dir="ltr">
                     <strong className={styles.primaryMetric}>{formatMoneyText(row.observed_ltv_text, currency)}</strong>
-                    <small>لكل عميل بدأ في هذا الشهر</small>
+                    <small dir="rtl">لكل عميل بدأ في هذا الشهر</small>
                   </td>
                 </tr>
               );
@@ -194,6 +220,41 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
           </tbody>
         </table>
       </div>
+
+      <section className={ltvStyles.mobileList} aria-label="قيمة العميل حسب شهر أول شراء — عرض الهاتف">
+        {rows.map((row) => {
+          const currency = row.currency ?? baseCurrency;
+          return (
+            <article className={ltvStyles.mobileCard} key={`mobile:${row.business_id}:${row.cohort_month}`}>
+              <div className={ltvStyles.mobileCardHeader}>
+                <div>
+                  <span>شهر أول شراء</span>
+                  <strong>{acquisitionMonthLabel(row.cohort_month)}</strong>
+                </div>
+                <div>
+                  <span>العملاء الذين بدأوا هنا</span>
+                  <strong dir="ltr">{formatCountText(row.original_cohort_size)}</strong>
+                </div>
+              </div>
+              {hasVaryingObservationCutoffs && (
+                <small className={ltvStyles.mobileCutoff}>محسوب حتى {observationDateLabel(row.observation_cutoff_date)}</small>
+              )}
+              <dl className={ltvStyles.mobileMetrics}>
+                <div>
+                  <dt>إجمالي ما دفعوه حتى الآن</dt>
+                  <dd dir="ltr">{formatMoneyText(row.cumulative_net_cash_collected_text, currency)}</dd>
+                  <small>صافي التحصيل من أول شراء حتى تاريخ الحساب</small>
+                </div>
+                <div>
+                  <dt>متوسط ما دفعه العميل حتى الآن</dt>
+                  <dd dir="ltr">{formatMoneyText(row.observed_ltv_text, currency)}</dd>
+                  <small>لكل عميل بدأ في هذا الشهر</small>
+                </div>
+              </dl>
+            </article>
+          );
+        })}
+      </section>
 
       <nav className={styles.pagination} aria-label="التنقل بين صفحات أشهر أول شراء">
         <button
