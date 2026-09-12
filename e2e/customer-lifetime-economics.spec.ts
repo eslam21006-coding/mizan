@@ -183,12 +183,13 @@ test.describe("Customer profitability UX", () => {
     await expect(incompleteRow.locator("td").nth(4)).toContainText("غير مكتمل");
 
     await estimatedRow.getByText("عرض طريقة الحساب").click();
-    await expect(estimatedRow.getByText("تكاليف الاكتساب الموزعة")).toBeVisible();
-    await expect(estimatedRow.getByText("2,500 EGP", { exact: true })).toBeVisible();
-    await expect(estimatedRow.getByText("إجمالي التكاليف المرتبطة بالعميل")).toBeVisible();
-    await expect(estimatedRow.getByText("4,300 EGP", { exact: true })).toBeVisible();
-    await expect(estimatedRow.getByText("ربح 5,700 EGP", { exact: true })).toBeVisible();
-    await expect(estimatedRow.getByText(/لا تحتاج إلى إدخال توزيع شهري يدوي/)).toBeVisible();
+    const estimatedDetails = estimatedRow.locator("details");
+    await expect(estimatedDetails.getByText("تكاليف الاكتساب الموزعة")).toBeVisible();
+    await expect(estimatedDetails.getByText("2,500 EGP", { exact: true })).toBeVisible();
+    await expect(estimatedDetails.getByText("إجمالي التكاليف المرتبطة بالعميل")).toBeVisible();
+    await expect(estimatedDetails.getByText("4,300 EGP", { exact: true })).toBeVisible();
+    await expect(estimatedDetails.getByText("ربح 5,700 EGP", { exact: true })).toBeVisible();
+    await expect(estimatedDetails.getByText(/لا تحتاج إلى إدخال توزيع شهري يدوي/)).toBeVisible();
 
     await unknownQualityRow.getByText("عرض طريقة الحساب").click();
     await expect(unknownQualityRow.getByText(/لا يعرض ميزان ربحًا نهائيًا/)).toBeVisible();
