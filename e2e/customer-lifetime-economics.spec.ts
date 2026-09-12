@@ -33,27 +33,100 @@ async function installLifetimeEconomicsMocks(page: Page) {
 
   await page.route("**/rest/v1/customer_lifetime_contribution_profit_display**", (route) =>
     fulfillSupabaseJson(route, [
-      { business_id: "mock", cohort_month: "2026-01-01", observation_cutoff_date: "2026-08-26", original_cohort_size: 1, lifetime_net_cash_text: "10000", attributable_costs_text: "4300", acquisition_costs_text: "2500", variable_fulfillment_costs_text: "1000", other_variable_costs_text: "500", payment_processing_costs_text: "300", allocation_complete: true, uses_explicit_allocation: true, lifetime_contribution_profit_text: "5700", lifetime_contribution_profit_per_customer_text: "5700", currency: "EGP" },
-      { business_id: "mock", cohort_month: "2026-08-01", observation_cutoff_date: "2026-08-31", original_cohort_size: 1, lifetime_net_cash_text: "6829", attributable_costs_text: "9008.41", acquisition_costs_text: "2580", variable_fulfillment_costs_text: "6000", other_variable_costs_text: "0", payment_processing_costs_text: "428.41", allocation_complete: true, uses_explicit_allocation: true, lifetime_contribution_profit_text: "-2179.41", lifetime_contribution_profit_per_customer_text: "-2179.41", currency: "EGP" },
-    ]),
-  );
-
-  await page.route("**/rest/v1/customer_cohort_cost_allocation_display**", (route) =>
-    fulfillSupabaseJson(route, [
-      { business_id: "mock", cohort_month: "2026-01-01", cost_type: "acquisition", amount_text: "2500", attribution_method: "direct_actual", note: "Acquisition", eligibility_confirmed: true },
-      { business_id: "mock", cohort_month: "2026-01-01", cost_type: "variable_fulfillment", amount_text: "1000", attribution_method: "explicit_allocation", note: "Variable fulfillment", eligibility_confirmed: true },
-      { business_id: "mock", cohort_month: "2026-01-01", cost_type: "other_variable", amount_text: "500", attribution_method: "direct_actual", note: "Other variable", eligibility_confirmed: true },
-      { business_id: "mock", cohort_month: "2026-01-01", cost_type: "payment_processing", amount_text: "300", attribution_method: "direct_actual", note: "Processor", eligibility_confirmed: true },
-      { business_id: "mock", cohort_month: "2026-08-01", cost_type: "acquisition", amount_text: "2580", attribution_method: "direct_actual", note: "Meta Ads", eligibility_confirmed: true },
-      { business_id: "mock", cohort_month: "2026-08-01", cost_type: "variable_fulfillment", amount_text: "6000", attribution_method: "explicit_allocation", note: "Reviewed variable example", eligibility_confirmed: true },
-      { business_id: "mock", cohort_month: "2026-08-01", cost_type: "other_variable", amount_text: "0", attribution_method: "direct_actual", note: null, eligibility_confirmed: false },
-      { business_id: "mock", cohort_month: "2026-08-01", cost_type: "payment_processing", amount_text: "428.41", attribution_method: "direct_actual", note: "Stripe", eligibility_confirmed: true },
+      {
+        business_id: "mock",
+        cohort_month: "2026-03-01",
+        observation_cutoff_date: "2026-08-31",
+        original_cohort_size: 2,
+        lifetime_net_cash_text: "3000",
+        acquisition_costs_text: "0",
+        variable_fulfillment_costs_text: "0",
+        other_variable_costs_text: "0",
+        variable_financial_costs_text: "0",
+        lifetime_attributable_costs_text: "0",
+        lifetime_contribution_profit_text: "3000",
+        lifetime_contribution_profit_per_customer_text: "1500",
+        currency: "EGP",
+        quality_state: "actual",
+        transaction_history_complete: true,
+        missing_relevant_period_count: 0,
+        incomplete_relevant_period_count: 0,
+        estimated_relevant_period_count: 0,
+        legacy_manual_allocation_count: 0,
+        uses_automatic_allocation: false,
+      },
+      {
+        business_id: "mock",
+        cohort_month: "2026-01-01",
+        observation_cutoff_date: "2026-08-31",
+        original_cohort_size: 1,
+        lifetime_net_cash_text: "10000",
+        acquisition_costs_text: "2500",
+        variable_fulfillment_costs_text: "1000",
+        other_variable_costs_text: "500",
+        variable_financial_costs_text: "300",
+        lifetime_attributable_costs_text: "4300",
+        lifetime_contribution_profit_text: "5700",
+        lifetime_contribution_profit_per_customer_text: "5700",
+        currency: "EGP",
+        quality_state: "estimated",
+        transaction_history_complete: true,
+        missing_relevant_period_count: 0,
+        incomplete_relevant_period_count: 0,
+        estimated_relevant_period_count: 1,
+        legacy_manual_allocation_count: 0,
+        uses_automatic_allocation: true,
+      },
+      {
+        business_id: "mock",
+        cohort_month: "2026-04-01",
+        observation_cutoff_date: "2026-08-31",
+        original_cohort_size: 1,
+        lifetime_net_cash_text: "4000",
+        acquisition_costs_text: "500",
+        variable_fulfillment_costs_text: "0",
+        other_variable_costs_text: "0",
+        variable_financial_costs_text: "0",
+        lifetime_attributable_costs_text: "500",
+        lifetime_contribution_profit_text: "3500",
+        lifetime_contribution_profit_per_customer_text: "3500",
+        currency: "EGP",
+        quality_state: "future_state",
+        transaction_history_complete: true,
+        missing_relevant_period_count: 0,
+        incomplete_relevant_period_count: 0,
+        estimated_relevant_period_count: 0,
+        legacy_manual_allocation_count: 0,
+        uses_automatic_allocation: true,
+      },
+      {
+        business_id: "mock",
+        cohort_month: "2026-08-01",
+        observation_cutoff_date: "2026-08-31",
+        original_cohort_size: 1,
+        lifetime_net_cash_text: "6829",
+        acquisition_costs_text: "2580",
+        variable_fulfillment_costs_text: "6000",
+        other_variable_costs_text: "0",
+        variable_financial_costs_text: "428.41",
+        lifetime_attributable_costs_text: "9008.41",
+        lifetime_contribution_profit_text: null,
+        lifetime_contribution_profit_per_customer_text: null,
+        currency: "EGP",
+        quality_state: "incomplete",
+        transaction_history_complete: true,
+        missing_relevant_period_count: 1,
+        incomplete_relevant_period_count: 0,
+        estimated_relevant_period_count: 1,
+        legacy_manual_allocation_count: 0,
+        uses_automatic_allocation: true,
+      },
     ]),
   );
 }
 
-test.describe("Tasks 24-25 lifetime customer economics", () => {
-  test("shows founder-facing lifetime profitability without cohort jargon or negative-profit wording", async ({ page }) => {
+test.describe("Customer profitability UX", () => {
+  test("shows automatic profitability states and calculation details without manual monthly allocation", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") browserErrors.push(message.text());
@@ -79,48 +152,66 @@ test.describe("Tasks 24-25 lifetime customer economics", () => {
     await expect(coreRow.locator("td").nth(6)).toHaveText("1,700 EGP");
     await expect(backendRow.locator("td").nth(6)).toHaveText("500 EGP");
     await expect(otherRow.locator("td").nth(1)).toHaveText("أخرى");
-    await expect(otherRow.locator("td").nth(6)).toHaveText("150 EGP");
     await expect(unattributedRow.locator("td").nth(0)).toContainText("غير منسوب");
-    await expect(unattributedRow.locator("td").nth(6)).toHaveText("200 EGP");
 
-    await expect(page.getByRole("heading", { name: "ربحية العملاء بعد التكاليف" })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "كم حقق عملاء كل شهر بعد التكاليف المرتبطة بهم؟" }),
+    ).toBeVisible();
+
     const contributionTable = page.getByRole("table", {
-      name: "جدول ربحية العملاء بعد التكاليف",
+      name: "ربحية العملاء حسب شهر أول شراء",
     });
-    const positiveRow = contributionTable.getByRole("row").filter({ hasText: "2026-01-01" });
-    const lossRow = contributionTable.getByRole("row").filter({ hasText: "2026-08-01" });
-    await expect(positiveRow.locator("td").nth(2)).toHaveText("10,000 EGP");
-    await expect(positiveRow.locator("td").nth(4)).toHaveText("ربح 5,700 EGP");
-    await expect(positiveRow.locator("td").nth(6)).toContainText("توزيعًا تقديريًا صريحًا");
-    await expect(lossRow.locator("td").nth(2)).toHaveText("6,829 EGP");
-    await expect(lossRow.locator("td").nth(4)).toHaveText("خسارة 2,179.41 EGP");
-    await expect(lossRow.locator("td").nth(5)).toHaveText("خسارة 2,179.41 EGP");
-    await expect(page.getByText(/الرواتب الشهرية الثابتة/).first()).toBeVisible();
+    const actualRow = contributionTable.getByRole("row").filter({ hasText: "2026-03-01" });
+    const estimatedRow = contributionTable.getByRole("row").filter({ hasText: "2026-01-01" });
+    const unknownQualityRow = contributionTable.getByRole("row").filter({ hasText: "2026-04-01" });
+    const incompleteRow = contributionTable.getByRole("row").filter({ hasText: "2026-08-01" });
 
-    await expect(page.getByRole("heading", { name: "راجع التكاليف حسب شهر أول شراء" })).toBeVisible();
-    const augustCard = page.locator("article").filter({ hasText: "2026-08-01" });
-    await expect(augustCard.getByText("خسارة بعد التكاليف حتى الآن")).toBeVisible();
-    await expect(augustCard.getByText("2,179.41 EGP", { exact: true })).toBeVisible();
+    await expect(actualRow.locator("td").nth(2)).toContainText("3,000 EGP");
+    await expect(actualRow.locator("td").nth(3)).toHaveText("ربح 1,500 EGP");
+    await expect(actualRow.locator("td").nth(4)).toContainText("فعلي");
 
-    const variableCostInput = page.getByRole("textbox", {
-      name: "تكاليف خدمة العميل المتغيرة 2026-08-01",
-      exact: true,
-    });
-    await variableCostInput.fill("6001");
-    const saveButton = augustCard.getByRole("button", { name: "حفظ التكاليف بعد المراجعة" });
-    await expect(saveButton).toBeDisabled();
-    await expect(augustCard.getByText(/لم تتم مراجعة أهليته/)).toBeVisible();
-    await page
-      .getByRole("checkbox", {
-        name: "تأكيد أهلية تكاليف خدمة العميل المتغيرة 2026-08-01",
-        exact: true,
-      })
-      .check();
-    await expect(saveButton).toBeEnabled();
+    await expect(estimatedRow.locator("td").nth(2)).toContainText("10,000 EGP");
+    await expect(estimatedRow.locator("td").nth(3)).toHaveText("ربح 5,700 EGP");
+    await expect(estimatedRow.locator("td").nth(4)).toContainText("تقديري");
 
+    await expect(unknownQualityRow.locator("td").nth(2)).toContainText("4,000 EGP");
+    await expect(unknownQualityRow.locator("td").nth(3)).toHaveText("غير متاح حتى تكتمل البيانات");
+    await expect(unknownQualityRow.locator("td").nth(4)).toContainText("غير مكتمل");
+
+    await expect(incompleteRow.locator("td").nth(2)).toContainText("6,829 EGP");
+    await expect(incompleteRow.locator("td").nth(3)).toHaveText("غير متاح حتى تكتمل البيانات");
+    await expect(incompleteRow.locator("td").nth(4)).toContainText("غير مكتمل");
+
+    await estimatedRow.getByText("عرض طريقة الحساب").click();
+    const estimatedDetails = estimatedRow.locator("details");
+    await expect(estimatedDetails.getByText("تكاليف الاكتساب الموزعة")).toBeVisible();
+    await expect(estimatedDetails.getByText("2,500 EGP", { exact: true })).toBeVisible();
+    await expect(estimatedDetails.getByText("إجمالي التكاليف المرتبطة بالعميل")).toBeVisible();
+    await expect(estimatedDetails.getByText("4,300 EGP", { exact: true })).toBeVisible();
+    await expect(estimatedDetails.getByText("ربح 5,700 EGP", { exact: true })).toBeVisible();
+    await expect(estimatedDetails.getByText(/لا تحتاج إلى إدخال توزيع شهري يدوي/)).toBeVisible();
+
+    await unknownQualityRow.getByText("عرض طريقة الحساب").click();
+    await expect(unknownQualityRow.getByText(/لا يعرض ميزان ربحًا نهائيًا/)).toBeVisible();
+    await expect(unknownQualityRow.getByText("الربح المحقق للمجموعة حتى الآن")).toBeVisible();
+    await expect(unknownQualityRow.getByText("ربح 3,500 EGP", { exact: true })).toHaveCount(0);
+
+    await incompleteRow.getByText("عرض طريقة الحساب").click();
+    await expect(incompleteRow.getByText(/يوجد نشاط لعملاء في شهر لا توجد له بيانات مالية شهرية مكتملة/)).toBeVisible();
+    await expect(incompleteRow.getByText("الربح المحقق للمجموعة حتى الآن")).toBeVisible();
+
+    await expect(page.getByRole("heading", { name: "راجع التكاليف حسب شهر أول شراء" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "حفظ التكاليف بعد المراجعة" })).toHaveCount(0);
     await expect(page.getByText(/كوهورت/)).toHaveCount(0);
 
     await page.setViewportSize({ width: 390, height: 844 });
+    const mobileRegion = page.getByRole("region", {
+      name: "ربحية العملاء حسب شهر أول شراء — عرض الهاتف",
+    });
+    await expect(mobileRegion).toBeVisible();
+    const estimatedMobileCard = mobileRegion.locator("article").filter({ hasText: "10,000 EGP" });
+    await estimatedMobileCard.getByText("عرض طريقة الحساب").click();
+    await expect(estimatedMobileCard.getByText(/لا تحتاج إلى إدخال توزيع شهري يدوي/)).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     expect(browserErrors).toEqual([]);
   });

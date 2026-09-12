@@ -1,10 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import styles from "./customer-groups.module.css";
+import profitStyles from "./customer-profitability.module.css";
+
+type QualityState = "actual" | "estimated" | "incomplete";
 
 type LifetimeContributionRow = {
   business_id: string;
@@ -12,16 +14,21 @@ type LifetimeContributionRow = {
   observation_cutoff_date: string;
   original_cohort_size: number | string;
   lifetime_net_cash_text: string;
-  attributable_costs_text: string;
   acquisition_costs_text: string;
   variable_fulfillment_costs_text: string;
   other_variable_costs_text: string;
-  payment_processing_costs_text: string;
-  allocation_complete: boolean;
-  uses_explicit_allocation: boolean;
+  variable_financial_costs_text: string;
+  lifetime_attributable_costs_text: string;
   lifetime_contribution_profit_text: string | null;
   lifetime_contribution_profit_per_customer_text: string | null;
   currency: string | null;
+  quality_state: string | null;
+  transaction_history_complete: boolean;
+  missing_relevant_period_count: number | string;
+  incomplete_relevant_period_count: number | string;
+  estimated_relevant_period_count: number | string;
+  legacy_manual_allocation_count: number | string;
+  uses_automatic_allocation: boolean;
 };
 
 type Props = {
@@ -57,13 +64,50 @@ function profitabilityResult(value: string | null, currency: string) {
   return `ربح ${formatMoneyText(exact, currency)}`;
 }
 
-/** Renders customer-group Lifetime Contribution Profit without including fixed monthly overhead. */
+/** Allows only the two quality states that are safe to present as a final profitability result. */
+function isCompletedQualityState(state: unknown): state is Exclude<QualityState, "incomplete"> {
+  return state === "actual" || state === "estimated";
+}
+
+/** Returns the founder-facing quality label for one first-purchase month. */
+function qualityLabel(state: unknown) {
+  if (state === "actual") return "فعلي";
+  if (state === "estimated") return "تقديري";
+  return "غير مكتمل";
+}
+
+/** Explains why a row is incomplete without exposing internal allocation jargon. */
+function incompleteReasons(row: LifetimeContributionRow) {
+  const reasons: string[] = [];
+  if (!row.transaction_history_complete) reasons.push("سجل معاملات العملاء غير مكتمل.");
+  if (Number(row.missing_relevant_period_count) > 0) {
+    reasons.push("يوجد نشاط لعملاء في شهر لا توجد له بيانات مالية شهرية مكتملة.");
+  }
+  if (Number(row.incomplete_relevant_period_count) > 0) {
+    reasons.push("توجد تكلفة أو بيانات شهرية لم يكتمل توزيعها بأمان.");
+  }
+  if (Number(row.legacy_manual_allocation_count) > 0) {
+    reasons.push("توجد توزيعات يدوية قديمة محفوظة للمراجعة ولم تدخل تلقائيًا في الربحية.");
+  }
+  if (reasons.length === 0) reasons.push("توجد بيانات لازمة لم تكتمل بعد، لذلك لا يعرض ميزان ربحًا نهائيًا.");
+  return reasons;
+}
+
+/** Explains the provenance of a completed profitability result in founder language. */
+function completedQualityExplanation(row: LifetimeContributionRow) {
+  if (row.quality_state === "actual") {
+    return "القيمة مبنية على بيانات مكتملة، ولا توجد تكلفة مؤهلة احتاجت إلى توزيع تقديري.";
+  }
+  return "المعاملات مكتملة، وميزان وزّع بعض التكاليف تلقائيًا بقواعد ثابتة مثل العملاء الجدد أو العملاء الدافعين أو التحصيل الإيجابي.";
+}
+
+/** Renders automatic Customer Profitability by first-purchase month with calculation details on demand. */
 export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
   const [rows, setRows] = useState<LifetimeContributionRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  /** Loads the authorized lifetime-profitability rows for the selected business. */
+  /** Loads the authorized automatic lifetime-profitability rows for the selected business. */
   const loadRows = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -71,14 +115,14 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
     const { data, error: loadError } = await supabase
       .from("customer_lifetime_contribution_profit_display")
       .select(
-        "business_id,cohort_month,observation_cutoff_date,original_cohort_size,lifetime_net_cash_text,attributable_costs_text,acquisition_costs_text,variable_fulfillment_costs_text,other_variable_costs_text,payment_processing_costs_text,allocation_complete,uses_explicit_allocation,lifetime_contribution_profit_text,lifetime_contribution_profit_per_customer_text,currency",
+        "business_id,cohort_month,observation_cutoff_date,original_cohort_size,lifetime_net_cash_text,acquisition_costs_text,variable_fulfillment_costs_text,other_variable_costs_text,variable_financial_costs_text,lifetime_attributable_costs_text,lifetime_contribution_profit_text,lifetime_contribution_profit_per_customer_text,currency,quality_state,transaction_history_complete,missing_relevant_period_count,incomplete_relevant_period_count,estimated_relevant_period_count,legacy_manual_allocation_count,uses_automatic_allocation",
       )
       .eq("business_id", businessId)
       .order("cohort_month", { ascending: false });
 
     if (loadError) {
       setRows([]);
-      setError("تعذر تحميل ربحية العملاء بعد التكاليف. حاول مرة أخرى.");
+      setError("تعذر تحميل ربحية العملاء. حاول مرة أخرى.");
     } else {
       setRows((data ?? []) as LifetimeContributionRow[]);
     }
@@ -90,13 +134,13 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
   }, [loadRows]);
 
   if (isLoading) {
-    return <section className={styles.statusPanel}>جاري حساب ربحية العملاء بعد التكاليف…</section>;
+    return <section className={styles.statusPanel}>جاري حساب ربحية العملاء…</section>;
   }
 
   if (error) {
     return (
       <section className={styles.errorPanel} role="alert">
-        <strong>تعذر تحميل ربحية العملاء بعد التكاليف</strong>
+        <strong>تعذر تحميل ربحية العملاء</strong>
         <p>{error}</p>
         <button className={styles.retryButton} type="button" onClick={() => void loadRows()}>
           إعادة المحاولة
@@ -109,42 +153,39 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
     return (
       <section className={styles.compactEmptyPanel}>
         <strong>لا توجد مجموعات عملاء مكتسبة لحساب الربحية بعد.</strong>
-        <span>يبدأ الحساب بعد وجود سجل معاملات واكتساب عملاء فعلي.</span>
+        <span>يبدأ الحساب تلقائيًا بعد وجود سجل معاملات وبيانات شهرية فعلية.</span>
       </section>
     );
   }
 
   return (
-    <section className={styles.groupPanel} aria-labelledby="lifetime-contribution-title">
+    <section className={styles.groupPanel} aria-labelledby="customer-profitability-title">
       <div className={styles.groupHeading}>
         <div>
-          <span className={styles.kicker}>بعد التكاليف المرتبطة بالعميل</span>
-          <h2 id="lifetime-contribution-title">ربحية العملاء بعد التكاليف</h2>
+          <span className={styles.kicker}>Lifetime Contribution Profit / الربح المحقق من العميل حتى الآن</span>
+          <h2 id="customer-profitability-title">كم حقق عملاء كل شهر بعد التكاليف المرتبطة بهم؟</h2>
           <p>
-            Lifetime Contribution Profit = صافي التحصيل المحقق ناقص تكلفة الاكتساب والتكاليف المتغيرة المرتبطة بالعميل ورسوم الدفع القابلة للتخصيص. الرواتب الشهرية الثابتة والإيجار والإدارة وأي Fixed Monthly لا تدخل هنا.
+            ميزان يحسب الربحية تلقائيًا من صافي التحصيل وتكاليف الاكتساب والتكاليف المتغيرة المرتبطة بالعميل. المصروفات الشهرية الثابتة غير المرتبطة بالعميل تبقى في Real Net Profit ولا تخصم هنا.
           </p>
         </div>
-        <Link className={styles.retryButton} href={`/businesses/${businessId}/customers/lifetime-contribution`}>
-          مراجعة التكاليف المرتبطة
-        </Link>
       </div>
 
-      <div className={styles.tableShell}>
-        <table className={styles.groupsTable} aria-label="جدول ربحية العملاء بعد التكاليف">
+      <div className={`${styles.tableShell} ${profitStyles.desktopTable}`}>
+        <table className={`${styles.groupsTable} ${profitStyles.profitTable}`} aria-label="ربحية العملاء حسب شهر أول شراء">
           <thead>
             <tr>
               <th scope="col">شهر أول شراء</th>
               <th scope="col">العملاء</th>
-              <th scope="col">صافي التحصيل حتى الآن</th>
-              <th scope="col">التكاليف المؤهلة</th>
-              <th scope="col">النتيجة بعد التكاليف</th>
-              <th scope="col">النتيجة لكل عميل</th>
-              <th scope="col">حالة التكاليف</th>
+              <th scope="col">قيمة العميل المحققة</th>
+              <th scope="col">الربح المحقق لكل عميل</th>
+              <th scope="col">الحالة</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((row) => {
               const currency = row.currency ?? baseCurrency;
+              const incomplete = !isCompletedQualityState(row.quality_state);
+              const reasons = incompleteReasons(row);
               return (
                 <tr key={`${row.business_id}:${row.cohort_month}`}>
                   <td>
@@ -152,26 +193,74 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
                     <small dir="ltr">{row.cohort_month}</small>
                   </td>
                   <td dir="ltr">{formatCountText(row.original_cohort_size)}</td>
-                  <td dir="ltr">{money(row.lifetime_net_cash_text, currency)}</td>
-                  <td dir="ltr">{row.allocation_complete ? money(row.attributable_costs_text, currency) : "—"}</td>
+                  <td dir="ltr">
+                    <strong>{money(row.lifetime_net_cash_text, currency)}</strong>
+                    <small dir="rtl">صافي ما دفعته هذه المجموعة حتى الآن</small>
+                  </td>
                   <td>
-                    {row.allocation_complete ? (
-                      <strong>{profitabilityResult(row.lifetime_contribution_profit_text, currency)}</strong>
+                    {incomplete ? (
+                      <span>غير متاح حتى تكتمل البيانات</span>
                     ) : (
-                      <span>تحتاج مراجعة التكاليف</span>
+                      <strong>{profitabilityResult(row.lifetime_contribution_profit_per_customer_text, currency)}</strong>
                     )}
                   </td>
                   <td>
-                    {row.allocation_complete
-                      ? profitabilityResult(row.lifetime_contribution_profit_per_customer_text, currency)
-                      : "—"}
-                  </td>
-                  <td>
-                    {row.allocation_complete
-                      ? row.uses_explicit_allocation
-                        ? "مراجَعة — تتضمن توزيعًا تقديريًا صريحًا"
-                        : "مراجَعة — تكاليف مرتبطة مباشرة"
-                      : "راجع أهلية التكاليف قبل اعتماد النتيجة"}
+                    <span
+                      className={`${profitStyles.qualityBadge} ${
+                        row.quality_state === "actual"
+                          ? profitStyles.qualityActual
+                          : row.quality_state === "estimated"
+                            ? profitStyles.qualityEstimated
+                            : profitStyles.qualityIncomplete
+                      }`}
+                    >
+                      {qualityLabel(row.quality_state)}
+                    </span>
+                    <details className={profitStyles.calculationDetails}>
+                      <summary>عرض طريقة الحساب</summary>
+                      <div className={profitStyles.detailBody}>
+                        <p className={profitStyles.qualityExplanation}>
+                          {incomplete ? reasons.join(" ") : completedQualityExplanation(row)}
+                        </p>
+                        <dl className={profitStyles.calculationList}>
+                          <div>
+                            <dt>صافي التحصيل المحقق</dt>
+                            <dd dir="ltr">{money(row.lifetime_net_cash_text, currency)}</dd>
+                          </div>
+                          <div>
+                            <dt>تكاليف الاكتساب الموزعة</dt>
+                            <dd dir="ltr">{money(row.acquisition_costs_text, currency)}</dd>
+                          </div>
+                          <div>
+                            <dt>تكاليف خدمة العميل المتغيرة</dt>
+                            <dd dir="ltr">{money(row.variable_fulfillment_costs_text, currency)}</dd>
+                          </div>
+                          <div>
+                            <dt>تكاليف أخرى مرتبطة بالعميل</dt>
+                            <dd dir="ltr">{money(row.other_variable_costs_text, currency)}</dd>
+                          </div>
+                          <div>
+                            <dt>التكاليف المالية المتغيرة</dt>
+                            <dd dir="ltr">{money(row.variable_financial_costs_text, currency)}</dd>
+                          </div>
+                          <div className={profitStyles.totalRow}>
+                            <dt>إجمالي التكاليف المرتبطة بالعميل</dt>
+                            <dd dir="ltr">{money(row.lifetime_attributable_costs_text, currency)}</dd>
+                          </div>
+                          <div className={profitStyles.resultRow}>
+                            <dt>الربح المحقق للمجموعة حتى الآن</dt>
+                            <dd dir="ltr">
+                              {incomplete
+                                ? "—"
+                                : profitabilityResult(row.lifetime_contribution_profit_text, currency)}
+                            </dd>
+                          </div>
+                        </dl>
+                        {row.uses_automatic_allocation && !incomplete && (
+                          <small>تم توزيع التكاليف المؤهلة تلقائيًا؛ لا تحتاج إلى إدخال توزيع شهري يدوي.</small>
+                        )}
+                      </div>
+                    </details>
                   </td>
                 </tr>
               );
@@ -179,6 +268,96 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
           </tbody>
         </table>
       </div>
+
+      <section className={profitStyles.mobileList} aria-label="ربحية العملاء حسب شهر أول شراء — عرض الهاتف">
+        {rows.map((row) => {
+          const currency = row.currency ?? baseCurrency;
+          const incomplete = !isCompletedQualityState(row.quality_state);
+          const reasons = incompleteReasons(row);
+          return (
+            <article className={profitStyles.mobileCard} key={`mobile:${row.business_id}:${row.cohort_month}`}>
+              <div className={profitStyles.mobileHeader}>
+                <div>
+                  <span>شهر أول شراء</span>
+                  <strong>{firstPurchaseMonthLabel(row.cohort_month)}</strong>
+                </div>
+                <span
+                  className={`${profitStyles.qualityBadge} ${
+                    row.quality_state === "actual"
+                      ? profitStyles.qualityActual
+                      : row.quality_state === "estimated"
+                        ? profitStyles.qualityEstimated
+                        : profitStyles.qualityIncomplete
+                  }`}
+                >
+                  {qualityLabel(row.quality_state)}
+                </span>
+              </div>
+              <dl className={profitStyles.mobileMetrics}>
+                <div>
+                  <dt>العملاء</dt>
+                  <dd dir="ltr">{formatCountText(row.original_cohort_size)}</dd>
+                </div>
+                <div>
+                  <dt>قيمة العميل المحققة</dt>
+                  <dd dir="ltr">{money(row.lifetime_net_cash_text, currency)}</dd>
+                </div>
+                <div className={profitStyles.mobilePrimaryMetric}>
+                  <dt>الربح المحقق لكل عميل</dt>
+                  <dd>
+                    {incomplete
+                      ? "غير متاح حتى تكتمل البيانات"
+                      : profitabilityResult(row.lifetime_contribution_profit_per_customer_text, currency)}
+                  </dd>
+                </div>
+              </dl>
+              <details className={profitStyles.calculationDetails}>
+                <summary>عرض طريقة الحساب</summary>
+                <div className={profitStyles.detailBody}>
+                  <p className={profitStyles.qualityExplanation}>
+                    {incomplete ? reasons.join(" ") : completedQualityExplanation(row)}
+                  </p>
+                  <dl className={profitStyles.calculationList}>
+                    <div>
+                      <dt>صافي التحصيل المحقق</dt>
+                      <dd dir="ltr">{money(row.lifetime_net_cash_text, currency)}</dd>
+                    </div>
+                    <div>
+                      <dt>تكاليف الاكتساب الموزعة</dt>
+                      <dd dir="ltr">{money(row.acquisition_costs_text, currency)}</dd>
+                    </div>
+                    <div>
+                      <dt>تكاليف خدمة العميل المتغيرة</dt>
+                      <dd dir="ltr">{money(row.variable_fulfillment_costs_text, currency)}</dd>
+                    </div>
+                    <div>
+                      <dt>تكاليف أخرى مرتبطة بالعميل</dt>
+                      <dd dir="ltr">{money(row.other_variable_costs_text, currency)}</dd>
+                    </div>
+                    <div>
+                      <dt>التكاليف المالية المتغيرة</dt>
+                      <dd dir="ltr">{money(row.variable_financial_costs_text, currency)}</dd>
+                    </div>
+                    <div className={profitStyles.totalRow}>
+                      <dt>إجمالي التكاليف المرتبطة بالعميل</dt>
+                      <dd dir="ltr">{money(row.lifetime_attributable_costs_text, currency)}</dd>
+                    </div>
+                    <div className={profitStyles.resultRow}>
+                      <dt>الربح المحقق للمجموعة حتى الآن</dt>
+                      <dd dir="ltr">
+                        {incomplete ? "—" : profitabilityResult(row.lifetime_contribution_profit_text, currency)}
+                      </dd>
+                    </div>
+                  </dl>
+                  {row.uses_automatic_allocation && !incomplete && (
+                    <small>تم توزيع التكاليف المؤهلة تلقائيًا؛ لا تحتاج إلى إدخال توزيع شهري يدوي.</small>
+                  )}
+                </div>
+              </details>
+            </article>
+          );
+        })}
+      </section>
     </section>
   );
 }

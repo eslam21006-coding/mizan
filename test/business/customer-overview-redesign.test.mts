@@ -71,12 +71,19 @@ test("customer redesign preserves locked financial meaning while removing redund
   assert.doesNotMatch(contributionSource, /كوهورت/);
   assert.doesNotMatch(contributionManagerSource, /كوهورت/);
   assert.doesNotMatch(contributionPageSource, /كوهورت/);
-  assert.match(contributionSource, /الرواتب الشهرية الثابتة والإيجار والإدارة وأي Fixed Monthly لا تدخل هنا/);
+  assert.match(contributionSource, /المصروفات الشهرية الثابتة غير المرتبطة بالعميل تبقى في Real Net Profit ولا تخصم هنا/);
+  assert.match(contributionSource, /Lifetime Contribution Profit \/ الربح المحقق من العميل حتى الآن/);
+  assert.match(contributionSource, /فعلي/);
+  assert.match(contributionSource, /تقديري/);
+  assert.match(contributionSource, /غير مكتمل/);
+  assert.match(contributionSource, /عرض طريقة الحساب/);
   assert.match(contributionManagerSource, /ليست راتبًا شهريًا ثابتًا أو تكلفة Fixed Monthly/);
   assert.match(contributionManagerSource, /توزيع من تكلفة مشتركة \(تقديري\)/);
   assert.match(contributionManagerSource, /خسارة بعد التكاليف حتى الآن/);
-  assert.match(shellSource, /ربحية العميل بعد التكاليف/);
-  assert.match(shellSource, /ميزان لا يعتبر إيراد فترة واحدة LTV/);
+  assert.match(shellSource, /العملاء وقيمة وربحية العميل/);
+  assert.match(shellSource, /لا تحتاج إلى توزيع التكاليف يدويًا لكل شهر أول شراء/);
+  assert.match(shellSource, /ميزان يستخدم تصنيف وسلوك المصروفات الشهرية/);
+  assert.doesNotMatch(shellSource, /href={`\/businesses\/\$\{businessId\}\/customers\/lifetime-contribution`}/);
 });
 
 test("analysis navigation is an accessible RTL tab interface with a strong active state", () => {
