@@ -113,21 +113,31 @@ insert into public.customer_transactions (
   imported_by_user_id, source_transaction_at, transaction_at, currency, normalized_outcome
 )
 select
-  '72727272-7272-4727-8727-72727272a001'::uuid, 'task2-fixture', 'dec-aug-' || g,
+  '72727272-7272-4727-8727-72727272a001', 'task2-fixture', 'dec-aug-' || g,
   gen_random_uuid(), 'aug-' || g || '@example.test', '2026-12-05', 100, 'collection', 300 + g,
-  '72727272-7272-4727-8727-727272720001'::uuid, '2026-12-05T10:00:00Z', '2026-12-05T10:00:00Z', 'USD', 'successful'
-from generate_series(1, 3) as g
-union all
+  '72727272-7272-4727-8727-727272720001', '2026-12-05T10:00:00Z', '2026-12-05T10:00:00Z', 'USD', 'successful'
+from generate_series(1, 3) as g;
+
+insert into public.customer_transactions (
+  business_id, source, source_transaction_id, import_row_token, customer_email,
+  transaction_date, amount_collected, transaction_type, source_row_number,
+  imported_by_user_id, source_transaction_at, transaction_at, currency, normalized_outcome
+)
 select
-  '72727272-7272-4727-8727-72727272a001'::uuid, 'task2-fixture', 'dec-sep-' || g,
+  '72727272-7272-4727-8727-72727272a001', 'task2-fixture', 'dec-sep-' || g,
   gen_random_uuid(), 'sep-' || g || '@example.test', '2026-12-05', 100, 'collection', 400 + g,
-  '72727272-7272-4727-8727-727272720001'::uuid, '2026-12-05T10:00:00Z', '2026-12-05T10:00:00Z', 'USD', 'successful'
-from generate_series(1, 4) as g
-union all
+  '72727272-7272-4727-8727-727272720001', '2026-12-05T10:00:00Z', '2026-12-05T10:00:00Z', 'USD', 'successful'
+from generate_series(1, 4) as g;
+
+insert into public.customer_transactions (
+  business_id, source, source_transaction_id, import_row_token, customer_email,
+  transaction_date, amount_collected, transaction_type, source_row_number,
+  imported_by_user_id, source_transaction_at, transaction_at, currency, normalized_outcome
+)
 select
-  '72727272-7272-4727-8727-72727272a001'::uuid, 'task2-fixture', 'dec-nov-' || g,
+  '72727272-7272-4727-8727-72727272a001', 'task2-fixture', 'dec-nov-' || g,
   gen_random_uuid(), 'nov-' || g || '@example.test', '2026-12-05', 100, 'collection', 500 + g,
-  '72727272-7272-4727-8727-727272720001'::uuid, '2026-12-05T10:00:00Z', '2026-12-05T10:00:00Z', 'USD', 'successful'
+  '72727272-7272-4727-8727-727272720001', '2026-12-05T10:00:00Z', '2026-12-05T10:00:00Z', 'USD', 'successful'
 from generate_series(1, 3) as g;
 
 insert into public.customer_transactions (
@@ -178,18 +188,27 @@ set local request.jwt.claims =
 
 do $$
 declare
-  result_row record;
+  pool_row record;
+  coverage_row record;
+  missing_row record;
+  zero_row record;
+  excluded_row record;
+  aug_amount numeric;
+  sep_amount numeric;
+  nov_amount numeric;
+  payer_weight numeric;
+  quality_value text;
 begin
   select authoritative_amount, allocated_amount, unallocated_amount, reconciles, allocation_quality_state
-  into result_row
+  into strict pool_row
   from public.customer_economics_cost_pool_reconciliation
   where authoritative_source_id = '72727272-7272-4727-8727-727272721002';
 
-  if result_row.authoritative_amount <> 4500
-    or result_row.allocated_amount <> 4500
-    or result_row.unallocated_amount <> 0
-    or result_row.reconciles is not true
-    or result_row.allocation_quality_state <> 'estimated' then
+  if pool_row.authoritative_amount is distinct from 4500
+    or pool_row.allocated_amount is distinct from 4500
+    or pool_row.unallocated_amount is distinct from 0
+    or pool_row.reconciles is not true
+    or pool_row.allocation_quality_state is distinct from 'estimated' then
     raise exception 'Task 2 same-period acquisition pool failed';
   end if;
 
@@ -203,197 +222,157 @@ begin
   ) then
     raise exception 'Task 2 acquisition allocation did not roll to August acquisition group';
   end if;
-end;
-$$;
 
-do $$
-begin
   if (select count(*) from public.customer_economics_authoritative_cost_pools
       where business_id = '72727272-7272-4727-8727-72727272a001'
         and activity_month = '2026-07-01'::date
-        and authoritative_amount = 8000) <> 1 then
+        and authoritative_amount = 8000) is distinct from 1 then
     raise exception 'Funnel Ad Spend became a duplicate Customer Economics monetary source';
   end if;
-end;
-$$;
 
-do $$
-declare result_row record;
-begin
   select allocated_amount, unallocated_amount, reconciles, allocation_exception_reason
-  into result_row
+  into strict pool_row
   from public.customer_economics_cost_pool_reconciliation
   where authoritative_source_id = '72727272-7272-4727-8727-727272721001';
 
-  if result_row.allocated_amount <> 0
-    or result_row.unallocated_amount <> 8000
-    or result_row.reconciles is not true
-    or result_row.allocation_exception_reason <> 'NO_NEW_CUSTOMERS' then
+  if pool_row.allocated_amount is distinct from 0
+    or pool_row.unallocated_amount is distinct from 8000
+    or pool_row.reconciles is not true
+    or pool_row.allocation_exception_reason is distinct from 'NO_NEW_CUSTOMERS' then
     raise exception 'Zero-new-customer Acquisition cost was not left Unallocated';
   end if;
-end;
-$$;
 
-do $$
-declare
-  aug_amount numeric;
-  sep_amount numeric;
-  nov_amount numeric;
-  payer_weight numeric;
-begin
   select sum(allocation_weight) into payer_weight
   from public.customer_economics_activity_evidence
   where business_id = '72727272-7272-4727-8727-72727272a001'
     and activity_month = '2026-12-01'::date
     and allocation_driver = 'paying_customers';
 
-  select allocated_amount into aug_amount
+  select allocated_amount into strict aug_amount
   from public.customer_economics_cost_allocations
   where authoritative_source_id = '72727272-7272-4727-8727-727272721004'
     and cohort_month = '2026-08-01'::date;
-  select allocated_amount into sep_amount
+  select allocated_amount into strict sep_amount
   from public.customer_economics_cost_allocations
   where authoritative_source_id = '72727272-7272-4727-8727-727272721004'
     and cohort_month = '2026-09-01'::date;
-  select allocated_amount into nov_amount
+  select allocated_amount into strict nov_amount
   from public.customer_economics_cost_allocations
   where authoritative_source_id = '72727272-7272-4727-8727-727272721004'
     and cohort_month = '2026-11-01'::date;
 
-  if payer_weight <> 10 or aug_amount <> 300 or sep_amount <> 400 or nov_amount <> 300 then
+  if payer_weight is distinct from 10
+    or aug_amount is distinct from 300
+    or sep_amount is distinct from 400
+    or nov_amount is distinct from 300 then
     raise exception 'Paying Customer allocation or distinct payer counting is wrong';
   end if;
-end;
-$$;
 
-do $$
-declare
-  aug_amount numeric;
-  sep_amount numeric;
-  result_row record;
-begin
-  select allocated_amount into aug_amount
+  select allocated_amount into strict aug_amount
   from public.customer_economics_cost_allocations
   where authoritative_source_id = '72727272-7272-4727-8727-727272721005'
     and cohort_month = '2026-08-01'::date;
-  select allocated_amount into sep_amount
+  select allocated_amount into strict sep_amount
   from public.customer_economics_cost_allocations
   where authoritative_source_id = '72727272-7272-4727-8727-727272721005'
     and cohort_month = '2026-09-01'::date;
   select authoritative_amount, allocated_amount, unallocated_amount, reconciles
-  into result_row
+  into strict pool_row
   from public.customer_economics_cost_pool_reconciliation
   where authoritative_source_id = '72727272-7272-4727-8727-727272721005';
 
-  if result_row.authoritative_amount <> 900
-    or aug_amount <> 300
-    or sep_amount <> 600
-    or result_row.allocated_amount <> 900
-    or result_row.unallocated_amount <> 0
-    or result_row.reconciles is not true then
+  if pool_row.authoritative_amount is distinct from 900
+    or aug_amount is distinct from 300
+    or sep_amount is distinct from 600
+    or pool_row.allocated_amount is distinct from 900
+    or pool_row.unallocated_amount is distinct from 0
+    or pool_row.reconciles is not true then
     raise exception 'Positive-cash weighted allocation failed';
   end if;
-end;
-$$;
 
-do $$
-declare
-  coverage_row record;
-  cost_row record;
-begin
   select coverage_difference, coverage_tolerance, blocking, coverage_state
-  into coverage_row
+  into strict coverage_row
   from public.customer_economics_revenue_coverage
   where business_id = '72727272-7272-4727-8727-72727272a001'
     and activity_month = '2027-02-01'::date;
 
   select authoritative_amount, allocated_amount, unallocated_amount, allocation_exception_reason, reconciles
-  into cost_row
+  into strict pool_row
   from public.customer_economics_cost_pool_reconciliation
   where authoritative_source_id = '72727272-7272-4727-8727-727272721006';
 
-  if coverage_row.coverage_difference <> 500
-    or coverage_row.coverage_tolerance <> 20
+  if coverage_row.coverage_difference is distinct from 500
+    or coverage_row.coverage_tolerance is distinct from 20
     or coverage_row.blocking is not true
-    or coverage_row.coverage_state <> 'REVENUE_COVERAGE_MISMATCH'
-    or cost_row.authoritative_amount <> 2000
-    or cost_row.allocated_amount <> 0
-    or cost_row.unallocated_amount <> 2000
-    or cost_row.allocation_exception_reason <> 'REVENUE_COVERAGE_MISMATCH'
-    or cost_row.reconciles is not true then
+    or coverage_row.coverage_state is distinct from 'REVENUE_COVERAGE_MISMATCH'
+    or pool_row.authoritative_amount is distinct from 2000
+    or pool_row.allocated_amount is distinct from 0
+    or pool_row.unallocated_amount is distinct from 2000
+    or pool_row.allocation_exception_reason is distinct from 'REVENUE_COVERAGE_MISMATCH'
+    or pool_row.reconciles is not true then
     raise exception 'Revenue coverage mismatch handling failed';
   end if;
-end;
-$$;
 
-do $$
-declare
-  missing_row record;
-  zero_row record;
-begin
   select authoritative_amount, allocated_amount, unallocated_amount, allocation_quality_state, reconciles
-  into missing_row
+  into strict missing_row
   from public.customer_economics_cost_pool_reconciliation
   where authoritative_source_id = '72727272-7272-4727-8727-727272721007';
 
   select authoritative_amount, allocated_amount, unallocated_amount, allocation_quality_state, reconciles
-  into zero_row
+  into strict zero_row
   from public.customer_economics_cost_pool_reconciliation
   where authoritative_source_id = '72727272-7272-4727-8727-727272721008';
 
   if missing_row.authoritative_amount is not null
     or missing_row.allocated_amount is not null
     or missing_row.unallocated_amount is not null
-    or missing_row.allocation_quality_state <> 'incomplete'
+    or missing_row.allocation_quality_state is distinct from 'incomplete'
     or missing_row.reconciles is not null then
     raise exception 'Missing eligible expense was converted to zero';
   end if;
 
-  if zero_row.authoritative_amount <> 0
-    or zero_row.allocated_amount <> 0
-    or zero_row.unallocated_amount <> 0
-    or zero_row.allocation_quality_state <> 'actual'
+  if zero_row.authoritative_amount is distinct from 0
+    or zero_row.allocated_amount is distinct from 0
+    or zero_row.unallocated_amount is distinct from 0
+    or zero_row.allocation_quality_state is distinct from 'actual'
     or zero_row.reconciles is not true then
     raise exception 'Explicit zero is not a valid reconciled zero';
   end if;
-end;
-$$;
 
-do $$
-declare result_row record;
-begin
   select cost_eligibility, authoritative_amount, allocated_amount, unallocated_amount, reconciles
-  into result_row
+  into strict excluded_row
   from public.customer_economics_cost_pool_reconciliation
   where authoritative_source_id = '72727272-7272-4727-8727-727272721003';
 
-  if result_row.cost_eligibility <> 'excluded'
-    or result_row.authoritative_amount <> 1000
-    or result_row.allocated_amount <> 0
-    or result_row.unallocated_amount <> 0
-    or result_row.reconciles is not null then
+  if excluded_row.cost_eligibility is distinct from 'excluded'
+    or excluded_row.authoritative_amount is distinct from 1000
+    or excluded_row.allocated_amount is distinct from 0
+    or excluded_row.unallocated_amount is distinct from 0
+    or excluded_row.reconciles is not null then
     raise exception 'Fixed Fulfillment entered customer economics allocation';
   end if;
-end;
-$$;
 
-do $$
-begin
-  if (select quality_state from public.customer_economics_period_quality
-      where business_id = '72727272-7272-4727-8727-72727272a001'
-        and activity_month = '2026-08-01'::date) <> 'estimated' then
+  select quality_state into strict quality_value
+  from public.customer_economics_period_quality
+  where business_id = '72727272-7272-4727-8727-72727272a001'
+    and activity_month = '2026-08-01'::date;
+  if quality_value is distinct from 'estimated' then
     raise exception 'Healthy automatic allocation period should be Estimated';
   end if;
 
-  if (select quality_state from public.customer_economics_period_quality
-      where business_id = '72727272-7272-4727-8727-72727272a001'
-        and activity_month = '2027-02-01'::date) <> 'incomplete' then
+  select quality_state into strict quality_value
+  from public.customer_economics_period_quality
+  where business_id = '72727272-7272-4727-8727-72727272a001'
+    and activity_month = '2027-02-01'::date;
+  if quality_value is distinct from 'incomplete' then
     raise exception 'Coverage mismatch period should be Incomplete';
   end if;
 
-  if (select quality_state from public.customer_economics_period_quality
-      where business_id = '72727272-7272-4727-8727-72727272a001'
-        and activity_month = '2027-03-01'::date) <> 'incomplete' then
+  select quality_state into strict quality_value
+  from public.customer_economics_period_quality
+  where business_id = '72727272-7272-4727-8727-72727272a001'
+    and activity_month = '2027-03-01'::date;
+  if quality_value is distinct from 'incomplete' then
     raise exception 'Missing eligible cost period should be Incomplete';
   end if;
 end;
@@ -408,14 +387,14 @@ do $$
 declare result_row record;
 begin
   select allocated_amount, unallocated_amount, allocation_exception_reason, allocation_quality_state, reconciles
-  into result_row
+  into strict result_row
   from public.customer_economics_cost_pool_reconciliation
   where authoritative_source_id = '72727272-7272-4727-8727-72727272b005';
 
-  if result_row.allocated_amount <> 0
-    or result_row.unallocated_amount <> 1000
-    or result_row.allocation_exception_reason <> 'INCOMPLETE_TRANSACTION_HISTORY'
-    or result_row.allocation_quality_state <> 'incomplete'
+  if result_row.allocated_amount is distinct from 0
+    or result_row.unallocated_amount is distinct from 1000
+    or result_row.allocation_exception_reason is distinct from 'INCOMPLETE_TRANSACTION_HISTORY'
+    or result_row.allocation_quality_state is distinct from 'incomplete'
     or result_row.reconciles is not true then
     raise exception 'Incomplete transaction history was treated as trusted allocation evidence';
   end if;
