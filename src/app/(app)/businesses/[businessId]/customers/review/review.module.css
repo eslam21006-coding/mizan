@@ -1,0 +1,434 @@
+.workspace {
+  display: grid;
+  gap: 16px;
+}
+
+.hero,
+.queue,
+.cleanState,
+.legacySection,
+.correctionCallout {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--radius-md) + 4px);
+  box-shadow: var(--shadow-soft);
+}
+
+.hero,
+.correctionCallout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  padding: 22px 24px;
+}
+
+.hero {
+  background: linear-gradient(135deg, var(--surface) 0%, var(--brand-soft) 100%);
+}
+
+.hero h1,
+.sectionHeading h2,
+.cleanState h2,
+.correctionCallout h2,
+.exceptionCard h3,
+.legacyCard h3 {
+  margin: 0;
+  color: var(--text);
+}
+
+.hero h1 {
+  margin-top: 5px;
+  font-size: clamp(25px, 3vw, 34px);
+}
+
+.hero p,
+.sectionCopy,
+.exceptionCard p,
+.correctionCallout p,
+.cleanState p {
+  margin: 6px 0 0;
+  color: var(--text-soft);
+  line-height: 1.75;
+}
+
+.eyebrow {
+  color: var(--brand-strong);
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+}
+
+.heroActions {
+  min-width: 178px;
+  display: grid;
+  gap: 8px;
+}
+
+.primaryAction,
+.secondaryAction,
+.inlineAction {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 13px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.primaryAction {
+  color: var(--surface);
+  background: var(--brand-strong);
+  border: 1px solid var(--brand-strong);
+}
+
+.secondaryAction,
+.inlineAction {
+  color: var(--brand-strong);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.inlineAction {
+  width: fit-content;
+  margin-top: 10px;
+}
+
+.primaryAction:focus-visible,
+.secondaryAction:focus-visible,
+.inlineAction:focus-visible,
+.overrideBox summary:focus-visible,
+.overrideForm input:focus-visible,
+.overrideForm textarea:focus-visible,
+.legacyCard input:focus-visible,
+.legacyCard textarea:focus-visible,
+.legacyCard select:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.successStatus,
+.errorStatus,
+.readOnlyNotice {
+  padding: 13px 15px;
+  border-radius: 12px;
+  font-weight: 750;
+}
+
+.successStatus {
+  color: #166534;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+}
+
+.errorStatus {
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.readOnlyNotice {
+  color: var(--text-soft);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+}
+
+.cleanState {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 22px;
+}
+
+.cleanMark {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: #166534;
+  background: #dcfce7;
+  border-radius: 50%;
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.queue,
+.legacySection {
+  padding: 18px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.sectionHeading h2,
+.correctionCallout h2 {
+  margin-top: 4px;
+  font-size: 18px;
+}
+
+.blockingBadge,
+.monthBadge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.blockingBadge {
+  color: #991b1b;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+.monthBadge {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+}
+
+.exceptionList,
+.legacyGroups {
+  display: grid;
+  gap: 10px;
+}
+
+.exceptionCard,
+.legacyCard {
+  padding: 16px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.exceptionTop,
+.legacyCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.exceptionCard h3,
+.legacyCard h3 {
+  margin-top: 6px;
+  font-size: 15px;
+}
+
+.amount {
+  flex: 0 0 auto;
+  color: var(--text);
+  font-size: 14px;
+}
+
+.sourceName {
+  font-weight: 750;
+}
+
+.technicalCode {
+  display: block;
+  width: fit-content;
+  margin-top: 8px;
+  color: var(--text-soft);
+  font-size: 9px;
+}
+
+.overrideBox {
+  margin-top: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.overrideBox > summary {
+  padding: 11px 13px;
+  color: var(--brand-strong);
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.overrideBox[open] > summary {
+  border-block-end: 1px solid var(--border);
+}
+
+.overrideForm,
+.legacyCard {
+  display: grid;
+  gap: 12px;
+}
+
+.overrideForm {
+  padding: 13px;
+}
+
+.safetyNote {
+  padding: 10px 12px;
+  color: var(--text-soft);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.allocationGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.allocationGrid label,
+.reasonField,
+.selectField {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.inputShell {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.inputShell input {
+  min-width: 0;
+  width: 100%;
+  min-height: 38px;
+  padding: 0;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  font: inherit;
+}
+
+.inputShell small {
+  color: var(--text-soft);
+  font-size: 9px;
+}
+
+.reasonField textarea,
+.selectField select {
+  width: 100%;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font: inherit;
+}
+
+.reasonField textarea {
+  min-height: 86px;
+  padding: 10px 11px;
+  resize: vertical;
+}
+
+.selectField select {
+  min-height: 42px;
+  padding: 0 10px;
+}
+
+.sectionCopy {
+  margin-bottom: 14px;
+}
+
+.legacyCardHeader span {
+  color: var(--text-soft);
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.legacyRows {
+  display: grid;
+  gap: 7px;
+}
+
+.legacyRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 11px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+}
+
+.legacyRow span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.legacyRow small {
+  overflow: hidden;
+  color: var(--text-soft);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.legacyRow b {
+  font-size: 11px;
+}
+
+.correctionCallout {
+  background: var(--surface-soft);
+}
+
+@media (max-width: 760px) {
+  .hero,
+  .correctionCallout {
+    grid-template-columns: 1fr;
+    padding: 18px;
+  }
+
+  .heroActions {
+    min-width: 0;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .sectionHeading,
+  .exceptionTop {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .allocationGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 460px) {
+  .heroActions {
+    grid-template-columns: 1fr;
+  }
+
+  .queue,
+  .legacySection {
+    padding: 14px;
+  }
+
+  .exceptionCard,
+  .legacyCard {
+    padding: 13px;
+  }
+}
