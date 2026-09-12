@@ -15,7 +15,7 @@ test.describe("Task 5 Customer Economics review UX", () => {
     await expect(page.getByRole("heading", { name: "ملاحظات تحتاج مراجعتك" })).toBeVisible();
     await expect(page.getByText("تكلفة اكتساب في شهر بلا عملاء جدد")).toBeVisible();
     await expect(page.getByText("صافي التحصيل لا يطابق سجل معاملات العملاء")).toBeVisible();
-    await expect(page.getByText("4,500 EGP", { exact: true })).toBeVisible();
+    await expect(page.getByText("4,500 EGP", { exact: true }).first()).toBeVisible();
 
     await page.getByText("لدي دليل موثوق — توزيع نفس التكلفة يدويًا").click();
     await expect(page.getByLabel(/المبلغ الموزع على/).first()).toBeVisible();
