@@ -214,14 +214,8 @@ $$;
 -- change an already-existing historical month outside the audited correction workflow.
 do $$
 declare
-  before_value numeric;
-  after_value numeric;
   copied_result record;
 begin
-  select input_value into before_value
-  from public.monthly_expense_entries
-  where id = '76767676-aaaa-4767-8767-767676761002';
-
   begin
     perform public.copy_previous_month_expenses(
       '76767676-aaaa-4767-8767-76767676a001',
@@ -230,14 +224,6 @@ begin
     raise exception 'Copy previous month changed an already-existing historical month';
   exception when invalid_parameter_value then null;
   end;
-
-  select input_value into after_value
-  from public.monthly_expense_entries
-  where id = '76767676-aaaa-4767-8767-767676761002';
-
-  if before_value is distinct from after_value then
-    raise exception 'Historical copy guard rejected the call only after mutating the target month';
-  end if;
 
   select * into strict copied_result
   from public.copy_previous_month_expenses(
@@ -266,7 +252,7 @@ end;
 $$;
 
 -- The historical existence check must occur only after the same transaction lock used by the
--- underlying monthly save helper. This closes the two-concurrent-backfill ON CONFLICT race.
+-- underlying monthly save helper, and the historical guard must run before any copy helper write.
 do $$
 declare
   save_definition text;
@@ -289,6 +275,13 @@ begin
      or strpos(copy_definition, 'select exists') = 0
      or strpos(copy_definition, 'pg_advisory_xact_lock') > strpos(copy_definition, 'select exists') then
     raise exception 'Copy previous month does not serialize before the historical existence check';
+  end if;
+
+  if strpos(copy_definition, 'existing_period and target_month_start < business_current_month') = 0
+     or strpos(copy_definition, 'private.copy_previous_month_expenses_unchecked') = 0
+     or strpos(copy_definition, 'existing_period and target_month_start < business_current_month')
+        > strpos(copy_definition, 'private.copy_previous_month_expenses_unchecked') then
+    raise exception 'Historical copy guard does not execute before the unchecked copy helper';
   end if;
 end;
 $$;
