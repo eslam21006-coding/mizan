@@ -99,7 +99,15 @@ runPsqlFile(
 );
 runPsqlFile("test/business/customer-economics-automatic-allocation.test.sql", environment);
 runPsqlFile("test/business/customer-economics-allocation-residual.test.sql", environment);
+runPsqlFile(
+  "supabase/migrations/20260912173000_customer_economics_automatic_lifetime_contribution_profit.sql",
+  environment,
+);
+runPsqlFile(
+  "test/business/customer-economics-automatic-lifetime-contribution-profit.test.sql",
+  environment,
+);
 
 console.log(
-  "Transaction-history and Customer Economics allocation matrix passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, manual-count conflict tests, exact Net Cash summary, persisted-row verification, completion-summary authorization, customer-name metadata/search isolation, automatic allocation, exact residual reconciliation, revenue coverage, and Customer Economics tenant isolation.",
+  "Transaction-history and Customer Economics matrix passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, manual-count conflict tests, exact Net Cash summary, persisted-row verification, completion-summary authorization, customer-name metadata/search isolation, automatic allocation, exact residual reconciliation, revenue coverage, automatic historical/current Lifetime Contribution Profit, backdated recalculation, legacy exclusion, missing-period blocking, and tenant isolation.",
 );
