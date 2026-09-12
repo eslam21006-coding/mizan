@@ -22,7 +22,7 @@ type LifetimeContributionRow = {
   lifetime_contribution_profit_text: string | null;
   lifetime_contribution_profit_per_customer_text: string | null;
   currency: string | null;
-  quality_state: QualityState;
+  quality_state: string | null;
   transaction_history_complete: boolean;
   missing_relevant_period_count: number | string;
   incomplete_relevant_period_count: number | string;
@@ -64,8 +64,13 @@ function profitabilityResult(value: string | null, currency: string) {
   return `ربح ${formatMoneyText(exact, currency)}`;
 }
 
+/** Allows only the two quality states that are safe to present as a final profitability result. */
+function isCompletedQualityState(state: unknown): state is Exclude<QualityState, "incomplete"> {
+  return state === "actual" || state === "estimated";
+}
+
 /** Returns the founder-facing quality label for one first-purchase month. */
-function qualityLabel(state: QualityState) {
+function qualityLabel(state: unknown) {
   if (state === "actual") return "فعلي";
   if (state === "estimated") return "تقديري";
   return "غير مكتمل";
@@ -179,7 +184,7 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
           <tbody>
             {rows.map((row) => {
               const currency = row.currency ?? baseCurrency;
-              const incomplete = row.quality_state === "incomplete";
+              const incomplete = !isCompletedQualityState(row.quality_state);
               const reasons = incompleteReasons(row);
               return (
                 <tr key={`${row.business_id}:${row.cohort_month}`}>
@@ -267,7 +272,7 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
       <section className={profitStyles.mobileList} aria-label="ربحية العملاء حسب شهر أول شراء — عرض الهاتف">
         {rows.map((row) => {
           const currency = row.currency ?? baseCurrency;
-          const incomplete = row.quality_state === "incomplete";
+          const incomplete = !isCompletedQualityState(row.quality_state);
           const reasons = incompleteReasons(row);
           return (
             <article className={profitStyles.mobileCard} key={`mobile:${row.business_id}:${row.cohort_month}`}>
@@ -344,6 +349,9 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
                       </dd>
                     </div>
                   </dl>
+                  {row.uses_automatic_allocation && !incomplete && (
+                    <small>تم توزيع التكاليف المؤهلة تلقائيًا؛ لا تحتاج إلى إدخال توزيع شهري يدوي.</small>
+                  )}
                 </div>
               </details>
             </article>
