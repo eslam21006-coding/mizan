@@ -159,6 +159,38 @@ test("Task 1 exact reconciliation has no floating point drift", () => {
   if (drift.available) assert.equal(drift.reconciles, false);
 });
 
+test("Task 1 reconciliation rejects every negative cost-pool component", () => {
+  assert.throws(
+    () =>
+      reconcileAuthoritativeCostPool({
+        authoritativeAmount: "-100",
+        allocatedAmounts: ["100"],
+        unallocatedAmount: "0",
+      }),
+    /Cost pool amounts cannot be negative/,
+  );
+
+  assert.throws(
+    () =>
+      reconcileAuthoritativeCostPool({
+        authoritativeAmount: "100",
+        allocatedAmounts: ["-50", "100"],
+        unallocatedAmount: "50",
+      }),
+    /Cost pool amounts cannot be negative/,
+  );
+
+  assert.throws(
+    () =>
+      reconcileAuthoritativeCostPool({
+        authoritativeAmount: "100",
+        allocatedAmounts: ["100"],
+        unallocatedAmount: "-1",
+      }),
+    /Cost pool amounts cannot be negative/,
+  );
+});
+
 test("Task 1 reconciliation preserves missing versus zero", () => {
   assert.deepEqual(
     reconcileAuthoritativeCostPool({
