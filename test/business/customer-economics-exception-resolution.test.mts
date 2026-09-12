@@ -9,6 +9,13 @@ const migration = await readFile(
   ),
   "utf8",
 );
+const hardeningMigration = await readFile(
+  new URL(
+    "../../supabase/migrations/20260912200000_task5_review_hardening.sql",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const matrixRunner = await readFile(
   new URL("../rls/run-transaction-history-completeness-matrix.mjs", import.meta.url),
   "utf8",
@@ -54,14 +61,40 @@ test("Task 5 historical edits require an explicit audited correction path", () =
   );
 });
 
-test("Task 5 database regression matrix applies the migration and numerical/security cases", () => {
+test("Task 5 hardening makes invalid overrides recoverable and serializes historical write decisions", () => {
+  assert.match(hardeningMigration, /customer_economics_manual_override_status[\s\S]*not status\.is_valid/i);
+  assert.match(hardeningMigration, /require_plan_exception := false/i);
+  assert.match(hardeningMigration, /copy_previous_month_expenses_unchecked/i);
+  assert.match(
+    hardeningMigration,
+    /pg_advisory_xact_lock[\s\S]*select exists[\s\S]*existing_period and target_month_start < business_current_month/is,
+  );
+  assert.match(
+    hardeningMigration,
+    /revoke all on function private\.copy_previous_month_expenses_unchecked\(uuid, date\) from authenticated/i,
+  );
+});
+
+test("Task 5 database regression matrix applies all migrations before numerical/security cases", () => {
   const migrationIndex = matrixRunner.indexOf(
     "supabase/migrations/20260912190000_customer_economics_exception_resolution.sql",
+  );
+  const snapshotMigrationIndex = matrixRunner.indexOf(
+    "supabase/migrations/20260912193000_task5_canonical_historical_snapshots.sql",
+  );
+  const hardeningMigrationIndex = matrixRunner.indexOf(
+    "supabase/migrations/20260912200000_task5_review_hardening.sql",
   );
   const testIndex = matrixRunner.indexOf(
     "test/business/customer-economics-exception-resolution.test.sql",
   );
+  const hardeningTestIndex = matrixRunner.indexOf(
+    "test/business/customer-economics-exception-resolution-hardening.test.sql",
+  );
 
   assert.ok(migrationIndex >= 0);
-  assert.ok(testIndex > migrationIndex);
+  assert.ok(snapshotMigrationIndex > migrationIndex);
+  assert.ok(hardeningMigrationIndex > snapshotMigrationIndex);
+  assert.ok(testIndex > hardeningMigrationIndex);
+  assert.ok(hardeningTestIndex > testIndex);
 });
