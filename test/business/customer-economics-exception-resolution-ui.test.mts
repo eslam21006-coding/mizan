@@ -16,6 +16,13 @@ const reviewPanel = await readFile(
   ),
   "utf8",
 );
+const monthlyActions = await readFile(
+  new URL(
+    "../../src/app/(app)/businesses/[businessId]/monthly/actions.ts",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const correctionActions = await readFile(
   new URL(
     "../../src/app/(app)/businesses/[businessId]/monthly/correction/actions.ts",
@@ -46,4 +53,11 @@ test("Task 5 historical correction UI cannot silently fall back to the ordinary 
   assert.match(correctionActions, /target_correction_reason/);
   assert.match(correctionPage, /تصحيح تاريخي صريح/);
   assert.match(correctionPage, /التصحيح التاريخي لا ينشئ شهرًا مفقودًا/);
+});
+
+test("Task 5 normal monthly edits route a backend historical rejection into the audited correction UI", () => {
+  assert.match(monthlyActions, /explicit historical correction workflow/);
+  assert.match(monthlyActions, /monthly\/correction/);
+  assert.match(monthlyActions, /historical-required/);
+  assert.match(correctionPage, /هذا الشهر محفوظ تاريخيًا/);
 });
