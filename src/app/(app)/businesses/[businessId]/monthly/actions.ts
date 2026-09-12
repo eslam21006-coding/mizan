@@ -26,6 +26,12 @@ function monthlyPath(
   return `/businesses/${businessId}/monthly?${query.toString()}`;
 }
 
+/** Builds the explicit audited-correction URL for an existing historical month. */
+function historicalCorrectionPath(businessId: string, monthKey: string) {
+  const query = new URLSearchParams({ month: monthKey, status: "historical-required" });
+  return `/businesses/${businessId}/monthly/correction?${query.toString()}`;
+}
+
 /** Revalidates monthly views and redirects to the selected month with a status code. */
 function redirectMonthly(businessId: string, monthKey: string, status: string): never {
   revalidatePath("/businesses");
@@ -137,6 +143,10 @@ export async function saveMonthlyActuals(formData: FormData) {
   });
 
   if (error) {
+    if (error.message.includes("explicit historical correction workflow")) {
+      revalidatePath(`/businesses/${businessId}/monthly`);
+      redirect(historicalCorrectionPath(businessId, month.monthKey));
+    }
     redirectMonthly(businessId, month.monthKey, "save-failed");
   }
 
