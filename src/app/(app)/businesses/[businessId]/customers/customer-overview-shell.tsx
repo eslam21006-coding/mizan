@@ -32,9 +32,9 @@ export function CustomerOverviewShell({
       <section className={styles.heroShell} aria-labelledby="customer-overview-title">
         <div className={styles.heroCopy}>
           <span className={styles.kicker}>اقتصاديات العميل · {businessName}</span>
-          <h1 id="customer-overview-title">العملاء وقيمة العميل</h1>
+          <h1 id="customer-overview-title">العملاء وقيمة وربحية العميل</h1>
           <p>
-            اعرف كم دفع عملاؤك فعلًا، من اشترى أكثر من مرة، ومتوسط ما دفعه العملاء منذ أول شراء. ميزان لا يعتبر إيراد فترة واحدة LTV؛ قيمة العميل المحققة تعتمد على تاريخ المعاملات الفعلي.
+            اعرف كم دفع عملاؤك فعلًا، والربح المحقق منهم بعد التكاليف المرتبطة بالعميل. ميزان يجمع المعاملات ويوزع التكاليف المؤهلة تلقائيًا؛ لا تحتاج إلى توزيع التكاليف يدويًا لكل شهر أول شراء.
           </p>
           <div className={styles.heroMeta}>
             <span>{businessName}</span>
@@ -64,12 +64,12 @@ export function CustomerOverviewShell({
       <details className={styles.setupDisclosure}>
         <summary>
           <span className={styles.setupSummaryText}>
-            <strong className={styles.setupSummaryTitle}>إعدادات التحليل المتقدمة</strong>
+            <strong className={styles.setupSummaryTitle}>مصادر بيانات اقتصاديات العميل</strong>
             <small className={styles.setupSummaryDescription}>
-              ربط مصادر الإيراد وإضافة التكاليف المرتبطة بالعميل عند الحاجة.
+              المعاملات والمصروفات الشهرية هما المدخلان الأساسيان. ربط مصدر الإيراد اختياري للتحليل التفصيلي.
             </small>
           </span>
-          <span className={styles.disclosureAction}>إعدادات التحليل</span>
+          <span className={styles.disclosureAction}>عرض المصادر</span>
         </summary>
         <div className={styles.workflowGrid}>
           <article className={styles.workflowCard}>
@@ -78,7 +78,7 @@ export function CustomerOverviewShell({
               <span className={styles.workflowTag}>المعاملات</span>
             </div>
             <h3>استيراد التحصيلات والاسترجاعات</h3>
-            <p>سجل بوابة الدفع هو المصدر الأساسي لتاريخ أول شراء وصافي التحصيل.</p>
+            <p>سجل بوابة الدفع هو المصدر الأساسي لأول شراء وصافي التحصيل وقيمة العميل المحققة.</p>
             <Link className={styles.workflowLink} href={`/businesses/${businessId}/customers/import`}>
               فتح الاستيراد
             </Link>
@@ -87,30 +87,27 @@ export function CustomerOverviewShell({
           <article className={styles.workflowCard}>
             <div className={styles.workflowCardTop}>
               <span className={styles.stepBadge}>2</span>
-              <span className={styles.workflowTag}>مصدر القيمة</span>
+              <span className={styles.workflowTag}>المصروفات</span>
             </div>
-            <h3>ربط مصادر الإيراد</h3>
-            <p>اربط Front-End وBackend والمصادر الأخرى يدويًا؛ ميزان لا يخمّن Attribution.</p>
-            <Link
-              className={styles.workflowLink}
-              href={`/businesses/${businessId}/customers/revenue-stream-attribution`}
-            >
-              ربط مصادر الإيراد
+            <h3>سجل المصروفات مرة واحدة</h3>
+            <p>ميزان يستخدم تصنيف وسلوك المصروفات الشهرية ليحدد ما يدخل في ربحية العميل وما يبقى في Real Net Profit.</p>
+            <Link className={styles.workflowLink} href={`/businesses/${businessId}/expenses`}>
+              فتح إعداد المصروفات
             </Link>
           </article>
 
           <article className={styles.workflowCard}>
             <div className={styles.workflowCardTop}>
               <span className={styles.stepBadge}>3</span>
-              <span className={styles.workflowTag}>ربحية العميل</span>
+              <span className={styles.workflowTag}>اختياري</span>
             </div>
-            <h3>مراجعة التكاليف المرتبطة بالعميل</h3>
-            <p>راجع تكلفة الاكتساب والتكاليف المتغيرة المرتبطة بالعميل. التكاليف الشهرية الثابتة تبقى في Real Net Profit ولا تخصم هنا.</p>
+            <h3>ربط مصادر الإيراد عند الحاجة</h3>
+            <p>اربط Front-End وBackend والمصادر الأخرى فقط إذا كنت تريد تحليل مصدر القيمة. ميزان لا يخمّن Attribution.</p>
             <Link
               className={styles.workflowLink}
-              href={`/businesses/${businessId}/customers/lifetime-contribution`}
+              href={`/businesses/${businessId}/customers/revenue-stream-attribution`}
             >
-              مراجعة التكاليف
+              ربط مصادر الإيراد
             </Link>
           </article>
         </div>
@@ -125,16 +122,16 @@ export function CustomerOverviewShell({
             content: observedLtv,
           },
           {
+            id: "contribution",
+            eyebrow: "محسوبة تلقائيًا من المصروفات",
+            label: "ربحية العميل",
+            content: contribution,
+          },
+          {
             id: "revenue-streams",
             eyebrow: "من أين جاء التحصيل؟",
             label: "مصادر الإيراد",
             content: revenueStreams,
-          },
-          {
-            id: "contribution",
-            eyebrow: "بعد التكاليف المرتبطة بالعميل",
-            label: "ربحية العميل بعد التكاليف",
-            content: contribution,
           },
           {
             id: "customers",
