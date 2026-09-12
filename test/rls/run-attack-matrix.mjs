@@ -91,6 +91,8 @@ export const sqlFiles = Object.freeze([
   "test/business/lifetime-contribution-cost-eligibility.test.sql",
   "supabase/migrations/20260912103000_customer_economics_foundation.sql",
   "test/business/customer-economics-foundation.test.sql",
+  "supabase/migrations/20260912150000_customer_economics_automatic_allocation.sql",
+  "test/business/customer-economics-automatic-allocation.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -166,9 +168,9 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     if (result.error) throw new Error(`Failed to execute psql for ${execution.sqlFile}: ${result.error.message}`);
     if (result.status !== 0) return result.status ?? 1;
   }
-  console.log("Mizan database-backed security and business matrices passed, including Customer Economics foundation isolation, lifetime cost eligibility review, customer-history overview isolation, owner/admin-only transaction mapping memory, and confirmed whole-business deletion.");
+  console.log("Mizan database-backed security and business matrices passed, including automatic Customer Economics allocation/reconciliation, Customer Economics foundation isolation, lifetime cost eligibility review, customer-history overview isolation, owner/admin-only transaction mapping memory, and confirmed whole-business deletion.");
   return 0;
 }
 
-const isMainModule = Boolean(process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]));
+const isMainModule = Boolean(process.argv[1] && fileURLToPath(import.meta.url) === resolve(import.meta.url) && fileURLToPath(import.meta.url) === resolve(process.argv[1]));
 if (isMainModule) process.exitCode = runAttackMatrix();
