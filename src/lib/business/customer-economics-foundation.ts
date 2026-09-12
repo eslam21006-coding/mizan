@@ -82,6 +82,7 @@ export type CustomerEconomicsCostPoolFoundation = {
   eligibilityReason: CustomerEconomicsCostRule["reason"];
 };
 
+/** Derives deterministic V1 customer-economics eligibility from the preserved expense category and behavior. */
 export function classifyCustomerEconomicsCost(input: {
   category: CustomerEconomicsExpenseCategory;
   behavior: CustomerEconomicsExpenseBehavior;
@@ -129,6 +130,7 @@ export function classifyCustomerEconomicsCost(input: {
   };
 }
 
+/** Builds a Customer Economics cost-pool record without creating or recalculating a second expense amount. */
 export function buildCustomerEconomicsCostPoolFoundation(input: {
   authoritativeSourceId: string;
   businessId: string;
@@ -171,6 +173,7 @@ export function buildCustomerEconomicsCostPoolFoundation(input: {
   };
 }
 
+/** Rejects duplicate monetary source identities before any Customer Economics allocation path is constructed. */
 export function assertUniqueAuthoritativeCostSources(
   pools: readonly Pick<
     CustomerEconomicsCostPoolFoundation,
@@ -185,6 +188,7 @@ export function assertUniqueAuthoritativeCostSources(
   }
 }
 
+/** Evaluates the locked V1 customer-revenue coverage difference and blocking tolerance with exact arithmetic. */
 export function evaluateCustomerRevenueCoverage(
   businessNetCash: string,
   transactionNetCash: string,
@@ -209,6 +213,14 @@ export function evaluateCustomerRevenueCoverage(
   };
 }
 
+/** Throws when a cost-pool reconciliation component is negative. */
+function assertNonNegativeCostAmount(amount: Rational) {
+  if (compareRationals(amount, ZERO_RATIONAL) < 0) {
+    throw new Error("Cost pool amounts cannot be negative.");
+  }
+}
+
+/** Reconciles allocated plus unallocated cost exactly to one authoritative non-negative cost pool. */
 export function reconcileAuthoritativeCostPool(input: {
   authoritativeAmount: string | null;
   allocatedAmounts: readonly string[];
@@ -220,8 +232,14 @@ export function reconcileAuthoritativeCostPool(input: {
 
   const authoritative = rationalFromDecimalString(input.authoritativeAmount);
   const unallocated = rationalFromDecimalString(input.unallocatedAmount);
-  const allocated = input.allocatedAmounts.reduce<Rational>(
-    (total, amount) => addRationals(total, rationalFromDecimalString(amount)),
+  const parsedAllocated = input.allocatedAmounts.map(rationalFromDecimalString);
+
+  assertNonNegativeCostAmount(authoritative);
+  assertNonNegativeCostAmount(unallocated);
+  for (const amount of parsedAllocated) assertNonNegativeCostAmount(amount);
+
+  const allocated = parsedAllocated.reduce<Rational>(
+    (total, amount) => addRationals(total, amount),
     ZERO_RATIONAL,
   );
   const reconciledTotal = addRationals(allocated, unallocated);
