@@ -9,6 +9,10 @@ import type {
 import { AppShell } from "@/components/app-shell";
 
 const BUSINESS_ID = "99999999-9999-4999-8999-999999999999";
+const fixtureShellProps = {
+  role: "admin" as const,
+  email: "admin.task5@example.test",
+};
 
 const revenueRows: RevenueInputRow[] = [
   {
@@ -38,7 +42,7 @@ export default async function CustomerEconomicsReviewFixturePage() {
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") notFound();
 
   return (
-    <AppShell role="admin" email="admin.task5@example.test">
+    <AppShell {...fixtureShellProps}>
       <div className="page-stack">
         <CustomerEconomicsReviewPanel
           businessId={BUSINESS_ID}
