@@ -93,7 +93,12 @@ runPsqlFile("supabase/migrations/20260908100000_customer_name_metadata.sql", env
 runPsqlFile("supabase/migrations/20260908173000_customer_name_email_search.sql", environment);
 runPsqlFile("test/business/customer-name-metadata.test.sql", environment);
 runPsqlFile("test/business/customer-name-search.test.sql", environment);
+runPsqlFile(
+  "supabase/migrations/20260912150000_customer_economics_automatic_allocation.sql",
+  environment,
+);
+runPsqlFile("test/business/customer-economics-automatic-allocation.test.sql", environment);
 
 console.log(
-  "Transaction-history and import-completion matrix passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, manual-count conflict tests, exact Net Cash summary, persisted-row verification, completion-summary authorization, customer-name metadata, name-or-email search, and customer-search tenant isolation.",
+  "Transaction-history and Customer Economics allocation matrix passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, manual-count conflict tests, exact Net Cash summary, persisted-row verification, completion-summary authorization, customer-name metadata/search isolation, automatic allocation, exact reconciliation, revenue coverage, and Customer Economics tenant isolation.",
 );
