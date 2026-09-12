@@ -113,21 +113,21 @@ insert into public.customer_transactions (
   imported_by_user_id, source_transaction_at, transaction_at, currency, normalized_outcome
 )
 select
-  '72727272-7272-4727-8727-72727272a001', 'task2-fixture', 'dec-aug-' || g,
+  '72727272-7272-4727-8727-72727272a001'::uuid, 'task2-fixture', 'dec-aug-' || g,
   gen_random_uuid(), 'aug-' || g || '@example.test', '2026-12-05', 100, 'collection', 300 + g,
-  '72727272-7272-4727-8727-727272720001', '2026-12-05T10:00:00Z', '2026-12-05T10:00:00Z', 'USD', 'successful'
+  '72727272-7272-4727-8727-727272720001'::uuid, '2026-12-05T10:00:00Z', '2026-12-05T10:00:00Z', 'USD', 'successful'
 from generate_series(1, 3) as g
 union all
 select
-  '72727272-7272-4727-8727-72727272a001', 'task2-fixture', 'dec-sep-' || g,
+  '72727272-7272-4727-8727-72727272a001'::uuid, 'task2-fixture', 'dec-sep-' || g,
   gen_random_uuid(), 'sep-' || g || '@example.test', '2026-12-05', 100, 'collection', 400 + g,
-  '72727272-7272-4727-8727-727272720001', '2026-12-05T10:00:00Z', '2026-12-05T10:00:00Z', 'USD', 'successful'
+  '72727272-7272-4727-8727-727272720001'::uuid, '2026-12-05T10:00:00Z', '2026-12-05T10:00:00Z', 'USD', 'successful'
 from generate_series(1, 4) as g
 union all
 select
-  '72727272-7272-4727-8727-72727272a001', 'task2-fixture', 'dec-nov-' || g,
+  '72727272-7272-4727-8727-72727272a001'::uuid, 'task2-fixture', 'dec-nov-' || g,
   gen_random_uuid(), 'nov-' || g || '@example.test', '2026-12-05', 100, 'collection', 500 + g,
-  '72727272-7272-4727-8727-727272720001', '2026-12-05T10:00:00Z', '2026-12-05T10:00:00Z', 'USD', 'successful'
+  '72727272-7272-4727-8727-727272720001'::uuid, '2026-12-05T10:00:00Z', '2026-12-05T10:00:00Z', 'USD', 'successful'
 from generate_series(1, 3) as g;
 
 insert into public.customer_transactions (
