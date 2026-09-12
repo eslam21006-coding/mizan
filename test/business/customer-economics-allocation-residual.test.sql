@@ -147,6 +147,9 @@ declare
   allocation_count bigint;
   distinct_amount_count bigint;
   total_allocated numeric;
+  january_amount numeric;
+  february_amount numeric;
+  march_amount numeric;
 begin
   select
     authoritative_amount,
@@ -167,6 +170,21 @@ begin
   from public.customer_economics_cost_allocations
   where authoritative_source_id = '73737373-7373-4737-8737-737373731001';
 
+  select allocated_amount into strict january_amount
+  from public.customer_economics_cost_allocations
+  where authoritative_source_id = '73737373-7373-4737-8737-737373731001'
+    and cohort_month = '2027-01-01'::date;
+
+  select allocated_amount into strict february_amount
+  from public.customer_economics_cost_allocations
+  where authoritative_source_id = '73737373-7373-4737-8737-737373731001'
+    and cohort_month = '2027-02-01'::date;
+
+  select allocated_amount into strict march_amount
+  from public.customer_economics_cost_allocations
+  where authoritative_source_id = '73737373-7373-4737-8737-737373731001'
+    and cohort_month = '2027-03-01'::date;
+
   if reconciliation_row.authoritative_amount is distinct from 550
     or reconciliation_row.allocated_amount is distinct from 550
     or reconciliation_row.unallocated_amount is distinct from 0
@@ -178,8 +196,10 @@ begin
     raise exception 'Residual allocation failed exact reconciliation';
   end if;
 
-  if distinct_amount_count is distinct from 2 then
-    raise exception 'Residual allocation branch was not exercised for equal-weight thirds';
+  if distinct_amount_count is distinct from 2
+    or january_amount is distinct from february_amount
+    or march_amount is not distinct from january_amount then
+    raise exception 'Residual allocation did not land on the final-ranked March cohort';
   end if;
 end;
 $$;
