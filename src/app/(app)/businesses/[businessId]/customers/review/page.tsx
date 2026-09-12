@@ -34,7 +34,7 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
   const [
     businessResult,
     exceptionsResult,
-    cohortsResult,
+    trustedMonthsResult,
     legacyResult,
     legacyReconciliationsResult,
     poolsResult,
@@ -52,9 +52,10 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
       .eq("business_id", businessId)
       .order("activity_month", { ascending: false, nullsFirst: true }),
     supabase
-      .from("customer_acquisition_cohorts")
+      .from("customer_economics_activity_evidence")
       .select("cohort_month")
       .eq("business_id", businessId)
+      .eq("allocation_driver", "new_customers")
       .order("cohort_month", { ascending: true }),
     supabase
       .from("customer_economics_legacy_manual_allocations")
@@ -82,7 +83,7 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
 
   const dataLoadError = Boolean(
     exceptionsResult.error ||
-      cohortsResult.error ||
+      trustedMonthsResult.error ||
       legacyResult.error ||
       legacyReconciliationsResult.error ||
       poolsResult.error,
@@ -101,13 +102,9 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
     );
   }
 
-  const trustedMonthValues = new Set<string>();
-  for (const row of cohortsResult.data ?? []) {
-    if (row.cohort_month) trustedMonthValues.add(String(row.cohort_month));
-  }
-  const trustedMonths = [...trustedMonthValues]
-    .sort()
-    .map((cohortMonth) => ({ cohortMonth }));
+  const trustedMonths = (trustedMonthsResult.data ?? [])
+    .filter((row) => row.cohort_month)
+    .map((row) => ({ cohortMonth: String(row.cohort_month) }));
 
   const reconciledLegacyIds = new Set(
     (legacyReconciliationsResult.data ?? []).map((row) => String(row.legacy_allocation_id)),
