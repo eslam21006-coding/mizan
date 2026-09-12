@@ -8,6 +8,8 @@ export type Rational = {
 export const ZERO_RATIONAL: Rational = { numerator: 0n, denominator: 1n };
 export const ONE_RATIONAL: Rational = { numerator: 1n, denominator: 1n };
 
+const DECIMAL_PATTERN = /^-?\d+(?:\.\d+)?$/;
+
 function gcd(left: bigint, right: bigint) {
   let a = left < 0n ? -left : left;
   let b = right < 0n ? -right : right;
@@ -30,6 +32,30 @@ export function normalizeRational(value: Rational): Rational {
   const denominator = value.denominator * sign;
   const divisor = gcd(numerator, denominator);
   return { numerator: numerator / divisor, denominator: denominator / divisor };
+}
+
+export function rationalFromDecimalString(value: string): Rational {
+  const raw = value.trim();
+  if (!DECIMAL_PATTERN.test(raw)) {
+    throw new Error("Exact decimal must be a canonical decimal string.");
+  }
+
+  const negative = raw.startsWith("-");
+  const unsigned = negative ? raw.slice(1) : raw;
+  const [whole, fraction = ""] = unsigned.split(".");
+  const magnitude = BigInt(`${whole}${fraction}` || "0");
+
+  return normalizeRational({
+    numerator: negative ? -magnitude : magnitude,
+    denominator: 10n ** BigInt(fraction.length),
+  });
+}
+
+export function absoluteRational(value: Rational): Rational {
+  const normalized = normalizeRational(value);
+  return normalized.numerator < 0n
+    ? { numerator: -normalized.numerator, denominator: normalized.denominator }
+    : normalized;
 }
 
 export function exactRatioFromRational(value: Rational): ExactRatio {
