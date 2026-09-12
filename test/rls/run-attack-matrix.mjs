@@ -89,6 +89,8 @@ export const sqlFiles = Object.freeze([
   "test/business/customer-history-overview.test.sql",
   "supabase/migrations/20260908190000_lifetime_contribution_cost_eligibility.sql",
   "test/business/lifetime-contribution-cost-eligibility.test.sql",
+  "supabase/migrations/20260912103000_customer_economics_foundation.sql",
+  "test/business/customer-economics-foundation.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
@@ -164,7 +166,7 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
     if (result.error) throw new Error(`Failed to execute psql for ${execution.sqlFile}: ${result.error.message}`);
     if (result.status !== 0) return result.status ?? 1;
   }
-  console.log("Mizan database-backed security and business matrices passed, including lifetime cost eligibility review, customer-history overview isolation, owner/admin-only transaction mapping memory, and confirmed whole-business deletion.");
+  console.log("Mizan database-backed security and business matrices passed, including Customer Economics foundation isolation, lifetime cost eligibility review, customer-history overview isolation, owner/admin-only transaction mapping memory, and confirmed whole-business deletion.");
   return 0;
 }
 
