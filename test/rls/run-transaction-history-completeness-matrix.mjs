@@ -107,7 +107,12 @@ runPsqlFile(
   "test/business/customer-economics-automatic-lifetime-contribution-profit.test.sql",
   environment,
 );
+runPsqlFile(
+  "supabase/migrations/20260912190000_customer_economics_exception_resolution.sql",
+  environment,
+);
+runPsqlFile("test/business/customer-economics-exception-resolution.test.sql", environment);
 
 console.log(
-  "Transaction-history and Customer Economics matrix passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, manual-count conflict tests, exact Net Cash summary, persisted-row verification, completion-summary authorization, customer-name metadata/search isolation, automatic allocation, exact residual reconciliation, revenue coverage, automatic historical/current Lifetime Contribution Profit, backdated recalculation, legacy exclusion, missing-period blocking, and tenant isolation.",
+  "Transaction-history and Customer Economics matrix passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, manual-count conflict tests, exact Net Cash summary, persisted-row verification, completion-summary authorization, customer-name metadata/search isolation, automatic allocation, exact residual reconciliation, revenue coverage, automatic historical/current Lifetime Contribution Profit, backdated recalculation, legacy exclusion, missing-period blocking, Task 5 exception-only exact-pool overrides, legacy reconciliation, audited historical correction, and tenant isolation.",
 );
