@@ -154,8 +154,8 @@ on conflict (business_id) do update set
 
 -- Preserve two old manual allocations for the separate 5,000 authoritative pool.
 insert into public.customer_cohort_cost_allocations (
-  id, business_id, cohort_month, cost_type, amount, attribution_type,
-  note, created_by_user_id, eligibility_confirmed
+  id, business_id, cohort_month, cost_type, amount, attribution_method,
+  note, created_by_user_id, updated_by_user_id
 )
 values
   (
@@ -164,10 +164,10 @@ values
     '2026-01-01',
     'acquisition',
     3000,
-    'explicit',
+    'explicit_allocation',
     'Legacy January allocation',
     '75757575-7575-4757-8757-757575750001',
-    true
+    '75757575-7575-4757-8757-757575750001'
   ),
   (
     '75757575-aaaa-4757-8757-757575752002',
@@ -175,10 +175,10 @@ values
     '2026-02-01',
     'acquisition',
     2000,
-    'explicit',
+    'explicit_allocation',
     'Legacy February allocation',
     '75757575-7575-4757-8757-757575750001',
-    true
+    '75757575-7575-4757-8757-757575750001'
   );
 
 set local role authenticated;
