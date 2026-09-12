@@ -79,6 +79,28 @@ async function installLifetimeEconomicsMocks(page: Page) {
       },
       {
         business_id: "mock",
+        cohort_month: "2026-04-01",
+        observation_cutoff_date: "2026-08-31",
+        original_cohort_size: 1,
+        lifetime_net_cash_text: "4000",
+        acquisition_costs_text: "500",
+        variable_fulfillment_costs_text: "0",
+        other_variable_costs_text: "0",
+        variable_financial_costs_text: "0",
+        lifetime_attributable_costs_text: "500",
+        lifetime_contribution_profit_text: "3500",
+        lifetime_contribution_profit_per_customer_text: "3500",
+        currency: "EGP",
+        quality_state: "future_state",
+        transaction_history_complete: true,
+        missing_relevant_period_count: 0,
+        incomplete_relevant_period_count: 0,
+        estimated_relevant_period_count: 0,
+        legacy_manual_allocation_count: 0,
+        uses_automatic_allocation: true,
+      },
+      {
+        business_id: "mock",
         cohort_month: "2026-08-01",
         observation_cutoff_date: "2026-08-31",
         original_cohort_size: 1,
@@ -141,6 +163,7 @@ test.describe("Customer profitability UX", () => {
     });
     const actualRow = contributionTable.getByRole("row").filter({ hasText: "2026-03-01" });
     const estimatedRow = contributionTable.getByRole("row").filter({ hasText: "2026-01-01" });
+    const unknownQualityRow = contributionTable.getByRole("row").filter({ hasText: "2026-04-01" });
     const incompleteRow = contributionTable.getByRole("row").filter({ hasText: "2026-08-01" });
 
     await expect(actualRow.locator("td").nth(2)).toContainText("3,000 EGP");
@@ -150,6 +173,10 @@ test.describe("Customer profitability UX", () => {
     await expect(estimatedRow.locator("td").nth(2)).toContainText("10,000 EGP");
     await expect(estimatedRow.locator("td").nth(3)).toHaveText("ربح 5,700 EGP");
     await expect(estimatedRow.locator("td").nth(4)).toContainText("تقديري");
+
+    await expect(unknownQualityRow.locator("td").nth(2)).toContainText("4,000 EGP");
+    await expect(unknownQualityRow.locator("td").nth(3)).toHaveText("غير متاح حتى تكتمل البيانات");
+    await expect(unknownQualityRow.locator("td").nth(4)).toContainText("غير مكتمل");
 
     await expect(incompleteRow.locator("td").nth(2)).toContainText("6,829 EGP");
     await expect(incompleteRow.locator("td").nth(3)).toHaveText("غير متاح حتى تكتمل البيانات");
@@ -163,6 +190,11 @@ test.describe("Customer profitability UX", () => {
     await expect(estimatedRow.getByText("ربح 5,700 EGP", { exact: true })).toBeVisible();
     await expect(estimatedRow.getByText(/لا تحتاج إلى إدخال توزيع شهري يدوي/)).toBeVisible();
 
+    await unknownQualityRow.getByText("عرض طريقة الحساب").click();
+    await expect(unknownQualityRow.getByText(/لا يعرض ميزان ربحًا نهائيًا/)).toBeVisible();
+    await expect(unknownQualityRow.getByText("الربح المحقق للمجموعة حتى الآن")).toBeVisible();
+    await expect(unknownQualityRow.getByText("ربح 3,500 EGP", { exact: true })).toHaveCount(0);
+
     await incompleteRow.getByText("عرض طريقة الحساب").click();
     await expect(incompleteRow.getByText(/يوجد نشاط لعملاء في شهر لا توجد له بيانات مالية شهرية مكتملة/)).toBeVisible();
     await expect(incompleteRow.getByText("الربح المحقق للمجموعة حتى الآن")).toBeVisible();
@@ -172,9 +204,13 @@ test.describe("Customer profitability UX", () => {
     await expect(page.getByText(/كوهورت/)).toHaveCount(0);
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(
-      page.getByRole("region", { name: "ربحية العملاء حسب شهر أول شراء — عرض الهاتف" }),
-    ).toBeVisible();
+    const mobileRegion = page.getByRole("region", {
+      name: "ربحية العملاء حسب شهر أول شراء — عرض الهاتف",
+    });
+    await expect(mobileRegion).toBeVisible();
+    const estimatedMobileCard = mobileRegion.locator("article").filter({ hasText: "10,000 EGP" });
+    await estimatedMobileCard.getByText("عرض طريقة الحساب").click();
+    await expect(estimatedMobileCard.getByText(/لا تحتاج إلى إدخال توزيع شهري يدوي/)).toBeVisible();
     await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     expect(browserErrors).toEqual([]);
   });
