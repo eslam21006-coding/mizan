@@ -32,6 +32,12 @@ function historicalCorrectionPath(businessId: string, monthKey: string) {
   return `/businesses/${businessId}/monthly/correction?${query.toString()}`;
 }
 
+/** Sends a rejected normal historical write to the explicit audited correction workflow. */
+function redirectHistoricalCorrection(businessId: string, monthKey: string): never {
+  revalidatePath(`/businesses/${businessId}/monthly`);
+  redirect(historicalCorrectionPath(businessId, monthKey));
+}
+
 /** Revalidates monthly views and redirects to the selected month with a status code. */
 function redirectMonthly(businessId: string, monthKey: string, status: string): never {
   revalidatePath("/businesses");
@@ -144,8 +150,7 @@ export async function saveMonthlyActuals(formData: FormData) {
 
   if (error) {
     if (error.message.includes("explicit historical correction workflow")) {
-      revalidatePath(`/businesses/${businessId}/monthly`);
-      redirect(historicalCorrectionPath(businessId, month.monthKey));
+      redirectHistoricalCorrection(businessId, month.monthKey);
     }
     redirectMonthly(businessId, month.monthKey, "save-failed");
   }
@@ -169,6 +174,9 @@ export async function copyPreviousMonthExpenses(formData: FormData) {
   });
 
   if (error) {
+    if (error.message.includes("explicit historical correction workflow")) {
+      redirectHistoricalCorrection(businessId, month.monthKey);
+    }
     redirectMonthly(businessId, month.monthKey, "copy-failed");
   }
 
