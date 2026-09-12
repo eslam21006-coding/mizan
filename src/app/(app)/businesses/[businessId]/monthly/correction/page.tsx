@@ -95,7 +95,14 @@ export default async function HistoricalCorrectionPage({
           </label>
           <button type="submit">فتح الشهر</button>
         </form>
-        <div className={styles.errorStatus}>اختر شهرًا قبل {currentMonthKey} لاستخدام مسار التصحيح التاريخي.</div>
+        {statusMessage && (
+          <div className={statusIsError ? styles.errorStatus : styles.successStatus} role="status">
+            {statusMessage}
+          </div>
+        )}
+        <div className={styles.errorStatus}>
+          اختر شهرًا قبل {monthLabel(`${currentMonthKey}-01`)} لاستخدام مسار التصحيح التاريخي.
+        </div>
       </div>
     );
   }
@@ -162,6 +169,11 @@ export default async function HistoricalCorrectionPage({
           </label>
           <button type="submit">فتح الشهر</button>
         </form>
+        {statusMessage && (
+          <div className={statusIsError ? styles.errorStatus : styles.successStatus} role="status">
+            {statusMessage}
+          </div>
+        )}
         <section className={styles.emptyState}>
           <div>
             <span className={styles.eyebrow}>لا توجد نسخة تاريخية بعد</span>
