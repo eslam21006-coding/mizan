@@ -172,5 +172,5 @@ export function runAttackMatrix(databaseUrl = process.env.RLS_TEST_DATABASE_URL,
   return 0;
 }
 
-const isMainModule = Boolean(process.argv[1] && fileURLToPath(import.meta.url) === resolve(import.meta.url) && fileURLToPath(import.meta.url) === resolve(process.argv[1]));
+const isMainModule = Boolean(process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1]));
 if (isMainModule) process.exitCode = runAttackMatrix();
