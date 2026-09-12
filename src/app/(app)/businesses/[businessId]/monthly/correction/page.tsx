@@ -25,6 +25,8 @@ type HistoricalCorrectionPageProps = {
 
 const STATUS_MESSAGES: Record<string, string> = {
   corrected: "تم حفظ التصحيح التاريخي وتسجيل نسخة قبل وبعد مع سبب التعديل.",
+  "historical-required":
+    "هذا الشهر محفوظ تاريخيًا. استخدم مسار التصحيح أدناه، واكتب سبب التعديل قبل الحفظ.",
   "invalid-month": "صيغة الشهر غير صحيحة.",
   "invalid-input": "راجع القيم وسبب التصحيح. السبب مطلوب ولا يتجاوز 500 حرف.",
   "invalid-customers": "عدد العملاء الجدد لا يمكن أن يتجاوز إجمالي العملاء الذين دفعوا خلال الشهر.",
@@ -68,7 +70,9 @@ export default async function HistoricalCorrectionPage({
   if (!selectedMonth) notFound();
 
   const statusMessage = query.status ? STATUS_MESSAGES[query.status] ?? null : null;
-  const statusIsError = Boolean(query.status && query.status !== "corrected");
+  const statusIsError = Boolean(
+    query.status && !["corrected", "historical-required"].includes(query.status),
+  );
   const isHistorical = selectedMonth.monthKey < currentMonthKey;
 
   if (!isHistorical) {
