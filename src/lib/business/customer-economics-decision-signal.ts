@@ -24,6 +24,7 @@ type ExactDecimal = {
 const DECIMAL_PATTERN = /^-?\d+(?:\.\d+)?$/;
 const ZERO: ExactDecimal = { coefficient: 0n, scale: 0 };
 
+/** Removes redundant decimal scale while preserving the exact signed value. */
 function normalize(value: ExactDecimal): ExactDecimal {
   if (value.coefficient === 0n) return ZERO;
   let coefficient = value.coefficient;
@@ -35,6 +36,7 @@ function normalize(value: ExactDecimal): ExactDecimal {
   return { coefficient, scale };
 }
 
+/** Parses a plain decimal string into bigint coefficient/scale form without floating-point loss. */
 function parseDecimal(value: string): ExactDecimal | null {
   const raw = value.trim();
   if (!DECIMAL_PATTERN.test(raw)) return null;
@@ -48,6 +50,7 @@ function parseDecimal(value: string): ExactDecimal | null {
   });
 }
 
+/** Adds two exact decimals by aligning their scales before summing bigint coefficients. */
 function add(left: ExactDecimal, right: ExactDecimal): ExactDecimal {
   const scale = Math.max(left.scale, right.scale);
   const leftCoefficient = left.coefficient * 10n ** BigInt(scale - left.scale);
@@ -55,6 +58,7 @@ function add(left: ExactDecimal, right: ExactDecimal): ExactDecimal {
   return normalize({ coefficient: leftCoefficient + rightCoefficient, scale });
 }
 
+/** Serializes an exact decimal to the canonical plain-decimal string consumed by financial rules. */
 function serialize(value: ExactDecimal) {
   const normalized = normalize(value);
   const negative = normalized.coefficient < 0n;
@@ -65,6 +69,7 @@ function serialize(value: ExactDecimal) {
   return `${negative ? "-" : ""}${padded.slice(0, splitAt)}.${padded.slice(splitAt)}`;
 }
 
+/** Creates a complete decision-signal shape while allowing validated result fields to be overlaid. */
 function result(
   status: CustomerEconomicsDecisionSignal["status"],
   sourceReason: string,
