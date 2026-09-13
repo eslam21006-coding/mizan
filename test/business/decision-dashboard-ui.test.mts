@@ -123,7 +123,7 @@ test("Decision dashboard fails closed when the comparison evidence is insufficie
   assert.equal(model.customerEconomicsEvidenceQuality, null);
 });
 
-test("Decision Engine route is user-facing, load-safe, time-scoped, and preserves locked product wording", () => {
+test("Decision Engine route is user-facing, load-safe, exhaustive, time-scoped, and preserves locked product wording", () => {
   const navigation = fs.readFileSync("src/lib/navigation.ts", "utf8");
   const page = fs.readFileSync("src/app/(app)/insights/page.tsx", "utf8");
   const loader = fs.readFileSync("src/lib/business/decision-dashboard.ts", "utf8");
@@ -139,6 +139,11 @@ test("Decision Engine route is user-facing, load-safe, time-scoped, and preserve
   assert.match(page, /!decision\.previousPeriodLoadError/);
   assert.match(loader, /customer_lifetime_contribution_profit_observations/);
   assert.match(loader, /\.eq\("observation_month", currentMonthStart\)/);
+  assert.match(loader, /count:\s*"exact"/);
+  assert.match(loader, /\.range\(from, from \+ CUSTOMER_ECONOMICS_PAGE_SIZE - 1\)/);
+  assert.match(loader, /while \(expectedCount === null \|\| rows\.length < expectedCount\)/);
+  assert.match(loader, /count !== expectedCount/);
+  assert.match(loader, /pageRows\.length === 0/);
   assert.match(loader, /buildCustomerEconomicsDecisionSignal/);
   assert.match(loader, /currentPeriodLoadError/);
   assert.match(loader, /previousPeriodLoadError/);
