@@ -7,6 +7,7 @@ type DecisionInsightsPanelProps = {
   fallbackMessageAr: string | null;
   currentMonthLabel: string;
   previousMonthLabel: string;
+  customerEconomicsEvidenceQuality?: "actual" | "estimated" | null;
 };
 
 const severityLabel = {
@@ -21,8 +22,12 @@ export function DecisionInsightsPanel({
   fallbackMessageAr,
   currentMonthLabel,
   previousMonthLabel,
+  customerEconomicsEvidenceQuality = null,
 }: DecisionInsightsPanelProps) {
   const visibleInsights = insights.slice(0, MAX_DECISION_INSIGHTS);
+  const showsCustomerEconomicsInsight = visibleInsights.some(
+    (insight) => insight.domain === "customer_economics",
+  );
 
   return (
     <section className={styles.panel} aria-labelledby="decision-insights-title">
@@ -59,6 +64,13 @@ export function DecisionInsightsPanel({
             ميزان لا يحول البيانات المفقودة إلى صفر ولا يخترع تفسيرًا عند غياب الأدلة اللازمة.
           </p>
         </div>
+      )}
+
+      {showsCustomerEconomicsInsight && customerEconomicsEvidenceQuality === "estimated" && (
+        <p className={styles.definitionNote} role="note">
+          ملاحظة اقتصاديات العميل تعتمد على كاش محصل فعلي، لكن بعض التكاليف المرتبطة بالعملاء موزعة
+          تقديريًا بقواعد ميزان الحتمية. راجع تفاصيل الربحية لمعرفة أساس التوزيع.
+        </p>
       )}
 
       <p className={styles.definitionNote}>
