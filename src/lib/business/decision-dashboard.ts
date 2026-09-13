@@ -1,4 +1,9 @@
 import type { createSupabaseServerClient } from "../supabase/server";
+import {
+  buildCustomerEconomicsDecisionSignal,
+  customerEconomicsDecisionQualitySignal,
+  type CustomerEconomicsDecisionRow,
+} from "./customer-economics-decision-signal";
 import { buildDecisionDashboardModel, type DecisionDashboardModel } from "./decision-dashboard-model";
 import type { DecisionFunnelInput } from "./decision-insights";
 import { loadDashboardMonth } from "./dashboard-month";
@@ -22,7 +27,7 @@ export async function loadDecisionDashboard(
   currentMonthStart: string,
   previousMonthStart: string | null,
 ): Promise<LoadedDecisionDashboard> {
-  const [currentLoad, previousLoad, funnelMonth] = await Promise.all([
+  const [currentLoad, previousLoad, funnelMonth, customerEconomicsResult] = await Promise.all([
     loadDashboardMonth(supabase, businessId, currentMonthStart),
     previousMonthStart
       ? loadDashboardMonth(supabase, businessId, previousMonthStart)
@@ -34,6 +39,12 @@ export async function loadDecisionDashboard(
           calculationError: false,
         }),
     loadFunnelMonth(supabase, businessId, currentMonthStart),
+    supabase
+      .from("customer_lifetime_contribution_profit_observations")
+      .select("cohort_month,lifetime_contribution_profit_text,quality_state,currency")
+      .eq("business_id", businessId)
+      .eq("observation_month", currentMonthStart)
+      .order("cohort_month", { ascending: true }),
   ]);
 
   const funnels: DecisionFunnelInput[] = funnelMonth.calculatedEntries.flatMap((entry) =>
@@ -55,12 +66,30 @@ export async function loadDecisionDashboard(
   const currentPeriodLoadError = currentLoad.dataLoadError || currentLoad.calculationError;
   const previousPeriodLoadError = previousLoad.dataLoadError || previousLoad.calculationError;
 
+  const customerEconomics = customerEconomicsResult.error
+    ? null
+    : buildCustomerEconomicsDecisionSignal(
+        (customerEconomicsResult.data ?? []) as CustomerEconomicsDecisionRow[],
+      );
+  const lifetimeContributionQuality = customerEconomicsResult.error
+    ? {
+        state: "incomplete" as const,
+        sourceReason: "CUSTOMER_ECONOMICS_LOAD_ERROR",
+      }
+    : customerEconomicsDecisionQualitySignal(customerEconomics!);
+
   return {
     model: buildDecisionDashboardModel({
       currentBusiness: currentLoad.result,
       previousBusiness: previousLoad.result,
       adSpendReconciliation: reconciliation,
       funnels,
+      lifetimeContributionProfit:
+        customerEconomics?.status === "ready"
+          ? customerEconomics.lifetimeContributionProfit
+          : null,
+      lifetimeContributionQuality,
+      lifetimeContributionEvidenceQuality: customerEconomics?.evidenceQuality ?? null,
     }),
     currentPeriodExists: currentLoad.periodExists,
     previousPeriodExists: previousLoad.periodExists,
@@ -71,6 +100,7 @@ export async function loadDecisionDashboard(
       previousPeriodLoadError ||
       funnelMonth.dataLoadError ||
       funnelMonth.reconciliationError ||
-      funnelMonth.calculatedEntries.some((entry) => entry.calculationError),
+      funnelMonth.calculatedEntries.some((entry) => entry.calculationError) ||
+      Boolean(customerEconomicsResult.error),
   };
 }
