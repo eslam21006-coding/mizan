@@ -13,39 +13,20 @@ import {
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-/** Builds the canonical monthly-entry URL with status and copy-result query parameters. */
-function monthlyPath(
-  businessId: string,
-  monthKey: string,
-  status?: string,
-  copied?: number,
-) {
+function correctionPath(businessId: string, monthKey: string, status?: string) {
   const query = new URLSearchParams({ month: monthKey });
   if (status) query.set("status", status);
-  if (copied !== undefined) query.set("copied", String(copied));
-  return `/businesses/${businessId}/monthly?${query.toString()}`;
-}
-
-/** Builds the explicit audited-correction URL for an existing historical month. */
-function historicalCorrectionPath(businessId: string, monthKey: string) {
-  const query = new URLSearchParams({ month: monthKey, status: "historical-required" });
   return `/businesses/${businessId}/monthly/correction?${query.toString()}`;
 }
 
-/** Sends a rejected normal historical write to the explicit audited correction workflow. */
-function redirectHistoricalCorrection(businessId: string, monthKey: string): never {
+function redirectCorrection(businessId: string, monthKey: string, status: string): never {
   revalidatePath(`/businesses/${businessId}/monthly`);
-  redirect(historicalCorrectionPath(businessId, monthKey));
+  revalidatePath(`/businesses/${businessId}/monthly/correction`);
+  revalidatePath(`/businesses/${businessId}/customers`);
+  revalidatePath(`/businesses/${businessId}/customers/review`);
+  redirect(correctionPath(businessId, monthKey, status));
 }
 
-/** Revalidates monthly views and redirects to the selected month with a status code. */
-function redirectMonthly(businessId: string, monthKey: string, status: string): never {
-  revalidatePath("/businesses");
-  revalidatePath(`/businesses/${businessId}/monthly`);
-  redirect(monthlyPath(businessId, monthKey, status));
-}
-
-/** Parses a submitted resource-id list and rejects duplicates or malformed identifiers. */
 function uniqueResourceIds(values: FormDataEntryValue[]) {
   const ids: string[] = [];
   const seen = new Set<string>();
@@ -60,16 +41,16 @@ function uniqueResourceIds(values: FormDataEntryValue[]) {
   return ids;
 }
 
-/** Validates and atomically persists one month's actual revenue, expenses, and customer inputs. */
-export async function saveMonthlyActuals(formData: FormData) {
+/** Corrects an existing historical month through the audited database-only correction workflow. */
+export async function correctHistoricalMonthlyActuals(formData: FormData) {
   await requireAuthContext();
 
   const businessId = parseResourceId(formData.get("business_id"));
   const month = parseMonthKey(formData.get("month"));
-
   if (!businessId) redirect("/businesses");
-  if (!month) redirect(`/businesses/${businessId}/monthly?status=invalid-month`);
+  if (!month) redirect(`/businesses/${businessId}/monthly/correction?status=invalid-month`);
 
+  const correctionReason = String(formData.get("correction_reason") ?? "").trim();
   const newCustomers = parseOptionalCountInput(formData.get("new_customers"));
   const payingCustomers = parseOptionalCountInput(formData.get("total_paying_customers"));
   const unallocatedGross = parseOptionalDecimalInput(formData.get("unallocated_gross"));
@@ -77,13 +58,15 @@ export async function saveMonthlyActuals(formData: FormData) {
   const adjustmentNote = normalizeAdjustmentNote(formData.get("adjustment_note"));
 
   if (
+    correctionReason.length < 1 ||
+    correctionReason.length > 500 ||
     !newCustomers.ok ||
     !payingCustomers.ok ||
     !unallocatedGross.ok ||
     !unallocatedRefunds.ok ||
     adjustmentNote === null
   ) {
-    redirectMonthly(businessId, month.monthKey, "invalid-input");
+    redirectCorrection(businessId, month.monthKey, "invalid-input");
   }
 
   if (
@@ -91,13 +74,13 @@ export async function saveMonthlyActuals(formData: FormData) {
     payingCustomers.value !== null &&
     newCustomers.value > payingCustomers.value
   ) {
-    redirectMonthly(businessId, month.monthKey, "invalid-customers");
+    redirectCorrection(businessId, month.monthKey, "invalid-customers");
   }
 
   const revenueStreamIds = uniqueResourceIds(formData.getAll("revenue_stream_id"));
   const expenseItemIds = uniqueResourceIds(formData.getAll("expense_item_id"));
   if (!revenueStreamIds || !expenseItemIds) {
-    redirectMonthly(businessId, month.monthKey, "invalid-input");
+    redirectCorrection(businessId, month.monthKey, "invalid-input");
   }
 
   const revenueEntries = [];
@@ -105,7 +88,7 @@ export async function saveMonthlyActuals(formData: FormData) {
     const gross = parseOptionalDecimalInput(formData.get(`gross_${streamId}`));
     const refunds = parseOptionalDecimalInput(formData.get(`refund_${streamId}`));
     if (!gross.ok || !refunds.ok) {
-      redirectMonthly(businessId, month.monthKey, "invalid-input");
+      redirectCorrection(businessId, month.monthKey, "invalid-input");
     }
 
     revenueEntries.push({
@@ -119,13 +102,13 @@ export async function saveMonthlyActuals(formData: FormData) {
   for (const expenseId of expenseItemIds) {
     const displayValue = parseOptionalDecimalInput(formData.get(`expense_value_${expenseId}`));
     if (!displayValue.ok) {
-      redirectMonthly(businessId, month.monthKey, "invalid-input");
+      redirectCorrection(businessId, month.monthKey, "invalid-input");
     }
 
     const rawBasis = String(formData.get(`expense_basis_${expenseId}`) ?? "").trim();
     const basis = rawBasis ? parseCustomerCountBasis(rawBasis) : null;
     if (rawBasis && !basis) {
-      redirectMonthly(businessId, month.monthKey, "invalid-input");
+      redirectCorrection(businessId, month.monthKey, "invalid-input");
     }
 
     expenseEntries.push({
@@ -136,7 +119,7 @@ export async function saveMonthlyActuals(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("save_monthly_actuals", {
+  const { error } = await supabase.rpc("correct_historical_monthly_actuals", {
     target_business_id: businessId,
     target_month_start: month.monthStart,
     target_new_customers: newCustomers.value,
@@ -146,46 +129,9 @@ export async function saveMonthlyActuals(formData: FormData) {
     target_adjustment_note: adjustmentNote,
     target_revenue_entries: revenueEntries,
     target_expense_entries: expenseEntries,
+    target_correction_reason: correctionReason,
   });
 
-  if (error) {
-    if (error.message.includes("explicit historical correction workflow")) {
-      redirectHistoricalCorrection(businessId, month.monthKey);
-    }
-    redirectMonthly(businessId, month.monthKey, "save-failed");
-  }
-
-  redirectMonthly(businessId, month.monthKey, "saved");
-}
-
-/** Copies the previous month's expense inputs into the selected month without changing other actuals. */
-export async function copyPreviousMonthExpenses(formData: FormData) {
-  await requireAuthContext();
-
-  const businessId = parseResourceId(formData.get("business_id"));
-  const month = parseMonthKey(formData.get("month"));
-  if (!businessId) redirect("/businesses");
-  if (!month) redirect(`/businesses/${businessId}/monthly?status=invalid-month`);
-
-  const supabase = await createSupabaseServerClient();
-  const { data, error } = await supabase.rpc("copy_previous_month_expenses", {
-    target_business_id: businessId,
-    target_month_start: month.monthStart,
-  });
-
-  if (error) {
-    if (error.message.includes("explicit historical correction workflow")) {
-      redirectHistoricalCorrection(businessId, month.monthKey);
-    }
-    redirectMonthly(businessId, month.monthKey, "copy-failed");
-  }
-
-  const result = Array.isArray(data) ? data[0] : data;
-  if (!result?.previous_month_found) {
-    redirectMonthly(businessId, month.monthKey, "no-previous");
-  }
-
-  const copiedCount = Number(result.copied_count ?? 0);
-  revalidatePath(`/businesses/${businessId}/monthly`);
-  redirect(monthlyPath(businessId, month.monthKey, "copied", copiedCount));
+  if (error) redirectCorrection(businessId, month.monthKey, "correction-failed");
+  redirectCorrection(businessId, month.monthKey, "corrected");
 }
