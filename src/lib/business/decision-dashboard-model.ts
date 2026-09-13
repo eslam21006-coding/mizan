@@ -12,10 +12,9 @@ import {
 import type { AdSpendReconciliationResult } from "./funnel-calculations.ts";
 import { prioritizeDecisionInsights } from "./insight-prioritization.ts";
 
-const COHORT_ONLY_LIFETIME_CONTRIBUTION_QUALITY: ExternalDataQualitySignal = {
-  state: "incomplete",
-  sourceReason:
-    "Lifetime Contribution Profit is cohort-scoped in V1; no business-level aggregate is defined for Decision Engine rules.",
+const CUSTOMER_ECONOMICS_NOT_PROVIDED: ExternalDataQualitySignal = {
+  state: "missing",
+  sourceReason: "No as-of-month customer-economics decision signal was provided.",
 };
 
 export type DecisionDashboardInput = {
@@ -25,18 +24,20 @@ export type DecisionDashboardInput = {
   funnels?: readonly DecisionFunnelInput[];
   lifetimeContributionProfit?: string | null;
   lifetimeContributionQuality?: ExternalDataQualitySignal;
+  lifetimeContributionEvidenceQuality?: "actual" | "estimated" | null;
 };
 
 export type DecisionDashboardModel = {
   insights: readonly DecisionInsightCandidate[];
   fallbackMessageAr: string | null;
   evaluations: readonly DecisionRuleEvaluation[];
+  customerEconomicsEvidenceQuality: "actual" | "estimated" | null;
 };
 
 /** Composes Tasks 26–28 without changing their rules, thresholds, or prioritization. */
 export function buildDecisionDashboardModel(input: DecisionDashboardInput): DecisionDashboardModel {
   const lifetimeContributionQuality =
-    input.lifetimeContributionQuality ?? COHORT_ONLY_LIFETIME_CONTRIBUTION_QUALITY;
+    input.lifetimeContributionQuality ?? CUSTOMER_ECONOMICS_NOT_PROVIDED;
 
   const dataQuality = buildDataQualityProfile({
     currentBusiness: input.currentBusiness,
@@ -66,5 +67,6 @@ export function buildDecisionDashboardModel(input: DecisionDashboardInput): Deci
     insights: prioritizeDecisionInsights(generated.candidates),
     fallbackMessageAr: generated.fallbackMessageAr,
     evaluations: generated.evaluations,
+    customerEconomicsEvidenceQuality: input.lifetimeContributionEvidenceQuality ?? null,
   };
 }
