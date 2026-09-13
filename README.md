@@ -4,11 +4,13 @@ Arabic-first financial decision-support for coaches, consultants, creators, and 
 
 ## Release state
 
-The implementation roadmap through **Task 39** is complete on `main`. The application now includes the scheduled authentication/roles model, Supabase-backed tenant isolation and RLS, business setup and monthly data entry, financial calculations and dashboards, funnel/customer/LTV analysis, scenarios, Admin/Mentee workflows, Arabic RTL/responsive polish, metric auditability, and the final security review.
+The original implementation roadmap through **Task 40** is complete. After that release, founder-testing and customer-economics hardening continued through PR **#75**, including raw payment-gateway import improvements, transaction-derived customer counts, customer-ledger and Observed LTV UX work, automatic Customer Economics allocation, automatic Lifetime Contribution Profit, profitability review/corrections, and downstream Decision Engine integration.
 
-**Task 40 — Production Deployment & Final Verification** is the release-closure task. It adds no new product feature; it verifies the exact production commit, records the release evidence, and closes only after the post-merge `main` pipeline and Vercel production deployment are both green.
+The current post-batch release baseline is `main` commit `54c5d498a9870fdf2f7880c8ec9860462bdfe2dd` (merge of PR #75). Its post-merge `Task verification` workflow run **34744428445 / #771** completed successfully.
 
-See `docs/releases/TASK_40_PRODUCTION_FINAL_VERIFICATION.md` for the final release gate and evidence.
+The remaining release-closure work is documentation and exact-production verification only. No new product behavior is part of that release task. After the release-record PR is merged, the resulting exact `main` commit must pass the full `Task verification` pipeline and be confirmed as the production deployment before the batch is considered closed.
+
+See `docs/releases/POST_BATCH_PRODUCTION_FINAL_VERIFICATION.md` for the current release gate and evidence. `docs/releases/TASK_40_PRODUCTION_FINAL_VERIFICATION.md` remains the historical record for the original Task 40 release.
 
 ## Local development
 
