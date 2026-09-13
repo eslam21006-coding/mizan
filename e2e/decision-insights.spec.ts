@@ -37,4 +37,25 @@ test.describe("Decision Engine Top 3 UI", () => {
     await expect(panel.getByRole("status")).toContainText("البيانات غير كافية للحكم");
     await expect(panel.getByRole("status")).toContainText("لا يخترع تفسيرًا");
   });
+
+  test("labels customer-economics insight evidence when deterministic cost allocation is estimated", async ({ page }) => {
+    const browserErrors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") browserErrors.push(message.text());
+    });
+    page.on("pageerror", (error) => browserErrors.push(error.message));
+
+    await page.goto("/auth/e2e-decision-insights?state=estimated-customer-economics");
+
+    const panel = page.getByRole("region", { name: "أهم 3 ملاحظات" });
+    await expect(panel.getByText("ارتفاع التكلفة لا يعني وحده أن الاستحواذ سيئ")).toBeVisible();
+    await expect(panel.getByRole("note")).toContainText("بعض التكاليف المرتبطة بالعملاء موزعة");
+    await expect(panel.getByRole("note")).toContainText("تقديريًا");
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
+      .toBe(true);
+    expect(browserErrors).toEqual([]);
+  });
 });

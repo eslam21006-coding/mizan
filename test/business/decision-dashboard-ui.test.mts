@@ -8,7 +8,15 @@ import {
 import { buildDecisionDashboardModel } from "../../src/lib/business/decision-dashboard-model.ts";
 import { calculateFunnelMetrics } from "../../src/lib/business/funnel-calculations.ts";
 
-function businessMonth({ revenue, overhead }: { revenue: string; overhead: string }) {
+function businessMonth({
+  revenue,
+  overhead,
+  media = "100",
+}: {
+  revenue: string;
+  overhead: string;
+  media?: string;
+}) {
   const input: CoreCalculationInput = {
     revenueStreams: [
       {
@@ -25,7 +33,7 @@ function businessMonth({ revenue, overhead }: { revenue: string; overhead: strin
         name: "Media",
         category: "acquisition",
         behavior: "fixed_monthly",
-        inputValue: "100",
+        inputValue: media,
       },
       {
         id: "overhead",
@@ -39,7 +47,7 @@ function businessMonth({ revenue, overhead }: { revenue: string; overhead: strin
     unallocatedRefunds: "0",
     newCustomers: 10,
     totalPayingCustomers: 10,
-    canonicalAdSpend: "100",
+    canonicalAdSpend: media,
   };
   return calculateCoreFinancials(input);
 }
@@ -75,6 +83,31 @@ test("Decision dashboard composes Tasks 26-28 and caps deterministic output at T
   assert.match(model.insights[1]?.messageAr ?? "", /التكلفة الكاملة للبزنس لكل عميل جديد/);
 });
 
+test("Decision dashboard activates the lifetime-economics guardrail from ready downstream evidence", () => {
+  const previous = businessMonth({ revenue: "1000", overhead: "100", media: "100" });
+  const current = businessMonth({ revenue: "1000", overhead: "100", media: "150" });
+
+  const model = buildDecisionDashboardModel({
+    currentBusiness: current,
+    previousBusiness: previous,
+    adSpendReconciliation: { status: "matched" },
+    funnels: [],
+    lifetimeContributionProfit: "500",
+    lifetimeContributionQuality: {
+      state: "ready",
+      sourceReason: "ESTIMATED_ALLOCATION_PRESENT",
+    },
+    lifetimeContributionEvidenceQuality: "estimated",
+  });
+
+  assert.deepEqual(model.insights.map((insight) => insight.ruleId), ["rising_cac_lifetime_supported"]);
+  assert.equal(
+    model.evaluations.find((evaluation) => evaluation.ruleId === "rising_cac_lifetime_supported")?.status,
+    "matched",
+  );
+  assert.equal(model.customerEconomicsEvidenceQuality, "estimated");
+});
+
 test("Decision dashboard fails closed when the comparison evidence is insufficient", () => {
   const current = businessMonth({ revenue: "1200", overhead: "500" });
   const model = buildDecisionDashboardModel({
@@ -87,9 +120,10 @@ test("Decision dashboard fails closed when the comparison evidence is insufficie
   assert.deepEqual(model.insights, []);
   assert.equal(model.fallbackMessageAr, "البيانات غير كافية للحكم");
   assert.ok(model.evaluations.some((evaluation) => evaluation.status === "insufficient"));
+  assert.equal(model.customerEconomicsEvidenceQuality, null);
 });
 
-test("Decision Engine route is user-facing, load-safe, and preserves locked product wording", () => {
+test("Decision Engine route is user-facing, load-safe, exhaustive, time-scoped, and preserves locked product wording", () => {
   const navigation = fs.readFileSync("src/lib/navigation.ts", "utf8");
   const page = fs.readFileSync("src/app/(app)/insights/page.tsx", "utf8");
   const loader = fs.readFileSync("src/lib/business/decision-dashboard.ts", "utf8");
@@ -100,11 +134,21 @@ test("Decision Engine route is user-facing, load-safe, and preserves locked prod
 
   assert.match(navigation, /label: "أهم الملاحظات", href: "\/insights"/);
   assert.match(page, /loadDecisionDashboard/);
+  assert.match(page, /customerEconomicsEvidenceQuality/);
   assert.match(page, /!decision\.currentPeriodLoadError && !decision\.currentPeriodExists/);
   assert.match(page, /!decision\.previousPeriodLoadError/);
+  assert.match(loader, /customer_lifetime_contribution_profit_observations/);
+  assert.match(loader, /\.eq\("observation_month", currentMonthStart\)/);
+  assert.match(loader, /count:\s*"exact"/);
+  assert.match(loader, /\.range\(from, from \+ CUSTOMER_ECONOMICS_PAGE_SIZE - 1\)/);
+  assert.match(loader, /while \(expectedCount === null \|\| rows\.length < expectedCount\)/);
+  assert.match(loader, /count !== expectedCount/);
+  assert.match(loader, /pageRows\.length === 0/);
+  assert.match(loader, /buildCustomerEconomicsDecisionSignal/);
   assert.match(loader, /currentPeriodLoadError/);
   assert.match(loader, /previousPeriodLoadError/);
   assert.match(panel, /أهم 3 ملاحظات/);
+  assert.match(panel, /بعض التكاليف المرتبطة بالعملاء موزعة\s+تقديريًا/);
   assert.match(panel, /التكلفة الكاملة للبزنس لكل عميل جديد/);
   assert.match(panel, /لا توجد\s+استنتاجات مولدة أو أرقام مفترضة/);
 });

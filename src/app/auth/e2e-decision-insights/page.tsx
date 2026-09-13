@@ -41,6 +41,21 @@ const FIXTURE_INSIGHTS: readonly DecisionInsightCandidate[] = [
   },
 ] as const;
 
+const ESTIMATED_CUSTOMER_ECONOMICS_INSIGHT: readonly DecisionInsightCandidate[] = [
+  {
+    id: "rising-cac-lifetime-supported",
+    ruleId: "rising_cac_lifetime_supported",
+    severity: "context",
+    domain: "customer_economics",
+    priority: 50,
+    dedupeKey: "ultimate-cac",
+    titleAr: "ارتفاع التكلفة لا يعني وحده أن الاستحواذ سيئ",
+    messageAr:
+      "التكلفة الكاملة للبزنس لكل عميل جديد ارتفعت، لكن ربح المساهمة مدى الحياة للعملاء ما زال موجباً.",
+    evidence: ["ultimate_cac:up", "lifetime_contribution_profit:positive"],
+  },
+] as const;
+
 type DecisionInsightsFixtureProps = {
   searchParams: Promise<{ state?: string }>;
 };
@@ -52,14 +67,21 @@ export default async function DecisionInsightsE2eFixturePage({
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") notFound();
   const query = await searchParams;
   const empty = query.state === "insufficient";
+  const estimatedCustomerEconomics = query.state === "estimated-customer-economics";
+  const insights = empty
+    ? []
+    : estimatedCustomerEconomics
+      ? ESTIMATED_CUSTOMER_ECONOMICS_INSIGHT
+      : FIXTURE_INSIGHTS;
 
   return (
     <main className="page-stack">
       <DecisionInsightsPanel
-        insights={empty ? [] : FIXTURE_INSIGHTS}
+        insights={insights}
         fallbackMessageAr={empty ? "البيانات غير كافية للحكم" : null}
         currentMonthLabel="سبتمبر ٢٠٢٦"
         previousMonthLabel="أغسطس ٢٠٢٦"
+        customerEconomicsEvidenceQuality={estimatedCustomerEconomics ? "estimated" : null}
       />
     </main>
   );
