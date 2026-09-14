@@ -29,7 +29,7 @@ function validateDatabaseUrl(value) {
 
   if (overrideParameter) {
     throw new Error(
-      `Refusing RLS database URL with connection target override parameter: ${overrideParameter}.`,
+      `Refusing transaction-history completeness tests with connection target override parameter: ${overrideParameter}.`,
     );
   }
 
@@ -124,7 +124,13 @@ runPsqlFile(
   "test/business/customer-economics-exception-resolution-hardening.test.sql",
   environment,
 );
+runPsqlFile(
+  "supabase/migrations/20260914080000_post_batch_final_security_hardening.sql",
+  environment,
+);
+// This global catalog audit must remain after every current feature migration.
+runPsqlFile("test/rls/task-39-full-security-review.test.sql", environment);
 
 console.log(
-  "Transaction-history and Customer Economics matrix passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, manual-count conflict tests, exact Net Cash summary, persisted-row verification, completion-summary authorization, customer-name metadata/search isolation, automatic allocation, exact residual reconciliation, revenue coverage, automatic historical/current Lifetime Contribution Profit, backdated recalculation, legacy exclusion, missing-period blocking, Task 5 exception-only exact-pool overrides, replaceable stale overrides, legacy reconciliation, canonical audited historical correction, protected historical copy, serialized historical backfills, and tenant isolation.",
+  "Transaction-history and Customer Economics matrix passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, manual-count conflict tests, exact Net Cash summary, persisted-row verification, completion-summary authorization, customer-name metadata/search isolation, automatic allocation, exact residual reconciliation, revenue coverage, automatic historical/current Lifetime Contribution Profit, backdated recalculation, legacy exclusion, missing-period blocking, Task 5 exception-only exact-pool overrides, replaceable stale overrides, legacy reconciliation, canonical audited historical correction, protected historical copy, serialized historical backfills, tenant isolation, final SECURITY DEFINER hardening, and the post-migration global security audit.",
 );
