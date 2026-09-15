@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -34,6 +35,12 @@ type LifetimeContributionRow = {
 type Props = {
   businessId: string;
   baseCurrency: string;
+};
+
+type RemediationAction = {
+  key: "history" | "review";
+  label: string;
+  href: string;
 };
 
 /** Formats an optional exact money value while preserving unavailable values as an em dash. */
@@ -93,6 +100,34 @@ function incompleteReasons(row: LifetimeContributionRow) {
   return reasons;
 }
 
+/** Returns only destinations that can actually resolve the blockers shown for an incomplete row. */
+function incompleteActions(row: LifetimeContributionRow, businessId: string): RemediationAction[] {
+  const actions: RemediationAction[] = [];
+  if (!row.transaction_history_complete) {
+    actions.push({
+      key: "history",
+      label: "إكمال سجل المعاملات",
+      href: `/businesses/${businessId}/customers/import#history-completeness-title`,
+    });
+  }
+
+  const needsExceptionReview =
+    Number(row.missing_relevant_period_count) > 0 ||
+    Number(row.incomplete_relevant_period_count) > 0 ||
+    Number(row.legacy_manual_allocation_count) > 0 ||
+    actions.length === 0;
+
+  if (needsExceptionReview) {
+    actions.push({
+      key: "review",
+      label: "مراجعة ما ينقص وإكماله",
+      href: `/businesses/${businessId}/customers/review`,
+    });
+  }
+
+  return actions;
+}
+
 /** Explains the provenance of a completed profitability result in founder language. */
 function completedQualityExplanation(row: LifetimeContributionRow) {
   if (row.quality_state === "actual") {
@@ -134,12 +169,12 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
   }, [loadRows]);
 
   if (isLoading) {
-    return <section className={styles.statusPanel}>جاري حساب ربحية العملاء…</section>;
+    return <section className={styles.statusPanel} dir="rtl">جاري حساب ربحية العملاء…</section>;
   }
 
   if (error) {
     return (
-      <section className={styles.errorPanel} role="alert">
+      <section className={styles.errorPanel} role="alert" dir="rtl">
         <strong>تعذر تحميل ربحية العملاء</strong>
         <p>{error}</p>
         <button className={styles.retryButton} type="button" onClick={() => void loadRows()}>
@@ -151,7 +186,7 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
 
   if (rows.length === 0) {
     return (
-      <section className={styles.compactEmptyPanel}>
+      <section className={styles.compactEmptyPanel} dir="rtl">
         <strong>لا توجد مجموعات عملاء مكتسبة لحساب الربحية بعد.</strong>
         <span>يبدأ الحساب تلقائيًا بعد وجود سجل معاملات وبيانات شهرية فعلية.</span>
       </section>
@@ -159,7 +194,7 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
   }
 
   return (
-    <section className={styles.groupPanel} aria-labelledby="customer-profitability-title">
+    <section className={styles.groupPanel} aria-labelledby="customer-profitability-title" dir="rtl">
       <div className={styles.groupHeading}>
         <div>
           <span className={styles.kicker}>Lifetime Contribution Profit / الربح المحقق من العميل حتى الآن</span>
@@ -171,7 +206,11 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
       </div>
 
       <div className={`${styles.tableShell} ${profitStyles.desktopTable}`}>
-        <table className={`${styles.groupsTable} ${profitStyles.profitTable}`} aria-label="ربحية العملاء حسب شهر أول شراء">
+        <table
+          className={`${styles.groupsTable} ${profitStyles.profitTable}`}
+          aria-label="ربحية العملاء حسب شهر أول شراء"
+          dir="rtl"
+        >
           <thead>
             <tr>
               <th scope="col">شهر أول شراء</th>
@@ -186,16 +225,18 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
               const currency = row.currency ?? baseCurrency;
               const incomplete = !isCompletedQualityState(row.quality_state);
               const reasons = incompleteReasons(row);
+              const actions = incomplete ? incompleteActions(row, businessId) : [];
+              const primaryAction = actions[0];
               return (
                 <tr key={`${row.business_id}:${row.cohort_month}`}>
                   <td>
                     <strong>{firstPurchaseMonthLabel(row.cohort_month)}</strong>
-                    <small dir="ltr">{row.cohort_month}</small>
+                    <small><bdi dir="ltr">{row.cohort_month}</bdi></small>
                   </td>
-                  <td dir="ltr">{formatCountText(row.original_cohort_size)}</td>
-                  <td dir="ltr">
-                    <strong>{money(row.lifetime_net_cash_text, currency)}</strong>
-                    <small dir="rtl">صافي ما دفعته هذه المجموعة حتى الآن</small>
+                  <td><bdi dir="ltr">{formatCountText(row.original_cohort_size)}</bdi></td>
+                  <td>
+                    <strong><bdi dir="ltr">{money(row.lifetime_net_cash_text, currency)}</bdi></strong>
+                    <small>صافي ما دفعته هذه المجموعة حتى الآن</small>
                   </td>
                   <td>
                     {incomplete ? (
@@ -216,12 +257,26 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
                     >
                       {qualityLabel(row.quality_state)}
                     </span>
+                    {incomplete && primaryAction && (
+                      <Link className={profitStyles.remediationLink} href={primaryAction.href}>
+                        {primaryAction.label}
+                      </Link>
+                    )}
                     <details className={profitStyles.calculationDetails}>
                       <summary>عرض طريقة الحساب</summary>
                       <div className={profitStyles.detailBody}>
                         <p className={profitStyles.qualityExplanation}>
                           {incomplete ? reasons.join(" ") : completedQualityExplanation(row)}
                         </p>
+                        {incomplete && actions.length > 0 && (
+                          <div className={profitStyles.remediationActions} aria-label="خطوات إكمال البيانات">
+                            {actions.map((action) => (
+                              <Link key={action.key} className={profitStyles.remediationLink} href={action.href}>
+                                {action.label}
+                              </Link>
+                            ))}
+                          </div>
+                        )}
                         <dl className={profitStyles.calculationList}>
                           <div>
                             <dt>صافي التحصيل المحقق</dt>
@@ -269,11 +324,17 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
         </table>
       </div>
 
-      <section className={profitStyles.mobileList} aria-label="ربحية العملاء حسب شهر أول شراء — عرض الهاتف">
+      <section
+        className={profitStyles.mobileList}
+        aria-label="ربحية العملاء حسب شهر أول شراء — عرض الهاتف"
+        dir="rtl"
+      >
         {rows.map((row) => {
           const currency = row.currency ?? baseCurrency;
           const incomplete = !isCompletedQualityState(row.quality_state);
           const reasons = incompleteReasons(row);
+          const actions = incomplete ? incompleteActions(row, businessId) : [];
+          const primaryAction = actions[0];
           return (
             <article className={profitStyles.mobileCard} key={`mobile:${row.business_id}:${row.cohort_month}`}>
               <div className={profitStyles.mobileHeader}>
@@ -293,14 +354,19 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
                   {qualityLabel(row.quality_state)}
                 </span>
               </div>
+              {incomplete && primaryAction && (
+                <Link className={profitStyles.remediationLink} href={primaryAction.href}>
+                  {primaryAction.label}
+                </Link>
+              )}
               <dl className={profitStyles.mobileMetrics}>
                 <div>
                   <dt>العملاء</dt>
-                  <dd dir="ltr">{formatCountText(row.original_cohort_size)}</dd>
+                  <dd><bdi dir="ltr">{formatCountText(row.original_cohort_size)}</bdi></dd>
                 </div>
                 <div>
                   <dt>قيمة العميل المحققة</dt>
-                  <dd dir="ltr">{money(row.lifetime_net_cash_text, currency)}</dd>
+                  <dd><bdi dir="ltr">{money(row.lifetime_net_cash_text, currency)}</bdi></dd>
                 </div>
                 <div className={profitStyles.mobilePrimaryMetric}>
                   <dt>الربح المحقق لكل عميل</dt>
@@ -317,6 +383,15 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
                   <p className={profitStyles.qualityExplanation}>
                     {incomplete ? reasons.join(" ") : completedQualityExplanation(row)}
                   </p>
+                  {incomplete && actions.length > 0 && (
+                    <div className={profitStyles.remediationActions} aria-label="خطوات إكمال البيانات">
+                      {actions.map((action) => (
+                        <Link key={action.key} className={profitStyles.remediationLink} href={action.href}>
+                          {action.label}
+                        </Link>
+                      ))}
+                    </div>
+                  )}
                   <dl className={profitStyles.calculationList}>
                     <div>
                       <dt>صافي التحصيل المحقق</dt>
