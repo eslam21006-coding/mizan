@@ -34,6 +34,7 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
   const [
     businessResult,
     exceptionsResult,
+    missingPeriodsResult,
     trustedMonthsResult,
     legacyResult,
     legacyReconciliationsResult,
@@ -51,6 +52,13 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
       )
       .eq("business_id", businessId)
       .order("activity_month", { ascending: false, nullsFirst: true }),
+    supabase
+      .from("customer_economics_missing_period_exceptions")
+      .select(
+        "activity_month,exception_code,authoritative_source_id,expense_name_snapshot,amount,currency,can_manual_override,blocking",
+      )
+      .eq("business_id", businessId)
+      .order("activity_month", { ascending: false }),
     supabase
       .from("customer_economics_activity_evidence")
       .select("cohort_month")
@@ -83,6 +91,7 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
 
   const dataLoadError = Boolean(
     exceptionsResult.error ||
+      missingPeriodsResult.error ||
       trustedMonthsResult.error ||
       legacyResult.error ||
       legacyReconciliationsResult.error ||
@@ -128,6 +137,16 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
     currency: row.currency === null ? null : String(row.currency),
   })) as EligibleCostPool[];
 
+  const exceptions = [
+    ...((exceptionsResult.data ?? []) as ReviewException[]),
+    ...((missingPeriodsResult.data ?? []) as ReviewException[]),
+  ].sort((left, right) => {
+    if (left.activity_month === null && right.activity_month === null) return 0;
+    if (left.activity_month === null) return 1;
+    if (right.activity_month === null) return -1;
+    return right.activity_month.localeCompare(left.activity_month);
+  });
+
   const query = await searchParams;
   const statusMessage = query.status ? STATUS_MESSAGES[query.status] ?? null : null;
   const statusIsError = Boolean(
@@ -140,7 +159,7 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
       businessId={business.id}
       baseCurrency={business.base_currency}
       canManage={canManage}
-      exceptions={(exceptionsResult.data ?? []) as ReviewException[]}
+      exceptions={exceptions}
       trustedMonths={trustedMonths}
       legacyAllocations={legacyAllocations}
       eligibleCostPools={eligibleCostPools}

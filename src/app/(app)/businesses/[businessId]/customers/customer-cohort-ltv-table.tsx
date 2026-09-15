@@ -117,7 +117,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
 
   if (isLoading) {
     return (
-      <section className={styles.statusPanel} role="status" aria-live="polite">
+      <section className={styles.statusPanel} role="status" aria-live="polite" dir="rtl">
         جاري حساب قيمة العميل المحققة…
       </section>
     );
@@ -125,7 +125,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
 
   if (error) {
     return (
-      <section className={styles.errorPanel} role="alert">
+      <section className={styles.errorPanel} role="alert" dir="rtl">
         <strong>تعذر تحميل قيمة العميل المحققة</strong>
         <p>{error}</p>
         <button className={styles.retryButton} type="button" onClick={() => void loadRows()}>
@@ -137,7 +137,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
 
   if (rows.length === 0 && page === 0) {
     return (
-      <section className={styles.compactEmptyPanel}>
+      <section className={styles.compactEmptyPanel} dir="rtl">
         <strong>لا توجد مجموعات عملاء حسب شهر أول شراء بعد.</strong>
         <span>ستظهر هنا بعد وجود أول تحصيل ناجح لعميل واحد على الأقل.</span>
       </section>
@@ -145,7 +145,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
   }
 
   return (
-    <section className={styles.groupPanel} aria-labelledby="observed-ltv-title">
+    <section className={styles.groupPanel} aria-labelledby="observed-ltv-title" dir="rtl">
       <div className={styles.groupHeading}>
         <div>
           <span className={styles.kicker}>Observed LTV / قيمة العميل المحققة حتى الآن</span>
@@ -172,7 +172,11 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
       )}
 
       <div className={`${styles.tableShell} ${ltvStyles.desktopTable}`}>
-        <table className={`${styles.groupsTable} ${styles.ltvTable}`} aria-label="قيمة العميل حسب شهر أول شراء">
+        <table
+          className={`${styles.groupsTable} ${styles.ltvTable}`}
+          aria-label="قيمة العميل حسب شهر أول شراء"
+          dir="rtl"
+        >
           <colgroup>
             <col className={ltvStyles.monthColumn} />
             <col className={ltvStyles.customerColumn} />
@@ -199,20 +203,27 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
                       <small>محسوب حتى {observationDateLabel(row.observation_cutoff_date)}</small>
                     )}
                   </td>
-                  <td dir="ltr">
-                    <strong>{formatCountText(row.original_cohort_size)}</strong>
-                    <small dir="rtl">عميلًا كانت أول دفعة لهم في هذا الشهر</small>
+                  <td>
+                    <strong>
+                      <bdi dir="ltr">{formatCountText(row.original_cohort_size)}</bdi>
+                    </strong>
+                    <small>عميلًا كانت أول دفعة لهم في هذا الشهر</small>
                   </td>
-                  <td dir="ltr">
-                    <strong>{formatMoneyText(row.cumulative_net_cash_collected_text, currency)}</strong>
-                    <small dir="rtl">صافي التحصيل من أول شراء حتى تاريخ الحساب</small>
-                    <small dir="rtl">
-                      تحصيل {formatMoneyText(row.cumulative_gross_cash_collected_text, currency)} · استرجاع {formatMoneyText(row.cumulative_refunds_text, currency)}
+                  <td>
+                    <strong>
+                      <bdi dir="ltr">{formatMoneyText(row.cumulative_net_cash_collected_text, currency)}</bdi>
+                    </strong>
+                    <small>صافي التحصيل من أول شراء حتى تاريخ الحساب</small>
+                    <small>
+                      تحصيل <bdi dir="ltr">{formatMoneyText(row.cumulative_gross_cash_collected_text, currency)}</bdi> · استرجاع{" "}
+                      <bdi dir="ltr">{formatMoneyText(row.cumulative_refunds_text, currency)}</bdi>
                     </small>
                   </td>
-                  <td dir="ltr">
-                    <strong className={styles.primaryMetric}>{formatMoneyText(row.observed_ltv_text, currency)}</strong>
-                    <small dir="rtl">لكل عميل بدأ في هذا الشهر</small>
+                  <td>
+                    <strong className={styles.primaryMetric}>
+                      <bdi dir="ltr">{formatMoneyText(row.observed_ltv_text, currency)}</bdi>
+                    </strong>
+                    <small>لكل عميل بدأ في هذا الشهر</small>
                   </td>
                 </tr>
               );
@@ -221,7 +232,11 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
         </table>
       </div>
 
-      <section className={ltvStyles.mobileList} aria-label="قيمة العميل حسب شهر أول شراء — عرض الهاتف">
+      <section
+        className={ltvStyles.mobileList}
+        aria-label="قيمة العميل حسب شهر أول شراء — عرض الهاتف"
+        dir="rtl"
+      >
         {rows.map((row) => {
           const currency = row.currency ?? baseCurrency;
           return (
@@ -233,7 +248,9 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
                 </div>
                 <div>
                   <span>العملاء الذين بدأوا هنا</span>
-                  <strong dir="ltr">{formatCountText(row.original_cohort_size)}</strong>
+                  <strong>
+                    <bdi dir="ltr">{formatCountText(row.original_cohort_size)}</bdi>
+                  </strong>
                 </div>
               </div>
               {hasVaryingObservationCutoffs && (
@@ -242,12 +259,16 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
               <dl className={ltvStyles.mobileMetrics}>
                 <div>
                   <dt>إجمالي ما دفعوه حتى الآن</dt>
-                  <dd dir="ltr">{formatMoneyText(row.cumulative_net_cash_collected_text, currency)}</dd>
+                  <dd>
+                    <bdi dir="ltr">{formatMoneyText(row.cumulative_net_cash_collected_text, currency)}</bdi>
+                  </dd>
                   <small>صافي التحصيل من أول شراء حتى تاريخ الحساب</small>
                 </div>
                 <div>
                   <dt>متوسط ما دفعه العميل حتى الآن</dt>
-                  <dd dir="ltr">{formatMoneyText(row.observed_ltv_text, currency)}</dd>
+                  <dd>
+                    <bdi dir="ltr">{formatMoneyText(row.observed_ltv_text, currency)}</bdi>
+                  </dd>
                   <small>لكل عميل بدأ في هذا الشهر</small>
                 </div>
               </dl>

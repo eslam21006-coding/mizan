@@ -29,6 +29,44 @@
   background: #fee2e2;
 }
 
+.remediationLink {
+  width: fit-content;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 7px;
+  padding: 5px 9px;
+  color: var(--brand-strong);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 10px;
+  font-weight: 850;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.remediationLink:hover {
+  border-color: var(--brand);
+}
+
+.remediationLink:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.remediationActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 0 0 10px;
+}
+
+.remediationActions .remediationLink {
+  margin-top: 0;
+}
+
 .calculationDetails {
   margin-top: 8px;
 }
@@ -224,6 +262,14 @@
 
   .qualityBadge {
     align-self: flex-start;
+  }
+
+  .remediationLink {
+    width: 100%;
+  }
+
+  .remediationActions {
+    display: grid;
   }
 
   .mobileMetrics {
