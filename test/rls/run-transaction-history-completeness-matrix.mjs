@@ -133,9 +133,14 @@ runPsqlFile(
   "test/business/customer-economics-exception-resolution-hardening.test.sql",
   environment,
 );
+runPsqlFile(
+  "supabase/migrations/20260915090000_customer_economics_missing_period_review.sql",
+  environment,
+);
+runPsqlFile("test/business/customer-economics-missing-period-review.test.sql", environment);
 // This global catalog audit must remain after every current feature migration and assertion.
 runPsqlFile("test/rls/task-39-full-security-review.test.sql", environment);
 
 console.log(
-  "Transaction-history and Customer Economics matrix passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, manual-count conflict tests, exact Net Cash summary, persisted-row verification, completion-summary authorization, legacy transaction-ID reconciliation coverage, customer-name metadata/search isolation, automatic allocation, exact residual reconciliation, revenue coverage, automatic historical/current Lifetime Contribution Profit, backdated recalculation, legacy exclusion, missing-period blocking, Task 5 exception-only exact-pool overrides after final SECURITY DEFINER hardening, replaceable stale overrides, legacy reconciliation, canonical audited historical correction, protected historical copy, serialized historical backfills, tenant isolation, and the post-migration global security audit.",
+  "Transaction-history and Customer Economics matrix passed migration repair, saved-purchase prerequisites, default-incomplete, paying/new trust, owner/admin, member/outsider, direct-write denial, confirmer-deletion audit retention, zero-count authority, manual-count conflict tests, exact Net Cash summary, persisted-row verification, completion-summary authorization, legacy transaction-ID reconciliation coverage, customer-name metadata/search isolation, automatic allocation, exact residual reconciliation, revenue coverage, automatic historical/current Lifetime Contribution Profit, backdated recalculation, legacy exclusion, missing-period blocking and actionable missing-period review with tenant isolation, Task 5 exception-only exact-pool overrides after final SECURITY DEFINER hardening, replaceable stale overrides, legacy reconciliation, canonical audited historical correction, protected historical copy, serialized historical backfills, tenant isolation, and the post-migration global security audit.",
 );
