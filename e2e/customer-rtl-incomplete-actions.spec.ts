@@ -7,6 +7,7 @@ const corsHeaders = {
   "Access-Control-Expose-Headers": "Content-Range",
 };
 
+/** Fulfills a mocked Supabase REST request with the same CORS and count headers used by the browser client. */
 async function fulfillSupabaseJson(route: Route, body: unknown, contentRange = "0-0/1") {
   if (route.request().method() === "OPTIONS") {
     await route.fulfill({ status: 204, headers: corsHeaders, body: "" });
@@ -21,6 +22,7 @@ async function fulfillSupabaseJson(route: Route, body: unknown, contentRange = "
   });
 }
 
+/** Collects console and page errors so the RTL fixtures must render without hidden browser failures. */
 function collectBrowserErrors(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
