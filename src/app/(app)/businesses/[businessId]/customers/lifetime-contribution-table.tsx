@@ -269,7 +269,7 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
                           {incomplete ? reasons.join(" ") : completedQualityExplanation(row)}
                         </p>
                         {incomplete && actions.length > 0 && (
-                          <div className={profitStyles.remediationActions} aria-label="خطوات إكمال البيانات">
+                          <div className={profitStyles.remediationActions} role="group" aria-label="خطوات إكمال البيانات">
                             {actions.map((action) => (
                               <Link key={action.key} className={profitStyles.remediationLink} href={action.href}>
                                 {action.label}
@@ -384,7 +384,7 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
                     {incomplete ? reasons.join(" ") : completedQualityExplanation(row)}
                   </p>
                   {incomplete && actions.length > 0 && (
-                    <div className={profitStyles.remediationActions} aria-label="خطوات إكمال البيانات">
+                    <div className={profitStyles.remediationActions} role="group" aria-label="خطوات إكمال البيانات">
                       {actions.map((action) => (
                         <Link key={action.key} className={profitStyles.remediationLink} href={action.href}>
                           {action.label}
