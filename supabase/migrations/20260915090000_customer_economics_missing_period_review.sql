@@ -7,7 +7,7 @@ as
 select distinct
   evidence.business_id,
   evidence.activity_month,
-  'MISSING_MONTHLY_PERIOD'::text as exception_code,
+  'BUSINESS_NET_CASH_MISSING'::text as exception_code,
   null::uuid as authoritative_source_id,
   null::text as expense_name_snapshot,
   null::numeric as amount,
@@ -29,4 +29,4 @@ grant select on public.customer_economics_missing_period_exceptions to authentic
 grant select on public.customer_economics_missing_period_exceptions to service_role;
 
 comment on view public.customer_economics_missing_period_exceptions is
-  'Founder remediation surface for Customer Economics activity months that have no monthly financial period. Security invoker preserves existing tenant RLS; each row identifies the exact month that must be created before acquisition-group profitability can become complete.';
+  'Founder remediation surface for Customer Economics activity months that have no monthly financial period. Rows use the existing BUSINESS_NET_CASH_MISSING founder workflow so the exact month opens in Monthly Actuals. Security invoker preserves existing tenant RLS.';
