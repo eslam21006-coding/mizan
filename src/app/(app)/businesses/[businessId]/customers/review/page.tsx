@@ -140,7 +140,12 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
   const exceptions = [
     ...((exceptionsResult.data ?? []) as ReviewException[]),
     ...((missingPeriodsResult.data ?? []) as ReviewException[]),
-  ].sort((left, right) => String(right.activity_month ?? "9999").localeCompare(String(left.activity_month ?? "9999")));
+  ].sort((left, right) => {
+    if (left.activity_month === null && right.activity_month === null) return 0;
+    if (left.activity_month === null) return 1;
+    if (right.activity_month === null) return -1;
+    return right.activity_month.localeCompare(left.activity_month);
+  });
 
   const query = await searchParams;
   const statusMessage = query.status ? STATUS_MESSAGES[query.status] ?? null : null;
