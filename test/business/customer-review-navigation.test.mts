@@ -22,6 +22,10 @@ const reviewNavigationSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/customers/review/customer-review-navigation.tsx",
   "utf8",
 );
+const reviewPanelSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/customers/review/customer-economics-review-panel.tsx",
+  "utf8",
+);
 
 test("Customer overview derives contextual Review state from both authoritative exception sources", () => {
   assert.match(customerPageSource, /customer_economics_review_exceptions/);
@@ -45,4 +49,21 @@ test("Review success shell uses deterministic breadcrumb and Back hierarchy", ()
   assert.match(reviewNavigationSource, /route: "business-customers"/);
   assert.match(reviewNavigationSource, /العملاء وقيمة العميل/);
   assert.match(reviewNavigationSource, /المراجعة/);
+});
+
+test("Review data-load errors preserve hierarchy and use the standard in-page error state", () => {
+  assert.match(reviewPageSource, /if \(dataLoadError\)/);
+  assert.match(reviewPageSource, /CustomerReviewNavigation/);
+  assert.match(reviewPageSource, /InPageErrorState/);
+  assert.match(reviewPageSource, /تعذر تحميل بيانات المراجعة/);
+  assert.match(reviewPageSource, /retryAction/);
+  assert.match(reviewPageSource, /business-customer-review/);
+});
+
+test("Review missing-month remediation resolves the exact month through typed Monthly navigation", () => {
+  assert.match(reviewPanelSource, /BUSINESS_NET_CASH_MISSING/);
+  assert.match(reviewPanelSource, /monthlyReviewHref/);
+  assert.match(reviewPanelSource, /route: "business-monthly"/);
+  assert.match(reviewPanelSource, /month: activityMonth\.slice\(0, 7\)/);
+  assert.doesNotMatch(reviewPanelSource, /monthly\?month=\$\{exception\.activity_month\.slice/);
 });
