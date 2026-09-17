@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { formatMoneyText } from "@/lib/financial-display";
+import { resolveNavigationDestination } from "@/lib/navigation-hierarchy";
 import {
   reconcileCustomerEconomicsLegacyAllocations,
   saveCustomerEconomicsManualOverride,
@@ -146,6 +147,15 @@ function legacyTypeLabel(costType: string) {
   return costType;
 }
 
+/** Resolves an exception's activity month through the canonical Monthly destination. */
+function monthlyReviewHref(businessId: string, activityMonth: string) {
+  return resolveNavigationDestination({
+    route: "business-monthly",
+    businessId,
+    month: activityMonth.slice(0, 7),
+  });
+}
+
 /** Renders the founder-facing review queue without weakening the database reconciliation rules. */
 export function CustomerEconomicsReviewPanel({
   businessId,
@@ -245,7 +255,7 @@ export function CustomerEconomicsReviewPanel({
                     exception.activity_month && (
                       <Link
                         className={styles.inlineAction}
-                        href={`/businesses/${businessId}/monthly?month=${exception.activity_month.slice(0, 7)}`}
+                        href={monthlyReviewHref(businessId, exception.activity_month)}
                       >
                         فتح بيانات هذا الشهر
                       </Link>

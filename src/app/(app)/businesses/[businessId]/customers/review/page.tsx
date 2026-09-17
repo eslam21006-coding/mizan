@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { InPageErrorState } from "@/components/workflow-recovery";
 import { requireAuthContext } from "@/lib/auth/context";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import { resolveNavigationDestination } from "@/lib/navigation-hierarchy";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   CustomerEconomicsReviewPanel,
@@ -100,14 +102,19 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
   );
 
   if (dataLoadError) {
+    const retryHref = resolveNavigationDestination({
+      route: "business-customer-review",
+      businessId: business.id,
+    });
+
     return (
       <div className="page-stack">
-        <div>
-          <span className="eyebrow">Customer Economics</span>
-          <h1>ملاحظات تحتاج مراجعتك</h1>
-          <p className="muted-copy">تعذر تحميل بيانات المراجعة كاملة. لم يتم عرض حالة نظيفة حتى لا نخفي ملاحظة محتملة.</p>
-        </div>
-        <Link href={`/businesses/${businessId}/customers`}>العودة لاقتصاديات العميل</Link>
+        <CustomerReviewNavigation businessId={business.id} businessName={business.name} />
+        <InPageErrorState
+          title="تعذر تحميل بيانات المراجعة"
+          description="تعذر تحميل بيانات المراجعة كاملة. لم يتم عرض حالة نظيفة حتى لا نخفي ملاحظة محتملة. أعد المحاولة، أو استخدم الرجوع للعودة إلى اقتصاديات العميل."
+          retryAction={<Link href={retryHref}>إعادة المحاولة</Link>}
+        />
       </div>
     );
   }

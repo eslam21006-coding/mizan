@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { CustomerEconomicsReviewPanel } from "@/app/(app)/businesses/[businessId]/customers/review/customer-economics-review-panel";
@@ -8,11 +9,17 @@ import type {
   RevenueInputRow,
 } from "@/app/(app)/businesses/[businessId]/monthly/monthly-entry-form";
 import { AppShell } from "@/components/app-shell";
+import { InPageErrorState } from "@/components/workflow-recovery";
 
 const BUSINESS_ID = "99999999-9999-4999-8999-999999999999";
+const FIXTURE_PATH = "/auth/e2e-customer-economics-review";
 const fixtureShellProps = {
   role: "admin" as const,
   email: "admin.task5@example.test",
+};
+
+type CustomerEconomicsReviewFixturePageProps = {
+  searchParams: Promise<{ state?: string }>;
 };
 
 const revenueRows: RevenueInputRow[] = [
@@ -38,9 +45,29 @@ const expenseRows: ExpenseInputRow[] = [
   },
 ];
 
-export default async function CustomerEconomicsReviewFixturePage() {
+/** Renders isolated Customer Review success and recoverable-error states for browser verification. */
+export default async function CustomerEconomicsReviewFixturePage({
+  searchParams,
+}: CustomerEconomicsReviewFixturePageProps) {
   await connection();
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") notFound();
+
+  const query = await searchParams;
+
+  if (query.state === "error") {
+    return (
+      <AppShell {...fixtureShellProps}>
+        <div className="page-stack">
+          <CustomerReviewNavigation businessId={BUSINESS_ID} businessName="بزنس مراجعة الاختبار" />
+          <InPageErrorState
+            title="تعذر تحميل بيانات المراجعة"
+            description="تعذر تحميل بيانات المراجعة كاملة. لم يتم عرض حالة نظيفة حتى لا نخفي ملاحظة محتملة."
+            retryAction={<Link href={FIXTURE_PATH}>إعادة المحاولة</Link>}
+          />
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell {...fixtureShellProps}>
@@ -68,6 +95,16 @@ export default async function CustomerEconomicsReviewFixturePage() {
               authoritative_source_id: null,
               expense_name_snapshot: null,
               amount: "250",
+              currency: "EGP",
+              can_manual_override: false,
+              blocking: true,
+            },
+            {
+              activity_month: "2026-05-01",
+              exception_code: "BUSINESS_NET_CASH_MISSING",
+              authoritative_source_id: null,
+              expense_name_snapshot: null,
+              amount: null,
               currency: "EGP",
               can_manual_override: false,
               blocking: true,
