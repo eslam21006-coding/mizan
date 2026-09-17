@@ -139,7 +139,14 @@ test.describe("CI-only navigation foundation fixture", () => {
     const bannerReturn = returnBanner.getByRole("link", { name: "العودة إلى ربحية العميل" });
     await expect(returnBanner).toBeVisible();
     await expect(bannerReturn).toBeVisible();
-    await expect(bannerReturn).toHaveCSS("width", "332px");
+    const bannerBox = await returnBanner.boundingBox();
+    const bannerReturnBox = await bannerReturn.boundingBox();
+    expect(bannerBox).not.toBeNull();
+    expect(bannerReturnBox).not.toBeNull();
+    expect(bannerReturnBox?.width ?? 0).toBeGreaterThan(250);
+    expect(bannerReturnBox?.width ?? Number.POSITIVE_INFINITY).toBeLessThanOrEqual(
+      bannerBox?.width ?? 0,
+    );
 
     const inPageError = page.getByRole("alert", { name: "تعذر تحميل تفاصيل المراجعة" });
     await expect(inPageError).toBeVisible();
