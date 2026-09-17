@@ -1,14 +1,28 @@
 import { notFound } from "next/navigation";
 import { CustomerHistoryOverview } from "@/app/(app)/businesses/[businessId]/customers/customer-history-overview";
 import { CustomerOverviewShell } from "@/app/(app)/businesses/[businessId]/customers/customer-overview-shell";
+import {
+  parseCustomerAnalysisView,
+  type CustomerSearchParams,
+} from "@/lib/customer-analysis-view";
 
 const FIXTURE_BUSINESS_ID = "00000000-0000-4000-8000-000000000057";
+const FIXTURE_PATH = "/auth/e2e-customers-overview";
 
-/** Renders deterministic customer-overview content for browser-only RTL and interaction verification. */
-export default function CustomerOverviewE2eFixturePage() {
+type CustomerOverviewE2eFixturePageProps = {
+  searchParams: Promise<CustomerSearchParams>;
+};
+
+/** Renders deterministic customer-overview content for browser-only RTL and URL-state verification. */
+export default async function CustomerOverviewE2eFixturePage({
+  searchParams,
+}: CustomerOverviewE2eFixturePageProps) {
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
     notFound();
   }
+
+  const customerSearchParams = await searchParams;
+  const activeView = parseCustomerAnalysisView(customerSearchParams.view);
 
   return (
     <main className="page-stack">
@@ -17,6 +31,9 @@ export default function CustomerOverviewE2eFixturePage() {
         businessName="بزنس الاختبار"
         baseCurrency="USD"
         timezone="Africa/Cairo"
+        activeView={activeView}
+        searchParams={customerSearchParams}
+        tabBasePath={FIXTURE_PATH}
         historyOverview={
           <CustomerHistoryOverview
             baseCurrency="USD"

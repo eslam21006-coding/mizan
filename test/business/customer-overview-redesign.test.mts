@@ -39,15 +39,16 @@ const contributionPageSource = readFileSync(
   "utf8",
 );
 
-test("customer overview keeps all four existing analyses behind one focused workspace", () => {
+test("customer overview keeps all existing analyses behind one focused five-view workspace", () => {
   assert.match(pageSource, /CustomerOverviewShell/);
   assert.match(pageSource, /CustomerCohortLtvTable/);
   assert.match(pageSource, /LifetimeRevenueStreamTable/);
   assert.match(pageSource, /LifetimeContributionTable/);
   assert.match(pageSource, /CustomerGroupsTable/);
-  assert.match(shellSource, /id: "observed-ltv"/);
+  assert.match(shellSource, /id: "overview"/);
+  assert.match(shellSource, /id: "value"/);
   assert.match(shellSource, /id: "revenue-streams"/);
-  assert.match(shellSource, /id: "contribution"/);
+  assert.match(shellSource, /id: "profitability"/);
   assert.match(shellSource, /id: "customers"/);
 });
 

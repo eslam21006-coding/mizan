@@ -1,54 +1,77 @@
 "use client";
 
-import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import Link from "next/link";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import {
+  buildCustomerAnalysisViewHref,
+  type CustomerAnalysisView,
+  type CustomerSearchParams,
+} from "@/lib/customer-analysis-view";
 import styles from "./customer-groups.module.css";
 import uxStyles from "./customer-analysis-ux.module.css";
 
 type CustomerAnalysisPanel = {
-  id: "observed-ltv" | "revenue-streams" | "contribution" | "customers";
+  id: CustomerAnalysisView;
   label: string;
   eyebrow: string;
   content: ReactNode;
 };
 
 type CustomerAnalysisTabsProps = {
+  businessId: string;
+  activeView: CustomerAnalysisView;
+  searchParams: CustomerSearchParams;
   panels: CustomerAnalysisPanel[];
+  tabBasePath?: string;
 };
 
-/** Keeps deeper customer analyses available without stacking full tables on one page. */
-export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
+/** Keeps deeper customer analyses URL-addressable without stacking full tables on one page. */
+export function CustomerAnalysisTabs({
+  businessId,
+  activeView,
+  searchParams,
+  panels,
+  tabBasePath,
+}: CustomerAnalysisTabsProps) {
   const instanceId = useId().replaceAll(":", "");
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [visitedIndexes, setVisitedIndexes] = useState(() => new Set([0]));
-  const tabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const activeIndex = Math.max(
+    0,
+    panels.findIndex((panel) => panel.id === activeView),
+  );
+  const [visitedIndexes, setVisitedIndexes] = useState(() => new Set([activeIndex]));
+  const tabRefs = useRef<Array<HTMLAnchorElement | null>>([]);
 
-  /** Selects a tab, records it as visited for lazy content mounting, and optionally moves focus. */
-  const selectTab = (index: number, focus = false) => {
-    const normalizedIndex = (index + panels.length) % panels.length;
-    setActiveIndex(normalizedIndex);
+  useEffect(() => {
     setVisitedIndexes((current) => {
-      if (current.has(normalizedIndex)) return current;
+      if (current.has(activeIndex)) return current;
       const next = new Set(current);
-      next.add(normalizedIndex);
+      next.add(activeIndex);
       return next;
     });
-    if (focus) tabRefs.current[normalizedIndex]?.focus();
+  }, [activeIndex]);
+
+  /** Moves focus and selection together through URL navigation for the RTL tab list. */
+  const selectTab = (index: number) => {
+    const normalizedIndex = (index + panels.length) % panels.length;
+    const target = tabRefs.current[normalizedIndex];
+    target?.focus();
+    target?.click();
   };
 
   /** Applies horizontal RTL keyboard behavior plus Home/End navigation to the tab list. */
-  const onTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+  const onTabKeyDown = (event: KeyboardEvent<HTMLAnchorElement>, index: number) => {
     if (event.key === "ArrowLeft") {
       event.preventDefault();
-      selectTab(index + 1, true);
+      selectTab(index + 1);
     } else if (event.key === "ArrowRight") {
       event.preventDefault();
-      selectTab(index - 1, true);
+      selectTab(index - 1);
     } else if (event.key === "Home") {
       event.preventDefault();
-      selectTab(0, true);
+      selectTab(0);
     } else if (event.key === "End") {
       event.preventDefault();
-      selectTab(panels.length - 1, true);
+      selectTab(panels.length - 1);
     }
   };
 
@@ -58,7 +81,7 @@ export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
         <div>
           <span className={styles.kicker}>التفاصيل عند الحاجة</span>
           <h2 id="customer-analysis-title">اختر ما تريد معرفته عن عملائك</h2>
-          <p>ابدأ بمتوسط ما دفعه العميل منذ أول شراء، ثم افتح باقي التفاصيل عندما تحتاجها.</p>
+          <p>ابدأ بالنظرة العامة، ثم افتح قيمة العميل أو الربحية أو باقي التفاصيل عندما تحتاجها.</p>
         </div>
       </div>
 
@@ -66,24 +89,29 @@ export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
         {panels.map((panel, index) => {
           const selected = activeIndex === index;
           return (
-            <button
+            <Link
               key={panel.id}
               ref={(element) => {
                 tabRefs.current[index] = element;
               }}
               id={`${instanceId}-${panel.id}-tab`}
-              type="button"
+              href={buildCustomerAnalysisViewHref(
+                businessId,
+                searchParams,
+                panel.id,
+                tabBasePath,
+              )}
+              scroll={false}
               role="tab"
               aria-selected={selected}
               aria-controls={`${instanceId}-${panel.id}-panel`}
               tabIndex={selected ? 0 : -1}
               className={`${styles.analysisTab} ${uxStyles.analysisTabEmphasis} ${selected ? `${styles.analysisTabActive} ${uxStyles.analysisTabActiveEmphasis}` : ""}`}
-              onClick={() => selectTab(index)}
               onKeyDown={(event) => onTabKeyDown(event, index)}
             >
               <strong>{panel.label}</strong>
               <span>{panel.eyebrow}</span>
-            </button>
+            </Link>
           );
         })}
       </div>
@@ -98,7 +126,7 @@ export function CustomerAnalysisTabs({ panels }: CustomerAnalysisTabsProps) {
             hidden={activeIndex !== index}
             className={styles.analysisPanel}
           >
-            {visitedIndexes.has(index) ? panel.content : null}
+            {visitedIndexes.has(index) || activeIndex === index ? panel.content : null}
           </div>
         ))}
       </div>

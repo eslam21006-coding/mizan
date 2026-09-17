@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import type { CustomerAnalysisView, CustomerSearchParams } from "@/lib/customer-analysis-view";
 import { CustomerAnalysisTabs } from "./customer-analysis-tabs";
 import styles from "./customer-groups.module.css";
 
@@ -8,24 +9,30 @@ type CustomerOverviewShellProps = {
   businessName: string;
   baseCurrency: string;
   timezone: string;
+  activeView: CustomerAnalysisView;
+  searchParams: CustomerSearchParams;
   historyOverview: ReactNode;
   observedLtv: ReactNode;
   revenueStreams: ReactNode;
   contribution: ReactNode;
   customers: ReactNode;
+  tabBasePath?: string;
 };
 
-/** Presents customer economics with a compact summary first and deeper analysis on demand. */
+/** Presents customer economics with URL-addressable local views and a dedicated Overview tab. */
 export function CustomerOverviewShell({
   businessId,
   businessName,
   baseCurrency,
   timezone,
+  activeView,
+  searchParams,
   historyOverview,
   observedLtv,
   revenueStreams,
   contribution,
   customers,
+  tabBasePath,
 }: CustomerOverviewShellProps) {
   return (
     <div className={styles.customerWorkspace}>
@@ -61,8 +68,6 @@ export function CustomerOverviewShell({
           </Link>
         </div>
       </section>
-
-      {historyOverview}
 
       <details className={styles.setupDisclosure}>
         <summary>
@@ -117,15 +122,25 @@ export function CustomerOverviewShell({
       </details>
 
       <CustomerAnalysisTabs
+        businessId={businessId}
+        activeView={activeView}
+        searchParams={searchParams}
+        tabBasePath={tabBasePath}
         panels={[
           {
-            id: "observed-ltv",
+            id: "overview",
+            eyebrow: "ملخص اقتصاديات العملاء",
+            label: "نظرة عامة",
+            content: historyOverview,
+          },
+          {
+            id: "value",
             eyebrow: "منذ أول شراء",
             label: "متوسط ما دفعه العميل",
             content: observedLtv,
           },
           {
-            id: "contribution",
+            id: "profitability",
             eyebrow: "محسوبة تلقائيًا من المصروفات",
             label: "ربحية العميل",
             content: contribution,
