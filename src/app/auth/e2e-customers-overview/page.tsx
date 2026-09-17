@@ -33,6 +33,7 @@ export default async function CustomerOverviewE2eFixturePage({
         timezone="Africa/Cairo"
         activeView={activeView}
         searchParams={customerSearchParams}
+        reviewIssueCount={2}
         tabBasePath={FIXTURE_PATH}
         historyOverview={
           <CustomerHistoryOverview
