@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const fixtureEnabled = process.env.MIZAN_E2E_UI_FIXTURE === "true";
 const fixturePath = "/auth/e2e-monthly-entry";
+const fixtureBusinessId = "00000000-0000-4000-8000-000000000025";
 
 function captureBrowserErrors(page: import("@playwright/test").Page) {
   const errors: string[] = [];
@@ -83,6 +84,34 @@ test.describe("Monthly entry UX fixture", () => {
     await gross.fill("31000");
     await refunds.fill("1000");
     await expect(page.getByText("30,000 USD", { exact: true })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+
+  test("shows only an allow-listed profitability Return context and keeps it usable on mobile", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(`${fixturePath}?origin=customer-profitability`);
+
+    const returnBanner = page.getByRole("region", { name: "العودة إلى ربحية العميل" });
+    await expect(returnBanner).toBeVisible();
+    await expect(returnBanner.getByText("أنت هنا لإكمال بيانات مطلوبة في ربحية العميل")).toBeVisible();
+    const returnLink = returnBanner.getByRole("link", { name: "العودة إلى ربحية العميل" });
+    await expect(returnLink).toHaveAttribute(
+      "href",
+      `/businesses/${fixtureBusinessId}/customers?view=profitability`,
+    );
+    await returnLink.focus();
+    await expect(returnLink).toBeFocused();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(returnBanner).toBeVisible();
+    await expect(returnLink).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
+      .toBe(true);
+
+    await page.goto(`${fixturePath}?origin=https://evil.example/return`);
+    await expect(page.getByRole("region", { name: "العودة إلى ربحية العميل" })).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 
