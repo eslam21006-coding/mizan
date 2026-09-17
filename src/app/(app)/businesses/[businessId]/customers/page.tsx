@@ -38,17 +38,34 @@ export default async function BusinessCustomersPage({
 
   if (error || !business) notFound();
 
-  const { data: historyOverviewData, error: historyOverviewError } = await supabase
-    .from("customer_history_overview")
-    .select(
-      "paying_customer_count_text,repeat_customer_count_text,net_cash_collected_text,revenue_per_paying_customer_text",
-    )
-    .eq("business_id", business.id)
-    .maybeSingle();
-  const historyOverviewSummary = historyOverviewError
+  const [historyOverviewResult, reviewExceptionsResult, missingPeriodsResult] = await Promise.all([
+    supabase
+      .from("customer_history_overview")
+      .select(
+        "paying_customer_count_text,repeat_customer_count_text,net_cash_collected_text,revenue_per_paying_customer_text",
+      )
+      .eq("business_id", business.id)
+      .maybeSingle(),
+    supabase
+      .from("customer_economics_review_exceptions")
+      .select("exception_code")
+      .eq("business_id", business.id),
+    supabase
+      .from("customer_economics_missing_period_exceptions")
+      .select("exception_code")
+      .eq("business_id", business.id),
+  ]);
+
+  const historyOverviewSummary = historyOverviewResult.error
     ? null
-    : parseCustomerHistoryOverviewSummary(historyOverviewData);
-  const historyOverviewLoadError = Boolean(historyOverviewError || !historyOverviewSummary);
+    : parseCustomerHistoryOverviewSummary(historyOverviewResult.data);
+  const historyOverviewLoadError = Boolean(
+    historyOverviewResult.error || !historyOverviewSummary,
+  );
+  const reviewLoadError = Boolean(reviewExceptionsResult.error || missingPeriodsResult.error);
+  const reviewIssueCount = reviewLoadError
+    ? null
+    : (reviewExceptionsResult.data?.length ?? 0) + (missingPeriodsResult.data?.length ?? 0);
 
   return (
     <CustomerOverviewShell
@@ -58,6 +75,8 @@ export default async function BusinessCustomersPage({
       timezone={business.timezone}
       activeView={activeView}
       searchParams={customerSearchParams}
+      reviewIssueCount={reviewIssueCount}
+      reviewLoadError={reviewLoadError}
       historyOverview={
         <CustomerHistoryOverview
           baseCurrency={business.base_currency}

@@ -47,6 +47,7 @@ export default async function CustomerTabsFixturePage({ searchParams }: Customer
         timezone="Africa/Cairo"
         activeView={activeView}
         searchParams={customerSearchParams}
+        reviewIssueCount={0}
         tabBasePath={fixturePath}
         historyOverview={<FixturePanel testId="fixture-overview" title="ملخص اقتصاديات العملاء" />}
         observedLtv={<FixturePanel testId="fixture-value" title="قيمة العميل" />}

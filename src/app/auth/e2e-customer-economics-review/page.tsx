@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { connection } from "next/server";
 import { CustomerEconomicsReviewPanel } from "@/app/(app)/businesses/[businessId]/customers/review/customer-economics-review-panel";
+import { CustomerReviewNavigation } from "@/app/(app)/businesses/[businessId]/customers/review/customer-review-navigation";
 import { HistoricalCorrectionForm } from "@/app/(app)/businesses/[businessId]/monthly/correction/historical-correction-form";
 import type {
   ExpenseInputRow,
@@ -44,6 +45,7 @@ export default async function CustomerEconomicsReviewFixturePage() {
   return (
     <AppShell {...fixtureShellProps}>
       <div className="page-stack">
+        <CustomerReviewNavigation businessId={BUSINESS_ID} businessName="بزنس مراجعة الاختبار" />
         <CustomerEconomicsReviewPanel
           businessId={BUSINESS_ID}
           baseCurrency="EGP"

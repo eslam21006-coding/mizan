@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import type { CustomerAnalysisView, CustomerSearchParams } from "@/lib/customer-analysis-view";
 import { CustomerAnalysisTabs } from "./customer-analysis-tabs";
 import { CustomerDataSourcesDrawer } from "./customer-data-sources-drawer";
+import { CustomerReviewNotice } from "./customer-review-notice";
 import styles from "./customer-groups.module.css";
 
 type CustomerOverviewShellProps = {
@@ -12,6 +13,8 @@ type CustomerOverviewShellProps = {
   timezone: string;
   activeView: CustomerAnalysisView;
   searchParams: CustomerSearchParams;
+  reviewIssueCount: number | null;
+  reviewLoadError?: boolean;
   historyOverview: ReactNode;
   observedLtv: ReactNode;
   revenueStreams: ReactNode;
@@ -28,6 +31,8 @@ export function CustomerOverviewShell({
   timezone,
   activeView,
   searchParams,
+  reviewIssueCount,
+  reviewLoadError = false,
   historyOverview,
   observedLtv,
   revenueStreams,
@@ -58,6 +63,11 @@ export function CustomerOverviewShell({
       </section>
 
       <CustomerDataSourcesDrawer businessId={businessId} />
+      <CustomerReviewNotice
+        businessId={businessId}
+        issueCount={reviewIssueCount}
+        loadError={reviewLoadError}
+      />
 
       <CustomerAnalysisTabs
         businessId={businessId}
