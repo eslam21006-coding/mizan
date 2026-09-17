@@ -15,6 +15,7 @@ const DRAWER_TITLE_ID = "customer-data-sources-title";
 export function CustomerDataSourcesDrawer({ businessId }: CustomerDataSourcesDrawerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
+  /** Opens the Data Sources dialog as a modal drawer with native focus management. */
   function openDrawer() {
     dialogRef.current?.showModal();
   }
