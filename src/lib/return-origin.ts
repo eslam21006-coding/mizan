@@ -21,9 +21,14 @@ export type ReturnOriginContext = {
 
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
+/** Detects URLSearchParams-like readers without coupling this utility to Next.js. */
+function isSearchParamReader(searchParams: ReturnOriginSearchParams): searchParams is SearchParamReader {
+  return typeof (searchParams as Partial<SearchParamReader>).getAll === "function";
+}
+
 /** Reads exactly one value so duplicated query keys cannot create ambiguous workflow context. */
 function readSingleSearchParam(searchParams: ReturnOriginSearchParams, key: string) {
-  if ("getAll" in searchParams && typeof searchParams.getAll === "function") {
+  if (isSearchParamReader(searchParams)) {
     const values = searchParams.getAll(key);
     return values.length === 1 ? values[0] : null;
   }
