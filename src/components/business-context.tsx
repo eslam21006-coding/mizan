@@ -6,6 +6,7 @@ type BusinessContextProps = {
   timezone: string;
 };
 
+/** Displays the current business identity and passive currency/timezone context. */
 export function BusinessContext({ businessName, baseCurrency, timezone }: BusinessContextProps) {
   return (
     <section className={styles.context} aria-label="سياق البزنس">
