@@ -24,7 +24,12 @@ export function PageActionSlot({
   ariaLabel = "إجراءات الصفحة",
 }: PageActionSlotProps) {
   return (
-    <div className={styles.actionSlot} data-action-state={state} aria-label={ariaLabel}>
+    <div
+      className={styles.actionSlot}
+      data-action-state={state}
+      role="group"
+      aria-label={ariaLabel}
+    >
       <div className={styles.actionContent}>
         {children ?? (
           <span className={styles.actionStateCopy} role="status">
