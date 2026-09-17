@@ -1,0 +1,180 @@
+.returnBanner,
+.errorState {
+  min-width: 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+.returnBanner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  padding: 16px 18px;
+  border-color: #d3e7e1;
+  background: #f8fbfa;
+}
+
+.returnCopy {
+  min-width: 0;
+}
+
+.kicker {
+  display: inline-flex;
+  color: var(--brand);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.returnCopy p {
+  margin: 4px 0 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.returnLink {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 13px;
+  color: var(--brand-strong);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+  transition:
+    background-color 140ms ease,
+    border-color 140ms ease;
+}
+
+.returnLink:hover {
+  background: var(--brand-soft);
+  border-color: #bcd8d0;
+}
+
+.returnLink:focus-visible,
+.retryAction > :is(a, button):focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.errorState {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 18px;
+  align-items: start;
+  padding: 24px;
+  border-color: #ead3d3;
+}
+
+.errorIcon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  color: var(--danger);
+  background: #fbefef;
+  border: 1px solid #efd4d4;
+  border-radius: 13px;
+  font-size: 22px;
+  font-weight: 850;
+}
+
+.errorCopy {
+  min-width: 0;
+}
+
+.errorCopy .kicker {
+  color: var(--danger);
+}
+
+.errorCopy h2 {
+  margin: 5px 0 0;
+  color: var(--text);
+  font-size: 20px;
+  line-height: 1.45;
+}
+
+.errorCopy p {
+  margin: 8px 0 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+.errorActions {
+  grid-column: 2;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.retryAction {
+  display: contents;
+}
+
+.retryAction > :is(a, button) {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 13px;
+  color: #fff;
+  background: var(--brand);
+  border: 1px solid var(--brand);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.retryAction > :is(a, button):hover {
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+}
+
+@media (max-width: 720px) {
+  .returnBanner {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .returnLink {
+    width: 100%;
+  }
+
+  .errorState {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 14px;
+    padding: 18px;
+  }
+
+  .errorActions {
+    grid-column: 1;
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .retryAction > :is(a, button),
+  .errorActions > .returnLink {
+    width: 100%;
+  }
+}
