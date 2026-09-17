@@ -5,8 +5,8 @@
   align-items: center;
   gap: 18px;
   padding: 16px 18px;
-  background: color-mix(in srgb, var(--warning) 8%, var(--surface));
-  border: 1px solid color-mix(in srgb, var(--warning) 32%, var(--border));
+  background: var(--brand-soft);
+  border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-soft);
 }
@@ -16,7 +16,7 @@
 }
 
 .eyebrow {
-  color: var(--warning-strong, var(--text));
+  color: var(--brand-strong);
   font-size: 10px;
   font-weight: 850;
 }
