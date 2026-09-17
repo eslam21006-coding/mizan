@@ -9,6 +9,7 @@ import {
   type LegacyAllocation,
   type ReviewException,
 } from "./customer-economics-review-panel";
+import { CustomerReviewNavigation } from "./customer-review-navigation";
 
 type ReviewPageProps = {
   params: Promise<{ businessId: string }>;
@@ -155,16 +156,19 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
   const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
 
   return (
-    <CustomerEconomicsReviewPanel
-      businessId={business.id}
-      baseCurrency={business.base_currency}
-      canManage={canManage}
-      exceptions={exceptions}
-      trustedMonths={trustedMonths}
-      legacyAllocations={legacyAllocations}
-      eligibleCostPools={eligibleCostPools}
-      statusMessage={statusMessage}
-      statusIsError={statusIsError}
-    />
+    <div className="page-stack">
+      <CustomerReviewNavigation businessId={business.id} businessName={business.name} />
+      <CustomerEconomicsReviewPanel
+        businessId={business.id}
+        baseCurrency={business.base_currency}
+        canManage={canManage}
+        exceptions={exceptions}
+        trustedMonths={trustedMonths}
+        legacyAllocations={legacyAllocations}
+        eligibleCostPools={eligibleCostPools}
+        statusMessage={statusMessage}
+        statusIsError={statusIsError}
+      />
+    </div>
   );
 }
