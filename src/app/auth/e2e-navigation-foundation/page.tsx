@@ -20,6 +20,7 @@ const breadcrumbItems = [
   { label: "اقتصاديات العملاء", current: true },
 ] satisfies readonly BreadcrumbItem[];
 
+/** Renders the CI-only page used to verify N01/N02 without migrating production modules. */
 export default function NavigationFoundationE2eFixturePage() {
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
     notFound();
