@@ -19,6 +19,11 @@ export type ReturnOriginContext = {
   businessId: string;
 };
 
+type SingleSearchParam =
+  | { status: "missing" }
+  | { status: "value"; value: string }
+  | { status: "ambiguous" };
+
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 
 /** Detects URLSearchParams-like readers without coupling this utility to Next.js. */
@@ -26,33 +31,45 @@ function isSearchParamReader(searchParams: ReturnOriginSearchParams): searchPara
   return typeof (searchParams as Partial<SearchParamReader>).getAll === "function";
 }
 
-/** Reads exactly one value so duplicated query keys cannot create ambiguous workflow context. */
-function readSingleSearchParam(searchParams: ReturnOriginSearchParams, key: string) {
+/** Distinguishes missing metadata from duplicated/ambiguous metadata. */
+function readSingleSearchParam(
+  searchParams: ReturnOriginSearchParams,
+  key: string,
+): SingleSearchParam {
   if (isSearchParamReader(searchParams)) {
     const values = searchParams.getAll(key);
-    return values.length === 1 ? values[0] : null;
+    if (values.length === 0) return { status: "missing" };
+    if (values.length === 1) return { status: "value", value: values[0] };
+    return { status: "ambiguous" };
   }
 
   const value = searchParams[key];
-  return typeof value === "string" ? value : null;
+  if (value === undefined) return { status: "missing" };
+  if (typeof value === "string") return { status: "value", value };
+  return { status: "ambiguous" };
 }
 
 /** Parses only allow-listed structured origins; arbitrary return URLs are never accepted. */
 export function parseReturnOrigin(searchParams: ReturnOriginSearchParams): ReturnOriginMetadata | null {
-  const origin = readSingleSearchParam(searchParams, "origin");
-  const month = readSingleSearchParam(searchParams, "month");
+  const originParam = readSingleSearchParam(searchParams, "origin");
+  const monthParam = readSingleSearchParam(searchParams, "month");
 
-  if (month !== null && !MONTH_KEY_PATTERN.test(month)) {
+  if (originParam.status !== "value" || monthParam.status === "ambiguous") {
     return null;
   }
 
-  switch (origin) {
+  const month = monthParam.status === "value" ? monthParam.value : undefined;
+  if (month !== undefined && !MONTH_KEY_PATTERN.test(month)) {
+    return null;
+  }
+
+  switch (originParam.value) {
     case "customer-overview":
-      return { origin };
+      return { origin: "customer-overview" };
     case "customer-profitability":
-      return month ? { origin, month } : { origin };
+      return month ? { origin: "customer-profitability", month } : { origin: "customer-profitability" };
     case "monthly-editor":
-      return month ? { origin, month } : null;
+      return month ? { origin: "monthly-editor", month } : null;
     default:
       return null;
   }
