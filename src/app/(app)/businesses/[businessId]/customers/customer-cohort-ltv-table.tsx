@@ -27,6 +27,8 @@ type CustomerCohortLtvTableProps = {
   baseCurrency: string;
 };
 
+type NavigationMode = "push" | "replace";
+
 /** Converts a stored first-purchase month into a founder-facing Arabic month label. */
 function acquisitionMonthLabel(value: string) {
   const [yearText, monthText] = value.split("-");
@@ -77,13 +79,15 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
 
   /** Writes cohort pagination to the current URL while preserving Customer view and unrelated structured state. */
   const navigateToPage = useCallback(
-    (nextPage: number) => {
+    (nextPage: number, mode: NavigationMode = "push") => {
       const safePage = Math.max(0, nextPage);
       const params = new URLSearchParams(searchParams.toString());
       if (safePage === 0) params.delete(COHORT_PAGE_PARAM);
       else params.set(COHORT_PAGE_PARAM, String(safePage + 1));
       const query = params.toString();
-      router.push(query ? `${pathname}?${query}` : pathname);
+      const href = query ? `${pathname}?${query}` : pathname;
+      if (mode === "replace") router.replace(href);
+      else router.push(href);
     },
     [pathname, router, searchParams],
   );
@@ -135,7 +139,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
 
   useEffect(() => {
     if (pageCount !== null && page >= pageCount) {
-      navigateToPage(pageCount - 1);
+      navigateToPage(pageCount - 1, "replace");
     }
   }, [navigateToPage, page, pageCount]);
 
