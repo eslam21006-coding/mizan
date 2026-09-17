@@ -53,7 +53,7 @@ test.describe("Customer Review navigation", () => {
     expect(browserErrors).toEqual([]);
   });
 
-  test("gives Review a deterministic breadcrumb and Back parent in Arabic RTL", async ({ page }) => {
+  test("gives Review a deterministic breadcrumb, Back parent, and exact missing-month fix", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") browserErrors.push(message.text());
@@ -82,9 +82,54 @@ test.describe("Customer Review navigation", () => {
     await backLink.focus();
     await expect(backLink).toBeFocused();
 
+    const missingMonthCard = page.locator("article").filter({ hasText: "BUSINESS_NET_CASH_MISSING" });
+    await expect(missingMonthCard).toBeVisible();
+    const missingMonthFix = missingMonthCard.getByRole("link", { name: "فتح بيانات هذا الشهر" });
+    await expect(missingMonthFix).toHaveAttribute(
+      "href",
+      `/businesses/${reviewBusinessId}/monthly?month=2026-05`,
+    );
+    await missingMonthFix.focus();
+    await expect(missingMonthFix).toBeFocused();
+
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(breadcrumb).toBeVisible();
     await expect(backLink).toBeVisible();
+    await expect(missingMonthFix).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
+      .toBe(true);
+    expect(browserErrors).toEqual([]);
+  });
+
+  test("keeps the Review hierarchy visible when review data fails and exposes retry", async ({ page }) => {
+    const browserErrors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") browserErrors.push(message.text());
+    });
+    page.on("pageerror", (error) => browserErrors.push(error.message));
+
+    await page.goto(`${reviewPath}?state=error`);
+
+    const breadcrumb = page.getByRole("navigation", { name: "مسار مراجعة اقتصاديات العميل" });
+    await expect(breadcrumb).toBeVisible();
+    const backLink = page.getByRole("link", { name: "العودة للعملاء وقيمة العميل" });
+    await expect(backLink).toHaveAttribute("href", `/businesses/${reviewBusinessId}/customers`);
+
+    const errorState = page.getByRole("alert", { name: "تعذر تحميل بيانات المراجعة" });
+    await expect(errorState).toBeVisible();
+    await expect(errorState.getByRole("heading", { name: "تعذر تحميل بيانات المراجعة" })).toBeVisible();
+    await expect(errorState.getByText(/لم يتم عرض حالة نظيفة/)).toBeVisible();
+
+    const retryLink = errorState.getByRole("link", { name: "إعادة المحاولة" });
+    await expect(retryLink).toHaveAttribute("href", reviewPath);
+    await retryLink.focus();
+    await expect(retryLink).toBeFocused();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(breadcrumb).toBeVisible();
+    await expect(errorState).toBeVisible();
+    await expect(retryLink).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
       .toBe(true);
