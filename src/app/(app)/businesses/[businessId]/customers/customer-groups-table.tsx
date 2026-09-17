@@ -6,7 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } fro
 import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import uxStyles from "./customer-analysis-ux.module.css";
-import { CustomerDetailDrawer, type CustomerDetailSummary } from "./customer-detail-drawer";
+import { CustomerDetailDrawer } from "./customer-detail-drawer";
 import detailStyles from "./customer-detail-drawer.module.css";
 import styles from "./customer-groups.module.css";
 
@@ -16,8 +16,20 @@ const SEARCH_PARAM = "search";
 const FILTER_PARAM = "filter";
 const SORT_PARAM = "sort";
 
-type CustomerTransactionGroup = CustomerDetailSummary & {
+type CustomerTransactionGroup = {
   business_id: string;
+  customer_email: string;
+  customer_name: string | null;
+  acquisition_at: string | null;
+  acquisition_date: string | null;
+  transaction_count: number | string;
+  collection_count: number | string;
+  refund_count: number | string;
+  gross_cash_collected_text: string;
+  refunds_text: string;
+  net_cash_collected_text: string;
+  last_transaction_at: string | null;
+  currency: string | null;
 };
 
 type CustomerGroupsTableProps = {
