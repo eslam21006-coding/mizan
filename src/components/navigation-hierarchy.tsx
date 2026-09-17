@@ -1,0 +1,56 @@
+import Link from "next/link";
+import type { BackNavigation, BreadcrumbItem } from "@/lib/navigation-hierarchy";
+import { resolveNavigationDestination } from "@/lib/navigation-hierarchy";
+import styles from "./navigation-hierarchy.module.css";
+
+type BreadcrumbProps = {
+  items: readonly BreadcrumbItem[];
+  ariaLabel?: string;
+};
+
+export function Breadcrumb({ items, ariaLabel = "مسار التنقل" }: BreadcrumbProps) {
+  return (
+    <nav className={styles.breadcrumbNav} aria-label={ariaLabel}>
+      <ol className={styles.breadcrumbList}>
+        {items.map((item, index) => (
+          <li className={styles.breadcrumbItem} key={`${item.label}-${index}`}>
+            {index > 0 && (
+              <span className={styles.separator} aria-hidden="true">
+                /
+              </span>
+            )}
+            {item.current ? (
+              <span className={styles.current} aria-current="page">
+                {item.label}
+              </span>
+            ) : (
+              <Link
+                className={styles.breadcrumbLink}
+                href={resolveNavigationDestination(item.destination)}
+              >
+                {item.label}
+              </Link>
+            )}
+          </li>
+        ))}
+      </ol>
+    </nav>
+  );
+}
+
+type BackLinkProps = BackNavigation & {
+  className?: string;
+};
+
+export function BackLink({ label, destination, className }: BackLinkProps) {
+  const classes = className ? `${styles.backLink} ${className}` : styles.backLink;
+
+  return (
+    <Link className={classes} href={resolveNavigationDestination(destination)}>
+      <span className={styles.backIcon} aria-hidden="true">
+        →
+      </span>
+      <span>{label}</span>
+    </Link>
+  );
+}
