@@ -59,7 +59,7 @@ export function parseReturnOrigin(searchParams: ReturnOriginSearchParams): Retur
   }
 
   const month = monthParam.status === "value" ? monthParam.value : undefined;
-  if (month !== undefined && !MONTH_KEY_PATTERN.test(month)) {
+  if (month !== undefined && (month.length !== 7 || !MONTH_KEY_PATTERN.test(month))) {
     return null;
   }
 
@@ -67,7 +67,9 @@ export function parseReturnOrigin(searchParams: ReturnOriginSearchParams): Retur
     case "customer-overview":
       return { origin: "customer-overview" };
     case "customer-profitability":
-      return month ? { origin: "customer-profitability", month } : { origin: "customer-profitability" };
+      return month
+        ? { origin: "customer-profitability", month }
+        : { origin: "customer-profitability" };
     case "monthly-editor":
       return month ? { origin: "monthly-editor", month } : null;
     default:
