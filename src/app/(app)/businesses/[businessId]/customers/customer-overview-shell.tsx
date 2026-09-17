@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CustomerAnalysisView, CustomerSearchParams } from "@/lib/customer-analysis-view";
 import { CustomerAnalysisTabs } from "./customer-analysis-tabs";
+import { CustomerDataSourcesDrawer } from "./customer-data-sources-drawer";
 import styles from "./customer-groups.module.css";
 
 type CustomerOverviewShellProps = {
@@ -56,57 +57,7 @@ export function CustomerOverviewShell({
         </div>
       </section>
 
-      <details className={styles.setupDisclosure}>
-        <summary>
-          <span className={styles.setupSummaryText}>
-            <strong className={styles.setupSummaryTitle}>مصادر بيانات اقتصاديات العميل</strong>
-            <small className={styles.setupSummaryDescription}>
-              المعاملات والمصروفات الشهرية هما المدخلان الأساسيان. ربط مصدر الإيراد اختياري للتحليل التفصيلي.
-            </small>
-          </span>
-          <span className={styles.disclosureAction}>عرض المصادر</span>
-        </summary>
-        <div className={styles.workflowGrid}>
-          <article className={styles.workflowCard}>
-            <div className={styles.workflowCardTop}>
-              <span className={styles.stepBadge}>1</span>
-              <span className={styles.workflowTag}>المعاملات</span>
-            </div>
-            <h3>استيراد التحصيلات والاسترجاعات</h3>
-            <p>سجل بوابة الدفع هو المصدر الأساسي لأول شراء وصافي التحصيل وقيمة العميل المحققة.</p>
-            <Link className={styles.workflowLink} href={`/businesses/${businessId}/customers/import`}>
-              فتح الاستيراد
-            </Link>
-          </article>
-
-          <article className={styles.workflowCard}>
-            <div className={styles.workflowCardTop}>
-              <span className={styles.stepBadge}>2</span>
-              <span className={styles.workflowTag}>المصروفات</span>
-            </div>
-            <h3>سجل المصروفات مرة واحدة</h3>
-            <p>ميزان يستخدم تصنيف وسلوك المصروفات الشهرية ليحدد ما يدخل في ربحية العميل وما يبقى في Real Net Profit.</p>
-            <Link className={styles.workflowLink} href={`/businesses/${businessId}/expenses`}>
-              فتح إعداد المصروفات
-            </Link>
-          </article>
-
-          <article className={styles.workflowCard}>
-            <div className={styles.workflowCardTop}>
-              <span className={styles.stepBadge}>3</span>
-              <span className={styles.workflowTag}>اختياري</span>
-            </div>
-            <h3>ربط مصادر الإيراد عند الحاجة</h3>
-            <p>اربط Front-End وBackend والمصادر الأخرى فقط إذا كنت تريد تحليل مصدر القيمة. ميزان لا يخمّن Attribution.</p>
-            <Link
-              className={styles.workflowLink}
-              href={`/businesses/${businessId}/customers/revenue-stream-attribution`}
-            >
-              ربط مصادر الإيراد
-            </Link>
-          </article>
-        </div>
-      </details>
+      <CustomerDataSourcesDrawer businessId={businessId} />
 
       <CustomerAnalysisTabs
         businessId={businessId}
