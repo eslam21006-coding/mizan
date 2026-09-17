@@ -38,6 +38,7 @@ type CustomerGroupsTableProps = {
 
 type CustomerFilter = "all" | "repeat" | "single" | "refunded";
 type CustomerSort = "acquisition_desc" | "last_transaction_desc" | "net_cash_desc" | "transactions_desc";
+type NavigationMode = "push" | "replace";
 
 type CustomerUrlStateUpdate = {
   search?: string;
@@ -113,9 +114,11 @@ export function CustomerGroupsTable({
   const search = parseCustomerSearch(parsedSearchParams);
   const customerFilter = parseCustomerFilter(parsedSearchParams);
   const sort = parseCustomerSort(parsedSearchParams);
+  const listQueryKey = JSON.stringify([search, customerFilter, sort]);
 
   const [rows, setRows] = useState<CustomerTransactionGroup[]>([]);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [totalCountQueryKey, setTotalCountQueryKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchDraft, setSearchDraft] = useState(search);
@@ -126,7 +129,7 @@ export function CustomerGroupsTable({
 
   /** Updates only customer-ledger URL state while preserving Customer view and unrelated structured query parameters. */
   const updateCustomerUrlState = useCallback(
-    (updates: CustomerUrlStateUpdate) => {
+    (updates: CustomerUrlStateUpdate, mode: NavigationMode = "push") => {
       const params = new URLSearchParams(readonlySearchParams.toString());
 
       if (updates.search !== undefined) {
@@ -149,7 +152,9 @@ export function CustomerGroupsTable({
       }
 
       const query = params.toString();
-      router.push(query ? `${pathname}?${query}` : pathname);
+      const href = query ? `${pathname}?${query}` : pathname;
+      if (mode === "replace") router.replace(href);
+      else router.push(href);
     },
     [pathname, readonlySearchParams, router],
   );
@@ -195,14 +200,16 @@ export function CustomerGroupsTable({
       if (loadError) {
         setRows([]);
         setTotalCount(null);
+        setTotalCountQueryKey(null);
         setError("تعذر تحميل بيانات العملاء. حاول مرة أخرى. إذا استمرت المشكلة، تحقق من تطبيق تحديثات قاعدة البيانات الخاصة بالعملاء.");
       } else {
         setRows((data ?? []) as CustomerTransactionGroup[]);
         setTotalCount(count ?? null);
+        setTotalCountQueryKey(listQueryKey);
       }
       setIsLoading(false);
     },
-    [businessId, customerFilter, page, search, sort],
+    [businessId, customerFilter, listQueryKey, page, search, sort],
   );
 
   useEffect(() => {
@@ -213,14 +220,15 @@ export function CustomerGroupsTable({
     };
   }, [loadRows]);
 
+  const activeTotalCount = totalCountQueryKey === listQueryKey ? totalCount : null;
   const pageCount = useMemo(() => {
-    if (totalCount === null) return null;
-    return Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  }, [totalCount]);
+    if (activeTotalCount === null) return null;
+    return Math.max(1, Math.ceil(activeTotalCount / PAGE_SIZE));
+  }, [activeTotalCount]);
 
   useEffect(() => {
     if (pageCount !== null && page >= pageCount) {
-      updateCustomerUrlState({ page: pageCount - 1 });
+      updateCustomerUrlState({ page: pageCount - 1 }, "replace");
     }
   }, [page, pageCount, updateCustomerUrlState]);
 
@@ -288,7 +296,7 @@ export function CustomerGroupsTable({
         </div>
         <div className={styles.identityCount}>
           <span>النتائج</span>
-          <strong>{formatCountText(totalCount ?? rows.length)}</strong>
+          <strong>{formatCountText(activeTotalCount ?? rows.length)}</strong>
         </div>
       </div>
 
