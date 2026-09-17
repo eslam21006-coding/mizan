@@ -9,7 +9,8 @@ import type {
   RevenueInputRow,
 } from "@/app/(app)/businesses/[businessId]/monthly/monthly-entry-form";
 import { AppShell } from "@/components/app-shell";
-import { InPageErrorState } from "@/components/workflow-recovery";
+import { InPageErrorState, ReturnContextBanner } from "@/components/workflow-recovery";
+import { parseReturnOrigin } from "@/lib/return-origin";
 
 const BUSINESS_ID = "99999999-9999-4999-8999-999999999999";
 const FIXTURE_PATH = "/auth/e2e-customer-economics-review";
@@ -19,7 +20,7 @@ const fixtureShellProps = {
 };
 
 type CustomerEconomicsReviewFixturePageProps = {
-  searchParams: Promise<{ state?: string }>;
+  searchParams: Promise<{ state?: string; origin?: string | string[] }>;
 };
 
 const revenueRows: RevenueInputRow[] = [
@@ -53,16 +54,31 @@ export default async function CustomerEconomicsReviewFixturePage({
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") notFound();
 
   const query = await searchParams;
+  const parsedOrigin = parseReturnOrigin({ origin: query.origin });
+  const returnOrigin = parsedOrigin?.origin === "customer-profitability" ? parsedOrigin : null;
+  const returnBanner = returnOrigin ? (
+    <ReturnContextBanner
+      purpose="بيانات مطلوبة في ربحية العميل"
+      origin={returnOrigin}
+      context={{ businessId: BUSINESS_ID }}
+      returnLabel="العودة إلى ربحية العميل"
+      ariaLabel="العودة إلى ربحية العميل"
+    />
+  ) : null;
 
   if (query.state === "error") {
+    const retryHref = returnOrigin
+      ? `${FIXTURE_PATH}?origin=${encodeURIComponent(returnOrigin.origin)}`
+      : FIXTURE_PATH;
     return (
       <AppShell {...fixtureShellProps}>
         <div className="page-stack">
           <CustomerReviewNavigation businessId={BUSINESS_ID} businessName="بزنس مراجعة الاختبار" />
+          {returnBanner}
           <InPageErrorState
             title="تعذر تحميل بيانات المراجعة"
             description="تعذر تحميل بيانات المراجعة كاملة. لم يتم عرض حالة نظيفة حتى لا نخفي ملاحظة محتملة."
-            retryAction={<Link href={FIXTURE_PATH}>إعادة المحاولة</Link>}
+            retryAction={<Link href={retryHref}>إعادة المحاولة</Link>}
           />
         </div>
       </AppShell>
@@ -73,11 +89,13 @@ export default async function CustomerEconomicsReviewFixturePage({
     <AppShell {...fixtureShellProps}>
       <div className="page-stack">
         <CustomerReviewNavigation businessId={BUSINESS_ID} businessName="بزنس مراجعة الاختبار" />
+        {returnBanner}
         <CustomerEconomicsReviewPanel
           businessId={BUSINESS_ID}
           baseCurrency="EGP"
           canManage
           statusMessage="تم تحميل مثال المراجعة بنجاح."
+          returnOrigin={returnOrigin}
           exceptions={[
             {
               activity_month: "2026-03-01",
