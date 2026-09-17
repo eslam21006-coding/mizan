@@ -26,6 +26,10 @@ test("rejects unknown, ambiguous, or malformed return origin metadata", () => {
     null,
   );
   assert.equal(
+    parseReturnOrigin({ origin: "customer-profitability", month: "2026-08\n" }),
+    null,
+  );
+  assert.equal(
     parseReturnOrigin({ origin: ["customer-overview", "monthly-editor"], month: "2026-08" }),
     null,
   );
