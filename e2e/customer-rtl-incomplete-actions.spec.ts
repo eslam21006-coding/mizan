@@ -88,7 +88,7 @@ test.describe("Founder customer UX: actionable incomplete states and Arabic RTL"
     await expect(details.getByText(/توزيعات يدوية قديمة/)).toBeVisible();
     await expect(details.getByRole("link", { name: "مراجعة ما ينقص وإكماله" })).toHaveAttribute(
       "href",
-      "/businesses/00000000-0000-4000-8000-000000000025/customers/review",
+      "/businesses/00000000-0000-4000-8000-000000000025/customers/review?origin=customer-profitability",
     );
 
     await expect
