@@ -297,7 +297,7 @@
 
 .analysisTabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
   padding: 5px;
   background: var(--surface-soft);
@@ -318,6 +318,7 @@
   border-radius: 9px;
   font: inherit;
   text-align: start;
+  text-decoration: none;
   cursor: pointer;
 }
 
