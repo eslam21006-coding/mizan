@@ -17,6 +17,8 @@ export default function CustomerOverviewE2eFixturePage() {
         businessName="بزنس الاختبار"
         baseCurrency="USD"
         timezone="Africa/Cairo"
+        activeView="overview"
+        searchParams={{}}
         historyOverview={
           <CustomerHistoryOverview
             baseCurrency="USD"
