@@ -53,6 +53,7 @@ type Props = {
   returnOrigin?: ReturnOriginMetadata | null;
 };
 
+/** Formats an optional activity month for Arabic review copy. */
 function monthLabel(value: string | null) {
   if (!value) return "كل السجل";
   const match = /^(\d{4})-(\d{2})/.exec(value);
@@ -64,11 +65,13 @@ function monthLabel(value: string | null) {
   }).format(new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, 1)));
 }
 
+/** Formats a nullable monetary value using the business currency fallback. */
 function money(value: string | number | null, currency: string) {
   if (value === null) return "—";
   return formatMoneyText(String(value), currency);
 }
 
+/** Maps Customer Economics exception codes to founder-facing Arabic explanations. */
 function exceptionCopy(code: string) {
   if (code === "INCOMPLETE_TRANSACTION_HISTORY") {
     return {
@@ -133,6 +136,7 @@ function exceptionCopy(code: string) {
   };
 }
 
+/** Maps a legacy Customer Economics cost type to its authoritative expense category. */
 function expectedCategory(costType: string) {
   if (costType === "acquisition") return "acquisition";
   if (costType === "variable_fulfillment") return "fulfillment";
@@ -141,6 +145,7 @@ function expectedCategory(costType: string) {
   return null;
 }
 
+/** Returns the founder-facing Arabic label for a legacy cost type. */
 function legacyTypeLabel(costType: string) {
   if (costType === "acquisition") return "اكتساب";
   if (costType === "variable_fulfillment") return "تنفيذ متغير";
@@ -278,6 +283,9 @@ export function CustomerEconomicsReviewPanel({
                         <summary>لدي دليل موثوق — توزيع نفس التكلفة يدويًا</summary>
                         <form action={saveCustomerEconomicsManualOverride} className={styles.overrideForm}>
                           <input type="hidden" name="business_id" value={businessId} />
+                          {returnOrigin?.origin === "customer-profitability" && (
+                            <input type="hidden" name="origin" value={returnOrigin.origin} />
+                          )}
                           <input
                             type="hidden"
                             name="authoritative_source_id"
@@ -345,6 +353,9 @@ export function CustomerEconomicsReviewPanel({
                   key={costType}
                 >
                   <input type="hidden" name="business_id" value={businessId} />
+                  {returnOrigin?.origin === "customer-profitability" && (
+                    <input type="hidden" name="origin" value={returnOrigin.origin} />
+                  )}
                   <div className={styles.legacyCardHeader}>
                     <h3>{legacyTypeLabel(costType)}</h3>
                     <span>{rows.length} سجل</span>
