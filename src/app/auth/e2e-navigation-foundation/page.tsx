@@ -77,6 +77,14 @@ export default function NavigationFoundationE2eFixturePage() {
             <span className="eyebrow">خطأ</span>
             <PageActionSlot state="error" ariaLabel="إجراءات الصفحة - خطأ" />
           </article>
+          <article className="shell-card">
+            <span className="eyebrow">إجراء شرطي غير متاح</span>
+            <PageActionSlot ariaLabel="إجراءات الصفحة - شرط غير متاح">{false}</PageActionSlot>
+          </article>
+          <article className="shell-card">
+            <span className="eyebrow">قائمة إجراءات فارغة</span>
+            <PageActionSlot ariaLabel="إجراءات الصفحة - قائمة فارغة">{[]}</PageActionSlot>
+          </article>
         </section>
       </section>
     </AppShell>
