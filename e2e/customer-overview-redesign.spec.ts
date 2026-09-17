@@ -74,6 +74,14 @@ test.describe("Customer value overview redesign", () => {
     await expect(observedPanel).toBeHidden();
     await expect(observedPanel.getByRole("region", { name: "لوحة قيمة العميل المحققة" })).toHaveCount(0);
 
+    await observedTab.focus();
+    await expect(observedTab).toBeFocused();
+    await page.keyboard.press("ArrowRight");
+    await expect(page).toHaveURL(new RegExp(`${fixturePath}\\?view=overview$`));
+    await expect(overviewTab).toBeFocused();
+    await expect(overviewTab).toHaveAttribute("aria-selected", "true");
+    await expect(historyOverview).toBeVisible();
+
     const revenuePanelId = await revenueTab.getAttribute("aria-controls");
     expect(revenuePanelId).not.toBeNull();
     const revenuePanel = page.locator(`#${revenuePanelId}`);
