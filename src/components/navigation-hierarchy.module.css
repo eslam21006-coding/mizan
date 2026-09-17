@@ -1,0 +1,86 @@
+.breadcrumbNav {
+  min-width: 0;
+}
+
+.breadcrumbList {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text-soft);
+  font-size: 13px;
+}
+
+.breadcrumbItem {
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.breadcrumbLink,
+.backLink {
+  border-radius: 9px;
+  color: var(--brand-strong);
+  font-weight: 700;
+}
+
+.breadcrumbLink {
+  padding: 4px 6px;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition:
+    background-color 140ms ease,
+    text-decoration-color 140ms ease;
+}
+
+.breadcrumbLink:hover {
+  background: var(--brand-soft);
+  text-decoration-color: currentColor;
+}
+
+.breadcrumbLink:focus-visible,
+.backLink:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.separator {
+  color: var(--text-faint);
+  direction: ltr;
+  user-select: none;
+}
+
+.current {
+  min-width: 0;
+  color: var(--text);
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.backLink {
+  width: fit-content;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  transition:
+    background-color 140ms ease,
+    color 140ms ease;
+}
+
+.backLink:hover {
+  background: var(--brand-soft);
+}
+
+.backIcon {
+  flex: 0 0 auto;
+  direction: ltr;
+  font-size: 18px;
+  line-height: 1;
+}
