@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import styles from "./customer-detail-drawer.module.css";
@@ -75,26 +75,19 @@ export function CustomerDetailDrawer({
   onDismiss,
 }: CustomerDetailDrawerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
+  const requestIdRef = useRef(0);
   const [transactions, setTransactions] = useState<CustomerTransactionRow[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [reloadKey, setReloadKey] = useState(0);
 
-  useEffect(() => {
-    const dialog = dialogRef.current;
-    if (!customer) {
-      if (dialog?.open) dialog.close();
-      return;
-    }
+  /** Loads the selected customer's RLS-scoped transaction history and ignores superseded responses. */
+  const loadTransactions = useCallback(
+    async (targetCustomer: CustomerDetailSummary) => {
+      const requestId = ++requestIdRef.current;
+      setTransactions([]);
+      setError(null);
+      setIsLoading(true);
 
-    if (dialog && !dialog.open) dialog.showModal();
-
-    let active = true;
-    setTransactions([]);
-    setError(null);
-    setIsLoading(true);
-
-    async function loadTransactions() {
       const supabase = createSupabaseBrowserClient();
       const { data, error: loadError } = await supabase
         .from("customer_transactions")
@@ -102,12 +95,12 @@ export function CustomerDetailDrawer({
           "id,source,source_transaction_id,transaction_date,transaction_at,amount_collected,transaction_type,currency,revenue_stream_name_snapshot,revenue_stream_type_snapshot,created_at",
         )
         .eq("business_id", businessId)
-        .eq("customer_email", customer.customer_email)
+        .eq("customer_email", targetCustomer.customer_email)
         .order("transaction_at", { ascending: false })
         .order("created_at", { ascending: false })
         .order("id", { ascending: false });
 
-      if (!active) return;
+      if (requestId !== requestIdRef.current) return;
       if (loadError) {
         setTransactions([]);
         setError("تعذر تحميل سجل معاملات هذا العميل. حاول مرة أخرى.");
@@ -115,13 +108,25 @@ export function CustomerDetailDrawer({
         setTransactions((data ?? []) as CustomerTransactionRow[]);
       }
       setIsLoading(false);
+    },
+    [businessId],
+  );
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!customer) {
+      requestIdRef.current += 1;
+      if (dialog?.open) dialog.close();
+      return;
     }
 
-    void loadTransactions();
+    if (dialog && !dialog.open) dialog.showModal();
+    void loadTransactions(customer);
+
     return () => {
-      active = false;
+      requestIdRef.current += 1;
     };
-  }, [businessId, customer, reloadKey]);
+  }, [customer, loadTransactions]);
 
   /** Clears the selected customer and restores keyboard focus to the row action that opened the drawer. */
   function handleClose() {
@@ -206,7 +211,7 @@ export function CustomerDetailDrawer({
                 <div className={styles.errorPanel} role="alert">
                   <strong>تعذر تحميل السجل</strong>
                   <p>{error}</p>
-                  <button type="button" onClick={() => setReloadKey((value) => value + 1)}>
+                  <button type="button" onClick={() => void loadTransactions(customer)}>
                     إعادة المحاولة
                   </button>
                 </div>
@@ -231,7 +236,7 @@ export function CustomerDetailDrawer({
                             <small>{transaction.transaction_date}</small>
                           </div>
                           <strong className={isRefund ? styles.refundAmount : styles.collectionAmount} dir="ltr">
-                            {formatMoneyText(amountText, transaction.currency ?? customerCurrency)}
+                            {formatMoneyText(amountText, transaction.currency)}
                           </strong>
                         </div>
 
