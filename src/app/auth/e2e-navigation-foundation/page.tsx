@@ -4,6 +4,7 @@ import { AppShell } from "@/components/app-shell";
 import { BusinessContext } from "@/components/business-context";
 import { BackLink, Breadcrumb } from "@/components/navigation-hierarchy";
 import { PageActionSlot, PageHeader } from "@/components/page-header";
+import { InPageErrorState, ReturnContextBanner } from "@/components/workflow-recovery";
 import {
   resolveNavigationDestination,
   type BreadcrumbItem,
@@ -43,6 +44,7 @@ export default function NavigationFoundationE2eFixturePage() {
   const safeReturnHref = resolveNavigationDestination(
     resolveReturnOrigin(parsedOrigin, { businessId: fixtureBusinessId }),
   );
+  const returnContext = { businessId: fixtureBusinessId };
 
   return (
     <AppShell {...fixtureShellProps}>
@@ -56,12 +58,19 @@ export default function NavigationFoundationE2eFixturePage() {
         <PageHeader
           eyebrow="اختبار معزول"
           title="اقتصاديات العملاء"
-          description="يثبت هذا المسار خانة الإجراءات المستقرة ونموذج العودة المنظم بدون ربطهما بمنطق مالي أو بيانات فعلية."
+          description="يثبت هذا المسار خانة الإجراءات المستقرة ونموذج العودة المنظم وحالات الاسترداد داخل نفس هيكل الصفحة."
           actions={
             <Link className="primary-link" style={{ marginTop: 0 }} href={safeReturnHref}>
               عودة آمنة لربحية العميل
             </Link>
           }
+        />
+
+        <ReturnContextBanner
+          purpose="بيانات أغسطس المطلوبة في ربحية العميل"
+          origin={parsedOrigin}
+          context={returnContext}
+          returnLabel="العودة إلى ربحية العميل"
         />
 
         <section className="shell-grid" aria-label="حالات خانة الإجراءات">
@@ -86,6 +95,15 @@ export default function NavigationFoundationE2eFixturePage() {
             <PageActionSlot ariaLabel="إجراءات الصفحة - قائمة فارغة">{[]}</PageActionSlot>
           </article>
         </section>
+
+        <InPageErrorState
+          title="تعذر تحميل تفاصيل المراجعة"
+          description="ظل سياق البزنس ومسار التنقل والعنوان كما هو، وتم استبدال منطقة المحتوى فقط بحالة خطأ قابلة للاسترداد."
+          retryAction={<Link href="/auth/e2e-navigation-foundation">إعادة المحاولة</Link>}
+          returnOrigin={parsedOrigin}
+          returnContext={returnContext}
+          returnLabel="العودة إلى ربحية العميل"
+        />
       </section>
     </AppShell>
   );
