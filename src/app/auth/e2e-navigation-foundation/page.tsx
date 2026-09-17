@@ -1,8 +1,14 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { BusinessContext } from "@/components/business-context";
 import { BackLink, Breadcrumb } from "@/components/navigation-hierarchy";
-import type { BreadcrumbItem } from "@/lib/navigation-hierarchy";
+import { PageActionSlot, PageHeader } from "@/components/page-header";
+import {
+  resolveNavigationDestination,
+  type BreadcrumbItem,
+} from "@/lib/navigation-hierarchy";
+import { parseReturnOrigin, resolveReturnOrigin } from "@/lib/return-origin";
 
 const fixtureShellProps = {
   role: "admin" as const,
@@ -20,11 +26,23 @@ const breadcrumbItems = [
   { label: "اقتصاديات العملاء", current: true },
 ] satisfies readonly BreadcrumbItem[];
 
-/** Renders the CI-only page used to verify N01/N02 without migrating production modules. */
+/** Renders the CI-only page used to verify navigation foundation primitives without migrating production modules. */
 export default function NavigationFoundationE2eFixturePage() {
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
     notFound();
   }
+
+  const parsedOrigin = parseReturnOrigin({
+    origin: "customer-profitability",
+    month: "2026-08",
+    returnTo: "https://unsafe.example/ignored",
+  });
+  if (!parsedOrigin) {
+    throw new Error("Navigation foundation fixture must use a valid structured origin.");
+  }
+  const safeReturnHref = resolveNavigationDestination(
+    resolveReturnOrigin(parsedOrigin, { businessId: fixtureBusinessId }),
+  );
 
   return (
     <AppShell {...fixtureShellProps}>
@@ -35,13 +53,31 @@ export default function NavigationFoundationE2eFixturePage() {
           label="العودة إلى البزنس"
           destination={{ route: "business-overview", businessId: fixtureBusinessId }}
         />
-        <div className="panel">
-          <span className="eyebrow">اختبار معزول</span>
-          <h1>اقتصاديات العملاء</h1>
-          <p className="muted-copy">
-            يثبت هذا المسار مكونات سياق البزنس ومسار التنقل والعودة الحتمية بدون ربطها بمنطق مالي أو بيانات فعلية.
-          </p>
-        </div>
+        <PageHeader
+          eyebrow="اختبار معزول"
+          title="اقتصاديات العملاء"
+          description="يثبت هذا المسار خانة الإجراءات المستقرة ونموذج العودة المنظم بدون ربطهما بمنطق مالي أو بيانات فعلية."
+          actions={
+            <Link className="primary-link" style={{ marginTop: 0 }} href={safeReturnHref}>
+              عودة آمنة لربحية العميل
+            </Link>
+          }
+        />
+
+        <section className="shell-grid" aria-label="حالات خانة الإجراءات">
+          <article className="shell-card">
+            <span className="eyebrow">تحميل</span>
+            <PageActionSlot state="loading" ariaLabel="إجراءات الصفحة - تحميل" />
+          </article>
+          <article className="shell-card">
+            <span className="eyebrow">عرض فقط</span>
+            <PageActionSlot state="read-only" ariaLabel="إجراءات الصفحة - عرض فقط" />
+          </article>
+          <article className="shell-card">
+            <span className="eyebrow">خطأ</span>
+            <PageActionSlot state="error" ariaLabel="إجراءات الصفحة - خطأ" />
+          </article>
+        </section>
       </section>
     </AppShell>
   );
