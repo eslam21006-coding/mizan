@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 import { CustomerGroupsTable } from "@/app/(app)/businesses/[businessId]/customers/customer-groups-table";
 
 const FIXTURE_BUSINESS_ID = "00000000-0000-4000-8000-000000000067";
@@ -11,11 +12,13 @@ export default function CustomerNameSearchE2eFixturePage() {
 
   return (
     <main className="page-stack">
-      <CustomerGroupsTable
-        businessId={FIXTURE_BUSINESS_ID}
-        baseCurrency="EGP"
-        timezone="Africa/Cairo"
-      />
+      <Suspense fallback={<div role="status">جاري تحميل العملاء…</div>}>
+        <CustomerGroupsTable
+          businessId={FIXTURE_BUSINESS_ID}
+          baseCurrency="EGP"
+          timezone="Africa/Cairo"
+        />
+      </Suspense>
     </main>
   );
 }

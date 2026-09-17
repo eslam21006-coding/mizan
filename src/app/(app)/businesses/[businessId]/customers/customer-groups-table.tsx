@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
 import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -8,6 +9,10 @@ import uxStyles from "./customer-analysis-ux.module.css";
 import styles from "./customer-groups.module.css";
 
 const PAGE_SIZE = 50;
+const CUSTOMER_PAGE_PARAM = "customerPage";
+const SEARCH_PARAM = "search";
+const FILTER_PARAM = "filter";
+const SORT_PARAM = "sort";
 
 type CustomerTransactionGroup = {
   business_id: string;
@@ -33,6 +38,14 @@ type CustomerGroupsTableProps = {
 
 type CustomerFilter = "all" | "repeat" | "single" | "refunded";
 type CustomerSort = "acquisition_desc" | "last_transaction_desc" | "net_cash_desc" | "transactions_desc";
+type NavigationMode = "push" | "replace";
+
+type CustomerUrlStateUpdate = {
+  search?: string;
+  filter?: CustomerFilter;
+  sort?: CustomerSort;
+  page?: number;
+};
 
 /** Escapes PostgreSQL ILIKE metacharacters so user-entered customer search text is matched literally. */
 function escapeIlikeLiteral(value: string) {
@@ -51,21 +64,100 @@ function timestampDisplay(value: string | null, timezone: string) {
   }).format(date);
 }
 
+/** Returns one unambiguous query value or null when the parameter is missing or duplicated. */
+function singleSearchParam(searchParams: URLSearchParams, key: string) {
+  const values = searchParams.getAll(key);
+  return values.length === 1 ? values[0] : null;
+}
+
+/** Parses the customer-ledger page from a 1-based URL value. */
+function parseCustomerPage(searchParams: URLSearchParams) {
+  const raw = singleSearchParam(searchParams, CUSTOMER_PAGE_PARAM);
+  if (!raw) return 0;
+  const pageNumber = Number(raw);
+  return Number.isSafeInteger(pageNumber) && pageNumber >= 1 ? pageNumber - 1 : 0;
+}
+
+/** Parses the customer search text while treating duplicate query values as invalid. */
+function parseCustomerSearch(searchParams: URLSearchParams) {
+  return singleSearchParam(searchParams, SEARCH_PARAM)?.trim() ?? "";
+}
+
+/** Parses a supported customer filter and safely falls back to all customers. */
+function parseCustomerFilter(searchParams: URLSearchParams): CustomerFilter {
+  const candidate = singleSearchParam(searchParams, FILTER_PARAM);
+  return candidate === "repeat" || candidate === "single" || candidate === "refunded" ? candidate : "all";
+}
+
+/** Parses a supported customer sort and safely falls back to latest acquisition. */
+function parseCustomerSort(searchParams: URLSearchParams): CustomerSort {
+  const candidate = singleSearchParam(searchParams, SORT_PARAM);
+  return candidate === "last_transaction_desc" || candidate === "net_cash_desc" || candidate === "transactions_desc"
+    ? candidate
+    : "acquisition_desc";
+}
+
 /** Renders the searchable, sortable customer transaction ledger without changing stored transaction semantics. */
 export function CustomerGroupsTable({
   businessId,
   baseCurrency,
   timezone,
 }: CustomerGroupsTableProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const readonlySearchParams = useSearchParams();
+  const parsedSearchParams = useMemo(
+    () => new URLSearchParams(readonlySearchParams.toString()),
+    [readonlySearchParams],
+  );
+  const page = parseCustomerPage(parsedSearchParams);
+  const search = parseCustomerSearch(parsedSearchParams);
+  const customerFilter = parseCustomerFilter(parsedSearchParams);
+  const sort = parseCustomerSort(parsedSearchParams);
+  const listQueryKey = JSON.stringify([search, customerFilter, sort]);
+
   const [rows, setRows] = useState<CustomerTransactionGroup[]>([]);
-  const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState<number | null>(null);
+  const [totalCountQueryKey, setTotalCountQueryKey] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchDraft, setSearchDraft] = useState("");
-  const [search, setSearch] = useState("");
-  const [customerFilter, setCustomerFilter] = useState<CustomerFilter>("all");
-  const [sort, setSort] = useState<CustomerSort>("acquisition_desc");
+  const [searchDraft, setSearchDraft] = useState(search);
+
+  useEffect(() => {
+    setSearchDraft(search);
+  }, [search]);
+
+  /** Updates only customer-ledger URL state while preserving Customer view and unrelated structured query parameters. */
+  const updateCustomerUrlState = useCallback(
+    (updates: CustomerUrlStateUpdate, mode: NavigationMode = "push") => {
+      const params = new URLSearchParams(readonlySearchParams.toString());
+
+      if (updates.search !== undefined) {
+        const value = updates.search.trim();
+        if (value) params.set(SEARCH_PARAM, value);
+        else params.delete(SEARCH_PARAM);
+      }
+      if (updates.filter !== undefined) {
+        if (updates.filter === "all") params.delete(FILTER_PARAM);
+        else params.set(FILTER_PARAM, updates.filter);
+      }
+      if (updates.sort !== undefined) {
+        if (updates.sort === "acquisition_desc") params.delete(SORT_PARAM);
+        else params.set(SORT_PARAM, updates.sort);
+      }
+      if (updates.page !== undefined) {
+        const safePage = Math.max(0, updates.page);
+        if (safePage === 0) params.delete(CUSTOMER_PAGE_PARAM);
+        else params.set(CUSTOMER_PAGE_PARAM, String(safePage + 1));
+      }
+
+      const query = params.toString();
+      const href = query ? `${pathname}?${query}` : pathname;
+      if (mode === "replace") router.replace(href);
+      else router.push(href);
+    },
+    [pathname, readonlySearchParams, router],
+  );
 
   /** Loads one authorized customer-ledger page with the selected server-side filters and sorting. */
   const loadRows = useCallback(
@@ -108,14 +200,16 @@ export function CustomerGroupsTable({
       if (loadError) {
         setRows([]);
         setTotalCount(null);
+        setTotalCountQueryKey(null);
         setError("تعذر تحميل بيانات العملاء. حاول مرة أخرى. إذا استمرت المشكلة، تحقق من تطبيق تحديثات قاعدة البيانات الخاصة بالعملاء.");
       } else {
         setRows((data ?? []) as CustomerTransactionGroup[]);
         setTotalCount(count ?? null);
+        setTotalCountQueryKey(listQueryKey);
       }
       setIsLoading(false);
     },
-    [businessId, customerFilter, page, search, sort],
+    [businessId, customerFilter, listQueryKey, page, search, sort],
   );
 
   useEffect(() => {
@@ -126,25 +220,28 @@ export function CustomerGroupsTable({
     };
   }, [loadRows]);
 
+  const activeTotalCount = totalCountQueryKey === listQueryKey ? totalCount : null;
   const pageCount = useMemo(() => {
-    if (totalCount === null) return null;
-    return Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
-  }, [totalCount]);
+    if (activeTotalCount === null) return null;
+    return Math.max(1, Math.ceil(activeTotalCount / PAGE_SIZE));
+  }, [activeTotalCount]);
+
+  useEffect(() => {
+    if (pageCount !== null && page >= pageCount) {
+      updateCustomerUrlState({ page: pageCount - 1 }, "replace");
+    }
+  }, [page, pageCount, updateCustomerUrlState]);
 
   /** Applies the typed customer name-or-email search without issuing a request on every keystroke. */
   const submitSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setPage(0);
-    setSearch(searchDraft.trim());
+    updateCustomerUrlState({ search: searchDraft, page: 0 });
   };
 
-  /** Restores the complete customer ledger and the default acquisition-date sort. */
+  /** Restores the complete customer ledger and the default acquisition-date sort without disturbing other Customer state. */
   const clearControls = () => {
     setSearchDraft("");
-    setSearch("");
-    setCustomerFilter("all");
-    setSort("acquisition_desc");
-    setPage(0);
+    updateCustomerUrlState({ search: "", filter: "all", sort: "acquisition_desc", page: 0 });
   };
 
   if (isLoading && rows.length === 0) {
@@ -199,7 +296,7 @@ export function CustomerGroupsTable({
         </div>
         <div className={styles.identityCount}>
           <span>النتائج</span>
-          <strong>{formatCountText(totalCount ?? rows.length)}</strong>
+          <strong>{formatCountText(activeTotalCount ?? rows.length)}</strong>
         </div>
       </div>
 
@@ -223,10 +320,9 @@ export function CustomerGroupsTable({
           <span>اعرض</span>
           <select
             value={customerFilter}
-            onChange={(event) => {
-              setCustomerFilter(event.currentTarget.value as CustomerFilter);
-              setPage(0);
-            }}
+            onChange={(event) =>
+              updateCustomerUrlState({ filter: event.currentTarget.value as CustomerFilter, page: 0 })
+            }
           >
             <option value="all">كل العملاء</option>
             <option value="repeat">اشتروا أكثر من مرة</option>
@@ -239,10 +335,9 @@ export function CustomerGroupsTable({
           <span>رتّب حسب</span>
           <select
             value={sort}
-            onChange={(event) => {
-              setSort(event.currentTarget.value as CustomerSort);
-              setPage(0);
-            }}
+            onChange={(event) =>
+              updateCustomerUrlState({ sort: event.currentTarget.value as CustomerSort, page: 0 })
+            }
           >
             <option value="acquisition_desc">أحدث أول شراء</option>
             <option value="last_transaction_desc">أحدث معاملة</option>
@@ -321,7 +416,7 @@ export function CustomerGroupsTable({
         <button
           type="button"
           disabled={page === 0}
-          onClick={() => setPage((current) => Math.max(0, current - 1))}
+          onClick={() => updateCustomerUrlState({ page: page - 1 })}
         >
           الصفحة السابقة
         </button>
@@ -332,7 +427,7 @@ export function CustomerGroupsTable({
         <button
           type="button"
           disabled={pageCount !== null ? page + 1 >= pageCount : rows.length < PAGE_SIZE}
-          onClick={() => setPage((current) => current + 1)}
+          onClick={() => updateCustomerUrlState({ page: page + 1 })}
         >
           الصفحة التالية
         </button>
