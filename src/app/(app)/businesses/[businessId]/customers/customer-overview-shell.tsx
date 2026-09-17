@@ -53,13 +53,6 @@ export function CustomerOverviewShell({
           <Link className={styles.primaryAction} href={`/businesses/${businessId}/customers/import`}>
             استيراد معاملات
           </Link>
-          <a
-            className={styles.secondaryAction}
-            href="/mizan-transactions-template.csv"
-            download="mizan-transactions-template.csv"
-          >
-            تنزيل نموذج CSV
-          </a>
         </div>
       </section>
 
