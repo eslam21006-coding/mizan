@@ -6,7 +6,7 @@ const fixturePath = "/auth/e2e-customers-overview";
 test.describe("Customer value overview redesign", () => {
   test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
 
-  test("prioritizes readable KPIs, collapses data sources, and keeps URL-backed analysis tabs accessible in Arabic RTL", async ({ page }) => {
+  test("prioritizes readable KPIs, keeps one primary hero action, and preserves URL-backed analysis tabs in Arabic RTL", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") browserErrors.push(message.text());
@@ -17,7 +17,19 @@ test.describe("Customer value overview redesign", () => {
 
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
-    await expect(page.getByRole("heading", { name: "العملاء وقيمة وربحية العميل" })).toBeVisible();
+    const pageHeading = page.getByRole("heading", { name: "العملاء وقيمة وربحية العميل" });
+    await expect(pageHeading).toBeVisible();
+
+    const hero = page.locator("section").filter({ has: pageHeading });
+    const importLink = hero.getByRole("link", { name: "استيراد معاملات" });
+    await expect(hero.getByRole("link")).toHaveCount(1);
+    await expect(importLink).toHaveAttribute(
+      "href",
+      "/businesses/00000000-0000-4000-8000-000000000057/customers/import",
+    );
+    await expect(hero.getByRole("link", { name: "ملاحظات تحتاج مراجعتك" })).toHaveCount(0);
+    await expect(hero.getByRole("link", { name: "كل البزنسات" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "تنزيل نموذج CSV" })).toHaveCount(0);
 
     const tabList = page.getByRole("tablist", { name: "أقسام تحليل العملاء" });
     const overviewTab = tabList.getByRole("tab", { name: /نظرة عامة/ });
@@ -56,16 +68,6 @@ test.describe("Customer value overview redesign", () => {
     await expect(setup.getByText("فتح إعداد المصروفات", { exact: true })).toBeVisible();
     await expect(setup.getByText("ربط مصادر الإيراد", { exact: true }).last()).toBeVisible();
     await expect(setup.getByText(/توزيع التكاليف يدويًا/)).toHaveCount(0);
-
-    const importLink = page.getByRole("link", { name: "استيراد معاملات" });
-    await expect(importLink).toHaveAttribute(
-      "href",
-      "/businesses/00000000-0000-4000-8000-000000000057/customers/import",
-    );
-    await expect(page.getByRole("link", { name: "تنزيل نموذج CSV" })).toHaveAttribute(
-      "href",
-      "/mizan-transactions-template.csv",
-    );
 
     await expect(observedTab).toHaveAttribute("aria-selected", "false");
     const observedPanelId = await observedTab.getAttribute("aria-controls");
@@ -106,6 +108,7 @@ test.describe("Customer value overview redesign", () => {
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
       .toBe(true);
+    await expect(importLink).toBeVisible();
     await expect(page.getByRole("tablist", { name: "أقسام تحليل العملاء" })).toBeVisible();
     await expect(historyOverview).toHaveCount(0);
     expect(browserErrors).toEqual([]);
