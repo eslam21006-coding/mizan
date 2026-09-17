@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
+import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { requireAuthContext } from "@/lib/auth/context";
 import { loadTransactionDerivedMonthlyCustomerCounts } from "@/lib/business/monthly-customer-counts";
 import {
@@ -10,6 +11,7 @@ import {
   storedExpenseValueForDisplay,
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import { parseReturnOrigin } from "@/lib/return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { copyPreviousMonthExpenses, saveMonthlyActuals } from "./actions";
 import trustStyles from "./customer-history-trust.module.css";
@@ -24,7 +26,7 @@ import styles from "./monthly.module.css";
 
 type MonthlyPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ month?: string; status?: string; copied?: string }>;
+  searchParams: Promise<{ month?: string; status?: string; copied?: string; origin?: string | string[] }>;
 };
 
 const STATUS_MESSAGES: Record<string, string> = {
@@ -62,6 +64,9 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
   const selectedMonth =
     parseMonthKey(query.month) ?? parseMonthKey(currentMonthKeyForTimeZone(business.timezone));
   if (!selectedMonth) notFound();
+
+  const parsedOrigin = parseReturnOrigin({ origin: query.origin });
+  const returnOrigin = parsedOrigin?.origin === "customer-profitability" ? parsedOrigin : null;
 
   const [periodResult, streamsResult, expensesResult, customerCountsResult] = await Promise.all([
     supabase
@@ -228,6 +233,16 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
         </Link>
       </div>
 
+      {returnOrigin && (
+        <ReturnContextBanner
+          purpose="بيانات مطلوبة في ربحية العميل"
+          origin={returnOrigin}
+          context={{ businessId }}
+          returnLabel="العودة إلى ربحية العميل"
+          ariaLabel="العودة إلى ربحية العميل"
+        />
+      )}
+
       <section className={styles.monthBar} aria-label="اختيار الشهر">
         {previousMonth ? (
           <Link
@@ -337,6 +352,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
           >
             <input type="hidden" name="business_id" value={businessId} />
             <input type="hidden" name="month" value={selectedMonth.monthKey} />
+            {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
             {historyTrustNotice}
             <MonthlyEntryForm
               editable
