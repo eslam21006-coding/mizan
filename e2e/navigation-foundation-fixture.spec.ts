@@ -63,12 +63,16 @@ test.describe("CI-only navigation foundation fixture", () => {
     const loadingActions = page.getByRole("group", { name: "إجراءات الصفحة - تحميل" });
     const readOnlyActions = page.getByRole("group", { name: "إجراءات الصفحة - عرض فقط" });
     const errorActions = page.getByRole("group", { name: "إجراءات الصفحة - خطأ" });
+    const conditionalActions = page.getByRole("group", { name: "إجراءات الصفحة - شرط غير متاح" });
+    const emptyActions = page.getByRole("group", { name: "إجراءات الصفحة - قائمة فارغة" });
     await expect(loadingActions).toHaveAttribute("data-action-state", "loading");
     await expect(loadingActions.getByText("جارٍ تحميل الإجراءات…")).toBeVisible();
     await expect(readOnlyActions).toHaveAttribute("data-action-state", "read-only");
     await expect(readOnlyActions.getByText("عرض فقط")).toBeVisible();
     await expect(errorActions).toHaveAttribute("data-action-state", "error");
     await expect(errorActions.getByText("تعذر تحميل الإجراءات")).toBeVisible();
+    await expect(conditionalActions.getByText("لا يوجد إجراء مطلوب الآن")).toBeVisible();
+    await expect(emptyActions.getByText("لا يوجد إجراء مطلوب الآن")).toBeVisible();
 
     await page.screenshot({
       path: "test-results/screenshots/navigation-foundation-desktop.png",
@@ -101,6 +105,8 @@ test.describe("CI-only navigation foundation fixture", () => {
       "إجراءات الصفحة - تحميل",
       "إجراءات الصفحة - عرض فقط",
       "إجراءات الصفحة - خطأ",
+      "إجراءات الصفحة - شرط غير متاح",
+      "إجراءات الصفحة - قائمة فارغة",
     ]) {
       await expect(page.getByRole("group", { name, exact: true })).toBeVisible();
     }
