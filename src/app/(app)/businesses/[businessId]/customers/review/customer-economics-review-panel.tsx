@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatMoneyText } from "@/lib/financial-display";
 import { resolveNavigationDestination } from "@/lib/navigation-hierarchy";
+import type { ReturnOriginMetadata } from "@/lib/return-origin";
 import {
   reconcileCustomerEconomicsLegacyAllocations,
   saveCustomerEconomicsManualOverride,
@@ -49,6 +50,7 @@ type Props = {
   eligibleCostPools: EligibleCostPool[];
   statusMessage?: string | null;
   statusIsError?: boolean;
+  returnOrigin?: ReturnOriginMetadata | null;
 };
 
 function monthLabel(value: string | null) {
@@ -147,13 +149,19 @@ function legacyTypeLabel(costType: string) {
   return costType;
 }
 
-/** Resolves an exception's activity month through the canonical Monthly destination. */
-function monthlyReviewHref(businessId: string, activityMonth: string) {
-  return resolveNavigationDestination({
+/** Resolves an exception's activity month through the canonical Monthly destination and preserves a safe profitability origin. */
+function monthlyReviewHref(
+  businessId: string,
+  activityMonth: string,
+  returnOrigin: ReturnOriginMetadata | null,
+) {
+  const href = resolveNavigationDestination({
     route: "business-monthly",
     businessId,
     month: activityMonth.slice(0, 7),
   });
+  if (returnOrigin?.origin !== "customer-profitability") return href;
+  return `${href}&origin=${encodeURIComponent(returnOrigin.origin)}`;
 }
 
 /** Renders the founder-facing review queue without weakening the database reconciliation rules. */
@@ -167,6 +175,7 @@ export function CustomerEconomicsReviewPanel({
   eligibleCostPools,
   statusMessage = null,
   statusIsError = false,
+  returnOrigin = null,
 }: Props) {
   const legacyGroups = [...new Set(legacyAllocations.map((row) => row.cost_type))];
 
@@ -255,7 +264,7 @@ export function CustomerEconomicsReviewPanel({
                     exception.activity_month && (
                       <Link
                         className={styles.inlineAction}
-                        href={monthlyReviewHref(businessId, exception.activity_month)}
+                        href={monthlyReviewHref(businessId, exception.activity_month, returnOrigin)}
                       >
                         فتح بيانات هذا الشهر
                       </Link>
