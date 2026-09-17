@@ -1,6 +1,10 @@
 import { notFound } from "next/navigation";
 import { parseCustomerHistoryOverviewSummary } from "@/lib/business/customer-history-overview";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import {
+  parseCustomerAnalysisView,
+  type CustomerSearchParams,
+} from "@/lib/customer-analysis-view";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CustomerCohortLtvTable } from "./customer-cohort-ltv-table";
 import { CustomerGroupsTable } from "./customer-groups-table";
@@ -11,11 +15,17 @@ import { LifetimeRevenueStreamTable } from "./lifetime-revenue-stream-table";
 
 type BusinessCustomersPageProps = {
   params: Promise<{ businessId: string }>;
+  searchParams: Promise<CustomerSearchParams>;
 };
 
-/** Loads one authorized business context and composes its existing customer-economics analyses. */
-export default async function BusinessCustomersPage({ params }: BusinessCustomersPageProps) {
+/** Loads one authorized business context and composes its URL-addressable customer-economics views. */
+export default async function BusinessCustomersPage({
+  params,
+  searchParams,
+}: BusinessCustomersPageProps) {
   const { businessId: rawBusinessId } = await params;
+  const customerSearchParams = await searchParams;
+  const activeView = parseCustomerAnalysisView(customerSearchParams.view);
   const businessId = parseResourceId(rawBusinessId);
   if (!businessId) notFound();
 
@@ -46,6 +56,8 @@ export default async function BusinessCustomersPage({ params }: BusinessCustomer
       businessName={business.name}
       baseCurrency={business.base_currency}
       timezone={business.timezone}
+      activeView={activeView}
+      searchParams={customerSearchParams}
       historyOverview={
         <CustomerHistoryOverview
           baseCurrency={business.base_currency}
