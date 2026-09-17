@@ -67,8 +67,10 @@ test.describe("CI-only navigation foundation fixture", () => {
     expect(htmlDimensions.scrollWidth).toBeLessThanOrEqual(htmlDimensions.clientWidth + 1);
 
     const context = page.getByRole("region", { name: "سياق البزنس" });
+    const metadataValues = context.locator('bdi[dir="ltr"]');
     await expect(context).toHaveCSS("flex-direction", "column");
-    await expect(context.locator('bdi[dir="ltr"]')).toHaveText(["SAR", "Asia/Riyadh"]);
+    await expect(metadataValues).toHaveText(["SAR", "Asia/Riyadh"]);
+    await expect(metadataValues.nth(1)).toHaveCSS("white-space", "nowrap");
     await expect(page.getByRole("navigation", { name: "مسار التنقل" })).toBeVisible();
     await expect(page.getByRole("link", { name: "العودة إلى البزنس" })).toBeVisible();
 
