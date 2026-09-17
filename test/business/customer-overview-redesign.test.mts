@@ -10,6 +10,10 @@ const shellSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/customers/customer-overview-shell.tsx",
   "utf8",
 );
+const importPageSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/customers/import/page.tsx",
+  "utf8",
+);
 const tabsSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/customers/customer-analysis-tabs.tsx",
   "utf8",
@@ -50,6 +54,17 @@ test("customer overview keeps all existing analyses behind one focused five-view
   assert.match(shellSource, /id: "revenue-streams"/);
   assert.match(shellSource, /id: "profitability"/);
   assert.match(shellSource, /id: "customers"/);
+});
+
+test("customer header keeps Import primary while the CSV template stays inside Import", () => {
+  assert.match(shellSource, /استيراد معاملات/);
+  assert.doesNotMatch(shellSource, /ملاحظات تحتاج مراجعتك/);
+  assert.doesNotMatch(shellSource, /تنزيل نموذج CSV/);
+  assert.doesNotMatch(shellSource, /كل البزنسات/);
+  assert.match(importPageSource, /ماذا يجب أن يحتوي الملف؟/);
+  assert.match(importPageSource, /href="\/mizan-transactions-template\.csv"/);
+  assert.match(importPageSource, /download="mizan-transactions-template\.csv"/);
+  assert.match(importPageSource, /تنزيل النموذج الجاهز/);
 });
 
 test("customer redesign preserves locked financial meaning while removing redundant cohort-age language", () => {
