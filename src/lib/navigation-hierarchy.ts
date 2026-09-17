@@ -29,8 +29,10 @@ export function resolveNavigationDestination(destination: NavigationDestination)
   switch (destination.route) {
     case "businesses":
       return "/businesses";
-    case "business-overview":
-      return businessPath(destination.businessId);
+    case "business-overview": {
+      const searchParams = new URLSearchParams({ business: destination.businessId });
+      return `/?${searchParams.toString()}`;
+    }
     case "business-customers":
       return `${businessPath(destination.businessId)}/customers`;
     case "business-monthly": {
