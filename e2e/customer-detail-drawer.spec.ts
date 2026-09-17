@@ -13,17 +13,17 @@ const customerRow = {
   customer_name: "Ahmed Buyer",
   acquisition_at: "2026-09-01T10:00:00+00:00",
   acquisition_date: "2026-09-01",
-  transaction_count: 3,
-  collection_count: 2,
+  transaction_count: 51,
+  collection_count: 50,
   refund_count: 1,
-  gross_cash_collected_text: "150",
+  gross_cash_collected_text: "153",
   refunds_text: "25",
-  net_cash_collected_text: "125",
+  net_cash_collected_text: "128",
   last_transaction_at: "2026-09-07T10:00:00+00:00",
   currency: "EGP",
 };
 
-const customerTransactions = [
+const firstHistoryPage = [
   {
     id: "00000000-0000-4000-8000-000000000701",
     source: "stripe",
@@ -49,6 +49,35 @@ const customerTransactions = [
     revenue_stream_name_snapshot: "Front-End Offer",
     revenue_stream_type_snapshot: "front_end",
     created_at: "2026-09-01T10:05:00+00:00",
+  },
+  ...Array.from({ length: 48 }, (_, index) => ({
+    id: `fixture-page-one-${index}`,
+    source: "stripe",
+    source_transaction_id: `pi_fixture_${index}`,
+    transaction_date: "2026-08-31",
+    transaction_at: `2026-08-31T09:${String(index).padStart(2, "0")}:00+00:00`,
+    amount_collected: "1",
+    transaction_type: "collection",
+    currency: "EGP",
+    revenue_stream_name_snapshot: null,
+    revenue_stream_type_snapshot: null,
+    created_at: `2026-08-31T09:${String(index).padStart(2, "0")}:01+00:00`,
+  })),
+];
+
+const secondHistoryPage = [
+  {
+    id: "00000000-0000-4000-8000-000000000799",
+    source: "stripe",
+    source_transaction_id: "pi_oldest_page_2",
+    transaction_date: "2026-08-01",
+    transaction_at: "2026-08-01T08:00:00+00:00",
+    amount_collected: "5",
+    transaction_type: "collection",
+    currency: "EGP",
+    revenue_stream_name_snapshot: "Older History",
+    revenue_stream_type_snapshot: "other",
+    created_at: "2026-08-01T08:05:00+00:00",
   },
 ];
 
@@ -77,7 +106,7 @@ async function fulfillJson(route: Route, body: unknown[], contentRange?: string)
 }
 
 test.describe("N20 customer detail drawer", () => {
-  test("shows transaction history without losing ledger URL state and restores focus on close", async ({ page }) => {
+  test("shows complete paginated history without losing ledger URL state and restores focus", async ({ page }) => {
     const browserErrors = collectBrowserErrors(page);
     const detailRequests: URL[] = [];
     let groupRequestCount = 0;
@@ -87,8 +116,15 @@ test.describe("N20 customer detail drawer", () => {
       await fulfillJson(route, [customerRow], "50-50/100");
     });
     await page.route("**/rest/v1/customer_transactions**", async (route) => {
-      if (route.request().method() !== "OPTIONS") detailRequests.push(new URL(route.request().url()));
-      await fulfillJson(route, customerTransactions);
+      if (route.request().method() === "OPTIONS") {
+        await fulfillJson(route, []);
+        return;
+      }
+
+      const requestUrl = new URL(route.request().url());
+      detailRequests.push(requestUrl);
+      const offset = requestUrl.searchParams.get("offset") ?? "0";
+      await fulfillJson(route, offset === "0" ? firstHistoryPage : secondHistoryPage);
     });
 
     await page.goto(
@@ -105,15 +141,21 @@ test.describe("N20 customer detail drawer", () => {
     await expect(dialog).toBeVisible();
     await expect(page.getByRole("button", { name: "إغلاق تفاصيل العميل" })).toBeFocused();
     await expect(dialog.getByText("buyer@example.com", { exact: true })).toBeVisible();
-    await expect(dialog.getByText("125 EGP", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("128 EGP", { exact: true })).toBeVisible();
     await expect(dialog.getByText("سجل المعاملات", { exact: true })).toBeVisible();
     await expect(dialog.getByText("-25 EGP", { exact: true })).toBeVisible();
     await expect(dialog.getByText("100 EGP", { exact: true })).toBeVisible();
     await expect(dialog.getByText("Backend Renewal", { exact: true })).toBeVisible();
     await expect(dialog.getByText("Front-End Offer", { exact: true })).toBeVisible();
-    await expect.poll(() => detailRequests.length).toBe(1);
-    await expect.poll(() => detailRequests[0]?.searchParams.get("business_id")).toContain(customerRow.business_id);
-    await expect.poll(() => detailRequests[0]?.searchParams.get("customer_email")).toContain("buyer@example.com");
+    await expect(dialog.getByText("Older History", { exact: true })).toBeVisible();
+    await expect(dialog.getByText("51 معاملة", { exact: true })).toBeVisible();
+    await expect.poll(() => detailRequests.length).toBe(2);
+    expect(detailRequests.map((url) => url.searchParams.get("offset") ?? "0")).toEqual(["0", "50"]);
+    expect(detailRequests.map((url) => url.searchParams.get("limit"))).toEqual(["50", "50"]);
+    for (const requestUrl of detailRequests) {
+      expect(requestUrl.searchParams.get("business_id")).toContain(customerRow.business_id);
+      expect(requestUrl.searchParams.get("customer_email")).toContain("buyer@example.com");
+    }
     expect(page.url()).toBe(ledgerUrl);
     expect(groupRequestCount).toBe(initialGroupRequestCount);
 
