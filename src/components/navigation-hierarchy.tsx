@@ -8,6 +8,7 @@ type BreadcrumbProps = {
   ariaLabel?: string;
 };
 
+/** Creates a stable key from a breadcrumb's semantic destination or current-page label. */
 function breadcrumbItemKey(item: BreadcrumbItem) {
   if (item.current) {
     return `current:${item.label}`;
@@ -16,6 +17,7 @@ function breadcrumbItemKey(item: BreadcrumbItem) {
   return `${resolveNavigationDestination(item.destination)}:${item.label}`;
 }
 
+/** Renders an accessible hierarchical breadcrumb from structured navigation metadata. */
 export function Breadcrumb({ items, ariaLabel = "مسار التنقل" }: BreadcrumbProps) {
   return (
     <nav className={styles.breadcrumbNav} aria-label={ariaLabel}>
@@ -50,6 +52,7 @@ type BackLinkProps = BackNavigation & {
   className?: string;
 };
 
+/** Renders a deterministic link to an explicitly declared hierarchical parent. */
 export function BackLink({ label, destination, className }: BackLinkProps) {
   const classes = className ? `${styles.backLink} ${className}` : styles.backLink;
 
