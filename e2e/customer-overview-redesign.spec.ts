@@ -6,7 +6,7 @@ const fixturePath = "/auth/e2e-customers-overview";
 test.describe("Customer value overview redesign", () => {
   test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
 
-  test("prioritizes readable KPIs, keeps one primary hero action, and preserves URL-backed analysis tabs in Arabic RTL", async ({ page }) => {
+  test("keeps one primary hero action, opens Data Sources in-context, and preserves URL-backed analysis tabs in Arabic RTL", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "error") browserErrors.push(message.text());
@@ -30,6 +30,32 @@ test.describe("Customer value overview redesign", () => {
     await expect(hero.getByRole("link", { name: "ملاحظات تحتاج مراجعتك" })).toHaveCount(0);
     await expect(hero.getByRole("link", { name: "كل البزنسات" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "تنزيل نموذج CSV" })).toHaveCount(0);
+
+    const dataSourcesCard = page.getByRole("button", { name: /مصادر بيانات اقتصاديات العميل/ });
+    await expect(dataSourcesCard).toBeVisible();
+    await expect(dataSourcesCard).toHaveAttribute("aria-haspopup", "dialog");
+    await dataSourcesCard.focus();
+    await expect(dataSourcesCard).toBeFocused();
+    await dataSourcesCard.press("Enter");
+
+    const dataSourcesDrawer = page.getByRole("dialog", { name: "مصادر بيانات اقتصاديات العميل" });
+    await expect(dataSourcesDrawer).toBeVisible();
+    await expect(dataSourcesDrawer.getByRole("link", { name: "فتح الاستيراد" })).toHaveAttribute(
+      "href",
+      "/businesses/00000000-0000-4000-8000-000000000057/customers/import",
+    );
+    await expect(dataSourcesDrawer.getByRole("link", { name: "فتح إعداد المصروفات" })).toHaveAttribute(
+      "href",
+      "/businesses/00000000-0000-4000-8000-000000000057/expenses",
+    );
+    await expect(dataSourcesDrawer.getByRole("link", { name: "ربط مصادر الإيراد" })).toHaveAttribute(
+      "href",
+      "/businesses/00000000-0000-4000-8000-000000000057/customers/revenue-stream-attribution",
+    );
+    await expect(dataSourcesDrawer.getByText(/توزيع التكاليف يدويًا/)).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(dataSourcesDrawer).toBeHidden();
+    await expect(dataSourcesCard).toBeFocused();
 
     const tabList = page.getByRole("tablist", { name: "أقسام تحليل العملاء" });
     const overviewTab = tabList.getByRole("tab", { name: /نظرة عامة/ });
@@ -57,17 +83,6 @@ test.describe("Customer value overview redesign", () => {
       historyOverview.getByText("Observed LTV / قيمة العميل المحققة حتى الآن", { exact: true }),
     ).toBeVisible();
     await expect(page.getByText("255.218952380952381", { exact: true })).toHaveCount(0);
-
-    const setup = page.locator("details").filter({ hasText: "مصادر بيانات اقتصاديات العميل" });
-    await expect(setup).toHaveCount(1);
-    await expect(setup).not.toHaveAttribute("open", "");
-    await expect(setup.getByText("فتح الاستيراد", { exact: true })).toBeHidden();
-    await setup.locator("summary").click();
-    await expect(setup).toHaveAttribute("open", "");
-    await expect(setup.getByText("فتح الاستيراد", { exact: true })).toBeVisible();
-    await expect(setup.getByText("فتح إعداد المصروفات", { exact: true })).toBeVisible();
-    await expect(setup.getByText("ربط مصادر الإيراد", { exact: true }).last()).toBeVisible();
-    await expect(setup.getByText(/توزيع التكاليف يدويًا/)).toHaveCount(0);
 
     await expect(observedTab).toHaveAttribute("aria-selected", "false");
     const observedPanelId = await observedTab.getAttribute("aria-controls");
@@ -109,6 +124,17 @@ test.describe("Customer value overview redesign", () => {
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
       .toBe(true);
     await expect(importLink).toBeVisible();
+    await expect(dataSourcesCard).toBeVisible();
+    await dataSourcesCard.click();
+    await expect(dataSourcesDrawer).toBeVisible();
+    await expect
+      .poll(() => dataSourcesDrawer.evaluate((element) => element.scrollWidth <= element.clientWidth))
+      .toBe(true);
+    const drawerBox = await dataSourcesDrawer.boundingBox();
+    expect(drawerBox).not.toBeNull();
+    expect(drawerBox!.width).toBeLessThanOrEqual(390);
+    await page.getByRole("button", { name: "إغلاق مصادر البيانات" }).click();
+    await expect(dataSourcesDrawer).toBeHidden();
     await expect(page.getByRole("tablist", { name: "أقسام تحليل العملاء" })).toBeVisible();
     await expect(historyOverview).toHaveCount(0);
     expect(browserErrors).toEqual([]);

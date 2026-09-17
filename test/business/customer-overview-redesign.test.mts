@@ -10,6 +10,14 @@ const shellSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/customers/customer-overview-shell.tsx",
   "utf8",
 );
+const dataSourcesSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/customers/customer-data-sources-drawer.tsx",
+  "utf8",
+);
+const dataSourcesCss = readFileSync(
+  "src/app/(app)/businesses/[businessId]/customers/customer-data-sources-drawer.module.css",
+  "utf8",
+);
 const importPageSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/customers/import/page.tsx",
   "utf8",
@@ -67,6 +75,27 @@ test("customer header keeps Import primary while the CSV template stays inside I
   assert.match(importPageSource, /تنزيل النموذج الجاهز/);
 });
 
+test("Data Sources uses an obvious clickable card and an in-context modal drawer", () => {
+  assert.match(shellSource, /CustomerDataSourcesDrawer/);
+  assert.doesNotMatch(shellSource, /<details/);
+  assert.match(dataSourcesSource, /^"use client";/);
+  assert.match(dataSourcesSource, /aria-haspopup="dialog"/);
+  assert.match(dataSourcesSource, /showModal\(\)/);
+  assert.match(dataSourcesSource, /<dialog/);
+  assert.match(dataSourcesSource, /method="dialog"/);
+  assert.match(dataSourcesSource, /إغلاق مصادر البيانات/);
+  assert.match(dataSourcesSource, /فتح الاستيراد/);
+  assert.match(dataSourcesSource, /فتح إعداد المصروفات/);
+  assert.match(dataSourcesSource, /ربط مصادر الإيراد/);
+  assert.match(dataSourcesCss, /\.dataSourcesCard:hover/);
+  assert.match(dataSourcesCss, /\.dataSourcesCard:focus-visible/);
+  assert.match(dataSourcesCss, /cursor:\s*pointer/);
+  assert.match(dataSourcesCss, /\.drawer::backdrop/);
+  assert.match(dataSourcesCss, /@media \(max-width: 600px\)/);
+  assert.match(dataSourcesCss, /width:\s*100vw/);
+  assert.match(dataSourcesCss, /height:\s*100dvh/);
+});
+
 test("customer redesign preserves locked financial meaning while removing redundant cohort-age language", () => {
   assert.match(observedLtvSource, /Observed LTV \/ قيمة العميل المحققة حتى الآن/);
   assert.match(observedLtvSource, /رقم محقق من المعاملات الفعلية، وليس توقعًا للمستقبل/);
@@ -98,7 +127,7 @@ test("customer redesign preserves locked financial meaning while removing redund
   assert.match(contributionManagerSource, /خسارة بعد التكاليف حتى الآن/);
   assert.match(shellSource, /العملاء وقيمة وربحية العميل/);
   assert.match(shellSource, /لا تحتاج إلى توزيع التكاليف يدويًا لكل شهر أول شراء/);
-  assert.match(shellSource, /ميزان يستخدم تصنيف وسلوك المصروفات الشهرية/);
+  assert.match(dataSourcesSource, /ميزان يستخدم تصنيف وسلوك المصروفات الشهرية/);
   assert.doesNotMatch(shellSource, /href={`\/businesses\/\$\{businessId\}\/customers\/lifetime-contribution`}/);
 });
 
