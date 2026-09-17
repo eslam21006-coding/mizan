@@ -1,7 +1,12 @@
 export type NavigationDestination =
   | { route: "businesses" }
   | { route: "business-overview"; businessId: string }
-  | { route: "business-customers"; businessId: string }
+  | {
+      route: "business-customers";
+      businessId: string;
+      view?: "profitability";
+      month?: string;
+    }
   | { route: "business-monthly"; businessId: string; month?: string };
 
 export type BreadcrumbItem =
@@ -35,8 +40,14 @@ export function resolveNavigationDestination(destination: NavigationDestination)
       const searchParams = new URLSearchParams({ business: destination.businessId });
       return `/?${searchParams.toString()}`;
     }
-    case "business-customers":
-      return `${businessPath(destination.businessId)}/customers`;
+    case "business-customers": {
+      const pathname = `${businessPath(destination.businessId)}/customers`;
+      const searchParams = new URLSearchParams();
+      if (destination.view) searchParams.set("view", destination.view);
+      if (destination.month) searchParams.set("month", destination.month);
+      const query = searchParams.toString();
+      return query ? `${pathname}?${query}` : pathname;
+    }
     case "business-monthly": {
       const pathname = `${businessPath(destination.businessId)}/monthly`;
       if (!destination.month) {
