@@ -29,11 +29,12 @@ test.describe("CI-only navigation foundation fixture", () => {
     const businessLink = breadcrumb.getByRole("link", { name: "أكاديمية ميزان" });
     const currentCrumb = breadcrumb.getByText("اقتصاديات العملاء", { exact: true });
     const backLink = page.getByRole("link", { name: "العودة إلى البزنس" });
+    const expectedBusinessDashboard = "/?business=business+fixture%2F01";
 
     await expect(businessesLink).toHaveAttribute("href", "/businesses");
-    await expect(businessLink).toHaveAttribute("href", "/businesses/business%20fixture%2F01");
+    await expect(businessLink).toHaveAttribute("href", expectedBusinessDashboard);
     await expect(currentCrumb).toHaveAttribute("aria-current", "page");
-    await expect(backLink).toHaveAttribute("href", "/businesses/business%20fixture%2F01");
+    await expect(backLink).toHaveAttribute("href", expectedBusinessDashboard);
 
     await businessesLink.focus();
     await expect(businessesLink).toBeFocused();
