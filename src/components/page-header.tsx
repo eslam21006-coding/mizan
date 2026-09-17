@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Children, type ReactNode } from "react";
 import { PageHeading } from "./page-heading";
 import styles from "./page-header.module.css";
 
@@ -23,10 +23,14 @@ export function PageActionSlot({
   children,
   ariaLabel = "إجراءات الصفحة",
 }: PageActionSlotProps) {
+  const renderableChildren = Children.toArray(children);
+
   return (
     <fieldset className={styles.actionSlot} data-action-state={state} aria-label={ariaLabel}>
       <div className={styles.actionContent}>
-        {children ?? (
+        {renderableChildren.length > 0 ? (
+          renderableChildren
+        ) : (
           <span className={styles.actionStateCopy} role="status">
             {ACTION_STATE_COPY[state]}
           </span>
