@@ -45,6 +45,7 @@ type CustomerDetailDrawerProps = {
 
 const DRAWER_ID = "customer-detail-drawer";
 const DRAWER_TITLE_ID = "customer-detail-drawer-title";
+const TRANSACTION_PAGE_SIZE = 50;
 
 /** Formats one stored transaction timestamp in the business reporting timezone. */
 function timestampDisplay(value: string, timezone: string) {
@@ -80,7 +81,7 @@ export function CustomerDetailDrawer({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  /** Loads the selected customer's RLS-scoped transaction history and ignores superseded responses. */
+  /** Loads the complete RLS-scoped history in bounded pages and ignores superseded responses. */
   const loadTransactions = useCallback(
     async (targetCustomer: CustomerDetailSummary) => {
       const requestId = ++requestIdRef.current;
@@ -89,24 +90,36 @@ export function CustomerDetailDrawer({
       setIsLoading(true);
 
       const supabase = createSupabaseBrowserClient();
-      const { data, error: loadError } = await supabase
-        .from("customer_transactions")
-        .select(
-          "id,source,source_transaction_id,transaction_date,transaction_at,amount_collected,transaction_type,currency,revenue_stream_name_snapshot,revenue_stream_type_snapshot,created_at",
-        )
-        .eq("business_id", businessId)
-        .eq("customer_email", targetCustomer.customer_email)
-        .order("transaction_at", { ascending: false })
-        .order("created_at", { ascending: false })
-        .order("id", { ascending: false });
+      const loadedTransactions: CustomerTransactionRow[] = [];
+
+      for (let from = 0; ; from += TRANSACTION_PAGE_SIZE) {
+        const { data, error: loadError } = await supabase
+          .from("customer_transactions")
+          .select(
+            "id,source,source_transaction_id,transaction_date,transaction_at,amount_collected,transaction_type,currency,revenue_stream_name_snapshot,revenue_stream_type_snapshot,created_at",
+          )
+          .eq("business_id", businessId)
+          .eq("customer_email", targetCustomer.customer_email)
+          .order("transaction_at", { ascending: false })
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, from + TRANSACTION_PAGE_SIZE - 1);
+
+        if (requestId !== requestIdRef.current) return;
+        if (loadError) {
+          setTransactions([]);
+          setError("تعذر تحميل سجل معاملات هذا العميل. حاول مرة أخرى.");
+          setIsLoading(false);
+          return;
+        }
+
+        const pageRows = (data ?? []) as CustomerTransactionRow[];
+        loadedTransactions.push(...pageRows);
+        if (pageRows.length < TRANSACTION_PAGE_SIZE) break;
+      }
 
       if (requestId !== requestIdRef.current) return;
-      if (loadError) {
-        setTransactions([]);
-        setError("تعذر تحميل سجل معاملات هذا العميل. حاول مرة أخرى.");
-      } else {
-        setTransactions((data ?? []) as CustomerTransactionRow[]);
-      }
+      setTransactions(loadedTransactions);
       setIsLoading(false);
     },
     [businessId],
