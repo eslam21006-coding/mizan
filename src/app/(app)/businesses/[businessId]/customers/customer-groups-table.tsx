@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import uxStyles from "./customer-analysis-ux.module.css";
+import { CustomerDetailDrawer } from "./customer-detail-drawer";
+import detailStyles from "./customer-detail-drawer.module.css";
 import styles from "./customer-groups.module.css";
 
 const PAGE_SIZE = 50;
@@ -122,6 +124,8 @@ export function CustomerGroupsTable({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchDraft, setSearchDraft] = useState(search);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerTransactionGroup | null>(null);
+  const detailOpenerRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     setSearchDraft(search);
@@ -243,6 +247,12 @@ export function CustomerGroupsTable({
     setSearchDraft("");
     updateCustomerUrlState({ search: "", filter: "all", sort: "acquisition_desc", page: 0 });
   };
+
+  /** Opens one customer's detail drawer while retaining the current list URL and focused row action. */
+  function openCustomerDetails(customer: CustomerTransactionGroup, opener: HTMLButtonElement) {
+    detailOpenerRef.current = opener;
+    setSelectedCustomer(customer);
+  }
 
   if (isLoading && rows.length === 0) {
     return (
@@ -367,6 +377,7 @@ export function CustomerGroupsTable({
                 <th scope="col">الاسترجاعات</th>
                 <th scope="col">صافي التحصيل</th>
                 <th scope="col">آخر معاملة</th>
+                <th scope="col">التفاصيل</th>
               </tr>
             </thead>
             <tbody>
@@ -404,6 +415,18 @@ export function CustomerGroupsTable({
                       <strong>{formatMoneyText(row.net_cash_collected_text, currency)}</strong>
                     </td>
                     <td>{timestampDisplay(row.last_transaction_at, timezone)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className={detailStyles.rowAction}
+                        aria-haspopup="dialog"
+                        aria-controls="customer-detail-drawer"
+                        aria-label={`عرض تفاصيل العميل ${row.customer_name ?? row.customer_email}`}
+                        onClick={(event) => openCustomerDetails(row, event.currentTarget)}
+                      >
+                        عرض التفاصيل
+                      </button>
+                    </td>
                   </tr>
                 );
               })}
@@ -432,6 +455,15 @@ export function CustomerGroupsTable({
           الصفحة التالية
         </button>
       </nav>
+
+      <CustomerDetailDrawer
+        businessId={businessId}
+        baseCurrency={baseCurrency}
+        timezone={timezone}
+        customer={selectedCustomer}
+        opener={detailOpenerRef.current}
+        onDismiss={() => setSelectedCustomer(null)}
+      />
     </section>
   );
 }
