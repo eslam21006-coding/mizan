@@ -24,6 +24,10 @@ test("resolves nested business routes without accepting arbitrary href strings",
     "/businesses/business%2F01/customers?view=profitability&month=2026-08",
   );
   assert.equal(
+    resolveNavigationDestination({ route: "business-customer-review", businessId: "business/01" }),
+    "/businesses/business%2F01/customers/review",
+  );
+  assert.equal(
     resolveNavigationDestination({
       route: "business-monthly",
       businessId: "business/01",
