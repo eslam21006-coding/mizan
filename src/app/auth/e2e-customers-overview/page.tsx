@@ -23,6 +23,11 @@ export default async function CustomerOverviewE2eFixturePage({
 
   const customerSearchParams = await searchParams;
   const activeView = parseCustomerAnalysisView(customerSearchParams.view);
+  const reviewState = Array.isArray(customerSearchParams.review)
+    ? customerSearchParams.review[0]
+    : customerSearchParams.review;
+  const reviewLoadError = reviewState === "error";
+  const reviewIssueCount = reviewState === "clean" ? 0 : reviewLoadError ? null : 2;
 
   return (
     <main className="page-stack">
@@ -33,7 +38,8 @@ export default async function CustomerOverviewE2eFixturePage({
         timezone="Africa/Cairo"
         activeView={activeView}
         searchParams={customerSearchParams}
-        reviewIssueCount={2}
+        reviewIssueCount={reviewIssueCount}
+        reviewLoadError={reviewLoadError}
         tabBasePath={FIXTURE_PATH}
         historyOverview={
           <CustomerHistoryOverview
