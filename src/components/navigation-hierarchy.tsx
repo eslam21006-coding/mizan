@@ -8,12 +8,20 @@ type BreadcrumbProps = {
   ariaLabel?: string;
 };
 
+function breadcrumbItemKey(item: BreadcrumbItem) {
+  if (item.current) {
+    return `current:${item.label}`;
+  }
+
+  return `${resolveNavigationDestination(item.destination)}:${item.label}`;
+}
+
 export function Breadcrumb({ items, ariaLabel = "مسار التنقل" }: BreadcrumbProps) {
   return (
     <nav className={styles.breadcrumbNav} aria-label={ariaLabel}>
       <ol className={styles.breadcrumbList}>
         {items.map((item, index) => (
-          <li className={styles.breadcrumbItem} key={`${item.label}-${index}`}>
+          <li className={styles.breadcrumbItem} key={breadcrumbItemKey(item)}>
             {index > 0 && (
               <span className={styles.separator} aria-hidden="true">
                 /
