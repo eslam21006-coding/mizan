@@ -7,6 +7,7 @@ import {
 } from "@/lib/customer-analysis-view";
 
 const FIXTURE_BUSINESS_ID = "00000000-0000-4000-8000-000000000057";
+const FIXTURE_PATH = "/auth/e2e-customers-overview";
 
 type CustomerOverviewE2eFixturePageProps = {
   searchParams: Promise<CustomerSearchParams>;
@@ -32,6 +33,7 @@ export default async function CustomerOverviewE2eFixturePage({
         timezone="Africa/Cairo"
         activeView={activeView}
         searchParams={customerSearchParams}
+        tabBasePath={FIXTURE_PATH}
         historyOverview={
           <CustomerHistoryOverview
             baseCurrency="USD"

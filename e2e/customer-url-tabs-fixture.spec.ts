@@ -33,16 +33,18 @@ test.describe("CI-only URL-backed Customer tabs fixture", () => {
     const customersTab = tab(page, /سجل العملاء/);
     await expect(customersTab).toHaveAttribute(
       "href",
-      "/businesses/business%20fixture%2F01/customers?view=customers&month=2026-08",
+      `${fixturePath}?view=customers&month=2026-08`,
     );
 
-    await page.reload();
-    await expect(tab(page, /ربحية العميل/)).toHaveAttribute("aria-selected", "true");
-    await expect(page.getByTestId("fixture-profitability")).toBeVisible();
-
-    await page.goto(`${fixturePath}?view=customers&month=2026-08`);
+    await customersTab.click();
+    await expect(page).toHaveURL(new RegExp(`${fixturePath}\\?view=customers&month=2026-08$`));
     await expect(tab(page, /سجل العملاء/)).toHaveAttribute("aria-selected", "true");
     await expect(page.getByTestId("fixture-customers")).toBeVisible();
+
+    await page.reload();
+    await expect(tab(page, /سجل العملاء/)).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByTestId("fixture-customers")).toBeVisible();
+
     await page.goBack();
     await expect(page).toHaveURL(new RegExp(`${fixturePath}\\?view=profitability&month=2026-08$`));
     await expect(tab(page, /ربحية العميل/)).toHaveAttribute("aria-selected", "true");
@@ -69,20 +71,15 @@ test.describe("CI-only URL-backed Customer tabs fixture", () => {
 
     await expect(tab(page, /متوسط ما دفعه العميل/)).toHaveAttribute(
       "href",
-      "/businesses/business%20fixture%2F01/customers?view=value&month=2026-08",
+      `${fixturePath}?view=value&month=2026-08`,
     );
 
-    await tabs.evaluateAll((elements) => {
-      for (const element of elements) {
-        element.addEventListener("click", (event) => event.preventDefault());
-      }
-    });
     const overviewTab = tab(page, /نظرة عامة/);
-    const valueTab = tab(page, /متوسط ما دفعه العميل/);
     await overviewTab.focus();
     await expect(overviewTab).toBeFocused();
     await page.keyboard.press("ArrowLeft");
-    await expect(valueTab).toBeFocused();
+    await expect(page).toHaveURL(new RegExp(`${fixturePath}\\?view=value&month=2026-08$`));
+    await expect(tab(page, /متوسط ما دفعه العميل/)).toHaveAttribute("aria-selected", "true");
 
     const dimensions = await page.locator("html").evaluate((element) => ({
       clientWidth: element.clientWidth,

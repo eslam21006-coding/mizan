@@ -22,6 +22,7 @@ type CustomerAnalysisTabsProps = {
   activeView: CustomerAnalysisView;
   searchParams: CustomerSearchParams;
   panels: CustomerAnalysisPanel[];
+  tabBasePath?: string;
 };
 
 /** Keeps deeper customer analyses URL-addressable without stacking full tables on one page. */
@@ -30,6 +31,7 @@ export function CustomerAnalysisTabs({
   activeView,
   searchParams,
   panels,
+  tabBasePath,
 }: CustomerAnalysisTabsProps) {
   const instanceId = useId().replaceAll(":", "");
   const activeIndex = Math.max(
@@ -93,7 +95,12 @@ export function CustomerAnalysisTabs({
                 tabRefs.current[index] = element;
               }}
               id={`${instanceId}-${panel.id}-tab`}
-              href={buildCustomerAnalysisViewHref(businessId, searchParams, panel.id)}
+              href={buildCustomerAnalysisViewHref(
+                businessId,
+                searchParams,
+                panel.id,
+                tabBasePath,
+              )}
               scroll={false}
               role="tab"
               aria-selected={selected}

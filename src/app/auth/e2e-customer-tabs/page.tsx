@@ -14,6 +14,7 @@ const fixtureShellProps = {
 };
 
 const fixtureBusinessId = "business fixture/01";
+const fixturePath = "/auth/e2e-customer-tabs";
 
 type CustomerTabsFixturePageProps = {
   searchParams: Promise<CustomerSearchParams>;
@@ -46,6 +47,7 @@ export default async function CustomerTabsFixturePage({ searchParams }: Customer
         timezone="Africa/Cairo"
         activeView={activeView}
         searchParams={customerSearchParams}
+        tabBasePath={fixturePath}
         historyOverview={<FixturePanel testId="fixture-overview" title="ملخص اقتصاديات العملاء" />}
         observedLtv={<FixturePanel testId="fixture-value" title="قيمة العميل" />}
         contribution={<FixturePanel testId="fixture-profitability" title="ربحية العميل" />}

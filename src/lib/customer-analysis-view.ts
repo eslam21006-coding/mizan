@@ -20,11 +20,12 @@ export function parseCustomerAnalysisView(value: CustomerSearchParamValue): Cust
     : "overview";
 }
 
-/** Builds a business-scoped Customer view URL while preserving unrelated structured query state. */
+/** Builds a Customer view URL while preserving unrelated structured query state. */
 export function buildCustomerAnalysisViewHref(
   businessId: string,
   searchParams: CustomerSearchParams,
   view: CustomerAnalysisView,
+  basePath = `/businesses/${encodeURIComponent(businessId)}/customers`,
 ) {
   const params = new URLSearchParams();
   params.set("view", view);
@@ -38,5 +39,5 @@ export function buildCustomerAnalysisViewHref(
     }
   }
 
-  return `/businesses/${encodeURIComponent(businessId)}/customers?${params.toString()}`;
+  return `${basePath}?${params.toString()}`;
 }

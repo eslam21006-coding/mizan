@@ -26,3 +26,15 @@ test("builds business-scoped Customer view URLs while preserving unrelated query
     "/businesses/business%2F01/customers?view=customers&month=2026-08&sort=revenue",
   );
 });
+
+test("supports an explicit fixture base path without changing preserved query state", () => {
+  assert.equal(
+    buildCustomerAnalysisViewHref(
+      "business/01",
+      { view: "overview", month: "2026-08" },
+      "profitability",
+      "/auth/e2e-customer-tabs",
+    ),
+    "/auth/e2e-customer-tabs?view=profitability&month=2026-08",
+  );
+});

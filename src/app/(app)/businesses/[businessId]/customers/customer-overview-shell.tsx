@@ -16,6 +16,7 @@ type CustomerOverviewShellProps = {
   revenueStreams: ReactNode;
   contribution: ReactNode;
   customers: ReactNode;
+  tabBasePath?: string;
 };
 
 /** Presents customer economics with URL-addressable local views and a dedicated Overview tab. */
@@ -31,6 +32,7 @@ export function CustomerOverviewShell({
   revenueStreams,
   contribution,
   customers,
+  tabBasePath,
 }: CustomerOverviewShellProps) {
   return (
     <div className={styles.customerWorkspace}>
@@ -123,6 +125,7 @@ export function CustomerOverviewShell({
         businessId={businessId}
         activeView={activeView}
         searchParams={searchParams}
+        tabBasePath={tabBasePath}
         panels={[
           {
             id: "overview",
