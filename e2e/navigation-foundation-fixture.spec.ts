@@ -18,7 +18,9 @@ function captureBrowserErrors(page: import("@playwright/test").Page) {
 test.describe("CI-only navigation foundation fixture", () => {
   test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
 
-  test("renders explicit RTL breadcrumbs, deterministic Back, and business context", async ({ page }) => {
+  test("renders RTL hierarchy, stable page actions, and a safe structured return destination", async ({
+    page,
+  }) => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.goto(fixturePath);
@@ -48,6 +50,30 @@ test.describe("CI-only navigation foundation fixture", () => {
     await expect(context.getByText("أكاديمية ميزان", { exact: true })).toBeVisible();
     await expect(context.locator('bdi[dir="ltr"]')).toHaveText(["SAR", "Asia/Riyadh"]);
 
+    const normalActions = page.getByRole("group", { name: "إجراءات الصفحة", exact: true });
+    const safeReturnLink = normalActions.getByRole("link", { name: "عودة آمنة لربحية العميل" });
+    await expect(normalActions).toHaveAttribute("data-action-state", "normal");
+    await expect(safeReturnLink).toHaveAttribute(
+      "href",
+      "/businesses/business%20fixture%2F01/customers?view=profitability&month=2026-08",
+    );
+    await safeReturnLink.focus();
+    await expect(safeReturnLink).toBeFocused();
+
+    const loadingActions = page.getByRole("group", { name: "إجراءات الصفحة - تحميل" });
+    const readOnlyActions = page.getByRole("group", { name: "إجراءات الصفحة - عرض فقط" });
+    const errorActions = page.getByRole("group", { name: "إجراءات الصفحة - خطأ" });
+    const conditionalActions = page.getByRole("group", { name: "إجراءات الصفحة - شرط غير متاح" });
+    const emptyActions = page.getByRole("group", { name: "إجراءات الصفحة - قائمة فارغة" });
+    await expect(loadingActions).toHaveAttribute("data-action-state", "loading");
+    await expect(loadingActions.getByText("جارٍ تحميل الإجراءات…")).toBeVisible();
+    await expect(readOnlyActions).toHaveAttribute("data-action-state", "read-only");
+    await expect(readOnlyActions.getByText("عرض فقط")).toBeVisible();
+    await expect(errorActions).toHaveAttribute("data-action-state", "error");
+    await expect(errorActions.getByText("تعذر تحميل الإجراءات")).toBeVisible();
+    await expect(conditionalActions.getByText("لا يوجد إجراء مطلوب الآن")).toBeVisible();
+    await expect(emptyActions.getByText("لا يوجد إجراء مطلوب الآن")).toBeVisible();
+
     await page.screenshot({
       path: "test-results/screenshots/navigation-foundation-desktop.png",
       fullPage: true,
@@ -55,7 +81,7 @@ test.describe("CI-only navigation foundation fixture", () => {
     expect(errors).toEqual([]);
   });
 
-  test("keeps the business context and hierarchy usable at 390px without overflow", async ({ page }) => {
+  test("keeps hierarchy and every action state usable at 390px without overflow", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(fixturePath);
@@ -73,6 +99,17 @@ test.describe("CI-only navigation foundation fixture", () => {
     await expect(metadataValues.nth(1)).toHaveCSS("white-space", "nowrap");
     await expect(page.getByRole("navigation", { name: "مسار التنقل" })).toBeVisible();
     await expect(page.getByRole("link", { name: "العودة إلى البزنس" })).toBeVisible();
+
+    for (const name of [
+      "إجراءات الصفحة",
+      "إجراءات الصفحة - تحميل",
+      "إجراءات الصفحة - عرض فقط",
+      "إجراءات الصفحة - خطأ",
+      "إجراءات الصفحة - شرط غير متاح",
+      "إجراءات الصفحة - قائمة فارغة",
+    ]) {
+      await expect(page.getByRole("group", { name, exact: true })).toBeVisible();
+    }
 
     await page.screenshot({
       path: "test-results/screenshots/navigation-foundation-mobile-390.png",
