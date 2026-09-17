@@ -14,6 +14,10 @@ const reviewPanelSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/customers/review/customer-economics-review-panel.tsx",
   "utf8",
 );
+const reviewActionsSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/customers/review/actions.ts",
+  "utf8",
+);
 const monthlyPageSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/monthly/page.tsx",
   "utf8",
@@ -39,6 +43,19 @@ test("Review carries profitability context into the exact Monthly fix", () => {
   assert.match(reviewPanelSource, /month: activityMonth\.slice\(0, 7\)/);
   assert.match(reviewPanelSource, /origin=\$\{encodeURIComponent\(returnOrigin\.origin\)\}/);
   assert.match(reviewPageSource, /returnOrigin=\{returnOrigin\}/);
+});
+
+/** Locks Review mutations to validated origin metadata so their redirects do not break the profitability return loop. */
+test("Review mutations preserve only the safe profitability origin across validation, failure, and success", () => {
+  assert.match(reviewPanelSource, /name="origin" value=\{returnOrigin\.origin\}/);
+  assert.match(reviewActionsSource, /function parseReviewReturnOrigin/);
+  assert.match(reviewActionsSource, /parseReturnOrigin\(\{ origin: rawOrigin \}\)/);
+  assert.match(reviewActionsSource, /query\.set\("origin", returnOrigin\.origin\)/);
+  assert.match(reviewActionsSource, /redirectReview\(businessId, "override-failed", returnOrigin\)/);
+  assert.match(reviewActionsSource, /redirectReview\(businessId, "override-saved", returnOrigin\)/);
+  assert.match(reviewActionsSource, /redirectReview\(businessId, "legacy-failed", returnOrigin\)/);
+  assert.match(reviewActionsSource, /redirectReview\(businessId, "legacy-reconciled", returnOrigin\)/);
+  assert.doesNotMatch(reviewActionsSource, /returnTo/);
 });
 
 /** Locks Monthly save redirects to the same structured origin so Return remains available after Save. */
