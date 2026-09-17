@@ -29,6 +29,10 @@ test("rejects unknown, ambiguous, or malformed return origin metadata", () => {
     parseReturnOrigin({ origin: ["customer-overview", "monthly-editor"], month: "2026-08" }),
     null,
   );
+  assert.equal(
+    parseReturnOrigin({ origin: "customer-profitability", month: ["2026-08", "2026-09"] }),
+    null,
+  );
 });
 
 test("known origin ignores arbitrary returnTo and resolves only through typed destinations", () => {
@@ -47,11 +51,16 @@ test("known origin ignores arbitrary returnTo and resolves only through typed de
   );
 });
 
-test("URLSearchParams with duplicate origin keys is rejected as ambiguous", () => {
-  const params = new URLSearchParams();
-  params.append("origin", "customer-overview");
-  params.append("origin", "monthly-editor");
-  params.set("month", "2026-08");
+test("URLSearchParams with duplicate structured keys is rejected as ambiguous", () => {
+  const duplicateOrigin = new URLSearchParams();
+  duplicateOrigin.append("origin", "customer-overview");
+  duplicateOrigin.append("origin", "monthly-editor");
+  duplicateOrigin.set("month", "2026-08");
+  assert.equal(parseReturnOrigin(duplicateOrigin), null);
 
-  assert.equal(parseReturnOrigin(params), null);
+  const duplicateMonth = new URLSearchParams();
+  duplicateMonth.set("origin", "customer-profitability");
+  duplicateMonth.append("month", "2026-08");
+  duplicateMonth.append("month", "2026-09");
+  assert.equal(parseReturnOrigin(duplicateMonth), null);
 });
