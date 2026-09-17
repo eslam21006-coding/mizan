@@ -1,8 +1,11 @@
 import { expect, test } from "@playwright/test";
 
+const fixtureEnabled = process.env.MIZAN_E2E_UI_FIXTURE === "true";
 const fixturePath = "/auth/e2e-customers-overview";
 
 test.describe("Customer value overview redesign", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
   test("prioritizes readable KPIs, collapses data sources, and keeps URL-backed analysis tabs accessible in Arabic RTL", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {
