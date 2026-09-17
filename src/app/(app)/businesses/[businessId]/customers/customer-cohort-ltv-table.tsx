@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatCountText, formatMoneyText } from "@/lib/financial-display";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -7,6 +8,7 @@ import styles from "./customer-groups.module.css";
 import ltvStyles from "./observed-ltv-table.module.css";
 
 const PAGE_SIZE = 12;
+const COHORT_PAGE_PARAM = "cohortPage";
 
 type CustomerObservedLtv = {
   business_id: string;
@@ -55,13 +57,36 @@ function observationDateLabel(value: string) {
   }).format(new Date(Date.UTC(year, month - 1, day)));
 }
 
+/** Parses one 1-based URL page value and safely falls back to the first page for missing, duplicate, or invalid values. */
+function parseCohortPage(values: string[]) {
+  if (values.length !== 1) return 0;
+  const pageNumber = Number(values[0]);
+  return Number.isSafeInteger(pageNumber) && pageNumber >= 1 ? pageNumber - 1 : 0;
+}
+
 /** Shows one year of first-purchase customer groups per page with cumulative realized customer value. */
 export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCohortLtvTableProps) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const page = parseCohortPage(searchParams.getAll(COHORT_PAGE_PARAM));
   const [rows, setRows] = useState<CustomerObservedLtv[]>([]);
-  const [page, setPage] = useState(0);
   const [totalCount, setTotalCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  /** Writes cohort pagination to the current URL while preserving Customer view and unrelated structured state. */
+  const navigateToPage = useCallback(
+    (nextPage: number) => {
+      const safePage = Math.max(0, nextPage);
+      const params = new URLSearchParams(searchParams.toString());
+      if (safePage === 0) params.delete(COHORT_PAGE_PARAM);
+      else params.set(COHORT_PAGE_PARAM, String(safePage + 1));
+      const query = params.toString();
+      router.push(query ? `${pathname}?${query}` : pathname);
+    },
+    [pathname, router, searchParams],
+  );
 
   /** Loads the current first-purchase-month page and ignores stale responses after the caller becomes inactive. */
   const loadRows = useCallback(
@@ -107,6 +132,12 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
     if (totalCount === null) return null;
     return Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
   }, [totalCount]);
+
+  useEffect(() => {
+    if (pageCount !== null && page >= pageCount) {
+      navigateToPage(pageCount - 1);
+    }
+  }, [navigateToPage, page, pageCount]);
 
   const observationCutoffs = useMemo(
     () => Array.from(new Set(rows.map((row) => row.observation_cutoff_date).filter(Boolean))),
@@ -281,7 +312,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
         <button
           type="button"
           disabled={page === 0}
-          onClick={() => setPage((current) => Math.max(0, current - 1))}
+          onClick={() => navigateToPage(page - 1)}
         >
           الصفحة السابقة
         </button>
@@ -292,7 +323,7 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
         <button
           type="button"
           disabled={pageCount !== null ? page + 1 >= pageCount : rows.length < PAGE_SIZE}
-          onClick={() => setPage((current) => current + 1)}
+          onClick={() => navigateToPage(page + 1)}
         >
           الصفحة التالية
         </button>
