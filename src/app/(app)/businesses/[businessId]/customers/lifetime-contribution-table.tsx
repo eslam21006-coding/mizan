@@ -121,7 +121,7 @@ function incompleteActions(row: LifetimeContributionRow, businessId: string): Re
     actions.push({
       key: "review",
       label: "مراجعة ما ينقص وإكماله",
-      href: `/businesses/${businessId}/customers/review`,
+      href: `/businesses/${businessId}/customers/review?origin=customer-profitability`,
     });
   }
 

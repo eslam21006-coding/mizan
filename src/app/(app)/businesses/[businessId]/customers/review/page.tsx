@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { InPageErrorState } from "@/components/workflow-recovery";
+import { InPageErrorState, ReturnContextBanner } from "@/components/workflow-recovery";
 import { requireAuthContext } from "@/lib/auth/context";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { resolveNavigationDestination } from "@/lib/navigation-hierarchy";
+import { parseReturnOrigin } from "@/lib/return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   CustomerEconomicsReviewPanel,
@@ -15,7 +16,7 @@ import { CustomerReviewNavigation } from "./customer-review-navigation";
 
 type ReviewPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string | string[]; origin?: string | string[] }>;
 };
 
 const STATUS_MESSAGES: Record<string, string> = {
@@ -92,6 +93,19 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
   const business = businessResult.data;
   if (businessResult.error || !business) notFound();
 
+  const query = await searchParams;
+  const parsedOrigin = parseReturnOrigin({ origin: query.origin });
+  const returnOrigin = parsedOrigin?.origin === "customer-profitability" ? parsedOrigin : null;
+  const returnBanner = returnOrigin ? (
+    <ReturnContextBanner
+      purpose="بيانات مطلوبة في ربحية العميل"
+      origin={returnOrigin}
+      context={{ businessId: business.id }}
+      returnLabel="العودة إلى ربحية العميل"
+      ariaLabel="العودة إلى ربحية العميل"
+    />
+  ) : null;
+
   const dataLoadError = Boolean(
     exceptionsResult.error ||
       missingPeriodsResult.error ||
@@ -102,14 +116,18 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
   );
 
   if (dataLoadError) {
-    const retryHref = resolveNavigationDestination({
+    const retryBaseHref = resolveNavigationDestination({
       route: "business-customer-review",
       businessId: business.id,
     });
+    const retryHref = returnOrigin
+      ? `${retryBaseHref}?origin=${encodeURIComponent(returnOrigin.origin)}`
+      : retryBaseHref;
 
     return (
       <div className="page-stack">
         <CustomerReviewNavigation businessId={business.id} businessName={business.name} />
+        {returnBanner}
         <InPageErrorState
           title="تعذر تحميل بيانات المراجعة"
           description="تعذر تحميل بيانات المراجعة كاملة. لم يتم عرض حالة نظيفة حتى لا نخفي ملاحظة محتملة. أعد المحاولة، أو استخدم الرجوع للعودة إلى اقتصاديات العميل."
@@ -155,16 +173,17 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
     return right.activity_month.localeCompare(left.activity_month);
   });
 
-  const query = await searchParams;
-  const statusMessage = query.status ? STATUS_MESSAGES[query.status] ?? null : null;
+  const status = typeof query.status === "string" ? query.status : null;
+  const statusMessage = status ? STATUS_MESSAGES[status] ?? null : null;
   const statusIsError = Boolean(
-    query.status && !["override-saved", "legacy-reconciled"].includes(query.status),
+    status && !["override-saved", "legacy-reconciled"].includes(status),
   );
   const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
 
   return (
     <div className="page-stack">
       <CustomerReviewNavigation businessId={business.id} businessName={business.name} />
+      {returnBanner}
       <CustomerEconomicsReviewPanel
         businessId={business.id}
         baseCurrency={business.base_currency}
@@ -175,6 +194,7 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
         eligibleCostPools={eligibleCostPools}
         statusMessage={statusMessage}
         statusIsError={statusIsError}
+        returnOrigin={returnOrigin}
       />
     </div>
   );

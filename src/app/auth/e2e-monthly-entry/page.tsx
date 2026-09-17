@@ -9,10 +9,17 @@ import {
 import saveBarStyles from "@/app/(app)/businesses/[businessId]/monthly/monthly-save-bar.module.css";
 import styles from "@/app/(app)/businesses/[businessId]/monthly/monthly.module.css";
 import { AppShell } from "@/components/app-shell";
+import { ReturnContextBanner } from "@/components/workflow-recovery";
+import { parseReturnOrigin } from "@/lib/return-origin";
 
+const BUSINESS_ID = "00000000-0000-4000-8000-000000000025";
 const fixtureShellProps = {
   role: "admin" as const,
   email: "admin.fixture@example.test",
+};
+
+type MonthlyEntryE2eFixturePageProps = {
+  searchParams: Promise<{ origin?: string | string[] }>;
 };
 
 const revenueRows: RevenueInputRow[] = [
@@ -73,11 +80,18 @@ const expenseRows: ExpenseInputRow[] = [
   },
 ];
 
-export default async function MonthlyEntryE2eFixturePage() {
+/** Renders the isolated Monthly editor with an optional safe profitability return context. */
+export default async function MonthlyEntryE2eFixturePage({
+  searchParams,
+}: MonthlyEntryE2eFixturePageProps) {
   await connection();
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
     notFound();
   }
+
+  const query = await searchParams;
+  const parsedOrigin = parseReturnOrigin({ origin: query.origin });
+  const returnOrigin = parsedOrigin?.origin === "customer-profitability" ? parsedOrigin : null;
 
   return (
     <AppShell {...fixtureShellProps}>
@@ -87,6 +101,16 @@ export default async function MonthlyEntryE2eFixturePage() {
           <h1>الإدخال الشهري</h1>
           <p className="muted-copy">واجهة اختبار معزولة للتحقق من وضوح الإدخال واتجاه RTL والاستجابة.</p>
         </div>
+
+        {returnOrigin && (
+          <ReturnContextBanner
+            purpose="بيانات مطلوبة في ربحية العميل"
+            origin={returnOrigin}
+            context={{ businessId: BUSINESS_ID }}
+            returnLabel="العودة إلى ربحية العميل"
+            ariaLabel="العودة إلى ربحية العميل"
+          />
+        )}
 
         <section className={styles.monthBar} aria-label="اختيار الشهر">
           <Link className={styles.monthNavButton} href="#previous">

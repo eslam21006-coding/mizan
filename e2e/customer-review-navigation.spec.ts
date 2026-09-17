@@ -102,6 +102,41 @@ test.describe("Customer Review navigation", () => {
     expect(browserErrors).toEqual([]);
   });
 
+  test("propagates a safe profitability origin from Review into the exact missing Monthly month", async ({ page }) => {
+    const browserErrors: string[] = [];
+    page.on("console", (message) => {
+      if (message.type() === "error") browserErrors.push(message.text());
+    });
+    page.on("pageerror", (error) => browserErrors.push(error.message));
+
+    await page.goto(`${reviewPath}?origin=customer-profitability`);
+
+    const returnBanner = page.getByRole("region", { name: "العودة إلى ربحية العميل" });
+    await expect(returnBanner).toBeVisible();
+    const returnLink = returnBanner.getByRole("link", { name: "العودة إلى ربحية العميل" });
+    await expect(returnLink).toHaveAttribute(
+      "href",
+      `/businesses/${reviewBusinessId}/customers?view=profitability`,
+    );
+
+    const missingMonthCard = page.locator("article").filter({ hasText: "BUSINESS_NET_CASH_MISSING" });
+    const missingMonthFix = missingMonthCard.getByRole("link", { name: "فتح بيانات هذا الشهر" });
+    await expect(missingMonthFix).toHaveAttribute(
+      "href",
+      `/businesses/${reviewBusinessId}/monthly?month=2026-05&origin=customer-profitability`,
+    );
+    await missingMonthFix.focus();
+    await expect(missingMonthFix).toBeFocused();
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(returnBanner).toBeVisible();
+    await expect(missingMonthFix).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
+      .toBe(true);
+    expect(browserErrors).toEqual([]);
+  });
+
   test("keeps the Review hierarchy visible when review data fails and exposes retry", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {
@@ -134,5 +169,20 @@ test.describe("Customer Review navigation", () => {
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
       .toBe(true);
     expect(browserErrors).toEqual([]);
+  });
+
+  test("keeps the profitability Return context visible when Review data fails", async ({ page }) => {
+    await page.goto(`${reviewPath}?state=error&origin=customer-profitability`);
+
+    const returnBanner = page.getByRole("region", { name: "العودة إلى ربحية العميل" });
+    await expect(returnBanner).toBeVisible();
+    await expect(returnBanner.getByRole("link", { name: "العودة إلى ربحية العميل" })).toHaveAttribute(
+      "href",
+      `/businesses/${reviewBusinessId}/customers?view=profitability`,
+    );
+    const retryLink = page.getByRole("alert", { name: "تعذر تحميل بيانات المراجعة" }).getByRole("link", {
+      name: "إعادة المحاولة",
+    });
+    await expect(retryLink).toHaveAttribute("href", `${reviewPath}?origin=customer-profitability`);
   });
 });
