@@ -21,10 +21,12 @@ export type BackNavigation = {
   destination: NavigationDestination;
 };
 
+/** Builds an encoded path prefix for routes nested under a business. */
 function businessPath(businessId: string) {
   return `/businesses/${encodeURIComponent(businessId)}`;
 }
 
+/** Resolves a known navigation destination to its canonical application URL. */
 export function resolveNavigationDestination(destination: NavigationDestination) {
   switch (destination.route) {
     case "businesses":
