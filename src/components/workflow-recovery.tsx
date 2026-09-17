@@ -94,7 +94,7 @@ export function InPageErrorState({
         <p>{description}</p>
       </div>
       {(retryChildren.length > 0 || (returnOrigin && returnContext)) && (
-        <div className={styles.errorActions} role="group" aria-label="إجراءات معالجة الخطأ">
+        <fieldset className={styles.errorActions} aria-label="إجراءات معالجة الخطأ">
           {retryChildren.length > 0 && <div className={styles.retryAction}>{retryChildren}</div>}
           {returnOrigin && returnContext && (
             <StructuredReturnLink
@@ -103,7 +103,7 @@ export function InPageErrorState({
               label={returnLabel}
             />
           )}
-        </div>
+        </fieldset>
       )}
     </section>
   );
