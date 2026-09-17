@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 const fixtureEnabled = process.env.MIZAN_E2E_UI_FIXTURE === "true";
 const fixturePath = "/auth/e2e-navigation-foundation";
 
+/** Collects console and uncaught page errors so each fixture test can fail on browser noise. */
 function captureBrowserErrors(page: import("@playwright/test").Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
