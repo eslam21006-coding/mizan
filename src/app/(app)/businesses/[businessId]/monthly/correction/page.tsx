@@ -279,15 +279,13 @@ export default async function HistoricalCorrectionPage({
 
   return (
     <div className={styles.page}>
+      {correctionNavigation}
       <div className={styles.headingRow}>
         <div>
           <span className={styles.eyebrow}>تصحيح تاريخي صريح</span>
           <h1>تصحيح بيانات شهر سابق</h1>
           <p>{business.name} · {selectedMonthLabel}</p>
         </div>
-        <Link className={styles.backLink} href={`/businesses/${businessId}/monthly?month=${selectedMonth.monthKey}`}>
-          العودة لعرض الشهر
-        </Link>
       </div>
 
       <div className={styles.warningPanel}>
