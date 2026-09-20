@@ -60,6 +60,6 @@ test("customer navigation describes automatic grouping and uses an analysis acti
   assert.match(customersPageSource, /تجميع معاملات العميل يتم تلقائيًا داخل ميزان/);
   assert.match(customersPageSource, />\s*عرض تحليل العملاء\s*<\/Link>/);
   assert.doesNotMatch(customersPageSource, />\s*تجميع العملاء\s*<\/Link>/);
-  assert.match(completionCardSource, />\s*عرض تحليل العملاء\s*<\/a>/);
+  assert.match(completionCardSource, /\{nextAction\.label\}/);\n  assert.match(importNavigationSource, /label: "عرض تحليل العملاء"/);
   assert.match(completionCardSource, /صفوف غير صالحة تم تجاهلها/);
 });
