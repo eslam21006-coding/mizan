@@ -47,7 +47,7 @@ function asInputValue(value: unknown) {
   return value === null || value === undefined ? "" : String(value);
 }
 
-export default async function MonthlyPage({ params, searchParams }: MonthlyPageProps) {
+/** Renders the business-scoped Monthly editor while keeping hierarchical Back separate from workflow Return. */\nexport default async function MonthlyPage({ params, searchParams }: MonthlyPageProps) {
   const { businessId: rawBusinessId } = await params;
   const businessId = parseResourceId(rawBusinessId);
   if (!businessId) notFound();
