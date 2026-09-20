@@ -20,7 +20,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 /** Reads only a safe cross-module origin from a Monthly form submission. */
 function parseMonthlyReturnOrigin(formData: FormData): MonthlyExternalReturnOrigin | null {
   const rawOrigin = formData.get("origin");
-  const rawMonth = formData.get("month");
+  const rawReturnMonth = formData.get("return_month");
+  const rawMonth = rawReturnMonth ?? formData.get("month");
   if (typeof rawOrigin !== "string" || typeof rawMonth !== "string") return null;
   return parseMonthlyExternalReturnOrigin({ origin: rawOrigin, month: rawMonth });
 }
@@ -36,7 +37,12 @@ function monthlyPath(
   const query = new URLSearchParams({ month: monthKey });
   if (status) query.set("status", status);
   if (copied !== undefined) query.set("copied", String(copied));
-  if (returnOrigin) query.set("origin", returnOrigin.origin);
+  if (returnOrigin) {
+    query.set("origin", returnOrigin.origin);
+    if (returnOrigin.origin === "customer-profitability" && returnOrigin.month) {
+      query.set("return_month", returnOrigin.month);
+    }
+  }
   return `/businesses/${businessId}/monthly?${query.toString()}`;
 }
 
