@@ -16,7 +16,7 @@ import { CustomerReviewNavigation } from "./customer-review-navigation";
 
 type ReviewPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ status?: string | string[]; origin?: string | string[] }>;
+  searchParams: Promise<{ status?: string | string[]; origin?: string | string[]; month?: string | string[] }>;
 };
 
 const STATUS_MESSAGES: Record<string, string> = {
@@ -94,7 +94,7 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
   if (businessResult.error || !business) notFound();
 
   const query = await searchParams;
-  const parsedOrigin = parseReturnOrigin({ origin: query.origin });
+  const parsedOrigin = parseReturnOrigin({ origin: query.origin, month: query.month });
   const returnOrigin = parsedOrigin?.origin === "customer-profitability" ? parsedOrigin : null;
   const returnBanner = returnOrigin ? (
     <ReturnContextBanner
@@ -120,9 +120,12 @@ export default async function CustomerEconomicsReviewPage({ params, searchParams
       route: "business-customer-review",
       businessId: business.id,
     });
-    const retryHref = returnOrigin
-      ? `${retryBaseHref}?origin=${encodeURIComponent(returnOrigin.origin)}`
-      : retryBaseHref;
+    const retryHref = (() => {
+      if (!returnOrigin) return retryBaseHref;
+      const retryParams = new URLSearchParams({ origin: returnOrigin.origin });
+      if (returnOrigin.month) retryParams.set("month", returnOrigin.month);
+      return `${retryBaseHref}?${retryParams.toString()}`;
+    })();
 
     return (
       <div className="page-stack">
