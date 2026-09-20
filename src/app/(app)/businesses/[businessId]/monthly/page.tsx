@@ -23,6 +23,7 @@ import {
   type RevenueInputRow,
 } from "./monthly-entry-form";
 import saveBarStyles from "./monthly-save-bar.module.css";
+import { MonthlyNavigationShell } from "./monthly-navigation-shell";
 import styles from "./monthly.module.css";
 
 type MonthlyPageProps = {
@@ -227,15 +228,17 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
 
   return (
     <div className="page-stack">
-      <div className={styles.headingRow}>
-        <PageHeading
-          title="الإدخال الشهري"
-          description={`أدخل الأرقام الفعلية لـ ${business.name}. هذه الصفحة للإدخال فقط، والنتائج تظهر بعد الحفظ في لوحة البزنس.`}
-        />
-        <Link className={styles.backLink} href="/businesses">
-          العودة للبزنسات
-        </Link>
-      </div>
+      <MonthlyNavigationShell
+        businessId={businessId}
+        businessName={business.name}
+        baseCurrency={business.base_currency}
+        timezone={business.timezone}
+      />
+
+      <PageHeading
+        title="الإدخال الشهري"
+        description={`أدخل الأرقام الفعلية لـ ${business.name}. هذه الصفحة للإدخال فقط، والنتائج تظهر بعد الحفظ في لوحة البزنس.`}
+      />
 
       {returnOrigin && (
         <ReturnContextBanner
