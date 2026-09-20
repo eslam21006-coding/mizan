@@ -18,6 +18,8 @@ type SetupReturnFixtureProps = {
     target?: string | string[];
     origin?: string | string[];
     month?: string | string[];
+    upstream_origin?: string | string[];
+    upstream_month?: string | string[];
   }>;
 };
 
@@ -35,6 +37,8 @@ export default async function SetupReturnE2eFixturePage({
   const returnOrigin = parseSetupReturnOrigin({
     origin: query.origin,
     month: query.month,
+    upstream_origin: query.upstream_origin,
+    upstream_month: query.upstream_month,
   });
 
   return (
