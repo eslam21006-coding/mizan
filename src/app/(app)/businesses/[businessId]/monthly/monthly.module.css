@@ -73,8 +73,17 @@
   font-size: 18px;
 }
 
+.monthStateRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 .savedState,
-.unsavedState {
+.unsavedState,
+.historicalBadge {
   display: inline-flex;
   padding: 3px 8px;
   border-radius: 999px;
@@ -90,6 +99,76 @@
 .unsavedState {
   color: var(--text-soft);
   background: var(--surface-soft);
+}
+
+.historicalBadge {
+  color: #92400e;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+}
+
+.historicalPanel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  background: #fffbeb;
+  border: 1px solid #fcd34d;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+}
+
+.historicalPanel > div {
+  min-width: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.historicalPanel strong {
+  font-size: 14px;
+}
+
+.historicalPanel p {
+  margin: 0;
+  max-width: 760px;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.75;
+}
+
+.historicalAction,
+.historicalReadOnly {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 9px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.historicalAction {
+  color: #fff;
+  background: var(--brand);
+  border: 1px solid var(--brand);
+}
+
+.historicalAction:hover {
+  background: var(--brand-strong);
+}
+
+.historicalAction:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.historicalReadOnly {
+  color: var(--text-soft);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 
 .monthPicker {
@@ -626,7 +705,8 @@
 
 @media (max-width: 720px) {
   .setupHeader,
-  .saveBar {
+  .saveBar,
+  .historicalPanel {
     align-items: stretch;
     flex-direction: column;
   }
@@ -669,7 +749,9 @@
   .setupLinkButton,
   .secondaryButton,
   .monthPicker button,
-  .saveBar button {
+  .saveBar button,
+  .historicalAction,
+  .historicalReadOnly {
     width: 100%;
   }
 
