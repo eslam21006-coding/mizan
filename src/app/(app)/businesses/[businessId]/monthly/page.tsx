@@ -28,7 +28,13 @@ import styles from "./monthly.module.css";
 
 type MonthlyPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ month?: string; status?: string; copied?: string; origin?: string | string[] }>;
+  searchParams: Promise<{
+    month?: string;
+    status?: string;
+    copied?: string;
+    origin?: string | string[];
+    return_month?: string | string[];
+  }>;
 };
 
 const STATUS_MESSAGES: Record<string, string> = {
@@ -70,7 +76,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
 
   const returnOrigin = parseMonthlyExternalReturnOrigin({
     origin: query.origin,
-    month: query.month,
+    month: query.return_month ?? query.month,
   });
 
   const [periodResult, streamsResult, expensesResult, customerCountsResult] = await Promise.all([
@@ -191,7 +197,12 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
   const nextMonth = shiftMonthKey(selectedMonth.monthKey, 1);
   const monthlyHref = (monthKey: string) => {
     const queryParams = new URLSearchParams({ month: monthKey });
-    if (returnOrigin) queryParams.set("origin", returnOrigin.origin);
+    if (returnOrigin) {
+      queryParams.set("origin", returnOrigin.origin);
+      if (returnOrigin.origin === "customer-profitability" && returnOrigin.month) {
+        queryParams.set("return_month", returnOrigin.month);
+      }
+    }
     return `/businesses/${businessId}/monthly?${queryParams.toString()}`;
   };
   const monthLabel = new Intl.DateTimeFormat("ar-EG", {
@@ -300,6 +311,9 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
 
       <form key={`month-picker-${selectedMonth.monthKey}`} className={styles.monthPicker}>
         {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
+        {returnOrigin?.origin === "customer-profitability" && returnOrigin.month && (
+          <input type="hidden" name="return_month" value={returnOrigin.month} />
+        )}
         <label>
           <span>انتقل مباشرة إلى شهر</span>
           <input type="month" name="month" defaultValue={selectedMonth.monthKey} aria-label="الشهر" />
@@ -356,6 +370,9 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
                 <input type="hidden" name="business_id" value={businessId} />
                 <input type="hidden" name="month" value={selectedMonth.monthKey} />
                 {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
+                {returnOrigin?.origin === "customer-profitability" && returnOrigin.month && (
+                  <input type="hidden" name="return_month" value={returnOrigin.month} />
+                )}
                 <button type="submit" className={styles.secondaryButton}>
                   نسخ مصروفات الشهر السابق
                 </button>
@@ -378,6 +395,9 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
             <input type="hidden" name="business_id" value={businessId} />
             <input type="hidden" name="month" value={selectedMonth.monthKey} />
             {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
+            {returnOrigin?.origin === "customer-profitability" && returnOrigin.month && (
+              <input type="hidden" name="return_month" value={returnOrigin.month} />
+            )}
             {historyTrustNotice}
             <MonthlyEntryForm
               editable
