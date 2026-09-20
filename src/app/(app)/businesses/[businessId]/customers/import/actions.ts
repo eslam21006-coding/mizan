@@ -8,6 +8,14 @@ import { parseReturnOrigin } from "@/lib/return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
 
+/** Preserves repeated form metadata so the structured origin parser can reject ambiguity. */
+function readReturnMetadataField(formData: FormData, key: "origin" | "month") {
+  const values = formData.getAll(key);
+  if (values.length === 0) return undefined;
+  if (values.length === 1 && typeof values[0] === "string") return values[0];
+  return values.map((value) => (typeof value === "string" ? value : ""));
+}
+
 /** Updates the business history-trust state through the database-authoritative owner/admin RPC. */
 export async function setTransactionHistoryCompletenessAction(formData: FormData) {
   await requireAuthContext();
@@ -18,11 +26,9 @@ export async function setTransactionHistoryCompletenessAction(formData: FormData
     redirect("/customers?status=invalid-history-state");
   }
 
-  const originValue = formData.get("origin");
-  const monthValue = formData.get("month");
   const returnOrigin = parseReturnOrigin({
-    origin: typeof originValue === "string" && originValue ? originValue : undefined,
-    month: typeof monthValue === "string" && monthValue ? monthValue : undefined,
+    origin: readReturnMetadataField(formData, "origin"),
+    month: readReturnMetadataField(formData, "month"),
   });
   const statusHref = (historyStatus: string) =>
     buildTransactionImportHref(businessId, returnOrigin, historyStatus);
