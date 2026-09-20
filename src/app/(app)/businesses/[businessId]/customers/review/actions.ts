@@ -15,9 +15,16 @@ type ProfitabilityReturnOrigin = Extract<
 
 /** Reads only the allow-listed profitability origin from a Review mutation submission. */
 function parseReviewReturnOrigin(formData: FormData): ProfitabilityReturnOrigin | null {
-  const rawOrigin = formData.get("origin");
-  if (typeof rawOrigin !== "string") return null;
-  const parsed = parseReturnOrigin({ origin: rawOrigin });
+  const origins = formData.getAll("origin");
+  const months = formData.getAll("month");
+  if (origins.length !== 1 || months.length > 1) return null;
+
+  const rawOrigin = origins[0];
+  const rawMonth = months[0];
+  if (typeof rawOrigin !== "string" || (rawMonth !== undefined && typeof rawMonth !== "string")) {
+    return null;
+  }
+  const parsed = parseReturnOrigin({ origin: rawOrigin, month: rawMonth });
   return parsed?.origin === "customer-profitability" ? parsed : null;
 }
 
@@ -29,7 +36,10 @@ function reviewPath(
 ) {
   const query = new URLSearchParams();
   if (status) query.set("status", status);
-  if (returnOrigin) query.set("origin", returnOrigin.origin);
+  if (returnOrigin) {
+    query.set("origin", returnOrigin.origin);
+    if (returnOrigin.month) query.set("month", returnOrigin.month);
+  }
   const suffix = query.size > 0 ? `?${query.toString()}` : "";
   return `/businesses/${businessId}/customers/review${suffix}`;
 }

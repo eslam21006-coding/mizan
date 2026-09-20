@@ -11,20 +11,23 @@ import {
   parseOptionalDecimalInput,
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
-import { parseReturnOrigin, type ReturnOriginMetadata } from "@/lib/return-origin";
+import {
+  parseMonthlyExternalReturnOrigin,
+  type MonthlyExternalReturnOrigin,
+} from "@/lib/monthly-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-type ProfitabilityReturnOrigin = Extract<
-  ReturnOriginMetadata,
-  { origin: "customer-profitability" }
->;
+/** Reads only a safe cross-module origin from a Monthly form submission. */
+function parseMonthlyReturnOrigin(formData: FormData): MonthlyExternalReturnOrigin | null {
+  const origins = formData.getAll("origin");
+  const returnMonths = formData.getAll("return_month");
+  const months = formData.getAll("month");
+  if (origins.length !== 1 || returnMonths.length > 1 || months.length > 1) return null;
 
-/** Reads only the allow-listed profitability origin from a Monthly save submission. */
-function parseMonthlyReturnOrigin(formData: FormData): ProfitabilityReturnOrigin | null {
-  const rawOrigin = formData.get("origin");
-  if (typeof rawOrigin !== "string") return null;
-  const parsed = parseReturnOrigin({ origin: rawOrigin });
-  return parsed?.origin === "customer-profitability" ? parsed : null;
+  const rawOrigin = origins[0];
+  const rawMonth = returnMonths.length === 1 ? returnMonths[0] : months[0];
+  if (typeof rawOrigin !== "string" || typeof rawMonth !== "string") return null;
+  return parseMonthlyExternalReturnOrigin({ origin: rawOrigin, month: rawMonth });
 }
 
 /** Builds the canonical monthly-entry URL with status, copy-result, and safe workflow-origin query parameters. */
@@ -33,12 +36,17 @@ function monthlyPath(
   monthKey: string,
   status?: string,
   copied?: number,
-  returnOrigin?: ProfitabilityReturnOrigin | null,
+  returnOrigin?: MonthlyExternalReturnOrigin | null,
 ) {
   const query = new URLSearchParams({ month: monthKey });
   if (status) query.set("status", status);
   if (copied !== undefined) query.set("copied", String(copied));
-  if (returnOrigin) query.set("origin", returnOrigin.origin);
+  if (returnOrigin) {
+    query.set("origin", returnOrigin.origin);
+    if (returnOrigin.origin === "customer-profitability" && returnOrigin.month) {
+      query.set("return_month", returnOrigin.month);
+    }
+  }
   return `/businesses/${businessId}/monthly?${query.toString()}`;
 }
 
@@ -59,7 +67,7 @@ function redirectMonthly(
   businessId: string,
   monthKey: string,
   status: string,
-  returnOrigin?: ProfitabilityReturnOrigin | null,
+  returnOrigin?: MonthlyExternalReturnOrigin | null,
 ): never {
   revalidatePath("/businesses");
   revalidatePath(`/businesses/${businessId}/monthly`);
@@ -189,6 +197,7 @@ export async function copyPreviousMonthExpenses(formData: FormData) {
   if (!businessId) redirect("/businesses");
   if (!month) redirect(`/businesses/${businessId}/monthly?status=invalid-month`);
 
+  const returnOrigin = parseMonthlyReturnOrigin(formData);
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("copy_previous_month_expenses", {
     target_business_id: businessId,
@@ -199,15 +208,15 @@ export async function copyPreviousMonthExpenses(formData: FormData) {
     if (error.message.includes("explicit historical correction workflow")) {
       redirectHistoricalCorrection(businessId, month.monthKey);
     }
-    redirectMonthly(businessId, month.monthKey, "copy-failed");
+    redirectMonthly(businessId, month.monthKey, "copy-failed", returnOrigin);
   }
 
   const result = Array.isArray(data) ? data[0] : data;
   if (!result?.previous_month_found) {
-    redirectMonthly(businessId, month.monthKey, "no-previous");
+    redirectMonthly(businessId, month.monthKey, "no-previous", returnOrigin);
   }
 
   const copiedCount = Number(result.copied_count ?? 0);
   revalidatePath(`/businesses/${businessId}/monthly`);
-  redirect(monthlyPath(businessId, month.monthKey, "copied", copiedCount));
+  redirect(monthlyPath(businessId, month.monthKey, "copied", copiedCount, returnOrigin));
 }

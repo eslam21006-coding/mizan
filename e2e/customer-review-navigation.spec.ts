@@ -109,21 +109,21 @@ test.describe("Customer Review navigation", () => {
     });
     page.on("pageerror", (error) => browserErrors.push(error.message));
 
-    await page.goto(`${reviewPath}?origin=customer-profitability`);
+    await page.goto(`${reviewPath}?origin=customer-profitability&month=2026-02`);
 
     const returnBanner = page.getByRole("region", { name: "العودة إلى ربحية العميل" });
     await expect(returnBanner).toBeVisible();
     const returnLink = returnBanner.getByRole("link", { name: "العودة إلى ربحية العميل" });
     await expect(returnLink).toHaveAttribute(
       "href",
-      `/businesses/${reviewBusinessId}/customers?view=profitability`,
+      `/businesses/${reviewBusinessId}/customers?view=profitability&month=2026-02`,
     );
 
     const missingMonthCard = page.locator("article").filter({ hasText: "BUSINESS_NET_CASH_MISSING" });
     const missingMonthFix = missingMonthCard.getByRole("link", { name: "فتح بيانات هذا الشهر" });
     await expect(missingMonthFix).toHaveAttribute(
       "href",
-      `/businesses/${reviewBusinessId}/monthly?month=2026-05&origin=customer-profitability`,
+      `/businesses/${reviewBusinessId}/monthly?month=2026-05&origin=customer-profitability&return_month=2026-02`,
     );
     await missingMonthFix.focus();
     await expect(missingMonthFix).toBeFocused();
@@ -172,17 +172,17 @@ test.describe("Customer Review navigation", () => {
   });
 
   test("keeps the profitability Return context visible when Review data fails", async ({ page }) => {
-    await page.goto(`${reviewPath}?state=error&origin=customer-profitability`);
+    await page.goto(`${reviewPath}?state=error&origin=customer-profitability&month=2026-02`);
 
     const returnBanner = page.getByRole("region", { name: "العودة إلى ربحية العميل" });
     await expect(returnBanner).toBeVisible();
     await expect(returnBanner.getByRole("link", { name: "العودة إلى ربحية العميل" })).toHaveAttribute(
       "href",
-      `/businesses/${reviewBusinessId}/customers?view=profitability`,
+      `/businesses/${reviewBusinessId}/customers?view=profitability&month=2026-02`,
     );
     const retryLink = page.getByRole("alert", { name: "تعذر تحميل بيانات المراجعة" }).getByRole("link", {
       name: "إعادة المحاولة",
     });
-    await expect(retryLink).toHaveAttribute("href", `${reviewPath}?origin=customer-profitability`);
+    await expect(retryLink).toHaveAttribute("href", `${reviewPath}?origin=customer-profitability&month=2026-02`);
   });
 });

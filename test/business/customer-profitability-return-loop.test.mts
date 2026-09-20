@@ -29,8 +29,14 @@ const monthlyActionsSource = readFileSync(
 
 /** Locks the customer-profitability detour to structured origin metadata instead of arbitrary return URLs. */
 test("profitability remediation carries only the allow-listed customer-profitability origin", () => {
-  assert.match(profitabilitySource, /customers\/review\?origin=customer-profitability/);
-  assert.match(reviewPageSource, /parseReturnOrigin\(\{ origin: query\.origin \}\)/);
+  assert.match(
+    profitabilitySource,
+    /new URLSearchParams\(\{ origin: "customer-profitability" \}\)/,
+  );
+  assert.match(
+    reviewPageSource,
+    /parseReturnOrigin\(\{ origin: query\.origin, month: query\.month \}\)/,
+  );
   assert.match(reviewPageSource, /parsedOrigin\?\.origin === "customer-profitability"/);
   assert.match(reviewPageSource, /ReturnContextBanner/);
   assert.doesNotMatch(profitabilitySource, /returnTo/);
@@ -41,7 +47,14 @@ test("profitability remediation carries only the allow-listed customer-profitabi
 test("Review carries profitability context into the exact Monthly fix", () => {
   assert.match(reviewPanelSource, /route: "business-monthly"/);
   assert.match(reviewPanelSource, /month: activityMonth\.slice\(0, 7\)/);
-  assert.match(reviewPanelSource, /origin=\$\{encodeURIComponent\(returnOrigin\.origin\)\}/);
+  assert.match(
+    reviewPanelSource,
+    /new URLSearchParams\(\{ origin: returnOrigin\.origin \}\)/,
+  );
+  assert.match(
+    reviewPanelSource,
+    /returnParams\.set\("return_month", returnOrigin\.month\)/,
+  );
   assert.match(reviewPageSource, /returnOrigin=\{returnOrigin\}/);
 });
 
@@ -49,24 +62,53 @@ test("Review carries profitability context into the exact Monthly fix", () => {
 test("Review mutations preserve only the safe profitability origin across validation, failure, and success", () => {
   assert.match(reviewPanelSource, /name="origin" value=\{returnOrigin\.origin\}/);
   assert.match(reviewActionsSource, /function parseReviewReturnOrigin/);
-  assert.match(reviewActionsSource, /parseReturnOrigin\(\{ origin: rawOrigin \}\)/);
+  assert.match(reviewActionsSource, /formData\.getAll\("origin"\)/);
+  assert.match(reviewActionsSource, /formData\.getAll\("month"\)/);
+  assert.match(
+    reviewActionsSource,
+    /parseReturnOrigin\(\{ origin: rawOrigin, month: rawMonth \}\)/,
+  );
   assert.match(reviewActionsSource, /query\.set\("origin", returnOrigin\.origin\)/);
-  assert.match(reviewActionsSource, /redirectReview\(businessId, "override-failed", returnOrigin\)/);
-  assert.match(reviewActionsSource, /redirectReview\(businessId, "override-saved", returnOrigin\)/);
-  assert.match(reviewActionsSource, /redirectReview\(businessId, "legacy-failed", returnOrigin\)/);
-  assert.match(reviewActionsSource, /redirectReview\(businessId, "legacy-reconciled", returnOrigin\)/);
+  assert.match(
+    reviewActionsSource,
+    /redirectReview\(businessId, "override-failed", returnOrigin\)/,
+  );
+  assert.match(
+    reviewActionsSource,
+    /redirectReview\(businessId, "override-saved", returnOrigin\)/,
+  );
+  assert.match(
+    reviewActionsSource,
+    /redirectReview\(businessId, "legacy-failed", returnOrigin\)/,
+  );
+  assert.match(
+    reviewActionsSource,
+    /redirectReview\(businessId, "legacy-reconciled", returnOrigin\)/,
+  );
   assert.doesNotMatch(reviewActionsSource, /returnTo/);
 });
 
 /** Locks Monthly save redirects to the same structured origin so Return remains available after Save. */
 test("Monthly preserves profitability origin through normal save redirects and renders Return", () => {
-  assert.match(monthlyPageSource, /parseReturnOrigin\(\{ origin: query\.origin \}\)/);
+  assert.match(
+    monthlyPageSource,
+    /parseMonthlyExternalReturnOrigin\(\{[\s\S]*origin: query\.origin,[\s\S]*month: query\.return_month \?\? query\.month/,
+  );
   assert.match(monthlyPageSource, /<ReturnContextBanner/);
   assert.match(monthlyPageSource, /name="origin" value=\{returnOrigin\.origin\}/);
   assert.match(monthlyActionsSource, /function parseMonthlyReturnOrigin/);
-  assert.match(monthlyActionsSource, /parseReturnOrigin\(\{ origin: rawOrigin \}\)/);
-  assert.match(monthlyActionsSource, /redirectMonthly\(businessId, month\.monthKey, "saved", returnOrigin\)/);
-  assert.match(monthlyActionsSource, /redirectMonthly\(businessId, month\.monthKey, "save-failed", returnOrigin\)/);
+  assert.match(
+    monthlyActionsSource,
+    /parseMonthlyExternalReturnOrigin\(\{ origin: rawOrigin, month: rawMonth \}\)/,
+  );
+  assert.match(
+    monthlyActionsSource,
+    /redirectMonthly\(businessId, month\.monthKey, "saved", returnOrigin\)/,
+  );
+  assert.match(
+    monthlyActionsSource,
+    /redirectMonthly\(businessId, month\.monthKey, "save-failed", returnOrigin\)/,
+  );
   assert.doesNotMatch(monthlyPageSource, /returnTo/);
   assert.doesNotMatch(monthlyActionsSource, /returnTo/);
 });

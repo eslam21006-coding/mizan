@@ -19,11 +19,11 @@ test("Monthly uses the shared deterministic hierarchy instead of a generic Busin
   assert.match(monthlyShellSource, /route: "business-overview", businessId/);
 });
 
-test("Monthly shell exposes the existing passive business context without changing workflow Return", () => {
+test("Monthly shell exposes passive business context while workflow Return stays outside the shell", () => {
   assert.match(monthlyShellSource, /<BusinessContext/);
   assert.match(monthlyShellSource, /businessName=\{businessName\}/);
   assert.match(monthlyShellSource, /baseCurrency=\{baseCurrency\}/);
   assert.match(monthlyShellSource, /timezone=\{timezone\}/);
   assert.match(monthlyPageSource, /<ReturnContextBanner/);
-  assert.match(monthlyPageSource, /returnLabel="العودة إلى ربحية العميل"/);
+  assert.match(monthlyPageSource, /"العودة إلى ربحية العميل"/);
 });

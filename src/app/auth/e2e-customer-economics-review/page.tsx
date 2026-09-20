@@ -20,7 +20,7 @@ const fixtureShellProps = {
 };
 
 type CustomerEconomicsReviewFixturePageProps = {
-  searchParams: Promise<{ state?: string; origin?: string | string[] }>;
+  searchParams: Promise<{ state?: string; origin?: string | string[]; month?: string | string[] }>;
 };
 
 const revenueRows: RevenueInputRow[] = [
@@ -54,7 +54,7 @@ export default async function CustomerEconomicsReviewFixturePage({
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") notFound();
 
   const query = await searchParams;
-  const parsedOrigin = parseReturnOrigin({ origin: query.origin });
+  const parsedOrigin = parseReturnOrigin({ origin: query.origin, month: query.month });
   const returnOrigin = parsedOrigin?.origin === "customer-profitability" ? parsedOrigin : null;
   const returnBanner = returnOrigin ? (
     <ReturnContextBanner
@@ -67,9 +67,12 @@ export default async function CustomerEconomicsReviewFixturePage({
   ) : null;
 
   if (query.state === "error") {
-    const retryHref = returnOrigin
-      ? `${FIXTURE_PATH}?origin=${encodeURIComponent(returnOrigin.origin)}`
-      : FIXTURE_PATH;
+    const retryHref = (() => {
+      if (!returnOrigin) return FIXTURE_PATH;
+      const retryParams = new URLSearchParams({ origin: returnOrigin.origin });
+      if (returnOrigin.month) retryParams.set("month", returnOrigin.month);
+      return `${FIXTURE_PATH}?${retryParams.toString()}`;
+    })();
     return (
       <AppShell {...fixtureShellProps}>
         <div className="page-stack">
