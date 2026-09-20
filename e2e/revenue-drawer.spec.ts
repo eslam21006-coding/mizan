@@ -41,8 +41,15 @@ test.describe("N30 + N31 Revenue Source drawer", () => {
       "123e4567-e89b-42d3-a456-426614174011",
     );
 
+    await createDialog.getByLabel("اسم مصدر الإيراد").fill("تعديل غير محفوظ");
     await page.keyboard.press("Escape");
     await expect(createDialog).toBeHidden();
+    await expect(createTrigger).toBeFocused();
+
+    await createTrigger.click();
+    await expect(createDialog).toBeVisible();
+    await expect(createDialog.getByLabel("اسم مصدر الإيراد")).toHaveValue("");
+    await createDialog.getByRole("button", { name: "إلغاء" }).click();
     await expect(createTrigger).toBeFocused();
 
     const editTrigger = page.getByRole("button", { name: "تعديل" });
@@ -57,8 +64,18 @@ test.describe("N30 + N31 Revenue Source drawer", () => {
       "123e4567-e89b-42d3-a456-426614174012",
     );
 
+    await editDialog.getByLabel("اسم مصدر الإيراد").fill("اسم مؤقت");
+    await editDialog.locator('select[name="stream_type"]').selectOption("backend");
+    await editDialog.locator('input[name="is_active"]').uncheck();
     await editDialog.getByRole("button", { name: "إلغاء" }).click();
     await expect(editDialog).toBeHidden();
+    await expect(editTrigger).toBeFocused();
+
+    await editTrigger.click();
+    await expect(editDialog.getByLabel("اسم مصدر الإيراد")).toHaveValue("البرنامج الأساسي");
+    await expect(editDialog.locator('select[name="stream_type"]')).toHaveValue("front_end");
+    await expect(editDialog.locator('input[name="is_active"]')).toBeChecked();
+    await page.keyboard.press("Escape");
     await expect(editTrigger).toBeFocused();
     expect(errors).toEqual([]);
   });
