@@ -60,7 +60,7 @@ test("Review mutations preserve only the safe profitability origin across valida
 
 /** Locks Monthly save redirects to the same structured origin so Return remains available after Save. */
 test("Monthly preserves profitability origin through normal save redirects and renders Return", () => {
-  assert.match(monthlyPageSource, /parseMonthlyExternalReturnOrigin\(\{[\s\S]*origin: query\.origin,[\s\S]*month: query\.month/);
+  assert.match(monthlyPageSource, /parseMonthlyExternalReturnOrigin\(\{[\s\S]*origin: query\.origin,[\s\S]*month: query\.return_month \?\? query\.month/);
   assert.match(monthlyPageSource, /<ReturnContextBanner/);
   assert.match(monthlyPageSource, /name="origin" value=\{returnOrigin\.origin\}/);
   assert.match(monthlyActionsSource, /function parseMonthlyReturnOrigin/);
