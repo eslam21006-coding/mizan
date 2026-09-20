@@ -93,8 +93,12 @@ test("Import page uses breadcrumb plus origin-aware Cancel and keeps origin thro
   assert.match(importPageSource, /name="month" value=\{returnOrigin\.month\}/);
   assert.match(importNavigationSource, /Breadcrumb/);
   assert.match(importNavigationSource, /إلغاء الاستيراد/);
-  assert.match(importActionsSource, /parseReturnOrigin/);
+  assert.match(importActionsSource, /formData\.getAll\(key\)/);
+  assert.match(importActionsSource, /origin: readReturnMetadataField\(formData, "origin"\)/);
+  assert.match(importActionsSource, /month: readReturnMetadataField\(formData, "month"\)/);
   assert.match(importActionsSource, /buildTransactionImportHref\(businessId, returnOrigin, historyStatus\)/);
+  assert.doesNotMatch(importActionsSource, /formData\.get\("origin"\)/);
+  assert.doesNotMatch(importActionsSource, /formData\.get\("month"\)/);
   assert.doesNotMatch(importPageSource, /returnTo/);
   assert.doesNotMatch(importActionsSource, /returnTo/);
 });
