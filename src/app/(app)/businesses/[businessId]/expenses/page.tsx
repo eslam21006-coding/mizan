@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { PageHeading } from "@/components/page-heading";
+import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { requireAuthContext } from "@/lib/auth/context";
 import {
   EXPENSE_CATEGORY_OPTIONS,
@@ -11,13 +12,18 @@ import {
   parseExpenseCostBehavior,
 } from "@/lib/business/expenses";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import { parseSetupReturnOrigin } from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createExpenseItem, deleteExpenseItem, updateExpenseItem } from "./actions";
 import styles from "./expenses.module.css";
 
 type ExpensesPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    origin?: string | string[];
+    month?: string | string[];
+  }>;
 };
 
 const STATUS_MESSAGES: Record<string, string> = {
@@ -74,6 +80,10 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
 
   const canManageExpenses = auth.role === "admin" || business.owner_user_id === auth.userId;
   const query = await searchParams;
+  const returnOrigin = parseSetupReturnOrigin({
+    origin: query.origin,
+    month: query.month,
+  });
   const statusMessage = query.status ? STATUS_MESSAGES[query.status] : null;
   const isErrorStatus =
     query.status?.endsWith("failed") || query.status === "invalid" || query.status === "in-use";
@@ -89,6 +99,16 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
           العودة للبزنسات
         </Link>
       </div>
+
+      {returnOrigin && (
+        <ReturnContextBanner
+          purpose="إضافة أو تعديل بند المصروف المطلوب للشهر"
+          origin={returnOrigin}
+          context={{ businessId }}
+          returnLabel="العودة إلى الإدخال الشهري"
+          ariaLabel="سياق العودة من إعداد المصروفات"
+        />
+      )}
 
       {statusMessage && (
         <div className={isErrorStatus ? styles.errorStatus : styles.successStatus} role="status">
@@ -142,6 +162,12 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
           <form action={createExpenseItem} className={styles.createForm}>
             <input type="hidden" name="business_id" value={businessId} />
             <input type="hidden" name="creation_request_id" value={randomUUID()} />
+            {returnOrigin && (
+              <>
+                <input type="hidden" name="origin" value={returnOrigin.origin} />
+                <input type="hidden" name="month" value={returnOrigin.month} />
+              </>
+            )}
 
             <label>
               <span>اسم المصروف</span>
@@ -219,6 +245,12 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
                     <form action={updateExpenseItem} className={styles.editForm}>
                       <input type="hidden" name="business_id" value={businessId} />
                       <input type="hidden" name="expense_id" value={expense.id} />
+                      {returnOrigin && (
+                        <>
+                          <input type="hidden" name="origin" value={returnOrigin.origin} />
+                          <input type="hidden" name="month" value={returnOrigin.month} />
+                        </>
+                      )}
 
                       <label>
                         <span>الاسم</span>
@@ -267,6 +299,13 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
                       <form action={deleteExpenseItem}>
                         <input type="hidden" name="business_id" value={businessId} />
                         <input type="hidden" name="expense_id" value={expense.id} />
+                        {returnOrigin && (
+                          <>
+                            <input type="hidden" name="origin" value={returnOrigin.origin} />
+                            <input type="hidden" name="month" value={returnOrigin.month} />
+                          </>
+                        )}
+
                         <ConfirmSubmitButton
                           className={styles.deleteButton}
                           ariaLabel={`حذف المصروف ${expense.name}`}
