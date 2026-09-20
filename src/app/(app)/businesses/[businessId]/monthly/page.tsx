@@ -15,6 +15,7 @@ import { parseMonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
 import { copyPreviousMonthExpenses, saveMonthlyActuals } from "./actions";
+import { HistoricalMonthState } from "./historical-month-state";
 import trustStyles from "./customer-history-trust.module.css";
 import {
   MonthlyEntryForm,
@@ -70,8 +71,9 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
   if (businessError || !business) notFound();
 
   const query = await searchParams;
+  const currentMonthKey = currentMonthKeyForTimeZone(business.timezone);
   const selectedMonth =
-    parseMonthKey(query.month) ?? parseMonthKey(currentMonthKeyForTimeZone(business.timezone));
+    parseMonthKey(query.month) ?? parseMonthKey(currentMonthKey);
   if (!selectedMonth) notFound();
 
   const returnOrigin = parseMonthlyExternalReturnOrigin({
@@ -192,7 +194,9 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
     });
 
   const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
-  const canEditMonth = canManage && !dataLoadError;
+  const isHistorical = selectedMonth.monthKey < currentMonthKey;
+  const isSavedHistorical = isHistorical && Boolean(period);
+  const canEditMonth = canManage && !dataLoadError && !isSavedHistorical;
   const previousMonth = shiftMonthKey(selectedMonth.monthKey, -1);
   const nextMonth = shiftMonthKey(selectedMonth.monthKey, 1);
   const monthlyHref = (monthKey: string) => {
@@ -305,9 +309,14 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
         <div className={styles.monthCenter}>
           <span className={styles.monthEyebrow}>الشهر الحالي في النموذج</span>
           <strong>{monthLabel}</strong>
-          <span className={period ? styles.savedState : styles.unsavedState}>
-            {period ? "محفوظ" : "لم يُحفظ بعد"}
-          </span>
+          <div className={styles.monthStateRow}>
+            {isSavedHistorical && (
+              <span className={styles.historicalBadge}>شهر تاريخي</span>
+            )}
+            <span className={period ? styles.savedState : styles.unsavedState}>
+              {period ? "محفوظ" : "لم يُحفظ بعد"}
+            </span>
+          </div>
         </div>
         {nextMonth ? (
           <Link
@@ -344,6 +353,15 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
         <div className={styles.errorStatus} role="alert">
           تعذر تحميل بيانات الشهر كاملة. تم إيقاف التعديل والنسخ حتى لا يتم حفظ بيانات ناقصة.
         </div>
+      )}
+
+      {!dataLoadError && isSavedHistorical && (
+        <HistoricalMonthState
+          businessId={businessId}
+          monthKey={selectedMonth.monthKey}
+          monthLabel={monthLabel}
+          canManage={canManage}
+        />
       )}
 
       {!canManage && !dataLoadError && (
@@ -405,7 +423,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
       )}
 
       {!dataLoadError &&
-        (canManage ? (
+        (canManage && !isSavedHistorical ? (
           <form
             key={`monthly-form-${selectedMonth.monthKey}`}
             action={saveMonthlyActuals}
