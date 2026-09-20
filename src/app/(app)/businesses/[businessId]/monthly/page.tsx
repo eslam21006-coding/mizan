@@ -359,7 +359,13 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
             </div>
           </div>
           <div className={styles.setupActions}>
-            <Link className={styles.setupLinkButton} href={`/businesses/${businessId}/revenue-streams`}>
+            <Link
+              className={styles.setupLinkButton}
+              href={`/businesses/${businessId}/revenue-streams?${new URLSearchParams({
+                origin: "monthly-editor",
+                month: selectedMonth.monthKey,
+              }).toString()}`}
+            >
               إدارة مصادر الإيراد
             </Link>
             <Link className={styles.setupLinkButton} href={`/businesses/${businessId}/expenses`}>
