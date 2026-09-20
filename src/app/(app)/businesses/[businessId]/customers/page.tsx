@@ -5,6 +5,7 @@ import {
   parseCustomerAnalysisView,
   type CustomerSearchParams,
 } from "@/lib/customer-analysis-view";
+import { parseReturnOrigin } from "@/lib/return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { CustomerCohortLtvTable } from "./customer-cohort-ltv-table";
 import { CustomerGroupsTable } from "./customer-groups-table";
@@ -26,6 +27,13 @@ export default async function BusinessCustomersPage({
   const { businessId: rawBusinessId } = await params;
   const customerSearchParams = await searchParams;
   const activeView = parseCustomerAnalysisView(customerSearchParams.view);
+  const profitabilityReturnOrigin =
+    activeView === "profitability"
+      ? parseReturnOrigin({
+          origin: "customer-profitability",
+          month: customerSearchParams.month,
+        })
+      : null;
   const businessId = parseResourceId(rawBusinessId);
   if (!businessId) notFound();
 
@@ -91,7 +99,15 @@ export default async function BusinessCustomersPage({
         <LifetimeRevenueStreamTable businessId={business.id} baseCurrency={business.base_currency} />
       }
       contribution={
-        <LifetimeContributionTable businessId={business.id} baseCurrency={business.base_currency} />
+        <LifetimeContributionTable
+          businessId={business.id}
+          baseCurrency={business.base_currency}
+          returnMonth={
+            profitabilityReturnOrigin?.origin === "customer-profitability"
+              ? profitabilityReturnOrigin.month
+              : undefined
+          }
+        />
       }
       customers={
         <CustomerGroupsTable
