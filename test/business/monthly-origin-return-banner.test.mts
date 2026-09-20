@@ -45,7 +45,7 @@ test("Monthly month navigation and setup-copy controls preserve Return context",
 
 /** Locks save/copy redirects to the same validated origin and source Return month. */
 test("Monthly actions preserve safe Return context across save and copy outcomes", () => {
-  assert.match(monthlyActionsSource, /rawReturnMonth = formData\.get\("return_month"\)/);
+  assert.match(monthlyActionsSource, /formData\.getAll\("origin"\)/);\n  assert.match(monthlyActionsSource, /formData\.getAll\("return_month"\)/);\n  assert.match(monthlyActionsSource, /formData\.getAll\("month"\)/);\n  assert.match(monthlyActionsSource, /origins\.length !== 1 \|\| returnMonths\.length > 1 \|\| months\.length > 1/);
   assert.match(
     monthlyActionsSource,
     /parseMonthlyExternalReturnOrigin\(\{ origin: rawOrigin, month: rawMonth \}\)/,
