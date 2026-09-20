@@ -166,7 +166,9 @@ function monthlyReviewHref(
     month: activityMonth.slice(0, 7),
   });
   if (returnOrigin?.origin !== "customer-profitability") return href;
-  return `${href}&origin=${encodeURIComponent(returnOrigin.origin)}`;
+  const returnParams = new URLSearchParams({ origin: returnOrigin.origin });
+  if (returnOrigin.month) returnParams.set("return_month", returnOrigin.month);
+  return `${href}&${returnParams.toString()}`;
 }
 
 /** Renders the founder-facing review queue without weakening the database reconciliation rules. */
@@ -284,7 +286,12 @@ export function CustomerEconomicsReviewPanel({
                         <form action={saveCustomerEconomicsManualOverride} className={styles.overrideForm}>
                           <input type="hidden" name="business_id" value={businessId} />
                           {returnOrigin?.origin === "customer-profitability" && (
-                            <input type="hidden" name="origin" value={returnOrigin.origin} />
+                            <>
+                              <input type="hidden" name="origin" value={returnOrigin.origin} />
+                              {returnOrigin.month && (
+                                <input type="hidden" name="month" value={returnOrigin.month} />
+                              )}
+                            </>
                           )}
                           <input
                             type="hidden"
