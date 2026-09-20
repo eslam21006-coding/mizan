@@ -11,7 +11,7 @@
     "build": "npm run check && next build",
     "start": "next start",
     "check": "npm run lint && npm run typecheck",
-    "lint": "biome lint .",
+    "lint": "biome lint . --max-diagnostics=100",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "npm run test:spec && npm run test:auth && npm run test:business && npm run test:rls",
     "test:spec": "node --test test/calculation-spec.examples.test.mjs",
