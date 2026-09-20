@@ -25,7 +25,10 @@ test("N30 moves Revenue Source create/edit into an accessible native drawer", ()
   assert.match(drawerSource, /<dialog/);
   assert.match(drawerSource, /dialog\.showModal\(\)/);
   assert.match(drawerSource, /method="dialog"/);
-  assert.match(drawerSource, /onClose=\{restoreFocus\}/);
+  assert.match(drawerSource, /const formRef = useRef<HTMLFormElement>\(null\)/);
+  assert.match(drawerSource, /formRef\.current\?\.reset\(\)/);
+  assert.match(drawerSource, /onClose=\{handleClose\}/);
+  assert.match(drawerSource, /ref=\{formRef\}/);
   assert.match(drawerSource, /aria-haspopup="dialog"/);
 });
 
