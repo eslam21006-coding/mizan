@@ -9,6 +9,7 @@ import {
   type TransactionFilePreview,
 } from "@/lib/business/transaction-preview";
 import { TRANSACTION_VALIDATION_SOURCE_LIMITS } from "@/lib/business/transaction-validation-source";
+import type { TransactionImportReturnAction } from "@/lib/transaction-import-navigation";
 import { TransactionColumnMapper } from "./transaction-column-mapper";
 import { TransactionImportReviewGuide } from "./transaction-import-review-guide";
 import styles from "./transaction-import.module.css";
