@@ -22,8 +22,9 @@ type ProfitabilityReturnOrigin = Extract<
 /** Reads only the allow-listed profitability origin from a Monthly save submission. */
 function parseMonthlyReturnOrigin(formData: FormData): ProfitabilityReturnOrigin | null {
   const rawOrigin = formData.get("origin");
-  if (typeof rawOrigin !== "string") return null;
-  const parsed = parseReturnOrigin({ origin: rawOrigin });
+  const rawMonth = formData.get("month");
+  if (typeof rawOrigin !== "string" || typeof rawMonth !== "string") return null;
+  const parsed = parseReturnOrigin({ origin: rawOrigin, month: rawMonth });
   return parsed?.origin === "customer-profitability" ? parsed : null;
 }
 
@@ -189,6 +190,7 @@ export async function copyPreviousMonthExpenses(formData: FormData) {
   if (!businessId) redirect("/businesses");
   if (!month) redirect(`/businesses/${businessId}/monthly?status=invalid-month`);
 
+  const returnOrigin = parseMonthlyReturnOrigin(formData);
   const supabase = await createSupabaseServerClient();
   const { data, error } = await supabase.rpc("copy_previous_month_expenses", {
     target_business_id: businessId,
@@ -199,15 +201,15 @@ export async function copyPreviousMonthExpenses(formData: FormData) {
     if (error.message.includes("explicit historical correction workflow")) {
       redirectHistoricalCorrection(businessId, month.monthKey);
     }
-    redirectMonthly(businessId, month.monthKey, "copy-failed");
+    redirectMonthly(businessId, month.monthKey, "copy-failed", returnOrigin);
   }
 
   const result = Array.isArray(data) ? data[0] : data;
   if (!result?.previous_month_found) {
-    redirectMonthly(businessId, month.monthKey, "no-previous");
+    redirectMonthly(businessId, month.monthKey, "no-previous", returnOrigin);
   }
 
   const copiedCount = Number(result.copied_count ?? 0);
   revalidatePath(`/businesses/${businessId}/monthly`);
-  redirect(monthlyPath(businessId, month.monthKey, "copied", copiedCount));
+  redirect(monthlyPath(businessId, month.monthKey, "copied", copiedCount, returnOrigin));
 }
