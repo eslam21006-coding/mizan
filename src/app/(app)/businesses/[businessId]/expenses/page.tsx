@@ -14,7 +14,8 @@ import {
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { parseSetupReturnOrigin } from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createExpenseItem, deleteExpenseItem, updateExpenseItem } from "./actions";
+import { deleteExpenseItem } from "./actions";
+import { ExpenseDrawerLauncher } from "./expense-drawer";
 import styles from "./expenses.module.css";
 
 type ExpensesPageProps = {
@@ -160,72 +161,21 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
               <span className={styles.kicker}>إضافة بند</span>
               <h2>مصروف جديد</h2>
             </div>
-            <span className={styles.currency}>{business.base_currency}</span>
+            <div className={styles.panelActions}>
+              <span className={styles.currency}>{business.base_currency}</span>
+              <ExpenseDrawerLauncher
+                businessId={businessId}
+                returnOrigin={returnOrigin}
+                categoryOptions={EXPENSE_CATEGORY_OPTIONS}
+                behaviorOptions={EXPENSE_COST_BEHAVIOR_OPTIONS}
+                mode="create"
+                creationRequestId={randomUUID()}
+              />
+            </div>
           </div>
 
-          <form action={createExpenseItem} className={styles.createForm}>
-            <input type="hidden" name="business_id" value={businessId} />
-            <input type="hidden" name="creation_request_id" value={randomUUID()} />
-            {returnOrigin && (
-              <>
-                <input type="hidden" name="origin" value={returnOrigin.origin} />
-                <input type="hidden" name="month" value={returnOrigin.month} />
-                {returnOrigin.upstream && (
-                  <input
-                    type="hidden"
-                    name="upstream_origin"
-                    value={returnOrigin.upstream.origin}
-                  />
-                )}
-                {returnOrigin.upstream?.origin === "customer-profitability" &&
-                  returnOrigin.upstream.month && (
-                    <input
-                      type="hidden"
-                      name="upstream_month"
-                      value={returnOrigin.upstream.month}
-                    />
-                  )}
-              </>
-            )}
-
-            <label>
-              <span>اسم المصروف</span>
-              <input
-                type="text"
-                name="name"
-                maxLength={120}
-                required
-                placeholder="مثال: إعلانات Meta"
-                autoComplete="off"
-              />
-            </label>
-
-            <label>
-              <span>التصنيف</span>
-              <select name="category" defaultValue="acquisition">
-                {EXPENSE_CATEGORY_OPTIONS.map((option) => (
-                  <option value={option.value} key={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label>
-              <span>طريقة التكلفة</span>
-              <select name="cost_behavior" defaultValue="fixed_monthly">
-                {EXPENSE_COST_BEHAVIOR_OPTIONS.map((option) => (
-                  <option value={option.value} key={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <button type="submit">إضافة المصروف</button>
-          </form>
           <p className={styles.formNote}>
-            لن تدخل المبلغ أو النسبة هنا. الأرقام الفعلية لكل شهر ستدخل في خطوة البيانات الشهرية.
+            افتح نموذج الإضافة لإدخال اسم المصروف وتصنيفه وطريقة التكلفة. لن تدخل المبلغ أو النسبة هنا؛ الأرقام الفعلية لكل شهر تدخل في خطوة البيانات الشهرية.
           </p>
         </section>
       )}
@@ -247,21 +197,40 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
               <article className={styles.expenseCard} key={expense.id}>
                 <div className={styles.expenseTopline}>
                   <strong>{expense.name}</strong>
-                  <div>
-                    <span className={expense.is_active ? styles.activeBadge : styles.inactiveBadge}>
-                      {expense.is_active ? "نشط" : "غير نشط"}
-                    </span>
-                    <span className={styles.categoryBadge}>{categoryLabel(expense.category)}</span>
-                    <span className={styles.behaviorBadge}>
-                      {behaviorLabel(expense.cost_behavior)}
-                    </span>
-                    <span className={styles.variableBadge}>{variableLabel(expense.cost_behavior)}</span>
+                  <div className={styles.expenseToplineActions}>
+                    <div className={styles.badgeRow}>
+                      <span className={expense.is_active ? styles.activeBadge : styles.inactiveBadge}>
+                        {expense.is_active ? "نشط" : "غير نشط"}
+                      </span>
+                      <span className={styles.categoryBadge}>{categoryLabel(expense.category)}</span>
+                      <span className={styles.behaviorBadge}>
+                        {behaviorLabel(expense.cost_behavior)}
+                      </span>
+                      <span className={styles.variableBadge}>{variableLabel(expense.cost_behavior)}</span>
+                    </div>
+                    {canManageExpenses && (
+                      <ExpenseDrawerLauncher
+                        businessId={businessId}
+                        returnOrigin={returnOrigin}
+                        categoryOptions={EXPENSE_CATEGORY_OPTIONS}
+                        behaviorOptions={EXPENSE_COST_BEHAVIOR_OPTIONS}
+                        mode="edit"
+                        expense={{
+                          id: expense.id,
+                          name: expense.name,
+                          category: expense.category,
+                          cost_behavior: expense.cost_behavior,
+                          is_active: expense.is_active,
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
 
                 {canManageExpenses && (
-                  <>
-                    <form action={updateExpenseItem} className={styles.editForm}>
+                  <div className={styles.deleteRow}>
+                    <p>الحذف متاح فقط إذا لم يُستخدم هذا البند في أي بيانات شهرية أو تخصيصات سابقة.</p>
+                    <form action={deleteExpenseItem}>
                       <input type="hidden" name="business_id" value={businessId} />
                       <input type="hidden" name="expense_id" value={expense.id} />
                       {returnOrigin && (
@@ -286,85 +255,15 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
                         </>
                       )}
 
-                      <label>
-                        <span>الاسم</span>
-                        <input
-                          type="text"
-                          name="name"
-                          maxLength={120}
-                          required
-                          defaultValue={expense.name}
-                          autoComplete="off"
-                        />
-                      </label>
-
-                      <label>
-                        <span>التصنيف</span>
-                        <select name="category" defaultValue={expense.category}>
-                          {EXPENSE_CATEGORY_OPTIONS.map((option) => (
-                            <option value={option.value} key={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <label>
-                        <span>طريقة التكلفة</span>
-                        <select name="cost_behavior" defaultValue={expense.cost_behavior}>
-                          {EXPENSE_COST_BEHAVIOR_OPTIONS.map((option) => (
-                            <option value={option.value} key={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <label className={styles.activeToggle}>
-                        <input type="checkbox" name="is_active" defaultChecked={expense.is_active} />
-                        <span>المصروف نشط ويظهر في الإدخالات الجديدة</span>
-                      </label>
-
-                      <button type="submit">حفظ التعديلات</button>
+                      <ConfirmSubmitButton
+                        className={styles.deleteButton}
+                        ariaLabel={`حذف المصروف ${expense.name}`}
+                        confirmMessage={`هل تريد حذف المصروف «${expense.name}»؟ لا يمكن التراجع عن حذف بند غير مستخدم.`}
+                      >
+                        حذف المصروف
+                      </ConfirmSubmitButton>
                     </form>
-
-                    <div className={styles.deleteRow}>
-                      <p>الحذف متاح فقط إذا لم يُستخدم هذا البند في أي بيانات شهرية أو تخصيصات سابقة.</p>
-                      <form action={deleteExpenseItem}>
-                        <input type="hidden" name="business_id" value={businessId} />
-                        <input type="hidden" name="expense_id" value={expense.id} />
-                        {returnOrigin && (
-                          <>
-                            <input type="hidden" name="origin" value={returnOrigin.origin} />
-                            <input type="hidden" name="month" value={returnOrigin.month} />
-                            {returnOrigin.upstream && (
-                              <input
-                                type="hidden"
-                                name="upstream_origin"
-                                value={returnOrigin.upstream.origin}
-                              />
-                            )}
-                            {returnOrigin.upstream?.origin === "customer-profitability" &&
-                              returnOrigin.upstream.month && (
-                                <input
-                                  type="hidden"
-                                  name="upstream_month"
-                                  value={returnOrigin.upstream.month}
-                                />
-                              )}
-                          </>
-                        )}
-
-                        <ConfirmSubmitButton
-                          className={styles.deleteButton}
-                          ariaLabel={`حذف المصروف ${expense.name}`}
-                          confirmMessage={`هل تريد حذف المصروف «${expense.name}»؟ لا يمكن التراجع عن حذف بند غير مستخدم.`}
-                        >
-                          حذف المصروف
-                        </ConfirmSubmitButton>
-                      </form>
-                    </div>
-                  </>
+                  </div>
                 )}
               </article>
             ))}
