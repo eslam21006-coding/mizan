@@ -25,6 +25,7 @@ import {
   type TransactionFilePreview,
 } from "@/lib/business/transaction-preview";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { TransactionImportReturnAction } from "@/lib/transaction-import-navigation";
 import { TransactionImportValidator } from "./transaction-import-validator";
 import styles from "./transaction-import.module.css";
 
@@ -35,6 +36,7 @@ type TransactionColumnMapperProps = {
   fileBuffer: ArrayBuffer;
   importBusy: boolean;
   onImportBusyChange: (busy: boolean) => void;
+  returnAction: TransactionImportReturnAction;
 };
 
 const FIELD_LABELS: Record<TransactionMappingField, string> = {
@@ -101,6 +103,7 @@ export function TransactionColumnMapper({
   fileBuffer,
   importBusy,
   onImportBusyChange,
+  returnAction,
 }: TransactionColumnMapperProps) {
   const [mapping, setMapping] = useState<TransactionColumnMapping>(EMPTY_TRANSACTION_COLUMN_MAPPING);
   const [mappingOrigin, setMappingOrigin] = useState<"automatic" | "saved" | "manual">("manual");
@@ -470,6 +473,7 @@ export function TransactionColumnMapper({
           fileBuffer={fileBuffer}
           mapping={mapping}
           onImportBusyChange={onImportBusyChange}
+          returnAction={returnAction}
         />
       )}
     </>
