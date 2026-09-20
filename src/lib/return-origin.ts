@@ -10,10 +10,17 @@ export type ReturnOriginSearchParams =
   | Readonly<Record<string, SearchParamValue>>
   | SearchParamReader;
 
-export type ReturnOriginMetadata =
+export type CustomerReturnOriginMetadata =
   | { origin: "customer-overview" }
-  | { origin: "customer-profitability"; month?: string }
-  | { origin: "monthly-editor"; month: string };
+  | { origin: "customer-profitability"; month?: string };
+
+export type ReturnOriginMetadata =
+  | CustomerReturnOriginMetadata
+  | {
+      origin: "monthly-editor";
+      month: string;
+      upstream?: CustomerReturnOriginMetadata;
+    };
 
 export type ReturnOriginContext = {
   businessId: string;
@@ -97,6 +104,11 @@ export function resolveReturnOrigin(
         route: "business-monthly",
         businessId: context.businessId,
         month: origin.month,
+        origin: origin.upstream?.origin,
+        returnMonth:
+          origin.upstream?.origin === "customer-profitability"
+            ? origin.upstream.month
+            : undefined,
       };
   }
 }

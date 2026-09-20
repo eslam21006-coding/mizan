@@ -205,6 +205,19 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
     }
     return `/businesses/${businessId}/monthly?${queryParams.toString()}`;
   };
+  const setupHref = (route: "revenue-streams" | "expenses") => {
+    const queryParams = new URLSearchParams({
+      origin: "monthly-editor",
+      month: selectedMonth.monthKey,
+    });
+    if (returnOrigin) {
+      queryParams.set("upstream_origin", returnOrigin.origin);
+      if (returnOrigin.origin === "customer-profitability" && returnOrigin.month) {
+        queryParams.set("upstream_month", returnOrigin.month);
+      }
+    }
+    return `/businesses/${businessId}/${route}?${queryParams.toString()}`;
+  };
   const monthLabel = new Intl.DateTimeFormat("ar-EG", {
     month: "long",
     year: "numeric",
@@ -359,10 +372,16 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
             </div>
           </div>
           <div className={styles.setupActions}>
-            <Link className={styles.setupLinkButton} href={`/businesses/${businessId}/revenue-streams`}>
+            <Link
+              className={styles.setupLinkButton}
+              href={setupHref("revenue-streams")}
+            >
               إدارة مصادر الإيراد
             </Link>
-            <Link className={styles.setupLinkButton} href={`/businesses/${businessId}/expenses`}>
+            <Link
+              className={styles.setupLinkButton}
+              href={setupHref("expenses")}
+            >
               إدارة هيكل المصروفات
             </Link>
             {canEditMonth && (

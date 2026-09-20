@@ -9,21 +9,85 @@ import {
   parseResourceId,
   parseRevenueStreamType,
 } from "@/lib/business/revenue-streams";
+import {
+  parseSetupReturnOrigin,
+  type SetupReturnOrigin,
+} from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-function revenueStreamsPath(businessId: string, status: string) {
-  return `/businesses/${businessId}/revenue-streams?status=${status}`;
+function parseRevenueSetupReturnOrigin(formData: FormData): SetupReturnOrigin | null {
+  const origins = formData.getAll("origin");
+  const months = formData.getAll("month");
+  const upstreamOrigins = formData.getAll("upstream_origin");
+  const upstreamMonths = formData.getAll("upstream_month");
+
+  if (
+    origins.length !== 1 ||
+    months.length !== 1 ||
+    upstreamOrigins.length > 1 ||
+    upstreamMonths.length > 1
+  ) {
+    return null;
+  }
+
+  const origin = origins[0];
+  const month = months[0];
+  const upstreamOrigin = upstreamOrigins[0];
+  const upstreamMonth = upstreamMonths[0];
+  if (
+    typeof origin !== "string" ||
+    typeof month !== "string" ||
+    (upstreamOrigin !== undefined && typeof upstreamOrigin !== "string") ||
+    (upstreamMonth !== undefined && typeof upstreamMonth !== "string")
+  ) {
+    return null;
+  }
+
+  return parseSetupReturnOrigin({
+    origin,
+    month,
+    upstream_origin: upstreamOrigin,
+    upstream_month: upstreamMonth,
+  });
 }
 
-function redirectToRevenueStreams(businessId: string, status: string): never {
+function revenueStreamsPath(
+  businessId: string,
+  status: string,
+  returnOrigin?: SetupReturnOrigin | null,
+) {
+  const query = new URLSearchParams({ status });
+  if (returnOrigin) {
+    query.set("origin", returnOrigin.origin);
+    query.set("month", returnOrigin.month);
+    if (returnOrigin.upstream) {
+      query.set("upstream_origin", returnOrigin.upstream.origin);
+      if (
+        returnOrigin.upstream.origin === "customer-profitability" &&
+        returnOrigin.upstream.month
+      ) {
+        query.set("upstream_month", returnOrigin.upstream.month);
+      }
+    }
+  }
+  return `/businesses/${businessId}/revenue-streams?${query.toString()}`;
+}
+
+function redirectToRevenueStreams(
+  businessId: string,
+  status: string,
+  returnOrigin?: SetupReturnOrigin | null,
+): never {
   revalidatePath("/businesses");
   revalidatePath(`/businesses/${businessId}/revenue-streams`);
   revalidatePath(`/businesses/${businessId}/monthly`);
-  redirect(revenueStreamsPath(businessId, status));
+  redirect(revenueStreamsPath(businessId, status, returnOrigin));
 }
 
 export async function createRevenueStream(formData: FormData) {
   await requireAuthContext();
+
+  const returnOrigin = parseRevenueSetupReturnOrigin(formData);
 
   const businessId = parseResourceId(formData.get("business_id"));
   const name = normalizeRevenueStreamName(formData.get("name"));
@@ -35,7 +99,7 @@ export async function createRevenueStream(formData: FormData) {
   }
 
   if (!name || !streamType || !creationRequestId) {
-    redirect(revenueStreamsPath(businessId, "invalid"));
+    redirect(revenueStreamsPath(businessId, "invalid", returnOrigin));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -47,14 +111,16 @@ export async function createRevenueStream(formData: FormData) {
   });
 
   if (!error || error.code === "23505") {
-    return redirectToRevenueStreams(businessId, "created");
+    return redirectToRevenueStreams(businessId, "created", returnOrigin);
   }
 
-  redirect(revenueStreamsPath(businessId, "create-failed"));
+  redirect(revenueStreamsPath(businessId, "create-failed", returnOrigin));
 }
 
 export async function updateRevenueStream(formData: FormData) {
   await requireAuthContext();
+
+  const returnOrigin = parseRevenueSetupReturnOrigin(formData);
 
   const businessId = parseResourceId(formData.get("business_id"));
   const streamId = parseResourceId(formData.get("stream_id"));
@@ -67,7 +133,7 @@ export async function updateRevenueStream(formData: FormData) {
   }
 
   if (!streamId || !name || !streamType) {
-    redirect(revenueStreamsPath(businessId, "invalid"));
+    redirect(revenueStreamsPath(businessId, "invalid", returnOrigin));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -84,14 +150,16 @@ export async function updateRevenueStream(formData: FormData) {
     .maybeSingle();
 
   if (error || !updatedStream) {
-    redirect(revenueStreamsPath(businessId, "update-failed"));
+    redirect(revenueStreamsPath(businessId, "update-failed", returnOrigin));
   }
 
-  redirectToRevenueStreams(businessId, "updated");
+  redirectToRevenueStreams(businessId, "updated", returnOrigin);
 }
 
 export async function deleteRevenueStream(formData: FormData) {
   await requireAuthContext();
+
+  const returnOrigin = parseRevenueSetupReturnOrigin(formData);
 
   const businessId = parseResourceId(formData.get("business_id"));
   const streamId = parseResourceId(formData.get("stream_id"));
@@ -101,7 +169,7 @@ export async function deleteRevenueStream(formData: FormData) {
   }
 
   if (!streamId) {
-    redirect(revenueStreamsPath(businessId, "invalid"));
+    redirect(revenueStreamsPath(businessId, "invalid", returnOrigin));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -114,12 +182,12 @@ export async function deleteRevenueStream(formData: FormData) {
     .maybeSingle();
 
   if (error?.code === "23503") {
-    redirect(revenueStreamsPath(businessId, "in-use"));
+    redirect(revenueStreamsPath(businessId, "in-use", returnOrigin));
   }
 
   if (error || !deletedStream) {
-    redirect(revenueStreamsPath(businessId, "delete-failed"));
+    redirect(revenueStreamsPath(businessId, "delete-failed", returnOrigin));
   }
 
-  redirectToRevenueStreams(businessId, "deleted");
+  redirectToRevenueStreams(businessId, "deleted", returnOrigin);
 }
