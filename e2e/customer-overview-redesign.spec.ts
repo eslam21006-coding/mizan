@@ -25,7 +25,7 @@ test.describe("Customer value overview redesign", () => {
     await expect(hero.getByRole("link")).toHaveCount(1);
     await expect(importLink).toHaveAttribute(
       "href",
-      "/businesses/00000000-0000-4000-8000-000000000057/customers/import",
+      "/businesses/00000000-0000-4000-8000-000000000057/customers/import?origin=customer-overview",
     );
     await expect(hero.getByRole("link", { name: "ملاحظات تحتاج مراجعتك" })).toHaveCount(0);
     await expect(hero.getByRole("link", { name: "كل البزنسات" })).toHaveCount(0);
@@ -42,7 +42,7 @@ test.describe("Customer value overview redesign", () => {
     await expect(dataSourcesDrawer).toBeVisible();
     await expect(dataSourcesDrawer.getByRole("link", { name: "فتح الاستيراد" })).toHaveAttribute(
       "href",
-      "/businesses/00000000-0000-4000-8000-000000000057/customers/import",
+      "/businesses/00000000-0000-4000-8000-000000000057/customers/import?origin=customer-overview",
     );
     await expect(dataSourcesDrawer.getByRole("link", { name: "فتح إعداد المصروفات" })).toHaveAttribute(
       "href",
@@ -114,6 +114,10 @@ test.describe("Customer value overview redesign", () => {
     await page.goto(`${fixturePath}?view=profitability`);
     await expect(contributionTab).toHaveAttribute("aria-selected", "true");
     await expect(page.getByRole("region", { name: "لوحة ربح المساهمة" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "استيراد معاملات" })).toHaveAttribute(
+      "href",
+      "/businesses/00000000-0000-4000-8000-000000000057/customers/import?origin=customer-profitability",
+    );
 
     await page.goto(`${fixturePath}?view=customers`);
     await expect(customersTab).toHaveAttribute("aria-selected", "true");
