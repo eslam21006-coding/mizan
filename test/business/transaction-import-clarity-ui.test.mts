@@ -19,6 +19,10 @@ const completionCardSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/customers/import/transaction-import-completion-card.tsx",
   "utf8",
 );
+const importNavigationSource = readFileSync(
+  "src/lib/transaction-import-navigation.ts",
+  "utf8",
+);
 
 test("review guidance distinguishes validation from persistence and explicitly skips only invalid rows", () => {
   assert.match(reviewGuideSource, /المراجعة وحدها لا تحفظ أي معاملات/);
