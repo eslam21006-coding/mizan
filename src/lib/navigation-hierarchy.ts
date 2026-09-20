@@ -8,7 +8,13 @@ export type NavigationDestination =
       month?: string;
     }
   | { route: "business-customer-review"; businessId: string }
-  | { route: "business-monthly"; businessId: string; month?: string };
+  | {
+      route: "business-monthly";
+      businessId: string;
+      month?: string;
+      origin?: "customer-overview" | "customer-profitability";
+      returnMonth?: string;
+    };
 
 export type BreadcrumbItem =
   | {
@@ -53,12 +59,14 @@ export function resolveNavigationDestination(destination: NavigationDestination)
       return `${businessPath(destination.businessId)}/customers/review`;
     case "business-monthly": {
       const pathname = `${businessPath(destination.businessId)}/monthly`;
-      if (!destination.month) {
-        return pathname;
+      const searchParams = new URLSearchParams();
+      if (destination.month) searchParams.set("month", destination.month);
+      if (destination.origin) searchParams.set("origin", destination.origin);
+      if (destination.origin === "customer-profitability" && destination.returnMonth) {
+        searchParams.set("return_month", destination.returnMonth);
       }
-
-      const searchParams = new URLSearchParams({ month: destination.month });
-      return `${pathname}?${searchParams.toString()}`;
+      const query = searchParams.toString();
+      return query ? `${pathname}?${query}` : pathname;
     }
   }
 }
