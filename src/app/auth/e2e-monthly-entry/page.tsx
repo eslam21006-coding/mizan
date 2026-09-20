@@ -10,7 +10,7 @@ import saveBarStyles from "@/app/(app)/businesses/[businessId]/monthly/monthly-s
 import styles from "@/app/(app)/businesses/[businessId]/monthly/monthly.module.css";
 import { AppShell } from "@/components/app-shell";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
-import { parseReturnOrigin } from "@/lib/return-origin";
+import { parseMonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
 
 const BUSINESS_ID = "00000000-0000-4000-8000-000000000025";
 const fixtureShellProps = {
@@ -19,7 +19,7 @@ const fixtureShellProps = {
 };
 
 type MonthlyEntryE2eFixturePageProps = {
-  searchParams: Promise<{ origin?: string | string[] }>;
+  searchParams: Promise<{ month?: string | string[]; origin?: string | string[] }>;
 };
 
 const revenueRows: RevenueInputRow[] = [
@@ -80,7 +80,7 @@ const expenseRows: ExpenseInputRow[] = [
   },
 ];
 
-/** Renders the isolated Monthly editor with an optional safe profitability return context. */
+/** Renders the isolated Monthly editor with an optional safe cross-module return context. */
 export default async function MonthlyEntryE2eFixturePage({
   searchParams,
 }: MonthlyEntryE2eFixturePageProps) {
@@ -90,8 +90,10 @@ export default async function MonthlyEntryE2eFixturePage({
   }
 
   const query = await searchParams;
-  const parsedOrigin = parseReturnOrigin({ origin: query.origin });
-  const returnOrigin = parsedOrigin?.origin === "customer-profitability" ? parsedOrigin : null;
+  const returnOrigin = parseMonthlyExternalReturnOrigin({
+    origin: query.origin,
+    month: query.month,
+  });
 
   return (
     <AppShell {...fixtureShellProps}>
@@ -104,11 +106,19 @@ export default async function MonthlyEntryE2eFixturePage({
 
         {returnOrigin && (
           <ReturnContextBanner
-            purpose="بيانات مطلوبة في ربحية العميل"
+            purpose={
+              returnOrigin.origin === "customer-profitability"
+                ? "بيانات مطلوبة في ربحية العميل"
+                : "بيانات مطلوبة في تحليل العملاء"
+            }
             origin={returnOrigin}
             context={{ businessId: BUSINESS_ID }}
-            returnLabel="العودة إلى ربحية العميل"
-            ariaLabel="العودة إلى ربحية العميل"
+            returnLabel={
+              returnOrigin.origin === "customer-profitability"
+                ? "العودة إلى ربحية العميل"
+                : "العودة إلى العملاء"
+            }
+            ariaLabel="سياق العودة من الإدخال الشهري"
           />
         )}
 
