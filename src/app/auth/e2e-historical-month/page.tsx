@@ -5,6 +5,11 @@ import { HistoricalMonthState } from "@/app/(app)/businesses/[businessId]/monthl
 
 export const dynamic = "force-dynamic";
 
+const fixtureShellProps = {
+  role: "admin" as const,
+  email: "admin.fixture@example.test",
+};
+
 /** CI-only fixture for N32/N33 historical month state and correction navigation. */
 export default function HistoricalMonthFixturePage() {
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
@@ -14,7 +19,7 @@ export default function HistoricalMonthFixturePage() {
   const businessId = "123e4567-e89b-42d3-a456-426614174000";
 
   return (
-    <AppShell role="admin" email="admin.fixture@example.test">
+    <AppShell {...fixtureShellProps}>
       <main className="page-stack" aria-label="اختبار الشهر التاريخي">
         <HistoricalCorrectionNavigation
           businessId={businessId}
