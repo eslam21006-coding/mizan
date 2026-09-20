@@ -3,18 +3,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { PageHeading } from "@/components/page-heading";
+import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { requireAuthContext } from "@/lib/auth/context";
 import {
   REVENUE_STREAM_TYPE_OPTIONS,
   parseResourceId,
 } from "@/lib/business/revenue-streams";
+import { parseSetupReturnOrigin } from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createRevenueStream, deleteRevenueStream, updateRevenueStream } from "./actions";
 import styles from "./revenue-streams.module.css";
 
 type RevenueStreamsPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{
+    status?: string;
+    origin?: string | string[];
+    month?: string | string[];
+  }>;
 };
 
 const STATUS_MESSAGES: Record<string, string> = {
@@ -65,6 +71,10 @@ export default async function RevenueStreamsPage({
 
   const canManageRevenueStreams = auth.role === "admin" || business.owner_user_id === auth.userId;
   const query = await searchParams;
+  const returnOrigin = parseSetupReturnOrigin({
+    origin: query.origin,
+    month: query.month,
+  });
   const statusMessage = query.status ? STATUS_MESSAGES[query.status] : null;
   const isErrorStatus =
     query.status?.endsWith("failed") || query.status === "invalid" || query.status === "in-use";
@@ -80,6 +90,16 @@ export default async function RevenueStreamsPage({
           العودة للبزنسات
         </Link>
       </div>
+
+      {returnOrigin && (
+        <ReturnContextBanner
+          purpose="إضافة أو تعديل مصدر الإيراد المطلوب للشهر"
+          origin={returnOrigin}
+          context={{ businessId }}
+          returnLabel="العودة إلى الإدخال الشهري"
+          ariaLabel="سياق العودة من إعداد مصادر الإيراد"
+        />
+      )}
 
       {statusMessage && (
         <div className={isErrorStatus ? styles.errorStatus : styles.successStatus} role="status">
@@ -121,6 +141,12 @@ export default async function RevenueStreamsPage({
           <form action={createRevenueStream} className={styles.createForm}>
             <input type="hidden" name="business_id" value={businessId} />
             <input type="hidden" name="creation_request_id" value={randomUUID()} />
+            {returnOrigin && (
+              <>
+                <input type="hidden" name="origin" value={returnOrigin.origin} />
+                <input type="hidden" name="month" value={returnOrigin.month} />
+              </>
+            )}
 
             <label>
               <span>اسم مصدر الإيراد</span>
@@ -182,6 +208,12 @@ export default async function RevenueStreamsPage({
                     <form action={updateRevenueStream} className={styles.editForm}>
                       <input type="hidden" name="business_id" value={businessId} />
                       <input type="hidden" name="stream_id" value={stream.id} />
+                      {returnOrigin && (
+                        <>
+                          <input type="hidden" name="origin" value={returnOrigin.origin} />
+                          <input type="hidden" name="month" value={returnOrigin.month} />
+                        </>
+                      )}
 
                       <label>
                         <span>الاسم</span>
@@ -219,6 +251,13 @@ export default async function RevenueStreamsPage({
                       <form action={deleteRevenueStream}>
                         <input type="hidden" name="business_id" value={businessId} />
                         <input type="hidden" name="stream_id" value={stream.id} />
+                        {returnOrigin && (
+                          <>
+                            <input type="hidden" name="origin" value={returnOrigin.origin} />
+                            <input type="hidden" name="month" value={returnOrigin.month} />
+                          </>
+                        )}
+
                         <ConfirmSubmitButton
                           className={styles.deleteButton}
                           ariaLabel={`حذف مصدر الإيراد ${stream.name}`}
