@@ -11,7 +11,8 @@ import {
 } from "@/lib/business/revenue-streams";
 import { parseSetupReturnOrigin } from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createRevenueStream, deleteRevenueStream, updateRevenueStream } from "./actions";
+import { deleteRevenueStream } from "./actions";
+import { RevenueStreamDrawerLauncher } from "./revenue-stream-drawer";
 import styles from "./revenue-streams.module.css";
 
 type RevenueStreamsPageProps = {
@@ -139,59 +140,20 @@ export default async function RevenueStreamsPage({
               <span className={styles.kicker}>إضافة مصدر</span>
               <h2>مصدر إيراد جديد</h2>
             </div>
-            <span className={styles.currency}>{business.base_currency}</span>
-          </div>
-
-          <form action={createRevenueStream} className={styles.createForm}>
-            <input type="hidden" name="business_id" value={businessId} />
-            <input type="hidden" name="creation_request_id" value={randomUUID()} />
-            {returnOrigin && (
-              <>
-                <input type="hidden" name="origin" value={returnOrigin.origin} />
-                <input type="hidden" name="month" value={returnOrigin.month} />
-                {returnOrigin.upstream && (
-                  <input
-                    type="hidden"
-                    name="upstream_origin"
-                    value={returnOrigin.upstream.origin}
-                  />
-                )}
-                {returnOrigin.upstream?.origin === "customer-profitability" &&
-                  returnOrigin.upstream.month && (
-                    <input
-                      type="hidden"
-                      name="upstream_month"
-                      value={returnOrigin.upstream.month}
-                    />
-                  )}
-              </>
-            )}
-
-            <label>
-              <span>اسم مصدر الإيراد</span>
-              <input
-                type="text"
-                name="name"
-                maxLength={120}
-                required
-                placeholder="مثال: البرنامج الأساسي"
-                autoComplete="off"
+            <div className={styles.panelActions}>
+              <span className={styles.currency}>{business.base_currency}</span>
+              <RevenueStreamDrawerLauncher
+                businessId={businessId}
+                returnOrigin={returnOrigin}
+                typeOptions={REVENUE_STREAM_TYPE_OPTIONS}
+                mode="create"
+                creationRequestId={randomUUID()}
               />
-            </label>
-
-            <label>
-              <span>التصنيف</span>
-              <select name="stream_type" defaultValue="front_end">
-                {REVENUE_STREAM_TYPE_OPTIONS.map((option) => (
-                  <option value={option.value} key={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <button type="submit">إضافة مصدر الإيراد</button>
-          </form>
+            </div>
+          </div>
+          <p className={styles.formNote}>
+            افتح نموذج الإضافة لتسمية مصدر الإيراد وتحديد نوعه. لا تدخل أي قيمة مالية هنا.
+          </p>
         </section>
       )}
 
@@ -214,17 +176,34 @@ export default async function RevenueStreamsPage({
               <article className={styles.streamCard} key={stream.id}>
                 <div className={styles.streamTopline}>
                   <strong>{stream.name}</strong>
-                  <div>
-                    <span className={stream.is_active ? styles.activeBadge : styles.inactiveBadge}>
-                      {stream.is_active ? "نشط" : "غير نشط"}
-                    </span>
-                    <span className={styles.typeBadge}>{typeLabel(stream.stream_type)}</span>
+                  <div className={styles.streamToplineActions}>
+                    <div className={styles.badgeRow}>
+                      <span className={stream.is_active ? styles.activeBadge : styles.inactiveBadge}>
+                        {stream.is_active ? "نشط" : "غير نشط"}
+                      </span>
+                      <span className={styles.typeBadge}>{typeLabel(stream.stream_type)}</span>
+                    </div>
+                    {canManageRevenueStreams && (
+                      <RevenueStreamDrawerLauncher
+                        businessId={businessId}
+                        returnOrigin={returnOrigin}
+                        typeOptions={REVENUE_STREAM_TYPE_OPTIONS}
+                        mode="edit"
+                        stream={{
+                          id: stream.id,
+                          name: stream.name,
+                          stream_type: stream.stream_type,
+                          is_active: stream.is_active,
+                        }}
+                      />
+                    )}
                   </div>
                 </div>
 
                 {canManageRevenueStreams && (
-                  <>
-                    <form action={updateRevenueStream} className={styles.editForm}>
+                  <div className={styles.deleteRow}>
+                    <p>الحذف متاح فقط إذا لم يُستخدم هذا المصدر في أي بيانات شهرية أو معاملات عملاء.</p>
+                    <form action={deleteRevenueStream}>
                       <input type="hidden" name="business_id" value={businessId} />
                       <input type="hidden" name="stream_id" value={stream.id} />
                       {returnOrigin && (
@@ -249,74 +228,15 @@ export default async function RevenueStreamsPage({
                         </>
                       )}
 
-                      <label>
-                        <span>الاسم</span>
-                        <input
-                          type="text"
-                          name="name"
-                          maxLength={120}
-                          required
-                          defaultValue={stream.name}
-                          autoComplete="off"
-                        />
-                      </label>
-
-                      <label>
-                        <span>التصنيف</span>
-                        <select name="stream_type" defaultValue={stream.stream_type}>
-                          {REVENUE_STREAM_TYPE_OPTIONS.map((option) => (
-                            <option value={option.value} key={option.value}>
-                              {option.label}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-
-                      <label className={styles.activeToggle}>
-                        <input type="checkbox" name="is_active" defaultChecked={stream.is_active} />
-                        <span>المصدر نشط ويظهر في الإدخالات الجديدة</span>
-                      </label>
-
-                      <button type="submit">حفظ التعديلات</button>
+                      <ConfirmSubmitButton
+                        className={styles.deleteButton}
+                        ariaLabel={`حذف مصدر الإيراد ${stream.name}`}
+                        confirmMessage={`هل تريد حذف مصدر الإيراد «${stream.name}»؟ لا يمكن التراجع عن حذف مصدر غير مستخدم.`}
+                      >
+                        حذف المصدر
+                      </ConfirmSubmitButton>
                     </form>
-
-                    <div className={styles.deleteRow}>
-                      <p>الحذف متاح فقط إذا لم يُستخدم هذا المصدر في أي بيانات شهرية أو معاملات عملاء.</p>
-                      <form action={deleteRevenueStream}>
-                        <input type="hidden" name="business_id" value={businessId} />
-                        <input type="hidden" name="stream_id" value={stream.id} />
-                        {returnOrigin && (
-                          <>
-                            <input type="hidden" name="origin" value={returnOrigin.origin} />
-                            <input type="hidden" name="month" value={returnOrigin.month} />
-                            {returnOrigin.upstream && (
-                              <input
-                                type="hidden"
-                                name="upstream_origin"
-                                value={returnOrigin.upstream.origin}
-                              />
-                            )}
-                            {returnOrigin.upstream?.origin === "customer-profitability" &&
-                              returnOrigin.upstream.month && (
-                                <input
-                                  type="hidden"
-                                  name="upstream_month"
-                                  value={returnOrigin.upstream.month}
-                                />
-                              )}
-                          </>
-                        )}
-
-                        <ConfirmSubmitButton
-                          className={styles.deleteButton}
-                          ariaLabel={`حذف مصدر الإيراد ${stream.name}`}
-                          confirmMessage={`هل تريد حذف مصدر الإيراد «${stream.name}»؟ لا يمكن التراجع عن حذف مصدر غير مستخدم.`}
-                        >
-                          حذف المصدر
-                        </ConfirmSubmitButton>
-                      </form>
-                    </div>
-                  </>
+                  </div>
                 )}
               </article>
             ))}

@@ -24,6 +24,13 @@ const page = await readFile(
   ),
   "utf8",
 );
+const drawer = await readFile(
+  new URL(
+    "../../src/app/(app)/businesses/[businessId]/revenue-streams/revenue-stream-drawer.tsx",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const migration = await readFile(
   new URL(
     "../../supabase/migrations/20260818153600_task_6_revenue_stream_management.sql",
@@ -69,8 +76,10 @@ test("revenue stream writes rely on authenticated context and never accept an ow
   assert.match(action, /\.eq\("business_id", businessId\)/);
 });
 
-test("revenue stream creation is database-idempotent", () => {
-  assert.match(page, /name="creation_request_id" value=\{randomUUID\(\)\}/);
+test("revenue stream creation remains database-idempotent through the N30/N31 drawer boundary", () => {
+  assert.match(page, /creationRequestId=\{randomUUID\(\)\}/);
+  assert.match(drawer, /name="creation_request_id"/);
+  assert.match(drawer, /value=\{creationRequestId \?\? ""\}/);
   assert.match(action, /creation_request_id:\s*creationRequestId/);
   assert.match(action, /!error \|\| error\.code === "23505"/);
   assert.doesNotMatch(action, /existingStream/);

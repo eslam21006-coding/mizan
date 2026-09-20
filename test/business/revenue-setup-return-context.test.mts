@@ -17,6 +17,10 @@ const revenuePageSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/revenue-streams/page.tsx",
   "utf8",
 );
+const revenueDrawerSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/revenue-streams/revenue-stream-drawer.tsx",
+  "utf8",
+);
 const revenueActionsSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/revenue-streams/actions.ts",
   "utf8",
@@ -86,20 +90,21 @@ test("N26 Monthly setup URLs preserve the selected month and validated upstream 
   assert.doesNotMatch(monthlySource, /returnTo/);
 });
 
-test("N26 Revenue Sources renders and submits the complete safe setup return context", () => {
+test("N26 Revenue Sources renders the safe setup Return banner and drawer submits the full context", () => {
   assert.match(
     revenuePageSource,
     /parseSetupReturnOrigin\(\{[\s\S]*origin: query\.origin,[\s\S]*month: query\.month,[\s\S]*upstream_origin: query\.upstream_origin,[\s\S]*upstream_month: query\.upstream_month/,
   );
   assert.match(revenuePageSource, /ariaLabel="سياق العودة من إعداد مصادر الإيراد"/);
   assert.match(revenuePageSource, /returnLabel="العودة إلى الإدخال الشهري"/);
-  assert.match(revenuePageSource, /name="origin" value=\{returnOrigin\.origin\}/);
-  assert.match(revenuePageSource, /name="month" value=\{returnOrigin\.month\}/);
-  assert.match(revenuePageSource, /name="upstream_origin"/);
-  assert.match(revenuePageSource, /value=\{returnOrigin\.upstream\.origin\}/);
-  assert.match(revenuePageSource, /name="upstream_month"/);
-  assert.match(revenuePageSource, /value=\{returnOrigin\.upstream\.month\}/);
+  assert.match(revenueDrawerSource, /name="origin" value=\{returnOrigin\.origin\}/);
+  assert.match(revenueDrawerSource, /name="month" value=\{returnOrigin\.month\}/);
+  assert.match(revenueDrawerSource, /name="upstream_origin"/);
+  assert.match(revenueDrawerSource, /value=\{returnOrigin\.upstream\.origin\}/);
+  assert.match(revenueDrawerSource, /name="upstream_month"/);
+  assert.match(revenueDrawerSource, /value=\{returnOrigin\.upstream\.month\}/);
   assert.doesNotMatch(revenuePageSource, /returnTo/);
+  assert.doesNotMatch(revenueDrawerSource, /returnTo/);
 });
 
 test("N26 Revenue Sources actions reject ambiguous nested metadata and preserve it on redirects", () => {
