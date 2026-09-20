@@ -19,6 +19,10 @@ const page = await readFile(
   new URL("../../src/app/(app)/businesses/[businessId]/expenses/page.tsx", import.meta.url),
   "utf8",
 );
+const drawer = await readFile(
+  new URL("../../src/app/(app)/businesses/[businessId]/expenses/expense-drawer.tsx", import.meta.url),
+  "utf8",
+);
 const migration = await readFile(
   new URL("../../supabase/migrations/20260819060840_task_7_expense_structure.sql", import.meta.url),
   "utf8",
@@ -109,8 +113,10 @@ test("database rejects expense names made only of whitespace without changing tr
   assert.match(nameConstraintMigration, /char_length\(btrim\(name\)\) between 1 and 120/i);
 });
 
-test("Task 7 create delivery is database-idempotent", () => {
-  assert.match(page, /name="creation_request_id" value=\{randomUUID\(\)\}/);
+test("Task 7 create delivery remains database-idempotent through the N28/N29 drawer boundary", () => {
+  assert.match(page, /creationRequestId=\{randomUUID\(\)\}/);
+  assert.match(drawer, /name="creation_request_id"/);
+  assert.match(drawer, /value=\{creationRequestId \?\? ""\}/);
   assert.match(action, /creation_request_id:\s*creationRequestId/);
   assert.match(action, /!error \|\| error\.code === "23505"/);
 });
