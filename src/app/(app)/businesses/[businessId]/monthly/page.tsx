@@ -368,7 +368,13 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
             >
               إدارة مصادر الإيراد
             </Link>
-            <Link className={styles.setupLinkButton} href={`/businesses/${businessId}/expenses`}>
+            <Link
+              className={styles.setupLinkButton}
+              href={`/businesses/${businessId}/expenses?${new URLSearchParams({
+                origin: "monthly-editor",
+                month: selectedMonth.monthKey,
+              }).toString()}`}
+            >
               إدارة هيكل المصروفات
             </Link>
             {canEditMonth && (
