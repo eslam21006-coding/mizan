@@ -32,6 +32,7 @@ import {
   type TransactionValidationSourceErrorCode,
 } from "@/lib/business/transaction-validation-source";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
+import type { TransactionImportReturnAction } from "@/lib/transaction-import-navigation";
 import { TransactionImportCompletionCard } from "./transaction-import-completion-card";
 import task20Styles from "./transaction-import-task20.module.css";
 import styles from "./transaction-import.module.css";
@@ -43,6 +44,7 @@ type TransactionImportValidatorProps = {
   fileBuffer: ArrayBuffer;
   mapping: TransactionColumnMapping;
   onImportBusyChange: (busy: boolean) => void;
+  returnAction: TransactionImportReturnAction;
 };
 
 type ImportResult = {
@@ -273,6 +275,7 @@ export function TransactionImportValidator({
   fileBuffer,
   mapping,
   onImportBusyChange,
+  returnAction,
 }: TransactionImportValidatorProps) {
   const [skipFirstRow, setSkipFirstRow] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
@@ -1008,6 +1011,7 @@ export function TransactionImportValidator({
                     ignoredDetailRows={result.ignoredDetailRows}
                     invalidRows={result.invalidRows}
                     summary={completionSummary}
+                    returnAction={returnAction}
                   />
                 ) : importResult ? (
                   <div role="status" aria-live="polite" className={task20Styles.importSuccess}>
