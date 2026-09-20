@@ -35,6 +35,7 @@ type LifetimeContributionRow = {
 type Props = {
   businessId: string;
   baseCurrency: string;
+  returnMonth?: string;
 };
 
 type RemediationAction = {
@@ -101,7 +102,11 @@ function incompleteReasons(row: LifetimeContributionRow) {
 }
 
 /** Returns only destinations that can actually resolve the blockers shown for an incomplete row. */
-function incompleteActions(row: LifetimeContributionRow, businessId: string): RemediationAction[] {
+function incompleteActions(
+  row: LifetimeContributionRow,
+  businessId: string,
+  returnMonth?: string,
+): RemediationAction[] {
   const actions: RemediationAction[] = [];
   if (!row.transaction_history_complete) {
     actions.push({
@@ -118,10 +123,12 @@ function incompleteActions(row: LifetimeContributionRow, businessId: string): Re
     actions.length === 0;
 
   if (needsExceptionReview) {
+    const reviewParams = new URLSearchParams({ origin: "customer-profitability" });
+    if (returnMonth) reviewParams.set("month", returnMonth);
     actions.push({
       key: "review",
       label: "مراجعة ما ينقص وإكماله",
-      href: `/businesses/${businessId}/customers/review?origin=customer-profitability`,
+      href: `/businesses/${businessId}/customers/review?${reviewParams.toString()}`,
     });
   }
 
@@ -137,7 +144,7 @@ function completedQualityExplanation(row: LifetimeContributionRow) {
 }
 
 /** Renders automatic Customer Profitability by first-purchase month with calculation details on demand. */
-export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
+export function LifetimeContributionTable({ businessId, baseCurrency, returnMonth }: Props) {
   const [rows, setRows] = useState<LifetimeContributionRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -225,7 +232,7 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
               const currency = row.currency ?? baseCurrency;
               const incomplete = !isCompletedQualityState(row.quality_state);
               const reasons = incompleteReasons(row);
-              const actions = incomplete ? incompleteActions(row, businessId) : [];
+              const actions = incomplete ? incompleteActions(row, businessId, returnMonth) : [];
               const primaryAction = actions[0];
               return (
                 <tr key={`${row.business_id}:${row.cohort_month}`}>
@@ -333,7 +340,7 @@ export function LifetimeContributionTable({ businessId, baseCurrency }: Props) {
           const currency = row.currency ?? baseCurrency;
           const incomplete = !isCompletedQualityState(row.quality_state);
           const reasons = incompleteReasons(row);
-          const actions = incomplete ? incompleteActions(row, businessId) : [];
+          const actions = incomplete ? incompleteActions(row, businessId, returnMonth) : [];
           const primaryAction = actions[0];
           return (
             <article className={profitStyles.mobileCard} key={`mobile:${row.business_id}:${row.cohort_month}`}>
