@@ -1,3 +1,34 @@
+.importNavigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.importNavigation > nav {
+  min-width: 0;
+}
+
+.cancelLink {
+  display: inline-flex;
+  min-height: 40px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 13px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  background: var(--surface-primary);
+  color: var(--text-primary);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.cancelLink:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--accent-primary) 35%, transparent);
+  outline-offset: 2px;
+}
+
 .headingRow {
   display: flex;
   gap: 20px;
@@ -671,6 +702,15 @@
 }
 
 @media (max-width: 720px) {
+  .importNavigation {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .cancelLink {
+    width: 100%;
+  }
+
   .headingRow,
   .guideHeading,
   .resultHeading,
