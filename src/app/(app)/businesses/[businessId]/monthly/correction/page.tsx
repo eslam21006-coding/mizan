@@ -16,6 +16,7 @@ import type {
   RevenueInputRow,
 } from "../monthly-entry-form";
 import { HistoricalCorrectionForm } from "./historical-correction-form";
+import { HistoricalCorrectionNavigation } from "./historical-correction-navigation";
 import styles from "./historical-correction.module.css";
 
 type HistoricalCorrectionPageProps = {
@@ -74,19 +75,29 @@ export default async function HistoricalCorrectionPage({
     query.status && !["corrected", "historical-required"].includes(query.status),
   );
   const isHistorical = selectedMonth.monthKey < currentMonthKey;
+  const selectedMonthLabel = selectedMonthLabel;
+  const correctionNavigation = (
+    <HistoricalCorrectionNavigation
+      businessId={businessId}
+      businessName={business.name}
+      baseCurrency={business.base_currency}
+      timezone={business.timezone}
+      monthKey={selectedMonth.monthKey}
+      monthLabel={selectedMonthLabel}
+    />
+  );
 
   if (!isHistorical) {
     return (
       <div className={styles.page}>
+      {correctionNavigation}
+        {correctionNavigation}
         <div className={styles.headingRow}>
           <div>
             <span className={styles.eyebrow}>تصحيح تاريخي صريح</span>
             <h1>تصحيح بيانات شهر سابق</h1>
             <p>هذا المسار مخصص فقط لشهر أقدم من الشهر الحالي للبزنس.</p>
           </div>
-          <Link className={styles.backLink} href={`/businesses/${businessId}/monthly`}>
-            العودة للإدخال الشهري
-          </Link>
         </div>
         <form className={styles.monthPicker}>
           <label>
@@ -135,14 +146,12 @@ export default async function HistoricalCorrectionPage({
   if (periodResult.error || streamsResult.error || expensesResult.error || customerCountsResult.dataLoadError) {
     return (
       <div className={styles.page}>
+        {correctionNavigation}
         <div className={styles.headingRow}>
           <div>
             <span className={styles.eyebrow}>تصحيح تاريخي صريح</span>
             <h1>تصحيح بيانات شهر سابق</h1>
           </div>
-          <Link className={styles.backLink} href={`/businesses/${businessId}/monthly`}>
-            العودة للإدخال الشهري
-          </Link>
         </div>
         <div className={styles.errorStatus}>تعذر تحميل بيانات الشهر كاملة. تم إيقاف التصحيح حتى لا يتم حفظ بيانات ناقصة.</div>
       </div>
@@ -152,15 +161,13 @@ export default async function HistoricalCorrectionPage({
   if (!period) {
     return (
       <div className={styles.page}>
+        {correctionNavigation}
         <div className={styles.headingRow}>
           <div>
             <span className={styles.eyebrow}>تصحيح تاريخي صريح</span>
             <h1>تصحيح بيانات شهر سابق</h1>
-            <p>{business.name} · {monthLabel(selectedMonth.monthStart)}</p>
+            <p>{business.name} · {selectedMonthLabel}</p>
           </div>
-          <Link className={styles.backLink} href={`/businesses/${businessId}/monthly`}>
-            العودة للإدخال الشهري
-          </Link>
         </div>
         <form className={styles.monthPicker}>
           <label>
@@ -210,6 +217,7 @@ export default async function HistoricalCorrectionPage({
   if (revenueResult.error || expenseResult.error) {
     return (
       <div className={styles.page}>
+        {correctionNavigation}
         <div className={styles.errorStatus}>تعذر تحميل تفاصيل الشهر كاملة. لم يتم فتح نموذج التصحيح.</div>
       </div>
     );
@@ -276,7 +284,7 @@ export default async function HistoricalCorrectionPage({
         <div>
           <span className={styles.eyebrow}>تصحيح تاريخي صريح</span>
           <h1>تصحيح بيانات شهر سابق</h1>
-          <p>{business.name} · {monthLabel(selectedMonth.monthStart)}</p>
+          <p>{business.name} · {selectedMonthLabel}</p>
         </div>
         <Link className={styles.backLink} href={`/businesses/${businessId}/monthly?month=${selectedMonth.monthKey}`}>
           العودة لعرض الشهر
@@ -305,7 +313,7 @@ export default async function HistoricalCorrectionPage({
       <HistoricalCorrectionForm
         businessId={businessId}
         monthKey={selectedMonth.monthKey}
-        monthLabel={monthLabel(selectedMonth.monthStart)}
+        monthLabel={selectedMonthLabel}
         currency={business.base_currency}
         revenueRows={revenueRows}
         expenseRows={expenseRows}
