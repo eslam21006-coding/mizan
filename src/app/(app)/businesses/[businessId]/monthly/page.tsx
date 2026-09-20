@@ -11,7 +11,7 @@ import {
   storedExpenseValueForDisplay,
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
-import { parseReturnOrigin } from "@/lib/return-origin";
+import { parseMonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
 import { copyPreviousMonthExpenses, saveMonthlyActuals } from "./actions";
@@ -68,8 +68,10 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
     parseMonthKey(query.month) ?? parseMonthKey(currentMonthKeyForTimeZone(business.timezone));
   if (!selectedMonth) notFound();
 
-  const parsedOrigin = parseReturnOrigin({ origin: query.origin });
-  const returnOrigin = parsedOrigin?.origin === "customer-profitability" ? parsedOrigin : null;
+  const returnOrigin = parseMonthlyExternalReturnOrigin({
+    origin: query.origin,
+    month: query.month,
+  });
 
   const [periodResult, streamsResult, expensesResult, customerCountsResult] = await Promise.all([
     supabase
@@ -187,6 +189,11 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
   const canEditMonth = canManage && !dataLoadError;
   const previousMonth = shiftMonthKey(selectedMonth.monthKey, -1);
   const nextMonth = shiftMonthKey(selectedMonth.monthKey, 1);
+  const monthlyHref = (monthKey: string) => {
+    const queryParams = new URLSearchParams({ month: monthKey });
+    if (returnOrigin) queryParams.set("origin", returnOrigin.origin);
+    return `/businesses/${businessId}/monthly?${queryParams.toString()}`;
+  };
   const monthLabel = new Intl.DateTimeFormat("ar-EG", {
     month: "long",
     year: "numeric",
@@ -243,11 +250,19 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
 
       {returnOrigin && (
         <ReturnContextBanner
-          purpose="بيانات مطلوبة في ربحية العميل"
+          purpose={
+            returnOrigin.origin === "customer-profitability"
+              ? "بيانات مطلوبة في ربحية العميل"
+              : "بيانات مطلوبة في تحليل العملاء"
+          }
           origin={returnOrigin}
           context={{ businessId }}
-          returnLabel="العودة إلى ربحية العميل"
-          ariaLabel="العودة إلى ربحية العميل"
+          returnLabel={
+            returnOrigin.origin === "customer-profitability"
+              ? "العودة إلى ربحية العميل"
+              : "العودة إلى العملاء"
+          }
+          ariaLabel="سياق العودة من الإدخال الشهري"
         />
       )}
 
@@ -255,7 +270,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
         {previousMonth ? (
           <Link
             className={styles.monthNavButton}
-            href={`/businesses/${businessId}/monthly?month=${previousMonth}`}
+            href={monthlyHref(previousMonth)}
           >
             <span aria-hidden="true">→</span>
             <span>الشهر السابق</span>
@@ -273,7 +288,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
         {nextMonth ? (
           <Link
             className={styles.monthNavButton}
-            href={`/businesses/${businessId}/monthly?month=${nextMonth}`}
+            href={monthlyHref(nextMonth)}
           >
             <span>الشهر التالي</span>
             <span aria-hidden="true">←</span>
@@ -284,6 +299,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
       </section>
 
       <form key={`month-picker-${selectedMonth.monthKey}`} className={styles.monthPicker}>
+        {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
         <label>
           <span>انتقل مباشرة إلى شهر</span>
           <input type="month" name="month" defaultValue={selectedMonth.monthKey} aria-label="الشهر" />
@@ -339,6 +355,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
               <form action={copyPreviousMonthExpenses}>
                 <input type="hidden" name="business_id" value={businessId} />
                 <input type="hidden" name="month" value={selectedMonth.monthKey} />
+                {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
                 <button type="submit" className={styles.secondaryButton}>
                   نسخ مصروفات الشهر السابق
                 </button>
