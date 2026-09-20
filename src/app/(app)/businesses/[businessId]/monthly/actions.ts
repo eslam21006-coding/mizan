@@ -19,9 +19,13 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /** Reads only a safe cross-module origin from a Monthly form submission. */
 function parseMonthlyReturnOrigin(formData: FormData): MonthlyExternalReturnOrigin | null {
-  const rawOrigin = formData.get("origin");
-  const rawReturnMonth = formData.get("return_month");
-  const rawMonth = rawReturnMonth ?? formData.get("month");
+  const origins = formData.getAll("origin");
+  const returnMonths = formData.getAll("return_month");
+  const months = formData.getAll("month");
+  if (origins.length !== 1 || returnMonths.length > 1 || months.length > 1) return null;
+
+  const rawOrigin = origins[0];
+  const rawMonth = returnMonths.length === 1 ? returnMonths[0] : months[0];
   if (typeof rawOrigin !== "string" || typeof rawMonth !== "string") return null;
   return parseMonthlyExternalReturnOrigin({ origin: rawOrigin, month: rawMonth });
 }
