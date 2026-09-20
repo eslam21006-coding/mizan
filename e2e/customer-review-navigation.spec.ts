@@ -178,7 +178,7 @@ test.describe("Customer Review navigation", () => {
     await expect(returnBanner).toBeVisible();
     await expect(returnBanner.getByRole("link", { name: "العودة إلى ربحية العميل" })).toHaveAttribute(
       "href",
-      `/businesses/${reviewBusinessId}/customers?view=profitability`,
+      `/businesses/${reviewBusinessId}/customers?view=profitability&month=2026-02`,
     );
     const retryLink = page.getByRole("alert", { name: "تعذر تحميل بيانات المراجعة" }).getByRole("link", {
       name: "إعادة المحاولة",
