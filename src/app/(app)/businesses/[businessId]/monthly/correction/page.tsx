@@ -75,7 +75,7 @@ export default async function HistoricalCorrectionPage({
     query.status && !["corrected", "historical-required"].includes(query.status),
   );
   const isHistorical = selectedMonth.monthKey < currentMonthKey;
-  const selectedMonthLabel = selectedMonthLabel;
+  const selectedMonthLabel = monthLabel(selectedMonth.monthStart);
   const correctionNavigation = (
     <HistoricalCorrectionNavigation
       businessId={businessId}
@@ -90,7 +90,6 @@ export default async function HistoricalCorrectionPage({
   if (!isHistorical) {
     return (
       <div className={styles.page}>
-      {correctionNavigation}
         {correctionNavigation}
         <div className={styles.headingRow}>
           <div>
