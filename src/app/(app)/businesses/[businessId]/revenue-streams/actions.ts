@@ -18,14 +18,37 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 function parseRevenueSetupReturnOrigin(formData: FormData): SetupReturnOrigin | null {
   const origins = formData.getAll("origin");
   const months = formData.getAll("month");
+  const upstreamOrigins = formData.getAll("upstream_origin");
+  const upstreamMonths = formData.getAll("upstream_month");
 
-  if (origins.length !== 1 || months.length !== 1) return null;
+  if (
+    origins.length !== 1 ||
+    months.length !== 1 ||
+    upstreamOrigins.length > 1 ||
+    upstreamMonths.length > 1
+  ) {
+    return null;
+  }
 
   const origin = origins[0];
   const month = months[0];
-  if (typeof origin !== "string" || typeof month !== "string") return null;
+  const upstreamOrigin = upstreamOrigins[0];
+  const upstreamMonth = upstreamMonths[0];
+  if (
+    typeof origin !== "string" ||
+    typeof month !== "string" ||
+    (upstreamOrigin !== undefined && typeof upstreamOrigin !== "string") ||
+    (upstreamMonth !== undefined && typeof upstreamMonth !== "string")
+  ) {
+    return null;
+  }
 
-  return parseSetupReturnOrigin({ origin, month });
+  return parseSetupReturnOrigin({
+    origin,
+    month,
+    upstream_origin: upstreamOrigin,
+    upstream_month: upstreamMonth,
+  });
 }
 
 function revenueStreamsPath(
@@ -37,6 +60,15 @@ function revenueStreamsPath(
   if (returnOrigin) {
     query.set("origin", returnOrigin.origin);
     query.set("month", returnOrigin.month);
+    if (returnOrigin.upstream) {
+      query.set("upstream_origin", returnOrigin.upstream.origin);
+      if (
+        returnOrigin.upstream.origin === "customer-profitability" &&
+        returnOrigin.upstream.month
+      ) {
+        query.set("upstream_month", returnOrigin.upstream.month);
+      }
+    }
   }
   return `/businesses/${businessId}/revenue-streams?${query.toString()}`;
 }
