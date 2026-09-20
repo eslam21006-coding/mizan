@@ -1,0 +1,57 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const monthlySource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/monthly/page.tsx",
+  "utf8",
+);
+const stateSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/monthly/historical-month-state.tsx",
+  "utf8",
+);
+const correctionPageSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/monthly/correction/page.tsx",
+  "utf8",
+);
+const correctionNavigationSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/monthly/correction/historical-correction-navigation.tsx",
+  "utf8",
+);
+const correctionFormSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/monthly/correction/historical-correction-form.tsx",
+  "utf8",
+);
+
+test("N32 treats only already-saved past months as historical read-only state", () => {
+  assert.match(monthlySource, /const currentMonthKey = currentMonthKeyForTimeZone/);
+  assert.match(monthlySource, /const isHistorical = selectedMonth\.monthKey < currentMonthKey/);
+  assert.match(monthlySource, /const isSavedHistorical = isHistorical && Boolean\(period\)/);
+  assert.match(
+    monthlySource,
+    /const canEditMonth = canManage && !dataLoadError && !isSavedHistorical/,
+  );
+  assert.match(monthlySource, /canManage && !isSavedHistorical \? \(/);
+  assert.match(monthlySource, /<HistoricalMonthState/);
+
+  assert.match(stateSource, /شهر تاريخي/);
+  assert.match(stateSource, /بدء تصحيح تاريخي/);
+  assert.match(stateSource, /monthly\/correction\?month=/);
+});
+
+test("N33 correction navigation returns to the exact historical Monthly month", () => {
+  assert.match(correctionPageSource, /<HistoricalCorrectionNavigation/);
+  assert.match(correctionNavigationSource, /<Breadcrumb items=\{breadcrumbItems\}/);
+  assert.match(correctionNavigationSource, /route: "business-monthly" as const/);
+  assert.match(correctionNavigationSource, /month: monthKey/);
+  assert.match(correctionNavigationSource, /العودة إلى/);
+  assert.doesNotMatch(correctionPageSource, /className=\{styles\.backLink\}/);
+});
+
+test("N33 keeps correction reason mandatory and the explicit correction save action", () => {
+  assert.match(correctionFormSource, /name="correction_reason"/);
+  assert.match(correctionFormSource, /maxLength=\{500\}/);
+  assert.match(correctionFormSource, /required/);
+  assert.match(correctionFormSource, /حفظ التصحيح التاريخي/);
+  assert.match(correctionFormSource, /correctHistoricalMonthlyActuals/);
+});
