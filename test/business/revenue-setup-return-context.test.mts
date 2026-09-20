@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { parseSetupReturnOrigin } from "../../src/lib/setup-return-origin.ts";
+import { parseReturnOrigin } from "../../src/lib/return-origin.ts";
 
+const setupOriginSource = readFileSync("src/lib/setup-return-origin.ts", "utf8");
 const monthlySource = readFileSync(
   "src/app/(app)/businesses/[businessId]/monthly/page.tsx",
   "utf8",
@@ -16,31 +17,28 @@ const revenueActionsSource = readFileSync(
   "utf8",
 );
 
-test("N26 accepts only an exact Monthly editor return origin", () => {
+test("N26 setup parser is constrained to an exact Monthly editor origin", () => {
   assert.deepEqual(
-    parseSetupReturnOrigin({ origin: "monthly-editor", month: "2026-09" }),
+    parseReturnOrigin({ origin: "monthly-editor", month: "2026-09" }),
     { origin: "monthly-editor", month: "2026-09" },
   );
+  assert.equal(parseReturnOrigin({ origin: "monthly-editor" }), null);
   assert.equal(
-    parseSetupReturnOrigin({ origin: "customer-overview", month: "2026-09" }),
+    parseReturnOrigin({ origin: "monthly-editor", month: "2026-13" }),
     null,
   );
   assert.equal(
-    parseSetupReturnOrigin({ origin: "customer-profitability", month: "2026-09" }),
-    null,
-  );
-  assert.equal(parseSetupReturnOrigin({ origin: "monthly-editor" }), null);
-  assert.equal(
-    parseSetupReturnOrigin({ origin: "monthly-editor", month: "2026-13" }),
-    null,
-  );
-  assert.equal(
-    parseSetupReturnOrigin({
+    parseReturnOrigin({
       origin: ["monthly-editor", "monthly-editor"],
       month: "2026-09",
     }),
     null,
   );
+  assert.match(
+    setupOriginSource,
+    /parsed\?\.origin === "monthly-editor" \? parsed : null/,
+  );
+  assert.doesNotMatch(setupOriginSource, /customer-overview|customer-profitability/);
 });
 
 test("N26 Monthly opens Revenue Sources with the selected month as structured origin", () => {
