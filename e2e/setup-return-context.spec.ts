@@ -83,3 +83,45 @@ test.describe("N26 Revenue Sources setup return context", () => {
     expect(errors).toEqual([]);
   });
 });
+
+
+test.describe("N27 Expenses setup return context", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
+  test("returns to the exact originating Monthly month in Arabic RTL", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(
+      `${fixturePath}?target=expenses&origin=monthly-editor&month=2026-09`,
+    );
+
+    await expect(page.locator("html")).toHaveAttribute("lang", "ar");
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect(
+      page.getByRole("region", { name: "سياق العودة من إعداد المصروفات" }),
+    ).toBeVisible();
+
+    const returnLink = page.getByRole("link", { name: "العودة إلى الإدخال الشهري" });
+    await expect(returnLink).toHaveAttribute(
+      "href",
+      `/businesses/${businessId}/monthly?month=2026-09`,
+    );
+
+    await page.reload();
+    await expect(returnLink).toHaveAttribute(
+      "href",
+      `/businesses/${businessId}/monthly?month=2026-09`,
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    const dimensions = await page.locator("html").evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+    await returnLink.focus();
+    await expect(returnLink).toBeFocused();
+
+    expect(errors).toEqual([]);
+  });
+});
