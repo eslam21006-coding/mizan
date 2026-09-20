@@ -91,6 +91,19 @@ test.describe("Founder customer UX: actionable incomplete states and Arabic RTL"
       "/businesses/00000000-0000-4000-8000-000000000025/customers/review?origin=customer-profitability",
     );
 
+    await page.goto("/auth/e2e-lifetime-economics?month=2026-07");
+    const monthAwareTable = page.getByRole("table", { name: "ربحية العملاء حسب شهر أول شراء" });
+    const monthAwareRow = monthAwareTable.getByRole("row").filter({ hasText: "2026-08-01" });
+    await monthAwareRow.getByText("عرض طريقة الحساب").click();
+    await expect(
+      monthAwareRow
+        .locator("details")
+        .getByRole("link", { name: "مراجعة ما ينقص وإكماله" }),
+    ).toHaveAttribute(
+      "href",
+      "/businesses/00000000-0000-4000-8000-000000000025/customers/review?origin=customer-profitability&month=2026-07",
+    );
+
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
       .toBe(true);
