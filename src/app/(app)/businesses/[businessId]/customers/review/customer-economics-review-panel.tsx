@@ -361,7 +361,12 @@ export function CustomerEconomicsReviewPanel({
                 >
                   <input type="hidden" name="business_id" value={businessId} />
                   {returnOrigin?.origin === "customer-profitability" && (
-                    <input type="hidden" name="origin" value={returnOrigin.origin} />
+                    <>
+                      <input type="hidden" name="origin" value={returnOrigin.origin} />
+                      {returnOrigin.month && (
+                        <input type="hidden" name="month" value={returnOrigin.month} />
+                      )}
+                    </>
                   )}
                   <div className={styles.legacyCardHeader}>
                     <h3>{legacyTypeLabel(costType)}</h3>
