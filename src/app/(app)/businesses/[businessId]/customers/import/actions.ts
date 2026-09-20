@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAuthContext } from "@/lib/auth/context";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import { parseReturnOrigin } from "@/lib/return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
 
 /** Updates the business history-trust state through the database-authoritative owner/admin RPC. */
 export async function setTransactionHistoryCompletenessAction(formData: FormData) {
@@ -16,9 +18,18 @@ export async function setTransactionHistoryCompletenessAction(formData: FormData
     redirect("/customers?status=invalid-history-state");
   }
 
+  const originValue = formData.get("origin");
+  const monthValue = formData.get("month");
+  const returnOrigin = parseReturnOrigin({
+    origin: typeof originValue === "string" && originValue ? originValue : undefined,
+    month: typeof monthValue === "string" && monthValue ? monthValue : undefined,
+  });
+  const statusHref = (historyStatus: string) =>
+    buildTransactionImportHref(businessId, returnOrigin, historyStatus);
+
   const historyComplete = requestedState === "true";
   if (historyComplete && formData.get("history_confirmation") !== "confirmed") {
-    redirect(`/businesses/${businessId}/customers/import?historyStatus=confirmation-required`);
+    redirect(statusHref("confirmation-required"));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -28,11 +39,11 @@ export async function setTransactionHistoryCompletenessAction(formData: FormData
   });
 
   if (error?.code === "MZ001") {
-    redirect(`/businesses/${businessId}/customers/import?historyStatus=transactions-required`);
+    redirect(statusHref("transactions-required"));
   }
   if (error?.code === "42501") redirect("/access-denied");
   if (error || data !== true) {
-    redirect(`/businesses/${businessId}/customers/import?historyStatus=update-failed`);
+    redirect(statusHref("update-failed"));
   }
 
   revalidatePath(`/businesses/${businessId}/customers/import`);
@@ -40,7 +51,5 @@ export async function setTransactionHistoryCompletenessAction(formData: FormData
   revalidatePath("/customers");
   revalidatePath("/");
 
-  redirect(
-    `/businesses/${businessId}/customers/import?historyStatus=${historyComplete ? "complete" : "incomplete"}`,
-  );
+  redirect(statusHref(historyComplete ? "complete" : "incomplete"));
 }
