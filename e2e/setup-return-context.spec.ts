@@ -41,25 +41,46 @@ test.describe("N26 Revenue Sources setup return context", () => {
     expect(errors).toEqual([]);
   });
 
-  test("fails closed for invalid or duplicated return metadata", async ({ page }) => {
+  test("restores the upstream profitability month after the setup detour", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(
+      `${fixturePath}?origin=monthly-editor&month=2026-09&upstream_origin=customer-profitability&upstream_month=2026-07`,
+    );
+
+    const returnLink = page.getByRole("link", { name: "العودة إلى الإدخال الشهري" });
+    await expect(returnLink).toHaveAttribute(
+      "href",
+      `/businesses/${businessId}/monthly?month=2026-09&origin=customer-profitability&return_month=2026-07`,
+    );
+
+    await page.reload();
+    await expect(returnLink).toHaveAttribute(
+      "href",
+      `/businesses/${businessId}/monthly?month=2026-09&origin=customer-profitability&return_month=2026-07`,
+    );
+
+    expect(errors).toEqual([]);
+  });
+
+  test("fails closed for invalid, duplicated, or malformed nested return metadata", async ({
+    page,
+  }) => {
     const errors = captureBrowserErrors(page);
 
-    await page.goto(`${fixturePath}?origin=monthly-editor&month=2026-13`);
-    await expect(
-      page.getByRole("region", { name: "سياق العودة من إعداد مصادر الإيراد" }),
-    ).toHaveCount(0);
-
-    await page.goto(
-      `${fixturePath}?origin=monthly-editor&origin=monthly-editor&month=2026-09`,
-    );
-    await expect(
-      page.getByRole("region", { name: "سياق العودة من إعداد مصادر الإيراد" }),
-    ).toHaveCount(0);
-
-    await page.goto(`${fixturePath}?origin=https%3A%2F%2Fevil.example&month=2026-09`);
-    await expect(
-      page.getByRole("region", { name: "سياق العودة من إعداد مصادر الإيراد" }),
-    ).toHaveCount(0);
+    for (const query of [
+      "origin=monthly-editor&month=2026-13",
+      "origin=monthly-editor&origin=monthly-editor&month=2026-09",
+      "origin=https%3A%2F%2Fevil.example&month=2026-09",
+      "origin=monthly-editor&month=2026-09&upstream_origin=customer-profitability&upstream_origin=customer-overview",
+      "origin=monthly-editor&month=2026-09&upstream_origin=customer-profitability&upstream_month=2026-13",
+      "origin=monthly-editor&month=2026-09&upstream_month=2026-07",
+      "origin=monthly-editor&month=2026-09&upstream_origin=customer-overview&upstream_month=2026-07",
+    ]) {
+      await page.goto(`${fixturePath}?${query}`);
+      await expect(
+        page.getByRole("region", { name: "سياق العودة من إعداد مصادر الإيراد" }),
+      ).toHaveCount(0);
+    }
 
     expect(errors).toEqual([]);
   });
@@ -67,7 +88,9 @@ test.describe("N26 Revenue Sources setup return context", () => {
   test("keeps the return context usable at 390px without overflow", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.goto(`${fixturePath}?origin=monthly-editor&month=2026-09`);
+    await page.goto(
+      `${fixturePath}?origin=monthly-editor&month=2026-09&upstream_origin=customer-profitability&upstream_month=2026-07`,
+    );
 
     const dimensions = await page.locator("html").evaluate((element) => ({
       clientWidth: element.clientWidth,
@@ -84,15 +107,14 @@ test.describe("N26 Revenue Sources setup return context", () => {
   });
 });
 
-
 test.describe("N27 Expenses setup return context", () => {
   test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
 
-  test("returns to the exact originating Monthly month in Arabic RTL", async ({ page }) => {
+  test("restores Customer Overview through the exact originating Monthly month", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(
-      `${fixturePath}?target=expenses&origin=monthly-editor&month=2026-09`,
+      `${fixturePath}?target=expenses&origin=monthly-editor&month=2026-09&upstream_origin=customer-overview`,
     );
 
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
@@ -104,13 +126,13 @@ test.describe("N27 Expenses setup return context", () => {
     const returnLink = page.getByRole("link", { name: "العودة إلى الإدخال الشهري" });
     await expect(returnLink).toHaveAttribute(
       "href",
-      `/businesses/${businessId}/monthly?month=2026-09`,
+      `/businesses/${businessId}/monthly?month=2026-09&origin=customer-overview`,
     );
 
     await page.reload();
     await expect(returnLink).toHaveAttribute(
       "href",
-      `/businesses/${businessId}/monthly?month=2026-09`,
+      `/businesses/${businessId}/monthly?month=2026-09&origin=customer-overview`,
     );
 
     await page.setViewportSize({ width: 390, height: 844 });
