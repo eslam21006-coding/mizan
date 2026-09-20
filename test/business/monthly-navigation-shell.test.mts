@@ -13,7 +13,7 @@ const monthlyShellSource = readFileSync(
 
 test("Monthly uses the shared deterministic hierarchy instead of a generic Businesses back link", () => {
   assert.match(monthlyPageSource, /<MonthlyNavigationShell/);
-  assert.doesNotMatch(monthlyPageSource, /href="\/businesses"[\s\S]*العودة للبزنسات/);
+  assert.doesNotMatch(monthlyPageSource, /href=\{?["\']\/businesses["\']\}?/);
   assert.match(monthlyShellSource, /<Breadcrumb items=\{breadcrumbItems\}/);
   assert.match(monthlyShellSource, /label="العودة إلى البزنس"/);
   assert.match(monthlyShellSource, /route: "business-overview", businessId/);
