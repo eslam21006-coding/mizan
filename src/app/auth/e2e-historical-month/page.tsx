@@ -20,7 +20,7 @@ export default function HistoricalMonthFixturePage() {
 
   return (
     <AppShell {...fixtureShellProps}>
-      <main className="page-stack" aria-label="اختبار الشهر التاريخي">
+      <section className="page-stack" aria-label="اختبار الشهر التاريخي">
         <HistoricalCorrectionNavigation
           businessId={businessId}
           businessName="بزنس الاختبار"
@@ -36,7 +36,7 @@ export default function HistoricalMonthFixturePage() {
           monthLabel="يوليو ٢٠٢٦"
           canManage
         />
-      </main>
+      </section>
     </AppShell>
   );
 }
