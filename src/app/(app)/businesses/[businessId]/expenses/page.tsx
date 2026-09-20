@@ -23,6 +23,8 @@ type ExpensesPageProps = {
     status?: string;
     origin?: string | string[];
     month?: string | string[];
+    upstream_origin?: string | string[];
+    upstream_month?: string | string[];
   }>;
 };
 
@@ -83,6 +85,8 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
   const returnOrigin = parseSetupReturnOrigin({
     origin: query.origin,
     month: query.month,
+    upstream_origin: query.upstream_origin,
+    upstream_month: query.upstream_month,
   });
   const statusMessage = query.status ? STATUS_MESSAGES[query.status] : null;
   const isErrorStatus =
@@ -166,6 +170,21 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
               <>
                 <input type="hidden" name="origin" value={returnOrigin.origin} />
                 <input type="hidden" name="month" value={returnOrigin.month} />
+                {returnOrigin.upstream && (
+                  <input
+                    type="hidden"
+                    name="upstream_origin"
+                    value={returnOrigin.upstream.origin}
+                  />
+                )}
+                {returnOrigin.upstream?.origin === "customer-profitability" &&
+                  returnOrigin.upstream.month && (
+                    <input
+                      type="hidden"
+                      name="upstream_month"
+                      value={returnOrigin.upstream.month}
+                    />
+                  )}
               </>
             )}
 
@@ -249,6 +268,21 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
                         <>
                           <input type="hidden" name="origin" value={returnOrigin.origin} />
                           <input type="hidden" name="month" value={returnOrigin.month} />
+                          {returnOrigin.upstream && (
+                            <input
+                              type="hidden"
+                              name="upstream_origin"
+                              value={returnOrigin.upstream.origin}
+                            />
+                          )}
+                          {returnOrigin.upstream?.origin === "customer-profitability" &&
+                            returnOrigin.upstream.month && (
+                              <input
+                                type="hidden"
+                                name="upstream_month"
+                                value={returnOrigin.upstream.month}
+                              />
+                            )}
                         </>
                       )}
 
@@ -303,6 +337,21 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
                           <>
                             <input type="hidden" name="origin" value={returnOrigin.origin} />
                             <input type="hidden" name="month" value={returnOrigin.month} />
+                            {returnOrigin.upstream && (
+                              <input
+                                type="hidden"
+                                name="upstream_origin"
+                                value={returnOrigin.upstream.origin}
+                              />
+                            )}
+                            {returnOrigin.upstream?.origin === "customer-profitability" &&
+                              returnOrigin.upstream.month && (
+                                <input
+                                  type="hidden"
+                                  name="upstream_month"
+                                  value={returnOrigin.upstream.month}
+                                />
+                              )}
                           </>
                         )}
 
