@@ -1,5 +1,5 @@
-import { resolveNavigationDestination } from "./navigation-hierarchy";
-import { resolveReturnOrigin, type ReturnOriginMetadata } from "./return-origin";
+import { resolveNavigationDestination } from "./navigation-hierarchy.ts";
+import { resolveReturnOrigin, type ReturnOriginMetadata } from "./return-origin.ts";
 
 export type TransactionImportReturnAction = {
   href: string;
