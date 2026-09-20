@@ -52,6 +52,7 @@ export function RevenueStreamDrawerLauncher({
   const dialogRef = useRef<HTMLDialogElement>(null);
   const openerRef = useRef<HTMLButtonElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
   const generatedId = useId().replaceAll(":", "");
   const dialogId = `revenue-stream-drawer-${generatedId}`;
   const titleId = `${dialogId}-title`;
@@ -66,6 +67,11 @@ export function RevenueStreamDrawerLauncher({
 
   function restoreFocus() {
     queueMicrotask(() => openerRef.current?.focus());
+  }
+
+  function handleClose() {
+    formRef.current?.reset();
+    restoreFocus();
   }
 
   const title = isCreate ? "إضافة مصدر إيراد جديد" : `تعديل ${stream?.name ?? "مصدر الإيراد"}`;
@@ -90,7 +96,7 @@ export function RevenueStreamDrawerLauncher({
         id={dialogId}
         className={styles.drawer}
         aria-labelledby={titleId}
-        onClose={restoreFocus}
+        onClose={handleClose}
       >
         <div className={styles.drawerShell}>
           <header className={styles.drawerHeader}>
@@ -115,6 +121,7 @@ export function RevenueStreamDrawerLauncher({
 
           <div className={styles.drawerBody}>
             <form
+              ref={formRef}
               action={isCreate ? createRevenueStream : updateRevenueStream}
               className={styles.form}
             >
