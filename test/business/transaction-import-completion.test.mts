@@ -79,7 +79,7 @@ test("completion summary parser fails closed on malformed or internally impossib
   );
 });
 
-test("import completion UX verifies persistence and links directly to Customers & LTV", () => {
+test("import completion UX verifies persistence and uses the safe return-action contract", () => {
   const importer = fs.readFileSync(
     "src/app/(app)/businesses/[businessId]/customers/import/transaction-import-validator.tsx",
     "utf8",
@@ -98,6 +98,14 @@ test("import completion UX verifies persistence and links directly to Customers 
   assert.match(completionCard, /لم تتم إضافة معاملات جديدة/);
   assert.match(completionCard, /صفوف تفاصيل تم تجاهلها/);
   assert.match(completionCard, /صفوف غير صالحة/);
-  assert.match(completionCard, /عرض تحليل العملاء/);
-  assert.match(completionCard, /\/businesses\/\$\{businessId\}\/customers/);
+  assert.match(completionCard, /transactionImportReturnAction/);
+  assert.match(completionCard, /nextAction\.href/);
+  assert.match(completionCard, /nextAction\.label/);
+
+  const navigation = fs.readFileSync(
+    "src/lib/transaction-import-navigation.ts",
+    "utf8",
+  );
+  assert.match(navigation, /عرض تحليل العملاء/);
+  assert.match(navigation, /route: "business-customers"/);
 });

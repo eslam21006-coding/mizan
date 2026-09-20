@@ -6,13 +6,14 @@ import styles from "./customer-data-sources-drawer.module.css";
 
 type CustomerDataSourcesDrawerProps = {
   businessId: string;
+  importHref: string;
 };
 
 const DRAWER_ID = "customer-data-sources-drawer";
 const DRAWER_TITLE_ID = "customer-data-sources-title";
 
 /** Keeps Customer data-source guidance in context instead of expanding the page inline. */
-export function CustomerDataSourcesDrawer({ businessId }: CustomerDataSourcesDrawerProps) {
+export function CustomerDataSourcesDrawer({ businessId, importHref }: CustomerDataSourcesDrawerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   /** Opens the Data Sources dialog as a modal drawer with native focus management. */
@@ -71,7 +72,7 @@ export function CustomerDataSourcesDrawer({ businessId }: CustomerDataSourcesDra
               </div>
               <h3>استيراد التحصيلات والاسترجاعات</h3>
               <p>سجل بوابة الدفع هو المصدر الأساسي لأول شراء وصافي التحصيل وقيمة العميل المحققة.</p>
-              <Link className={styles.workflowLink} href={`/businesses/${businessId}/customers/import`}>
+              <Link className={styles.workflowLink} href={importHref}>
                 فتح الاستيراد
               </Link>
             </article>

@@ -1,4 +1,8 @@
 import type { TransactionImportCompletionSummary } from "@/lib/business/transaction-import-completion";
+import {
+  transactionImportReturnAction,
+  type TransactionImportReturnAction,
+} from "@/lib/transaction-import-navigation";
 import styles from "./transaction-import-completion-card.module.css";
 
 type TransactionImportCompletionCardProps = {
@@ -9,6 +13,7 @@ type TransactionImportCompletionCardProps = {
   ignoredDetailRows: number;
   invalidRows: number;
   summary: TransactionImportCompletionSummary;
+  returnAction?: TransactionImportReturnAction | null;
 };
 
 function dateRange(firstDate: string | null, lastDate: string | null) {
@@ -25,8 +30,10 @@ export function TransactionImportCompletionCard({
   ignoredDetailRows,
   invalidRows,
   summary,
+  returnAction,
 }: TransactionImportCompletionCardProps) {
   const hasNewRows = insertedCount > 0;
+  const nextAction = returnAction ?? transactionImportReturnAction(null, businessId);
 
   return (
     <section
@@ -111,12 +118,10 @@ export function TransactionImportCompletionCard({
       <div className={styles.nextStep}>
         <div>
           <strong>الخطوة التالية</strong>
-          <p>
-            افتح تحليل العملاء؛ العملاء و Cohorts و Observed LTV تُقرأ من سجل المعاملات المحفوظ فعلًا.
-          </p>
+          <p>{nextAction.description}</p>
         </div>
-        <a className={styles.primaryAction} href={`/businesses/${businessId}/customers`}>
-          عرض تحليل العملاء
+        <a className={styles.primaryAction} href={nextAction.href}>
+          {nextAction.label}
         </a>
       </div>
     </section>

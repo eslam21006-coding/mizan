@@ -13,6 +13,7 @@ import {
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { parseReturnOrigin } from "@/lib/return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
 import { copyPreviousMonthExpenses, saveMonthlyActuals } from "./actions";
 import trustStyles from "./customer-history-trust.module.css";
 import {
@@ -213,7 +214,10 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
       {canManage && (
         <Link
           className={trustStyles.trustLink}
-          href={`/businesses/${businessId}/customers/import`}
+          href={buildTransactionImportHref(businessId, {
+            origin: "monthly-editor",
+            month: selectedMonth.monthKey,
+          })}
         >
           مراجعة وتأكيد اكتمال سجل المعاملات
         </Link>

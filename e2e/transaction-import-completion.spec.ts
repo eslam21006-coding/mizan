@@ -13,6 +13,25 @@ test.describe("verified transaction import completion", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 
+    const breadcrumb = page.getByRole("navigation", { name: "مسار استيراد معاملات العملاء" });
+    await expect(breadcrumb.getByRole("link", { name: "البزنسات" })).toHaveAttribute("href", "/businesses");
+    await expect(breadcrumb.getByRole("link", { name: "Fixture Business" })).toHaveAttribute(
+      "href",
+      "/?business=fixture-business",
+    );
+    await expect(breadcrumb.getByRole("link", { name: "العملاء وقيمة العميل" })).toHaveAttribute(
+      "href",
+      "/businesses/fixture-business/customers",
+    );
+    await expect(breadcrumb.getByText("استيراد المعاملات", { exact: true })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(page.getByRole("link", { name: "إلغاء الاستيراد" })).toHaveAttribute(
+      "href",
+      "/businesses/fixture-business/customers",
+    );
+
     const completion = page.getByRole("status");
     await expect(completion.getByRole("heading", { name: "تم حفظ معاملاتك والتحقق منها" })).toBeVisible();
     await expect(completion).toContainText("تحقق ميزان من وجود 9 معاملة جديدة في قاعدة البيانات");
@@ -38,6 +57,50 @@ test.describe("verified transaction import completion", () => {
       .toBe(true);
     await expect(customerAnalysisLink).toBeVisible();
     expect(browserErrors).toEqual([]);
+  });
+
+  test("returns to an allow-listed origin and rejects arbitrary return URLs", async ({ page }) => {
+    await page.goto(
+      "/auth/e2e-transaction-import-completion?origin=monthly-editor&month=2026-08",
+    );
+
+    const exactMonthlyHref = "/businesses/fixture-business/monthly?month=2026-08";
+    await expect(page.getByRole("link", { name: "إلغاء الاستيراد" })).toHaveAttribute(
+      "href",
+      exactMonthlyHref,
+    );
+    await expect(page.getByRole("link", { name: "العودة إلى الإدخال الشهري" })).toHaveAttribute(
+      "href",
+      exactMonthlyHref,
+    );
+    await expect(page.getByText("ارجع إلى نفس شهر الإدخال الشهري بعد تحديث سجل المعاملات.")).toBeVisible();
+
+    await page.goto(
+      "/auth/e2e-transaction-import-completion?origin=customer-profitability&month=2026-07",
+    );
+    const profitabilityHref =
+      "/businesses/fixture-business/customers?view=profitability&month=2026-07";
+    await expect(page.getByRole("link", { name: "إلغاء الاستيراد" })).toHaveAttribute(
+      "href",
+      profitabilityHref,
+    );
+    await expect(page.getByRole("link", { name: "العودة إلى ربحية العميل" })).toHaveAttribute(
+      "href",
+      profitabilityHref,
+    );
+
+    await page.goto(
+      "/auth/e2e-transaction-import-completion?origin=https%3A%2F%2Fevil.example&month=2026-08",
+    );
+    await expect(page.getByRole("link", { name: "إلغاء الاستيراد" })).toHaveAttribute(
+      "href",
+      "/businesses/fixture-business/customers",
+    );
+    await expect(page.getByRole("link", { name: "عرض تحليل العملاء" })).toHaveAttribute(
+      "href",
+      "/businesses/fixture-business/customers",
+    );
+    await expect(page.locator('a[href*="evil.example"]')).toHaveCount(0);
   });
 
   test("duplicate-only completion never claims new transactions were saved", async ({ page }) => {

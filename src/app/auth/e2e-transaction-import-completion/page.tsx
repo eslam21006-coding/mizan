@@ -1,6 +1,9 @@
 import { notFound } from "next/navigation";
 import { TransactionImportCompletionCard } from "@/app/(app)/businesses/[businessId]/customers/import/transaction-import-completion-card";
+import { TransactionImportNavigation } from "@/app/(app)/businesses/[businessId]/customers/import/transaction-import-navigation";
 import type { TransactionImportCompletionSummary } from "@/lib/business/transaction-import-completion";
+import { parseReturnOrigin } from "@/lib/return-origin";
+import { transactionImportReturnAction } from "@/lib/transaction-import-navigation";
 
 const NEW_ROWS_SUMMARY: TransactionImportCompletionSummary = {
   requestedTokenCount: 12,
@@ -27,7 +30,7 @@ const DUPLICATE_ONLY_SUMMARY: TransactionImportCompletionSummary = {
 };
 
 type FixturePageProps = {
-  searchParams: Promise<{ state?: string }>;
+  searchParams: Promise<{ state?: string | string[]; origin?: string | string[]; month?: string | string[] }>;
 };
 
 /** CI-only fixture for verified new-row and duplicate-only transaction import completion states. */
@@ -35,9 +38,16 @@ export default async function TransactionImportCompletionFixture({ searchParams 
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") notFound();
   const query = await searchParams;
   const duplicateOnly = query.state === "duplicates";
+  const returnOrigin = parseReturnOrigin({ origin: query.origin, month: query.month });
+  const returnAction = transactionImportReturnAction(returnOrigin, "fixture-business");
 
   return (
     <main className="page-stack" style={{ maxWidth: 1120, margin: "0 auto", padding: 24 }}>
+      <TransactionImportNavigation
+        businessId="fixture-business"
+        businessName="Fixture Business"
+        returnOrigin={returnOrigin}
+      />
       <TransactionImportCompletionCard
         businessId="fixture-business"
         baseCurrency="USD"
@@ -46,6 +56,7 @@ export default async function TransactionImportCompletionFixture({ searchParams 
         ignoredDetailRows={17}
         invalidRows={0}
         summary={duplicateOnly ? DUPLICATE_ONLY_SUMMARY : NEW_ROWS_SUMMARY}
+        returnAction={returnAction}
       />
     </main>
   );

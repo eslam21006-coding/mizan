@@ -32,7 +32,8 @@ test("Arabic import UX distinguishes reviewing a file from actually saving trans
 
 test("server action surfaces the database saved-purchase guard instead of a generic failure", () => {
   assert.match(importActions, /error\?\.code === "MZ001"/);
-  assert.match(importActions, /historyStatus=transactions-required/);
+  assert.match(importActions, /statusHref\("transactions-required"\)/);
+  assert.match(importActions, /buildTransactionImportHref\(businessId, returnOrigin, historyStatus\)/);
   assert.match(importPage, /status === "transactions-required"/);
   assert.match(importPage, /لا يمكن تأكيد اكتمال السجل قبل حفظ عملية شراء ناجحة واحدة على الأقل/);
 });

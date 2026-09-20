@@ -1,17 +1,19 @@
 import type { CSSProperties } from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { requireAuthContext } from "@/lib/auth/context";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import { parseReturnOrigin } from "@/lib/return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { transactionImportReturnAction } from "@/lib/transaction-import-navigation";
 import { setTransactionHistoryCompletenessAction } from "./actions";
 import styles from "./transaction-import.module.css";
+import { TransactionImportNavigation } from "./transaction-import-navigation";
 import { TransactionPreviewUploader } from "./transaction-preview-uploader";
 
 type TransactionImportPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ historyStatus?: string }>;
+  searchParams: Promise<{ historyStatus?: string | string[]; origin?: string | string[]; month?: string | string[] }>;
 };
 
 const IMPORT_THEME_ALIASES = {
@@ -77,31 +79,23 @@ export default async function TransactionImportPage({
   const transactionHistoryComplete = storedTransactionHistoryComplete && hasSavedCustomerPurchase;
   const historyIntegrityMismatch =
     storedTransactionHistoryComplete && !savedPurchaseCountError && !hasSavedCustomerPurchase;
-  const statusMessage = historyStatusMessage(query.historyStatus);
+  const status =
+    typeof query.historyStatus === "string" ? query.historyStatus : undefined;
+  const statusMessage = historyStatusMessage(status);
+  const returnOrigin = parseReturnOrigin({ origin: query.origin, month: query.month });
+  const returnAction = transactionImportReturnAction(returnOrigin, business.id);
 
   return (
     <div className="page-stack" style={IMPORT_THEME_ALIASES}>
-      <div className={styles.headingRow}>
-        <PageHeading
-          title="استيراد معاملات العملاء"
-          description="ارفع ملف CSV أو XLSX من بوابة الدفع، ثم راجع البيانات قبل حفظها في ميزان."
-        />
-        <div className={styles.headingLinks}>
-          <a
-            className={`${styles.backLink} ${styles.templateLink}`}
-            href="/mizan-transactions-template.csv"
-            download="mizan-transactions-template.csv"
-          >
-            تنزيل نموذج CSV
-          </a>
-          <Link className={styles.backLink} href="/customers">
-            العملاء و LTV
-          </Link>
-          <Link className={styles.backLink} href={`/?business=${business.id}`}>
-            الداشبورد
-          </Link>
-        </div>
-      </div>
+      <TransactionImportNavigation
+        businessId={business.id}
+        businessName={business.name}
+        returnOrigin={returnOrigin}
+      />
+      <PageHeading
+        title="استيراد معاملات العملاء"
+        description="ارفع ملف CSV أو XLSX من بوابة الدفع، ثم راجع البيانات قبل حفظها في ميزان."
+      />
 
       <section className={styles.importGuide} aria-labelledby="history-completeness-title">
         <div className={styles.guideHeading}>
@@ -135,6 +129,10 @@ export default async function TransactionImportPage({
               <form action={setTransactionHistoryCompletenessAction} className={styles.guideCard}>
                 <input type="hidden" name="business_id" value={business.id} />
                 <input type="hidden" name="history_complete" value="false" />
+                {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
+                {returnOrigin && "month" in returnOrigin && returnOrigin.month ? (
+                  <input type="hidden" name="month" value={returnOrigin.month} />
+                ) : null}
                 <strong>اكتشفت أن هناك تاريخ معاملات أقدم غير مرفوع؟</strong>
                 <p className={styles.guideNote}>
                   ألغِ التأكيد فورًا. سيستمر ميزان في حساب إجمالي من دفعوا خلال كل شهر، لكن العملاء الجدد سيعودون للإدخال اليدوي حتى يكتمل التاريخ.
@@ -164,6 +162,10 @@ export default async function TransactionImportPage({
               <form action={setTransactionHistoryCompletenessAction} className={styles.guideCard}>
                 <input type="hidden" name="business_id" value={business.id} />
                 <input type="hidden" name="history_complete" value="true" />
+                {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
+                {returnOrigin && "month" in returnOrigin && returnOrigin.month ? (
+                  <input type="hidden" name="month" value={returnOrigin.month} />
+                ) : null}
                 <label>
                   <input
                     type="checkbox"
@@ -282,6 +284,7 @@ export default async function TransactionImportPage({
         businessId={business.id}
         baseCurrency={business.base_currency}
         canManage={canManage}
+        returnAction={returnAction}
       />
     </div>
   );

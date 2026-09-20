@@ -9,6 +9,7 @@ import {
   type TransactionFilePreview,
 } from "@/lib/business/transaction-preview";
 import { TRANSACTION_VALIDATION_SOURCE_LIMITS } from "@/lib/business/transaction-validation-source";
+import type { TransactionImportReturnAction } from "@/lib/transaction-import-navigation";
 import { TransactionColumnMapper } from "./transaction-column-mapper";
 import { TransactionImportReviewGuide } from "./transaction-import-review-guide";
 import styles from "./transaction-import.module.css";
@@ -17,6 +18,7 @@ type TransactionPreviewUploaderProps = {
   businessId: string;
   baseCurrency: string;
   canManage: boolean;
+  returnAction: TransactionImportReturnAction;
 };
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -82,6 +84,7 @@ export function TransactionPreviewUploader({
   businessId,
   baseCurrency,
   canManage,
+  returnAction,
 }: TransactionPreviewUploaderProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [preview, setPreview] = useState<TransactionFilePreview | null>(null);
@@ -312,6 +315,7 @@ export function TransactionPreviewUploader({
                 fileBuffer={fileBuffer}
                 importBusy={importBusy}
                 onImportBusyChange={setImportBusy}
+                returnAction={returnAction}
               />
               <TransactionImportReviewGuide />
             </>

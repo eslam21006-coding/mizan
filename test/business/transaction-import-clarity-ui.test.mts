@@ -19,6 +19,10 @@ const completionCardSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/customers/import/transaction-import-completion-card.tsx",
   "utf8",
 );
+const importNavigationSource = readFileSync(
+  "src/lib/transaction-import-navigation.ts",
+  "utf8",
+);
 
 test("review guidance distinguishes validation from persistence and explicitly skips only invalid rows", () => {
   assert.match(reviewGuideSource, /المراجعة وحدها لا تحفظ أي معاملات/);
@@ -56,6 +60,7 @@ test("customer navigation describes automatic grouping and uses an analysis acti
   assert.match(customersPageSource, /تجميع معاملات العميل يتم تلقائيًا داخل ميزان/);
   assert.match(customersPageSource, />\s*عرض تحليل العملاء\s*<\/Link>/);
   assert.doesNotMatch(customersPageSource, />\s*تجميع العملاء\s*<\/Link>/);
-  assert.match(completionCardSource, />\s*عرض تحليل العملاء\s*<\/a>/);
+  assert.match(completionCardSource, /\{nextAction\.label\}/);
+  assert.match(importNavigationSource, /label: "عرض تحليل العملاء"/);
   assert.match(completionCardSource, /صفوف غير صالحة تم تجاهلها/);
 });
