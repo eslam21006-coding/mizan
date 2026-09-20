@@ -110,6 +110,15 @@ test.describe("Monthly entry UX fixture", () => {
       `/businesses/${fixtureBusinessId}/customers?view=profitability&month=2026-08`,
     );
 
+    await page.goto(
+      `${fixturePath}?month=2026-07&origin=customer-profitability&return_month=2026-08`,
+    );
+    const exactReturn = page.getByRole("region", { name: "سياق العودة من الإدخال الشهري" });
+    await expect(exactReturn.getByRole("link", { name: "العودة إلى ربحية العميل" })).toHaveAttribute(
+      "href",
+      `/businesses/${fixtureBusinessId}/customers?view=profitability&month=2026-08`,
+    );
+
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(returnBanner).toBeVisible();
     await expect(profitabilityReturn).toBeVisible();
@@ -129,6 +138,7 @@ test.describe("Monthly entry UX fixture", () => {
       "month=2026-08&origin=monthly-editor",
       "month=2026-08&origin=https://evil.example/return",
       "month=2026-08&origin=customer-profitability&origin=customer-overview",
+      "month=2026-08&origin=customer-profitability&return_month=invalid",
     ]) {
       await page.goto(`${fixturePath}?${unsafeQuery}`);
       await expect(page.getByRole("region", { name: "سياق العودة من الإدخال الشهري" })).toHaveCount(0);
