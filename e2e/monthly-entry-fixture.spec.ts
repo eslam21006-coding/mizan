@@ -87,31 +87,53 @@ test.describe("Monthly entry UX fixture", () => {
     expect(errors).toEqual([]);
   });
 
-  test("shows only an allow-listed profitability Return context and keeps it usable on mobile", async ({ page }) => {
+  test("preserves only safe external Return origins with exact month context", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 1440, height: 1000 });
-    await page.goto(`${fixturePath}?origin=customer-profitability`);
+    await page.goto(`${fixturePath}?month=2026-08&origin=customer-profitability`);
 
-    const returnBanner = page.getByRole("region", { name: "العودة إلى ربحية العميل" });
+    const returnBanner = page.getByRole("region", { name: "سياق العودة من الإدخال الشهري" });
     await expect(returnBanner).toBeVisible();
     await expect(returnBanner.getByText("أنت هنا لإكمال بيانات مطلوبة في ربحية العميل")).toBeVisible();
-    const returnLink = returnBanner.getByRole("link", { name: "العودة إلى ربحية العميل" });
-    await expect(returnLink).toHaveAttribute(
+    const profitabilityReturn = returnBanner.getByRole("link", { name: "العودة إلى ربحية العميل" });
+    await expect(profitabilityReturn).toHaveAttribute(
       "href",
-      `/businesses/${fixtureBusinessId}/customers?view=profitability`,
+      `/businesses/${fixtureBusinessId}/customers?view=profitability&month=2026-08`,
     );
-    await returnLink.focus();
-    await expect(returnLink).toBeFocused();
+    await profitabilityReturn.focus();
+    await expect(profitabilityReturn).toBeFocused();
+
+    await page.reload();
+    await expect(returnBanner).toBeVisible();
+    await expect(profitabilityReturn).toHaveAttribute(
+      "href",
+      `/businesses/${fixtureBusinessId}/customers?view=profitability&month=2026-08`,
+    );
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(returnBanner).toBeVisible();
-    await expect(returnLink).toBeVisible();
+    await expect(profitabilityReturn).toBeVisible();
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
       .toBe(true);
 
-    await page.goto(`${fixturePath}?origin=https://evil.example/return`);
-    await expect(page.getByRole("region", { name: "العودة إلى ربحية العميل" })).toHaveCount(0);
+    await page.goto(`${fixturePath}?month=2026-08&origin=customer-overview`);
+    const customerReturn = page.getByRole("region", { name: "سياق العودة من الإدخال الشهري" });
+    await expect(customerReturn.getByText("أنت هنا لإكمال بيانات مطلوبة في تحليل العملاء")).toBeVisible();
+    await expect(customerReturn.getByRole("link", { name: "العودة إلى العملاء" })).toHaveAttribute(
+      "href",
+      `/businesses/${fixtureBusinessId}/customers`,
+    );
+
+    for (const unsafeQuery of [
+      "month=2026-08&origin=monthly-editor",
+      "month=2026-08&origin=https://evil.example/return",
+      "month=2026-08&origin=customer-profitability&origin=customer-overview",
+    ]) {
+      await page.goto(`${fixturePath}?${unsafeQuery}`);
+      await expect(page.getByRole("region", { name: "سياق العودة من الإدخال الشهري" })).toHaveCount(0);
+    }
+
     expect(errors).toEqual([]);
   });
 
