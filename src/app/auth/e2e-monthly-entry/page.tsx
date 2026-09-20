@@ -19,7 +19,11 @@ const fixtureShellProps = {
 };
 
 type MonthlyEntryE2eFixturePageProps = {
-  searchParams: Promise<{ month?: string | string[]; origin?: string | string[] }>;
+  searchParams: Promise<{
+    month?: string | string[];
+    origin?: string | string[];
+    return_month?: string | string[];
+  }>;
 };
 
 const revenueRows: RevenueInputRow[] = [
@@ -92,7 +96,7 @@ export default async function MonthlyEntryE2eFixturePage({
   const query = await searchParams;
   const returnOrigin = parseMonthlyExternalReturnOrigin({
     origin: query.origin,
-    month: query.month,
+    month: query.return_month ?? query.month,
   });
 
   return (
