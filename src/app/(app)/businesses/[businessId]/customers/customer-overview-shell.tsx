@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CustomerAnalysisView, CustomerSearchParams } from "@/lib/customer-analysis-view";
+import { parseReturnOrigin, type ReturnOriginMetadata } from "@/lib/return-origin";
+import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
 import { CustomerAnalysisTabs } from "./customer-analysis-tabs";
 import { CustomerDataSourcesDrawer } from "./customer-data-sources-drawer";
 import { CustomerReviewNotice } from "./customer-review-notice";
@@ -40,6 +42,16 @@ export function CustomerOverviewShell({
   customers,
   tabBasePath,
 }: CustomerOverviewShellProps) {
+  let importOrigin: ReturnOriginMetadata = { origin: "customer-overview" };
+  if (activeView === "profitability") {
+    importOrigin =
+      parseReturnOrigin({
+        origin: "customer-profitability",
+        month: searchParams.month,
+      }) ?? { origin: "customer-profitability" };
+  }
+  const importHref = buildTransactionImportHref(businessId, importOrigin);
+
   return (
     <div className={styles.customerWorkspace}>
       <section className={styles.heroShell} aria-labelledby="customer-overview-title">
@@ -56,13 +68,13 @@ export function CustomerOverviewShell({
           </div>
         </div>
         <div className={styles.heroActions}>
-          <Link className={styles.primaryAction} href={`/businesses/${businessId}/customers/import`}>
+          <Link className={styles.primaryAction} href={importHref}>
             استيراد معاملات
           </Link>
         </div>
       </section>
 
-      <CustomerDataSourcesDrawer businessId={businessId} />
+      <CustomerDataSourcesDrawer businessId={businessId} importHref={importHref} />
       <CustomerReviewNotice
         businessId={businessId}
         issueCount={reviewIssueCount}
