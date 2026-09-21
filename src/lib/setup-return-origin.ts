@@ -65,7 +65,13 @@ export function parseSetupReturnOrigin(
   if (!hasUpstreamOrigin) return null;
 
   const upstream = parseReturnOrigin(upstreamSearchParams(searchParams));
-  if (!upstream || upstream.origin === "monthly-editor") return null;
+  if (
+    !upstream ||
+    (upstream.origin !== "customer-overview" &&
+      upstream.origin !== "customer-profitability")
+  ) {
+    return null;
+  }
   if (upstream.origin === "customer-overview" && hasUpstreamMonth) return null;
 
   return { ...parsed, upstream };
