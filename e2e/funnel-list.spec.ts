@@ -31,9 +31,11 @@ test.describe("N42 simplified Funnel list", () => {
     await expect(list.getByText("تحدي قديم", { exact: true })).toBeVisible();
     await expect(list.getByText("نشطة", { exact: true })).toBeVisible();
     await expect(list.getByText("غير نشطة", { exact: true })).toBeVisible();
-    await expect(list.getByText("Webinar / ويبينار", { exact: true })).toBeVisible();
-
     const firstCard = list.locator("details").first();
+    await expect(
+      firstCard.locator("summary").getByText("Webinar / ويبينار", { exact: true }),
+    ).toBeVisible();
+
     await expect(firstCard.locator("form")).toBeHidden();
     const summary = firstCard.locator("summary");
     await summary.focus();
