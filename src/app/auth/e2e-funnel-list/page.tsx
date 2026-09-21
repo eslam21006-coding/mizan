@@ -5,6 +5,10 @@ import { FunnelList } from "@/app/(app)/businesses/[businessId]/funnels/funnel-l
 export const dynamic = "force-dynamic";
 
 const businessId = "123e4567-e89b-42d3-a456-426614174000";
+const fixtureShellProps = {
+  role: "admin" as const,
+  email: "admin.fixture@example.test",
+};
 const fixtureFunnels = [
   {
     id: "123e4567-e89b-42d3-a456-426614174001",
@@ -34,7 +38,7 @@ export default async function FunnelListFixturePage({ searchParams }: FunnelList
   const canManage = query.mode !== "read-only";
 
   return (
-    <AppShell role="admin" email="admin.fixture@example.test">
+    <AppShell {...fixtureShellProps}>
       <section className="page-stack" aria-label="اختبار قائمة الفانلز">
         <FunnelList businessId={businessId} funnels={fixtureFunnels} canManage={canManage} />
       </section>
