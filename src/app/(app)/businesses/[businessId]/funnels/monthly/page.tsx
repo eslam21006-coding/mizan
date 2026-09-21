@@ -146,6 +146,7 @@ function blankEntry(funnel: FunnelRow): FunnelMonthlyEntrySnapshot {
   };
 }
 
+/** Displays the existing canonical ad-spend reconciliation without changing calculation semantics. */
 function ReconciliationPanel({
   status,
   businessAdSpend,
