@@ -1,19 +1,10 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   redirectHistoricalCorrection,
   redirectHistoricalCorrectionSuccess,
 } from "../../src/lib/historical-correction-navigation.ts";
-
-const monthlyPageSource = readFileSync(
-  "src/app/(app)/businesses/[businessId]/monthly/page.tsx",
-  "utf8",
-);
-const successSource = readFileSync(
-  "src/app/(app)/businesses/[businessId]/monthly/historical-correction-success.tsx",
-  "utf8",
-);
+import { resolveHistoricalMonthlyUiState } from "../../src/lib/historical-month-state.ts";
 
 class RedirectCapture extends Error {
   location: string;
@@ -88,15 +79,54 @@ test("N34 keeps correction failures inside the exact correction workflow", () =>
   assert.equal(failureUrl.searchParams.get("status"), "correction-failed");
 });
 
-test("N34 only shows correction success on a saved historical Monthly month", () => {
-  assert.match(
-    monthlyPageSource,
-    /const isHistoricalCorrectionSuccess = query\.status === "corrected" && isSavedHistorical/,
-  );
-  assert.match(monthlyPageSource, /<HistoricalCorrectionSuccess monthLabel=\{monthLabel\} \/>/);
-  assert.match(successSource, /role="status"/);
-  assert.match(successSource, /aria-label="تأكيد التصحيح التاريخي"/);
-  assert.match(successSource, /تم حفظ التصحيح التاريخي/);
-  assert.match(successSource, /سبب التصحيح ونسخة قبل وبعد/);
-  assert.match(successSource, /العرض\s+التاريخي للشهر/);
+test("N34 shows correction success only for a saved historical month", () => {
+  const savedHistorical = resolveHistoricalMonthlyUiState({
+    status: "corrected",
+    isHistorical: true,
+    hasSavedPeriod: true,
+    canManage: true,
+    dataLoadError: false,
+  });
+  assert.equal(savedHistorical.showCorrectionSuccess, true);
+  assert.equal(savedHistorical.isSavedHistorical, true);
+  assert.equal(savedHistorical.canEditMonth, false);
+
+  for (const state of [
+    resolveHistoricalMonthlyUiState({
+      status: "corrected",
+      isHistorical: false,
+      hasSavedPeriod: true,
+      canManage: true,
+      dataLoadError: false,
+    }),
+    resolveHistoricalMonthlyUiState({
+      status: "corrected",
+      isHistorical: true,
+      hasSavedPeriod: false,
+      canManage: true,
+      dataLoadError: false,
+    }),
+    resolveHistoricalMonthlyUiState({
+      status: "saved",
+      isHistorical: true,
+      hasSavedPeriod: true,
+      canManage: true,
+      dataLoadError: false,
+    }),
+  ]) {
+    assert.equal(state.showCorrectionSuccess, false);
+  }
+});
+
+test("N34 keeps a saved historical month read-only after a successful correction", () => {
+  const state = resolveHistoricalMonthlyUiState({
+    status: "corrected",
+    isHistorical: true,
+    hasSavedPeriod: true,
+    canManage: true,
+    dataLoadError: false,
+  });
+
+  assert.equal(state.isSavedHistorical, true);
+  assert.equal(state.canEditMonth, false);
 });
