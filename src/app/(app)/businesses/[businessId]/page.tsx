@@ -31,8 +31,16 @@ export default async function BusinessOverviewPage({ params }: BusinessOverviewP
   const currentMonthKey = currentMonthKeyForTimeZone(business.timezone);
   const currentMonthStart = `${currentMonthKey}-01`;
   const [streamsResult, expensesResult, currentPeriodResult, latestPeriodResult] = await Promise.all([
-    supabase.from("revenue_streams").select("id").eq("business_id", businessId),
-    supabase.from("expense_items").select("id").eq("business_id", businessId),
+    supabase
+      .from("revenue_streams")
+      .select("id")
+      .eq("business_id", businessId)
+      .eq("is_active", true),
+    supabase
+      .from("expense_items")
+      .select("id")
+      .eq("business_id", businessId)
+      .eq("is_active", true),
     supabase
       .from("monthly_periods")
       .select("month_start")
