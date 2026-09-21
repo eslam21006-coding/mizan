@@ -1,7 +1,9 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { FunnelHierarchyBack } from "@/app/(app)/businesses/[businessId]/funnel-hierarchy-back";
 import { FunnelModuleShell } from "@/app/(app)/businesses/[businessId]/funnel-module-shell";
+import { parseFunnelMonthlyReturnOrigin } from "@/lib/funnel-monthly-return-origin";
 import type { FunnelModuleTab } from "@/lib/funnel-module";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +15,7 @@ const fixtureShellProps = {
 };
 
 type FunnelModuleFixturePageProps = {
-  searchParams: Promise<{ tab?: string; month?: string }>;
+  searchParams: Promise<{ tab?: string; month?: string; origin?: string | string[] }>;
 };
 
 /** Restricts the fixture to the three supported Funnel module tab states. */
@@ -32,6 +34,10 @@ export default async function FunnelModuleFixturePage({
   const query = await searchParams;
   const activeTab = parseTab(query.tab);
   const monthKey = query.month ?? "2026-09";
+  const returnOrigin =
+    activeTab === "monthly"
+      ? parseFunnelMonthlyReturnOrigin({ origin: query.origin })
+      : null;
 
   return (
     <AppShell {...fixtureShellProps}>
@@ -40,11 +46,21 @@ export default async function FunnelModuleFixturePage({
           businessId={businessId}
           activeTab={activeTab}
           monthKey={monthKey}
+          origin={returnOrigin?.origin}
         />
         <FunnelHierarchyBack
           businessId={businessId}
           monthKey={activeTab === "structure" ? null : monthKey}
         />
+        {returnOrigin && (
+          <ReturnContextBanner
+            purpose="أرقام الفانلز الشهرية"
+            origin={returnOrigin}
+            context={{ businessId }}
+            returnLabel="العودة إلى هيكل الفانلز"
+            ariaLabel="سياق العودة من أرقام الفانلز الشهرية"
+          />
+        )}
         <section className="shell-card">
           <strong>
             {activeTab === "structure"
