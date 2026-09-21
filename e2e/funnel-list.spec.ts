@@ -16,9 +16,7 @@ function captureBrowserErrors(page: Page) {
 test.describe("N42 simplified Funnel list", () => {
   test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
 
-  test("shows compact Funnel identity and reveals the existing editor only on demand", async ({
-    page,
-  }) => {
+  test("shows compact Funnel identity with explicit edit actions", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(fixturePath);
@@ -31,19 +29,17 @@ test.describe("N42 simplified Funnel list", () => {
     await expect(list.getByText("تحدي قديم", { exact: true })).toBeVisible();
     await expect(list.getByText("نشطة", { exact: true })).toBeVisible();
     await expect(list.getByText("غير نشطة", { exact: true })).toBeVisible();
-    const firstCard = list.locator("details").first();
     await expect(
-      firstCard.locator("summary").getByText("Webinar / ويبينار", { exact: true }),
+      list.locator("span").filter({ hasText: /^Webinar \/ ويبينار$/ }),
     ).toBeVisible();
 
-    await expect(firstCard.locator("form")).toBeHidden();
-    const summary = firstCard.locator("summary");
-    await summary.focus();
-    await expect(summary).toBeFocused();
-    await summary.click();
-    await expect(firstCard).toHaveAttribute("open", "");
-    await expect(firstCard.locator("form")).toBeVisible();
-    await expect(firstCard.getByRole("button", { name: "حفظ التعديلات" })).toBeVisible();
+    await expect(list.locator("article")).toHaveCount(2);
+    await expect(list.locator("details")).toHaveCount(0);
+    const firstEdit = list.getByRole("button", {
+      name: "تعديل الفانل ويبينار البرنامج الأساسي",
+    });
+    await firstEdit.focus();
+    await expect(firstEdit).toBeFocused();
 
     expect(errors).toEqual([]);
   });
@@ -55,7 +51,7 @@ test.describe("N42 simplified Funnel list", () => {
     const list = page.getByRole("region", { name: "اختبار قائمة الفانلز" });
     await expect(list.getByText("عرض فقط")).toHaveCount(2);
     await expect(list.locator("details")).toHaveCount(0);
-    await expect(list.getByRole("button", { name: "حفظ التعديلات" })).toHaveCount(0);
+    await expect(list.getByRole("button", { name: /تعديل الفانل/ })).toHaveCount(0);
 
     expect(errors).toEqual([]);
   });
@@ -71,16 +67,11 @@ test.describe("N42 simplified Funnel list", () => {
     }));
     expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
 
-    const firstCard = page.locator("details").first();
-    await expect(firstCard.locator("summary")).toBeVisible();
-    await firstCard.locator("summary").click();
-    await expect(firstCard.locator("form")).toBeVisible();
-
-    const expandedDimensions = await page.locator("html").evaluate((element) => ({
-      clientWidth: element.clientWidth,
-      scrollWidth: element.scrollWidth,
-    }));
-    expect(expandedDimensions.scrollWidth).toBeLessThanOrEqual(expandedDimensions.clientWidth + 1);
+    const list = page.getByRole("region", { name: "اختبار قائمة الفانلز" });
+    await expect(list.locator("article")).toHaveCount(2);
+    await expect(
+      list.getByRole("button", { name: "تعديل الفانل ويبينار البرنامج الأساسي" }),
+    ).toBeVisible();
 
     expect(errors).toEqual([]);
   });

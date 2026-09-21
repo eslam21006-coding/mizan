@@ -1,4 +1,5 @@
 .primaryTrigger,
+.secondaryTrigger,
 .submitButton,
 .cancelButton,
 .closeButton {
@@ -6,19 +7,23 @@
   cursor: pointer;
 }
 
-.primaryTrigger {
+.primaryTrigger,
+.secondaryTrigger {
   min-height: 40px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   padding: 8px 13px;
-  color: #fff;
-  background: var(--brand);
-  border: 1px solid var(--brand);
   border-radius: 10px;
   font-size: 11px;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.primaryTrigger {
+  color: #fff;
+  background: var(--brand);
+  border: 1px solid var(--brand);
 }
 
 .primaryTrigger:hover {
@@ -26,10 +31,22 @@
   border-color: var(--brand-strong);
 }
 
+.secondaryTrigger {
+  color: var(--brand-strong);
+  background: var(--surface);
+  border: 1px solid #d3e7e1;
+}
+
+.secondaryTrigger:hover {
+  border-color: var(--brand);
+}
+
 .primaryTrigger:focus-visible,
+.secondaryTrigger:focus-visible,
 .closeButton:focus-visible,
 .form input:focus-visible,
 .form select:focus-visible,
+.activeToggle input:focus-visible,
 .submitButton:focus-visible,
 .cancelButton:focus-visible {
   outline: 3px solid var(--brand-ring);
@@ -131,7 +148,8 @@
   gap: 7px;
 }
 
-.field > span {
+.field > span,
+.activeToggle > span {
   color: var(--text-soft);
   font-size: 11px;
   font-weight: 750;
@@ -148,6 +166,24 @@
   border-radius: 10px;
   font: inherit;
   font-size: 13px;
+}
+
+.activeToggle {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.activeToggle input {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+  accent-color: var(--brand);
 }
 
 .footer {
