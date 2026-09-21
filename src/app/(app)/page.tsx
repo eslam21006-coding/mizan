@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { MetricAuditDetails } from "@/components/metric-audit";
+import { DashboardMetricDrawer } from "@/components/dashboard-metric-drawer";
 import { PageHeading } from "@/components/page-heading";
 import type {
   CalculatedMetric,
@@ -107,12 +107,15 @@ function formattedMultiple(metric: CalculatedMetric<ExactRatio>) {
   };
 }
 
+/** Renders one Dashboard KPI card with in-context audit inspection. */
 function MetricCard({
   label,
   value,
   note,
   audit,
   currency,
+  businessId,
+  monthKey,
   featured = false,
   unavailable = false,
 }: {
@@ -121,6 +124,8 @@ function MetricCard({
   note?: string;
   audit: MetricAudit;
   currency: string;
+  businessId: string;
+  monthKey: string;
   featured?: boolean;
   unavailable?: boolean;
 }) {
@@ -129,29 +134,45 @@ function MetricCard({
       <span>{label}</span>
       <strong className={unavailable ? styles.unavailableValue : undefined}>{value}</strong>
       {note && <p>{note}</p>}
-      <MetricAuditDetails audit={audit} currency={currency} />
+      <DashboardMetricDrawer
+        audit={audit}
+        currency={currency}
+        businessId={businessId}
+        monthKey={monthKey}
+      />
     </article>
   );
 }
 
+/** Renders a compact Dashboard metric row with the same audit drawer behavior. */
 function DetailMetric({
   label,
   value,
   unavailable,
   audit,
   currency,
+  businessId,
+  monthKey,
 }: {
   label: string;
   value: string;
   unavailable: boolean;
   audit: MetricAudit;
   currency: string;
+  businessId: string;
+  monthKey: string;
 }) {
   return (
     <div>
       <dt>{label}</dt>
       <dd className={unavailable ? styles.unavailableValue : undefined}>{value}</dd>
-      <MetricAuditDetails compact audit={audit} currency={currency} />
+      <DashboardMetricDrawer
+        compact
+        audit={audit}
+        currency={currency}
+        businessId={businessId}
+        monthKey={monthKey}
+      />
     </div>
   );
 }
@@ -175,14 +196,19 @@ function EmptyDashboard({ business, monthKey }: { business: BusinessRow; monthKe
   );
 }
 
+/** Renders the saved-month Dashboard metric groups without changing calculation semantics. */
 function DashboardMetrics({
   result,
   calculationInput,
   currency,
+  businessId,
+  monthKey,
 }: {
   result: CoreCalculationResult;
   calculationInput: CoreCalculationInput;
   currency: string;
+  businessId: string;
+  monthKey: string;
 }) {
   const audits = createCoreMetricAudits(result, calculationInput);
   const margin = formattedRatio(result.realNetProfitMargin, "percent", currency);
@@ -225,6 +251,8 @@ function DashboardMetrics({
           note="صافي الربح الحقيقي ÷ صافي الكاش المحصل"
           audit={audits.realNetProfitMargin}
           currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
         />
         <MetricCard
           featured
@@ -234,6 +262,8 @@ function DashboardMetrics({
           note="بعد كل تكاليف البزنس"
           audit={audits.realNetProfit}
           currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
         />
         <MetricCard
           featured
@@ -243,6 +273,8 @@ function DashboardMetrics({
           note="التكلفة الكاملة للبزنس لكل عميل جديد — مقياس ميزان وليس CAC التقليدي"
           audit={audits.ultimateCac}
           currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
         />
         <MetricCard
           featured
@@ -252,6 +284,8 @@ function DashboardMetrics({
           note="الإيراد المحصل فعليًا بعد المرتجعات"
           audit={audits.netCashCollected}
           currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
         />
       </section>
 
@@ -271,6 +305,8 @@ function DashboardMetrics({
             note="كل تكاليف الاكتساب والمبيعات والتسويق ÷ العملاء الجدد"
             audit={audits.acquisitionCac}
             currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
           />
           <MetricCard
             label="Media CAC"
@@ -279,6 +315,8 @@ function DashboardMetrics({
             note="إجمالي الإنفاق الإعلاني المعتمد ÷ العملاء الجدد"
             audit={audits.mediaCac}
             currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
           />
           <MetricCard
             label="MER"
@@ -287,6 +325,8 @@ function DashboardMetrics({
             note="صافي الكاش المحصل ÷ إجمالي الإنفاق الإعلاني المعتمد"
             audit={audits.mer}
             currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
           />
           <MetricCard
             label="هامش المساهمة"
@@ -294,6 +334,8 @@ function DashboardMetrics({
             unavailable={contributionMargin.unavailable}
             audit={audits.contributionMargin}
             currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
           />
           <MetricCard
             label="ربح المساهمة"
@@ -301,6 +343,8 @@ function DashboardMetrics({
             unavailable={contributionProfit.unavailable}
             audit={audits.contributionProfit}
             currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
           />
           <MetricCard
             label="إجمالي تكاليف البزنس"
@@ -308,6 +352,8 @@ function DashboardMetrics({
             unavailable={allCosts.unavailable}
             audit={audits.allBusinessCosts}
             currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
           />
         </div>
       </section>
@@ -327,6 +373,8 @@ function DashboardMetrics({
               unavailable={grossCash.unavailable}
               audit={audits.grossCashCollected}
               currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
             />
             <DetailMetric
               label="المرتجعات"
@@ -334,6 +382,8 @@ function DashboardMetrics({
               unavailable={refunds.unavailable}
               audit={audits.refunds}
               currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
             />
             <DetailMetric
               label="العملاء الجدد"
@@ -341,6 +391,8 @@ function DashboardMetrics({
               unavailable={newCustomers.unavailable}
               audit={audits.newCustomers}
               currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
             />
             <DetailMetric
               label="إجمالي العملاء الدافعين"
@@ -348,6 +400,8 @@ function DashboardMetrics({
               unavailable={payingCustomers.unavailable}
               audit={audits.totalPayingCustomers}
               currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
             />
             <DetailMetric
               label="العملاء العائدون"
@@ -355,6 +409,8 @@ function DashboardMetrics({
               unavailable={returningCustomers.unavailable}
               audit={audits.returningCustomers}
               currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
             />
             <DetailMetric
               label="الإيراد لكل عميل دافع"
@@ -362,6 +418,8 @@ function DashboardMetrics({
               unavailable={revenuePerPaying.unavailable}
               audit={audits.revenuePerPayingCustomer}
               currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
             />
             <DetailMetric
               label="الإيراد لكل عميل جديد"
@@ -369,6 +427,8 @@ function DashboardMetrics({
               unavailable={revenuePerNew.unavailable}
               audit={audits.revenuePerNewCustomer}
               currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
             />
           </dl>
           <p className={styles.definitionNote}>
@@ -393,7 +453,13 @@ function DashboardMetrics({
                   <strong className={formatted.unavailable ? styles.unavailableValue : undefined}>
                     {formatted.value}
                   </strong>
-                  <MetricAuditDetails compact audit={audit} currency={currency} />
+                  <DashboardMetricDrawer
+                    compact
+                    audit={audit}
+                    currency={currency}
+                    businessId={businessId}
+                    monthKey={monthKey}
+                  />
                 </div>
               );
             })}
@@ -559,6 +625,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           result={result}
           calculationInput={calculationInput}
           currency={selectedBusiness.base_currency}
+          businessId={selectedBusiness.id}
+          monthKey={selectedMonth.monthKey}
         />
       )}
     </div>
