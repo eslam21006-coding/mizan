@@ -14,7 +14,7 @@ export function BusinessCard({ business }: { business: BusinessCardViewModel }) 
   const dashboardQuery = new URLSearchParams({ business: business.id });
 
   return (
-    <article className={styles.businessCard}>
+    <article className={styles.businessCard} aria-label={`بزنس ${business.name}`}>
       <div className={styles.cardTopline}>
         <span className={styles.status}>جاهز للمتابعة</span>
         <span className={styles.currencyCode}>{business.baseCurrency}</span>
