@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { resolveNavigationDestination } from "../../src/lib/navigation-hierarchy.ts";
+import { parseSetupReturnOrigin } from "../../src/lib/setup-return-origin.ts";
 import {
   parseReturnOrigin,
   resolveReturnOrigin,
@@ -35,7 +36,8 @@ test("N26 setup parser requires Monthly editor and validates nested customer ori
   assert.equal(parseReturnOrigin({ origin: "monthly-editor", month: "2026-13" }), null);
 
   assert.match(setupOriginSource, /parsed\?\.origin !== "monthly-editor"/);
-  assert.match(setupOriginSource, /upstream\.origin === "monthly-editor"/);
+  assert.match(setupOriginSource, /upstream\.origin !== "customer-overview"/);
+  assert.match(setupOriginSource, /upstream\.origin !== "customer-profitability"/);
   assert.match(
     setupOriginSource,
     /upstream\.origin === "customer-overview" && hasUpstreamMonth/,
@@ -43,6 +45,14 @@ test("N26 setup parser requires Monthly editor and validates nested customer ori
   assert.match(setupOriginSource, /upstream_origin/);
   assert.match(setupOriginSource, /upstream_month/);
   assert.doesNotMatch(setupOriginSource, /returnTo/);
+  assert.equal(
+    parseSetupReturnOrigin({
+      origin: "monthly-editor",
+      month: "2026-09",
+      upstream_origin: "funnel-structure",
+    }),
+    null,
+  );
 });
 
 test("N26 typed setup return restores the exact Monthly month and upstream profitability origin", () => {
