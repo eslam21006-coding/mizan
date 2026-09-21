@@ -35,7 +35,7 @@ export default async function BusinessOverviewPage({ params }: BusinessOverviewP
 
       <PageHeading
         title="نظرة عامة"
-        description={\`مساحة العمل الخاصة بـ \${business.name} لإدارة هيكل البزنس من مكان واحد.\`}
+        description={`مساحة العمل الخاصة بـ ${business.name} لإدارة هيكل البزنس من مكان واحد.`}
       />
 
       <section className={styles.panel}>
