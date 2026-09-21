@@ -274,9 +274,6 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
           title="أرقام الفانلز الشهرية"
           description={`تتبّع أداء فانلز ${business.name} في ${monthLabel}. هذه طبقة Drill-down ولا تستبدل اقتصاديات البزنس الأساسية.`}
         />
-        <div className={styles.headerLinks}>
-          <Link href={`/?business=${businessId}&month=${selectedMonth.monthKey}`}>الداشبورد</Link>
-        </div>
       </div>
 
       {statusMessage && (
