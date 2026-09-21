@@ -11,30 +11,32 @@ import {
   parseOptionalDecimalInput,
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
-import { buildHistoricalCorrectionSuccessHref } from "@/lib/historical-correction-navigation";
+import {
+  redirectHistoricalCorrection,
+  redirectHistoricalCorrectionSuccess,
+} from "@/lib/historical-correction-navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-function correctionPath(businessId: string, monthKey: string, status?: string) {
-  const query = new URLSearchParams({ month: monthKey });
-  if (status) query.set("status", status);
-  return `/businesses/${businessId}/monthly/correction?${query.toString()}`;
-}
-
-function revalidateCorrectionDependencies(businessId: string) {
-  revalidatePath(`/businesses/${businessId}/monthly`);
-  revalidatePath(`/businesses/${businessId}/monthly/correction`);
-  revalidatePath(`/businesses/${businessId}/customers`);
-  revalidatePath(`/businesses/${businessId}/customers/review`);
-}
+const correctionNavigationEffects = {
+  revalidatePath,
+  redirect,
+};
 
 function redirectCorrection(businessId: string, monthKey: string, status: string): never {
-  revalidateCorrectionDependencies(businessId);
-  redirect(correctionPath(businessId, monthKey, status));
+  return redirectHistoricalCorrection(
+    correctionNavigationEffects,
+    businessId,
+    monthKey,
+    status,
+  );
 }
 
 function redirectCorrectionSuccess(businessId: string, monthKey: string): never {
-  revalidateCorrectionDependencies(businessId);
-  redirect(buildHistoricalCorrectionSuccessHref(businessId, monthKey));
+  return redirectHistoricalCorrectionSuccess(
+    correctionNavigationEffects,
+    businessId,
+    monthKey,
+  );
 }
 
 function uniqueResourceIds(values: FormDataEntryValue[]) {
