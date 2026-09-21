@@ -29,6 +29,7 @@ function funnelTypeLabel(value: string) {
   return FUNNEL_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? value;
 }
 
+/** Renders Funnel structure management with the persistent N40 module navigation. */
 export default async function FunnelsPage({ params, searchParams }: FunnelsPageProps) {
   const { businessId: rawBusinessId } = await params;
   const businessId = parseFunnelResourceId(rawBusinessId);
