@@ -1,8 +1,6 @@
 import { randomUUID } from "node:crypto";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
-import { PageHeading } from "@/components/page-heading";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { requireAuthContext } from "@/lib/auth/context";
 import {
@@ -14,9 +12,9 @@ import {
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { parseSetupReturnOrigin } from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { BusinessWorkspaceShell } from "../business-workspace-shell";
 import { deleteExpenseItem } from "./actions";
 import { ExpenseDrawerLauncher } from "./expense-drawer";
+import { ExpensesWorkspaceHeader } from "./expenses-workspace-header";
 import styles from "./expenses.module.css";
 
 type ExpensesPageProps = {
@@ -97,23 +95,15 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
 
   return (
     <div className="page-stack">
-      <BusinessWorkspaceShell
+      <ExpensesWorkspaceHeader
         businessId={businessId}
         businessName={business.name}
         baseCurrency={business.base_currency}
         timezone={business.timezone}
-        activeTab="expenses"
+        canManage={canManageExpenses}
+        returnOrigin={returnOrigin}
+        creationRequestId={randomUUID()}
       />
-
-      <div className={styles.headingRow}>
-        <PageHeading
-          title="هيكل المصروفات"
-          description={`عرّف مصروفات ${business.name} وطريقة سلوك كل تكلفة بدون إدخال أي أرقام مالية الآن.`}
-        />
-        <Link className={styles.backLink} href="/businesses">
-          العودة للبزنسات
-        </Link>
-      </div>
 
       {returnOrigin && (
         <ReturnContextBanner
@@ -163,32 +153,6 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
           ))}
         </div>
       </section>
-
-      {canManageExpenses && (
-        <section className={styles.panel}>
-          <div className={styles.panelHeading}>
-            <div>
-              <span className={styles.kicker}>إضافة بند</span>
-              <h2>مصروف جديد</h2>
-            </div>
-            <div className={styles.panelActions}>
-              <span className={styles.currency}>{business.base_currency}</span>
-              <ExpenseDrawerLauncher
-                businessId={businessId}
-                returnOrigin={returnOrigin}
-                categoryOptions={EXPENSE_CATEGORY_OPTIONS}
-                behaviorOptions={EXPENSE_COST_BEHAVIOR_OPTIONS}
-                mode="create"
-                creationRequestId={randomUUID()}
-              />
-            </div>
-          </div>
-
-          <p className={styles.formNote}>
-            افتح نموذج الإضافة لإدخال اسم المصروف وتصنيفه وطريقة التكلفة. لن تدخل المبلغ أو النسبة هنا؛ الأرقام الفعلية لكل شهر تدخل في خطوة البيانات الشهرية.
-          </p>
-        </section>
-      )}
 
       <section className={styles.panel}>
         <div className={styles.panelHeading}>
