@@ -8,6 +8,7 @@ import {
   parseFunnelResourceId,
 } from "@/lib/business/funnels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { FunnelModuleShell } from "../funnel-module-shell";
 import { createFunnel, updateFunnel } from "./actions";
 import styles from "./funnels.module.css";
 
@@ -63,6 +64,8 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
 
   return (
     <div className="page-stack">
+      <FunnelModuleShell businessId={businessId} activeTab="structure" />
+
       <div className={styles.headingRow}>
         <PageHeading
           title="الفانلز"
@@ -100,10 +103,6 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
           <p>عند توقف فانل، عطّلها بدل حذفها حتى تبقى البيانات التاريخية قابلة للربط بها لاحقًا.</p>
         </div>
       </section>
-
-      <Link className={styles.backLink} href={`/businesses/${businessId}/funnels/monthly`}>
-        فتح أرقام الفانلز الشهرية
-      </Link>
 
       {canManage && (
         <section className={styles.panel}>
