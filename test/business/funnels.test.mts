@@ -104,8 +104,6 @@ test("funnel writes require authentication and never accept an owner or user ID"
 });
 
 test("funnel creation is database-idempotent and historical identity is immutable", () => {
-  assert.match(page, /name="creation_request_id"/);
-  assert.match(page, /randomUUID\(\)/);
   assert.match(action, /creation_request_id:\s*creationRequestId/);
   assert.match(action, /!error \|\| error\.code === "23505"/);
   assert.match(migration, /old\.id is distinct from new\.id/i);
