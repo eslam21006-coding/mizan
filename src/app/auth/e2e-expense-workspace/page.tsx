@@ -11,11 +11,20 @@ const fixtureShellProps = {
   email: "admin.fixture@example.test",
 };
 
+type ExpenseWorkspaceFixturePageProps = {
+  searchParams: Promise<{ mode?: string }>;
+};
+
 /** CI-only fixture for N39 Expense Structure workspace hierarchy and primary action. */
-export default function ExpenseWorkspaceFixturePage() {
+export default async function ExpenseWorkspaceFixturePage({
+  searchParams,
+}: ExpenseWorkspaceFixturePageProps) {
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
     notFound();
   }
+
+  const query = await searchParams;
+  const canManage = query.mode !== "read-only";
 
   return (
     <AppShell {...fixtureShellProps}>
@@ -25,7 +34,7 @@ export default function ExpenseWorkspaceFixturePage() {
           businessName="أكاديمية ميزان"
           baseCurrency="USD"
           timezone="Africa/Cairo"
-          canManage
+          canManage={canManage}
           returnOrigin={null}
           creationRequestId="22222222-2222-4222-8222-222222222222"
         />
