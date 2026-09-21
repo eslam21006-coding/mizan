@@ -15,6 +15,7 @@ import { parseMonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
 import { copyPreviousMonthExpenses, saveMonthlyActuals } from "./actions";
+import { HistoricalCorrectionSuccess } from "./historical-correction-success";
 import { HistoricalMonthState } from "./historical-month-state";
 import trustStyles from "./customer-history-trust.module.css";
 import {
@@ -228,13 +229,16 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
     timeZone: "UTC",
   }).format(new Date(`${selectedMonth.monthStart}T00:00:00.000Z`));
 
+  const isHistoricalCorrectionSuccess = query.status === "corrected" && isSavedHistorical;
   const copiedCount = Number(query.copied ?? 0);
   const statusMessage =
-    query.status === "copied"
-      ? `تم نسخ ${Number.isFinite(copiedCount) ? copiedCount : 0} بند مصروف من الشهر السابق.`
-      : query.status
-        ? STATUS_MESSAGES[query.status]
-        : null;
+    isHistoricalCorrectionSuccess
+      ? null
+      : query.status === "copied"
+        ? `تم نسخ ${Number.isFinite(copiedCount) ? copiedCount : 0} بند مصروف من الشهر السابق.`
+        : query.status
+          ? STATUS_MESSAGES[query.status]
+          : null;
   const isErrorStatus = Boolean(
     query.status && !["saved", "copied", "no-previous"].includes(query.status),
   );
@@ -342,6 +346,10 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
         </label>
         <button type="submit">فتح الشهر</button>
       </form>
+
+      {isHistoricalCorrectionSuccess && (
+        <HistoricalCorrectionSuccess monthLabel={monthLabel} />
+      )}
 
       {statusMessage && (
         <div className={isErrorStatus ? styles.errorStatus : styles.successStatus} role="status">
