@@ -4,9 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAuthContext } from "@/lib/auth/context";
 import { parseResourceId } from "@/lib/business/revenue-streams";
-import { parseReturnOrigin } from "@/lib/return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
+import {
+  buildTransactionImportHref,
+  parseTransactionImportReturnOrigin,
+} from "@/lib/transaction-import-navigation";
 
 /** Preserves repeated form metadata so the structured origin parser can reject ambiguity. */
 function readReturnMetadataField(formData: FormData, key: "origin" | "month") {
@@ -26,7 +28,7 @@ export async function setTransactionHistoryCompletenessAction(formData: FormData
     redirect("/customers?status=invalid-history-state");
   }
 
-  const returnOrigin = parseReturnOrigin({
+  const returnOrigin = parseTransactionImportReturnOrigin({
     origin: readReturnMetadataField(formData, "origin"),
     month: readReturnMetadataField(formData, "month"),
   });
