@@ -6,6 +6,10 @@ const pageSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/expenses/page.tsx",
   "utf8",
 );
+const workspaceHeaderSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/expenses/expenses-workspace-header.tsx",
+  "utf8",
+);
 const drawerSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/expenses/expense-drawer.tsx",
   "utf8",
@@ -16,8 +20,9 @@ const actionsSource = readFileSync(
 );
 
 test("N28 moves expense create and edit into an accessible native drawer", () => {
+  assert.match(workspaceHeaderSource, /ExpenseDrawerLauncher/);
+  assert.match(workspaceHeaderSource, /mode="create"/);
   assert.match(pageSource, /ExpenseDrawerLauncher/);
-  assert.match(pageSource, /mode="create"/);
   assert.match(pageSource, /mode="edit"/);
   assert.doesNotMatch(pageSource, /className=\{styles\.createForm\}/);
   assert.doesNotMatch(pageSource, /className=\{styles\.editForm\}/);
