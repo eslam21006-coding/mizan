@@ -15,6 +15,7 @@ type FunnelModuleFixturePageProps = {
   searchParams: Promise<{ tab?: string; month?: string }>;
 };
 
+/** Restricts the fixture to the three supported Funnel module tab states. */
 function parseTab(value: string | undefined): FunnelModuleTab {
   return value === "monthly" || value === "liquidation" ? value : "structure";
 }
