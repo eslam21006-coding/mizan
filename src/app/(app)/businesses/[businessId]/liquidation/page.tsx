@@ -90,6 +90,7 @@ function expenseBehaviorLabel(behavior: FrontEndExpenseAllocationRow["behavior"]
   return behavior === "per_customer" ? "Per Customer" : "% of Revenue";
 }
 
+/** Renders business-level ad liquidation analysis within the persistent N40 Funnel module. */
 export default async function LiquidationPage({ params, searchParams }: LiquidationPageProps) {
   const { businessId: rawBusinessId } = await params;
   const businessId = parseResourceId(rawBusinessId);
