@@ -15,7 +15,7 @@ function captureBrowserErrors(page: Page) {
 test.describe("N35 simplified business cards", () => {
   test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
 
-  test("shows one primary dashboard action per business in Arabic RTL", async ({ page }) => {
+  test("shows one primary workspace action per business in Arabic RTL", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto(fixturePath);
@@ -34,14 +34,14 @@ test.describe("N35 simplified business cards", () => {
     const openLink = firstCard.getByRole("link", { name: "فتح البزنس" });
     await expect(openLink).toHaveAttribute(
       "href",
-      "/?business=123e4567-e89b-42d3-a456-426614174000",
+      "/businesses/123e4567-e89b-42d3-a456-426614174000",
     );
 
     const secondCard = page.getByRole("article", { name: "بزنس بزنس التدريب" });
     await expect(secondCard.getByRole("link")).toHaveCount(1);
     await expect(secondCard.getByRole("link", { name: "فتح البزنس" })).toHaveAttribute(
       "href",
-      "/?business=123e4567-e89b-42d3-a456-426614174001",
+      "/businesses/123e4567-e89b-42d3-a456-426614174001",
     );
 
     await expect(page.getByRole("link", { name: "إدارة مصادر الإيراد" })).toHaveCount(0);
