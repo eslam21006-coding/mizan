@@ -117,7 +117,10 @@ test("N37 Monthly href encodes the business ID and preserves exact month state",
 });
 
 test("N37 production Overview reads active setup and current/latest saved monthly periods", () => {
-  assert.match(overviewPage, /\.from\("revenue_streams"\)[\s\S]*\.eq\("is_active", true\)/);
+  assert.match(
+    overviewPage,
+    /\.from\("revenue_streams"\)(?:(?!\.from\().)*\.eq\("is_active", true\)/s,
+  );
   assert.match(overviewPage, /\.from\("expense_items"\)[\s\S]*\.eq\("is_active", true\)/);
   assert.match(
     overviewPage,
