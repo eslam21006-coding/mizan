@@ -14,6 +14,7 @@ import type {
 import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { FunnelHierarchyBack } from "../funnel-hierarchy-back";
 import { FunnelModuleShell } from "../funnel-module-shell";
 import { saveFrontEndAllocations } from "./actions";
 import styles from "./liquidation.module.css";
@@ -129,6 +130,8 @@ export default async function LiquidationPage({ params, searchParams }: Liquidat
         activeTab="liquidation"
         monthKey={selectedMonth.monthKey}
       />
+
+      <FunnelHierarchyBack businessId={businessId} monthKey={selectedMonth.monthKey} />
 
       <div className={styles.headingRow}>
         <PageHeading

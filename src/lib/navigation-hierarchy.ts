@@ -1,6 +1,6 @@
 export type NavigationDestination =
   | { route: "businesses" }
-  | { route: "business-overview"; businessId: string }
+  | { route: "business-overview"; businessId: string; month?: string }
   | { route: "business-workspace"; businessId: string }
   | {
       route: "business-customers";
@@ -46,6 +46,7 @@ export function resolveNavigationDestination(destination: NavigationDestination)
       return "/businesses";
     case "business-overview": {
       const searchParams = new URLSearchParams({ business: destination.businessId });
+      if (destination.month) searchParams.set("month", destination.month);
       return `/?${searchParams.toString()}`;
     }
     case "business-workspace":

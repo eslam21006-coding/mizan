@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
+import { FunnelHierarchyBack } from "@/app/(app)/businesses/[businessId]/funnel-hierarchy-back";
 import { FunnelModuleShell } from "@/app/(app)/businesses/[businessId]/funnel-module-shell";
 import type { FunnelModuleTab } from "@/lib/funnel-module";
 
@@ -39,6 +40,10 @@ export default async function FunnelModuleFixturePage({
           businessId={businessId}
           activeTab={activeTab}
           monthKey={monthKey}
+        />
+        <FunnelHierarchyBack
+          businessId={businessId}
+          monthKey={activeTab === "structure" ? null : monthKey}
         />
         <section className="shell-card">
           <strong>

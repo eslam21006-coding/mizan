@@ -1,5 +1,4 @@
 import { randomUUID } from "node:crypto";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { requireAuthContext } from "@/lib/auth/context";
@@ -8,6 +7,7 @@ import {
   parseFunnelResourceId,
 } from "@/lib/business/funnels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { FunnelHierarchyBack } from "../funnel-hierarchy-back";
 import { FunnelModuleShell } from "../funnel-module-shell";
 import { createFunnel, updateFunnel } from "./actions";
 import styles from "./funnels.module.css";
@@ -67,15 +67,13 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
   return (
     <div className="page-stack">
       <FunnelModuleShell businessId={businessId} activeTab="structure" />
+      <FunnelHierarchyBack businessId={businessId} />
 
       <div className={styles.headingRow}>
         <PageHeading
           title="الفانلز"
           description={`نظّم فانلز ${business.name} كطبقة اختيارية للتحليل. أرقام البزنس الأساسية تظل مستقلة عن وجود أي فانل.`}
         />
-        <Link className={styles.backLink} href="/businesses">
-          العودة للبزنسات
-        </Link>
       </div>
 
       {statusMessage && (

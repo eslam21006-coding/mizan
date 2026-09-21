@@ -12,6 +12,7 @@ import { loadFunnelMonth, type FunnelMonthlyEntrySnapshot } from "@/lib/business
 import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
 import type { ExactRatio } from "@/lib/business/calculations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { FunnelHierarchyBack } from "../../funnel-hierarchy-back";
 import { FunnelModuleShell } from "../../funnel-module-shell";
 import { saveFunnelMonthlyActuals } from "./actions";
 import styles from "./monthly.module.css";
@@ -266,14 +267,13 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
         monthKey={selectedMonth.monthKey}
       />
 
+      <FunnelHierarchyBack businessId={businessId} monthKey={selectedMonth.monthKey} />
+
       <div className={styles.headingRow}>
         <PageHeading
           title="أرقام الفانلز الشهرية"
           description={`تتبّع أداء فانلز ${business.name} في ${monthLabel}. هذه طبقة Drill-down ولا تستبدل اقتصاديات البزنس الأساسية.`}
         />
-        <div className={styles.headerLinks}>
-          <Link href={`/?business=${businessId}&month=${selectedMonth.monthKey}`}>الداشبورد</Link>
-        </div>
       </div>
 
       {statusMessage && (
