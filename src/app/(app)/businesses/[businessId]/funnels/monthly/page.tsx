@@ -12,6 +12,7 @@ import { loadFunnelMonth, type FunnelMonthlyEntrySnapshot } from "@/lib/business
 import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
 import type { ExactRatio } from "@/lib/business/calculations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { FunnelModuleShell } from "../../funnel-module-shell";
 import { saveFunnelMonthlyActuals } from "./actions";
 import styles from "./monthly.module.css";
 
@@ -257,6 +258,12 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
 
   return (
     <div className="page-stack">
+      <FunnelModuleShell
+        businessId={businessId}
+        activeTab="monthly"
+        monthKey={selectedMonth.monthKey}
+      />
+
       <div className={styles.headingRow}>
         <PageHeading
           title="أرقام الفانلز الشهرية"
@@ -264,7 +271,6 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
         />
         <div className={styles.headerLinks}>
           <Link href={`/?business=${businessId}&month=${selectedMonth.monthKey}`}>الداشبورد</Link>
-          <Link href={`/businesses/${businessId}/funnels`}>إدارة الفانلز</Link>
         </div>
       </div>
 
