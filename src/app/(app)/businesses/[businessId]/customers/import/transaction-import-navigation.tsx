@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { Breadcrumb } from "@/components/navigation-hierarchy";
-import type { ReturnOriginMetadata } from "@/lib/return-origin";
+import type { TransactionImportReturnOrigin } from "@/lib/transaction-import-navigation";
 import { transactionImportReturnAction } from "@/lib/transaction-import-navigation";
 import styles from "./transaction-import.module.css";
 
 type TransactionImportNavigationProps = {
   businessId: string;
   businessName: string;
-  returnOrigin: ReturnOriginMetadata | null;
+  returnOrigin: TransactionImportReturnOrigin | null;
 };
 
 /** Shows Import's deterministic hierarchy plus an origin-aware, allow-listed Cancel action. */
