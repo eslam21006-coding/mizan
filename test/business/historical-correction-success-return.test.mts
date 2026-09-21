@@ -22,7 +22,7 @@ test("N34 returns successful historical corrections to the exact Monthly month",
   );
   assert.match(
     correctionActionsSource,
-    /redirect\(\`\/businesses\/\$\{businessId\}\/monthly\?\$\{query\.toString\(\)\}\`\)/,
+    /redirect\(`\/businesses\/\$\{businessId\}\/monthly\?\$\{query\.toString\(\)\}`\)/,
   );
   assert.match(
     correctionActionsSource,
@@ -48,5 +48,5 @@ test("N34 only shows correction success on a saved historical Monthly month", ()
   assert.match(successSource, /aria-label="تأكيد التصحيح التاريخي"/);
   assert.match(successSource, /تم حفظ التصحيح التاريخي/);
   assert.match(successSource, /سبب التصحيح ونسخة قبل وبعد/);
-  assert.match(successSource, /العرض التاريخي للشهر/);
+  assert.match(successSource, /العرض\s+التاريخي للشهر/);
 });
