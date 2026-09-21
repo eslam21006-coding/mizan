@@ -2,7 +2,7 @@ import {
   parseReturnOrigin,
   type ReturnOriginMetadata,
   type ReturnOriginSearchParams,
-} from "./return-origin";
+} from "./return-origin.ts";
 
 export type FunnelMonthlyReturnOrigin = Extract<
   ReturnOriginMetadata,
