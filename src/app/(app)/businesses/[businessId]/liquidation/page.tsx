@@ -86,6 +86,7 @@ function formatRate(metric: LiquidationMetric<ExactRatio>) {
     : UNAVAILABLE_LABELS[metric.reason];
 }
 
+/** Maps an eligible Front-End variable-cost behavior to its existing display label. */
 function expenseBehaviorLabel(behavior: FrontEndExpenseAllocationRow["behavior"]) {
   return behavior === "per_customer" ? "Per Customer" : "% of Revenue";
 }
