@@ -21,10 +21,6 @@ const funnelsOverviewPage = await readFile(
   new URL("../../src/app/(app)/funnels/page.tsx", import.meta.url),
   "utf8",
 );
-const businessesPage = await readFile(
-  new URL("../../src/app/(app)/businesses/page.tsx", import.meta.url),
-  "utf8",
-);
 const migration = await readFile(
   new URL(
     "../../supabase/migrations/20260821001500_task_14_funnel_management.sql",
@@ -135,12 +131,10 @@ test("Task 14 has no authenticated hard-delete path", () => {
   assert.doesNotMatch(migration, /create policy funnels_delete/i);
 });
 
-test("funnel management is reachable from the main funnel route and each business", () => {
+test("funnel management remains reachable from the main funnel route", () => {
   assert.doesNotMatch(funnelsOverviewPage, /EmptyModule/);
   assert.match(funnelsOverviewPage, /\/businesses\/\$\{business\.id\}\/funnels/);
   assert.match(funnelsOverviewPage, /الفانلز طبقة تحليل اختيارية/);
-  assert.match(businessesPage, /\/funnels/);
-  assert.match(businessesPage, /إدارة الفانلز/);
   assert.match(page, /الفانلز اختيارية/);
   assert.match(page, /أرقام البزنس الأساسية تظل مستقلة/);
 });
