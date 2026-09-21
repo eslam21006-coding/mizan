@@ -9,6 +9,7 @@ type BusinessSettingsPageProps = {
   params: Promise<{ businessId: string }>;
 };
 
+/** Loads the selected business and renders its read-only identity inside the Settings workspace tab. */
 export default async function BusinessSettingsPage({ params }: BusinessSettingsPageProps) {
   const { businessId: rawBusinessId } = await params;
   const businessId = parseResourceId(rawBusinessId);
