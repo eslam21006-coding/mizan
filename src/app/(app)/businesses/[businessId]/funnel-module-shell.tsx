@@ -2,6 +2,7 @@ import Link from "next/link";
 import {
   FUNNEL_MODULE_TABS,
   buildFunnelModuleHref,
+  type FunnelModuleOrigin,
   type FunnelModuleTab,
 } from "@/lib/funnel-module";
 import styles from "./funnel-module-shell.module.css";
@@ -10,6 +11,7 @@ type FunnelModuleShellProps = {
   businessId: string;
   activeTab: FunnelModuleTab;
   monthKey?: string | null;
+  origin?: FunnelModuleOrigin | null;
 };
 
 /** Keeps the three Funnel workflows visibly connected as one persistent module. */
@@ -17,6 +19,7 @@ export function FunnelModuleShell({
   businessId,
   activeTab,
   monthKey,
+  origin,
 }: FunnelModuleShellProps) {
   return (
     <section className={styles.module} aria-label="وحدة الفانلز">
@@ -32,7 +35,11 @@ export function FunnelModuleShell({
                 businessId,
                 tab.id,
                 monthKey,
-                activeTab === "structure" && tab.id === "monthly" ? "funnel-structure" : null,
+                tab.id === "monthly"
+                  ? activeTab === "structure"
+                    ? "funnel-structure"
+                    : origin
+                  : null,
               )}
               aria-current={isActive ? "page" : undefined}
             >
