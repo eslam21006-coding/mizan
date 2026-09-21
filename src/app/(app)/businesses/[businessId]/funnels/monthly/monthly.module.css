@@ -13,13 +13,6 @@
   align-items: flex-end;
 }
 
-.headerLinks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.headerLinks a,
 .monthControl button,
 .saveBar button {
   min-height: 42px;
@@ -30,17 +23,6 @@
   border-radius: 10px;
   font-size: 12px;
   font-weight: 800;
-}
-
-.headerLinks a {
-  color: var(--text-soft);
-  background: var(--surface);
-  border: 1px solid var(--border);
-}
-
-.headerLinks a:hover {
-  color: var(--brand-strong);
-  border-color: #cbded9;
 }
 
 .successStatus,
