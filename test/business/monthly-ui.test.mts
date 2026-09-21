@@ -61,7 +61,7 @@ test("monthly entry groups raw inputs into three compact sections without calcul
 test("Task 8 page uses server-derived Admin-or-owner management access and keeps members read-only", () => {
   assert.match(page, /const canManage = auth\.role === "admin" \|\| business\.owner_user_id === auth\.userId/);
   assert.match(page, /!canManage && !dataLoadError/);
-  assert.match(page, /canManage \? \(/);
+  assert.match(page, /canManage && !isSavedHistorical \? \(/);
 });
 
 test("Task 8 page fails closed for mutations when any monthly data dependency fails to load", () => {
@@ -69,9 +69,9 @@ test("Task 8 page fails closed for mutations when any monthly data dependency fa
     page,
     /const dataLoadError = Boolean\([\s\S]*periodResult\.error[\s\S]*streamsResult\.error[\s\S]*expensesResult\.error[\s\S]*entryLoadError/,
   );
-  assert.match(page, /const canEditMonth = canManage && !dataLoadError/);
+  assert.match(page, /const canEditMonth = canManage && !dataLoadError && !isSavedHistorical/);
   assert.match(page, /\{canEditMonth && \(/);
-  assert.match(page, /\{!dataLoadError &&[\s\S]*canManage \? \(/);
+  assert.match(page, /\{!dataLoadError &&[\s\S]*canManage && !isSavedHistorical \? \(/);
 });
 
 test("Task 8 requires an explicit Per Customer count basis instead of inferring one", () => {
