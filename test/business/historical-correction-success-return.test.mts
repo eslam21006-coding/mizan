@@ -20,10 +20,9 @@ test("N34 returns successful historical corrections to the exact Monthly month",
     correctionActionsSource,
     /new URLSearchParams\(\{ month: monthKey, status: "corrected" \}\)/,
   );
-  assert.ok(
-    correctionActionsSource.includes(
-      'redirect(`/businesses/${businessId}/monthly?${query.toString()}`)',
-    ),
+  assert.match(
+    correctionActionsSource,
+    /redirect\(\`\/businesses\/\$\{businessId\}\/monthly\?\$\{query\.toString\(\)\}\`\)/,
   );
   assert.match(
     correctionActionsSource,
