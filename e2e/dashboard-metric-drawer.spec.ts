@@ -8,9 +8,9 @@ const businessId = "123e4567-e89b-42d3-a456-426614174000";
 function captureBrowserErrors(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
-    if (message.type() === "error") errors.push("console: " + message.text());
+    if (message.type() === "error") errors.push(`console: ${message.text()}`);
   });
-  page.on("pageerror", (error) => errors.push("pageerror: " + error.message));
+  page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
   return errors;
 }
 
@@ -47,7 +47,7 @@ test.describe("N47/N48 Dashboard KPI drawer and deep analysis", () => {
     await expect(dialog).toContainText("محرك الحساب المركزي");
 
     let deepAnalysis = dialog.getByRole("link", { name: "تحليل أعمق" });
-    const expectedAnalyticsHref = "/analytics?business=" + businessId + "&month=2026-04";
+    const expectedAnalyticsHref = `/analytics?business=${businessId}&month=2026-04`;
     await expect(deepAnalysis).toHaveAttribute("href", expectedAnalyticsHref);
 
     const dialogBox = await dialog.boundingBox();
