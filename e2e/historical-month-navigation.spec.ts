@@ -28,7 +28,8 @@ test.describe("N32 + N33 + N34 historical month UX", () => {
     const historicalPanel = page.locator('[aria-label="حالة الشهر التاريخي"]');
     await expect(historicalPanel).toBeVisible();
     await expect(historicalPanel).toContainText("شهر تاريخي");
-    await expect(historicalPanel).toContainText("الرجوع والمراجعة فقط");
+    await expect(historicalPanel).toContainText("العرض هنا");
+    await expect(historicalPanel).toContainText("مسار تصحيح تاريخي صريح");
     const correctionSuccess = page.locator(
       '[role="status"][aria-label="تأكيد التصحيح التاريخي"]',
     );
