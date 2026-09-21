@@ -8,6 +8,7 @@ import {
   parseFunnelResourceId,
 } from "@/lib/business/funnels";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { FunnelModuleShell } from "../funnel-module-shell";
 import { createFunnel, updateFunnel } from "./actions";
 import styles from "./funnels.module.css";
 
@@ -24,10 +25,12 @@ const STATUS_MESSAGES: Record<string, string> = {
   "update-failed": "تعذر حفظ تعديلات الفانل. لم يتم تغيير أي بيانات.",
 };
 
+/** Returns the founder-facing label for a persisted Funnel type without changing its stored value. */
 function funnelTypeLabel(value: string) {
   return FUNNEL_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? value;
 }
 
+/** Renders Funnel structure management with the persistent N40 module navigation. */
 export default async function FunnelsPage({ params, searchParams }: FunnelsPageProps) {
   const { businessId: rawBusinessId } = await params;
   const businessId = parseFunnelResourceId(rawBusinessId);
@@ -63,6 +66,8 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
 
   return (
     <div className="page-stack">
+      <FunnelModuleShell businessId={businessId} activeTab="structure" />
+
       <div className={styles.headingRow}>
         <PageHeading
           title="الفانلز"
@@ -100,10 +105,6 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
           <p>عند توقف فانل، عطّلها بدل حذفها حتى تبقى البيانات التاريخية قابلة للربط بها لاحقًا.</p>
         </div>
       </section>
-
-      <Link className={styles.backLink} href={`/businesses/${businessId}/funnels/monthly`}>
-        فتح أرقام الفانلز الشهرية
-      </Link>
 
       {canManage && (
         <section className={styles.panel}>

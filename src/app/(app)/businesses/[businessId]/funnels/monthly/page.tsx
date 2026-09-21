@@ -12,6 +12,7 @@ import { loadFunnelMonth, type FunnelMonthlyEntrySnapshot } from "@/lib/business
 import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
 import type { ExactRatio } from "@/lib/business/calculations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { FunnelModuleShell } from "../../funnel-module-shell";
 import { saveFunnelMonthlyActuals } from "./actions";
 import styles from "./monthly.module.css";
 
@@ -145,6 +146,7 @@ function blankEntry(funnel: FunnelRow): FunnelMonthlyEntrySnapshot {
   };
 }
 
+/** Displays the existing canonical ad-spend reconciliation without changing calculation semantics. */
 function ReconciliationPanel({
   status,
   businessAdSpend,
@@ -199,6 +201,7 @@ function ReconciliationPanel({
   );
 }
 
+/** Renders monthly Funnel performance while preserving the selected month across N40 module tabs. */
 export default async function FunnelMonthlyPage({ params, searchParams }: FunnelMonthlyPageProps) {
   const { businessId: rawBusinessId } = await params;
   const businessId = parseFunnelResourceId(rawBusinessId);
@@ -257,6 +260,12 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
 
   return (
     <div className="page-stack">
+      <FunnelModuleShell
+        businessId={businessId}
+        activeTab="monthly"
+        monthKey={selectedMonth.monthKey}
+      />
+
       <div className={styles.headingRow}>
         <PageHeading
           title="أرقام الفانلز الشهرية"
@@ -264,7 +273,6 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
         />
         <div className={styles.headerLinks}>
           <Link href={`/?business=${businessId}&month=${selectedMonth.monthKey}`}>الداشبورد</Link>
-          <Link href={`/businesses/${businessId}/funnels`}>إدارة الفانلز</Link>
         </div>
       </div>
 

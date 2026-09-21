@@ -14,6 +14,7 @@ import type {
 import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { FunnelModuleShell } from "../funnel-module-shell";
 import { saveFrontEndAllocations } from "./actions";
 import styles from "./liquidation.module.css";
 
@@ -85,10 +86,12 @@ function formatRate(metric: LiquidationMetric<ExactRatio>) {
     : UNAVAILABLE_LABELS[metric.reason];
 }
 
+/** Maps an eligible Front-End variable-cost behavior to its existing display label. */
 function expenseBehaviorLabel(behavior: FrontEndExpenseAllocationRow["behavior"]) {
   return behavior === "per_customer" ? "Per Customer" : "% of Revenue";
 }
 
+/** Renders business-level ad liquidation analysis within the persistent N40 Funnel module. */
 export default async function LiquidationPage({ params, searchParams }: LiquidationPageProps) {
   const { businessId: rawBusinessId } = await params;
   const businessId = parseResourceId(rawBusinessId);
@@ -121,15 +124,18 @@ export default async function LiquidationPage({ params, searchParams }: Liquidat
 
   return (
     <div className="page-stack">
+      <FunnelModuleShell
+        businessId={businessId}
+        activeTab="liquidation"
+        monthKey={selectedMonth.monthKey}
+      />
+
       <div className={styles.headingRow}>
         <PageHeading
           title="تسييل الإنفاق الإعلاني"
           description={`اقتصاديات الـ Front-End في ${business.name} خلال ${monthLabel}. الحساب هنا على مستوى البزنس ولا يفترض توزيع الإيراد أو التكلفة على فانل منفردة.`}
         />
         <div className={styles.headerLinks}>
-          <Link href={`/businesses/${businessId}/funnels/monthly?month=${selectedMonth.monthKey}`}>
-            أرقام الفانلز
-          </Link>
           <Link href={`/businesses/${businessId}/monthly?month=${selectedMonth.monthKey}`}>
             الإدخال الشهري
           </Link>
