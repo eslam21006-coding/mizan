@@ -31,6 +31,13 @@ const drawer = await readFile(
   ),
   "utf8",
 );
+const workspaceHeader = await readFile(
+  new URL(
+    "../../src/app/(app)/businesses/[businessId]/revenue-streams/revenue-streams-workspace-header.tsx",
+    import.meta.url,
+  ),
+  "utf8",
+);
 const migration = await readFile(
   new URL(
     "../../supabase/migrations/20260818153600_task_6_revenue_stream_management.sql",
@@ -105,6 +112,21 @@ test("read-only business members do not receive revenue stream mutation controls
     /const canManageRevenueStreams = auth\.role === "admin" \|\| business\.owner_user_id === auth\.userId/,
   );
   assert.match(page, /\{canManageRevenueStreams && \(/);
+});
+
+test("N38 keeps Revenue Sources inside the Business workspace hierarchy", () => {
+  assert.match(page, /<RevenueStreamsWorkspaceHeader/);
+  assert.doesNotMatch(page, /href="\/businesses"/);
+  assert.doesNotMatch(page, /العودة للبزنسات/);
+  assert.match(workspaceHeader, /<BusinessWorkspaceShell/);
+  assert.match(workspaceHeader, /activeTab="revenue-streams"/);
+  assert.match(workspaceHeader, /<Breadcrumb items=\{breadcrumbItems\}/);
+  assert.match(workspaceHeader, /route: "business-workspace"/);
+  assert.match(workspaceHeader, /label="العودة إلى نظرة عامة"/);
+  assert.match(workspaceHeader, /<PageHeader/);
+  assert.match(workspaceHeader, /actionState=\{canManage \? "normal" : "read-only"\}/);
+  assert.match(workspaceHeader, /<RevenueStreamDrawerLauncher/);
+  assert.match(page, /<ReturnContextBanner/);
 });
 
 test("safe-delete migration and database attack matrix execute in CI", () => {
