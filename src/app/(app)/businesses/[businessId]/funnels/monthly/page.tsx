@@ -200,6 +200,7 @@ function ReconciliationPanel({
   );
 }
 
+/** Renders monthly Funnel performance while preserving the selected month across N40 module tabs. */
 export default async function FunnelMonthlyPage({ params, searchParams }: FunnelMonthlyPageProps) {
   const { businessId: rawBusinessId } = await params;
   const businessId = parseFunnelResourceId(rawBusinessId);
