@@ -107,6 +107,7 @@ function formattedMultiple(metric: CalculatedMetric<ExactRatio>) {
   };
 }
 
+/** Renders one Dashboard KPI card with in-context audit inspection. */
 function MetricCard({
   label,
   value,
@@ -143,6 +144,7 @@ function MetricCard({
   );
 }
 
+/** Renders a compact Dashboard metric row with the same audit drawer behavior. */
 function DetailMetric({
   label,
   value,
@@ -194,6 +196,7 @@ function EmptyDashboard({ business, monthKey }: { business: BusinessRow; monthKe
   );
 }
 
+/** Renders the saved-month Dashboard metric groups without changing calculation semantics. */
 function DashboardMetrics({
   result,
   calculationInput,
