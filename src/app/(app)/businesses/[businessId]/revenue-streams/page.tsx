@@ -1,8 +1,6 @@
 import { randomUUID } from "node:crypto";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
-import { PageHeading } from "@/components/page-heading";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { requireAuthContext } from "@/lib/auth/context";
 import {
@@ -11,8 +9,8 @@ import {
 } from "@/lib/business/revenue-streams";
 import { parseSetupReturnOrigin } from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { BusinessWorkspaceShell } from "../business-workspace-shell";
 import { deleteRevenueStream } from "./actions";
+import { RevenueStreamsWorkspaceHeader } from "./revenue-streams-workspace-header";
 import { RevenueStreamDrawerLauncher } from "./revenue-stream-drawer";
 import styles from "./revenue-streams.module.css";
 
@@ -88,23 +86,15 @@ export default async function RevenueStreamsPage({
 
   return (
     <div className="page-stack">
-      <BusinessWorkspaceShell
+      <RevenueStreamsWorkspaceHeader
         businessId={businessId}
         businessName={business.name}
         baseCurrency={business.base_currency}
         timezone={business.timezone}
-        activeTab="revenue-streams"
+        canManage={canManageRevenueStreams}
+        returnOrigin={returnOrigin}
+        creationRequestId={randomUUID()}
       />
-
-      <div className={styles.headingRow}>
-        <PageHeading
-          title="مصادر الإيراد"
-          description={`نظّم طرق دخول الإيراد في ${business.name} بدون إدخال أي أرقام مالية الآن.`}
-        />
-        <Link className={styles.backLink} href="/businesses">
-          العودة للبزنسات
-        </Link>
-      </div>
 
       {returnOrigin && (
         <ReturnContextBanner
@@ -142,30 +132,6 @@ export default async function RevenueStreamsPage({
           <p>إيراد لا ينتمي بوضوح إلى Front-End أو Backend. لا يدخل في حساب Front-End Liquidation.</p>
         </div>
       </section>
-
-      {canManageRevenueStreams && (
-        <section className={styles.panel}>
-          <div className={styles.panelHeading}>
-            <div>
-              <span className={styles.kicker}>إضافة مصدر</span>
-              <h2>مصدر إيراد جديد</h2>
-            </div>
-            <div className={styles.panelActions}>
-              <span className={styles.currency}>{business.base_currency}</span>
-              <RevenueStreamDrawerLauncher
-                businessId={businessId}
-                returnOrigin={returnOrigin}
-                typeOptions={REVENUE_STREAM_TYPE_OPTIONS}
-                mode="create"
-                creationRequestId={randomUUID()}
-              />
-            </div>
-          </div>
-          <p className={styles.formNote}>
-            افتح نموذج الإضافة لتسمية مصدر الإيراد وتحديد نوعه. لا تدخل أي قيمة مالية هنا.
-          </p>
-        </section>
-      )}
 
       <section className={styles.panel}>
         <div className={styles.panelHeading}>
