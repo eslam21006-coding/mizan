@@ -66,6 +66,11 @@ export function DashboardMetricDrawer({
         className={styles.drawer}
         aria-labelledby={titleId}
         onClose={handleClose}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            event.currentTarget.close();
+          }
+        }}
       >
         <div className={styles.drawerShell}>
           <header className={styles.drawerHeader}>
