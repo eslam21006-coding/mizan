@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { requireAuthContext } from "@/lib/auth/context";
 import { parseResourceId } from "@/lib/business/revenue-streams";
-import { parseReturnOrigin } from "@/lib/return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { transactionImportReturnAction } from "@/lib/transaction-import-navigation";
+import {
+  parseTransactionImportReturnOrigin,
+  transactionImportReturnAction,
+} from "@/lib/transaction-import-navigation";
 import { setTransactionHistoryCompletenessAction } from "./actions";
 import styles from "./transaction-import.module.css";
 import { TransactionImportNavigation } from "./transaction-import-navigation";
@@ -82,7 +84,10 @@ export default async function TransactionImportPage({
   const status =
     typeof query.historyStatus === "string" ? query.historyStatus : undefined;
   const statusMessage = historyStatusMessage(status);
-  const returnOrigin = parseReturnOrigin({ origin: query.origin, month: query.month });
+  const returnOrigin = parseTransactionImportReturnOrigin({
+    origin: query.origin,
+    month: query.month,
+  });
   const returnAction = transactionImportReturnAction(returnOrigin, business.id);
 
   return (
