@@ -60,6 +60,29 @@ test.describe("N39 Expense Structure inside Business workspace", () => {
     expect(errors).toEqual([]);
   });
 
+  test("keeps the action region stable for read-only users", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(`${fixturePath}?mode=read-only`);
+
+    const actions = page.locator('fieldset[aria-label="إجراءات هيكل المصروفات"]');
+    await expect(actions).toHaveAttribute("data-action-state", "read-only");
+    await expect(actions).toContainText("عرض فقط");
+    await expect(page.getByRole("button", { name: "إضافة مصروف" })).toHaveCount(0);
+
+    const workspace = page.getByRole("region", { name: "مساحة عمل البزنس", exact: true });
+    await expect(workspace.getByRole("link", { name: "هيكل المصروفات" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    await expect(page.getByRole("link", { name: "العودة إلى نظرة عامة" })).toHaveAttribute(
+      "href",
+      `/businesses/${businessId}`,
+    );
+
+    expect(errors).toEqual([]);
+  });
+
   test("fits the Expense Structure workspace at 390px without horizontal overflow", async ({
     page,
   }) => {
