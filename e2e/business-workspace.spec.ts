@@ -23,7 +23,7 @@ test.describe("N36 business workspace shell", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 
-    const workspace = page.getByRole("region", { name: "مساحة عمل البزنس" });
+    const workspace = page.getByRole("region", { name: "مساحة عمل البزنس", exact: true });
     await expect(workspace).toContainText("أكاديمية ميزان");
     await expect(workspace).toContainText("USD");
     await expect(workspace).toContainText("Africa/Cairo");
