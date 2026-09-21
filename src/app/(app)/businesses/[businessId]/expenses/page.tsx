@@ -14,6 +14,7 @@ import {
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { parseSetupReturnOrigin } from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { BusinessWorkspaceShell } from "../business-workspace-shell";
 import { deleteExpenseItem } from "./actions";
 import { ExpenseDrawerLauncher } from "./expense-drawer";
 import styles from "./expenses.module.css";
@@ -67,7 +68,7 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
     await Promise.all([
       supabase
         .from("businesses")
-        .select("id,name,base_currency,owner_user_id")
+        .select("id,name,base_currency,timezone,owner_user_id")
         .eq("id", businessId)
         .maybeSingle(),
       supabase
@@ -95,6 +96,14 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
 
   return (
     <div className="page-stack">
+      <BusinessWorkspaceShell
+        businessId={businessId}
+        businessName={business.name}
+        baseCurrency={business.base_currency}
+        timezone={business.timezone}
+        activeTab="expenses"
+      />
+
       <div className={styles.headingRow}>
         <PageHeading
           title="هيكل المصروفات"
