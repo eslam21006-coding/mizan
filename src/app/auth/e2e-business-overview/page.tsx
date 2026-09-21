@@ -7,6 +7,10 @@ import { resolveBusinessOverviewHealth } from "@/lib/business-overview";
 export const dynamic = "force-dynamic";
 
 const businessId = "123e4567-e89b-42d3-a456-426614174000";
+const fixtureShellProps = {
+  role: "admin" as const,
+  email: "admin.fixture@example.test",
+};
 
 /** CI-only fixture for N37 Business Overview setup-health behavior. */
 export default function BusinessOverviewFixturePage() {
@@ -26,7 +30,7 @@ export default function BusinessOverviewFixturePage() {
   });
 
   return (
-    <AppShell role="admin" email="admin.fixture@example.test">
+    <AppShell {...fixtureShellProps}>
       <div className="page-stack">
         <BusinessWorkspaceShell
           businessId={businessId}
