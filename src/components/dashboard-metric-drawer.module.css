@@ -1,0 +1,208 @@
+.trigger,
+.compactTrigger,
+.closeButton,
+.secondaryButton {
+  font: inherit;
+  cursor: pointer;
+}
+
+.trigger,
+.compactTrigger {
+  width: fit-content;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 8px;
+  padding: 5px 9px;
+  color: #2d5e47;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.trigger:hover,
+.compactTrigger:hover {
+  color: #173d2b;
+  background: #f4f8f5;
+  border-color: #dfe8e2;
+}
+
+.compactTrigger {
+  margin-top: 5px;
+}
+
+.trigger:focus-visible,
+.compactTrigger:focus-visible,
+.closeButton:focus-visible,
+.secondaryButton:focus-visible,
+.deepAnalysisLink:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.drawer {
+  width: min(560px, 94vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  inset-block: 0;
+  inset-inline-start: auto;
+  inset-inline-end: 0;
+  color: var(--text);
+  background: var(--surface);
+  border: 0;
+  border-inline-start: 1px solid var(--border);
+  box-shadow: 20px 0 55px rgba(15, 23, 42, 0.16);
+}
+
+.drawer::backdrop {
+  background: rgba(15, 23, 42, 0.36);
+}
+
+.drawerShell {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawerHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  gap: 16px;
+  padding: 20px;
+  border-block-end: 1px solid var(--border);
+}
+
+.drawerHeader > div {
+  min-width: 0;
+}
+
+.drawerHeader h2 {
+  margin: 4px 0 6px;
+  overflow-wrap: anywhere;
+  font-size: 21px;
+  line-height: 1.3;
+}
+
+.drawerHeader p {
+  max-width: 420px;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.kicker {
+  color: var(--brand);
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.closeButton {
+  width: 38px;
+  height: 38px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  color: var(--text-soft);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 22px;
+  line-height: 1;
+}
+
+.drawerBody {
+  min-height: 0;
+  flex: 1 1 auto;
+  padding: 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.drawerBody > div {
+  margin-top: 0;
+}
+
+.drawerFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex: 0 0 auto;
+  gap: 10px;
+  padding: 14px 18px;
+  background: var(--surface);
+  border-block-start: 1px solid var(--border);
+}
+
+.deepAnalysisLink,
+.secondaryButton {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.deepAnalysisLink {
+  color: #fff;
+  background: var(--brand);
+  border: 1px solid var(--brand);
+}
+
+.deepAnalysisLink:hover {
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+}
+
+.secondaryButton {
+  color: var(--text-soft);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.secondaryButton:hover {
+  color: var(--brand-strong);
+  border-color: var(--brand);
+}
+
+@media (max-width: 600px) {
+  .drawer {
+    width: 100vw;
+    height: 100dvh;
+    inset: 0;
+    border: 0;
+    box-shadow: none;
+  }
+
+  .drawerHeader {
+    padding: 16px;
+  }
+
+  .drawerBody {
+    padding: 14px;
+  }
+
+  .drawerFooter {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 12px 14px;
+  }
+
+  .drawerFooter form,
+  .deepAnalysisLink,
+  .secondaryButton {
+    width: 100%;
+  }
+}
