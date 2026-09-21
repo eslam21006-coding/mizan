@@ -28,7 +28,12 @@ export function FunnelModuleShell({
             <Link
               key={tab.id}
               className={isActive ? styles.activeTab : styles.tab}
-              href={buildFunnelModuleHref(businessId, tab.id, monthKey)}
+              href={buildFunnelModuleHref(
+                businessId,
+                tab.id,
+                monthKey,
+                activeTab === "structure" && tab.id === "monthly" ? "funnel-structure" : null,
+              )}
               aria-current={isActive ? "page" : undefined}
             >
               {tab.label}
