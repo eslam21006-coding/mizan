@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { notFound } from "next/navigation";
-import { PageHeading } from "@/components/page-heading";
+import { PageHeader } from "@/components/page-header";
 import { requireAuthContext } from "@/lib/auth/context";
 import {
   FUNNEL_TYPE_OPTIONS,
@@ -9,7 +9,7 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FunnelHierarchyBack } from "../funnel-hierarchy-back";
 import { FunnelModuleShell } from "../funnel-module-shell";
-import { createFunnel } from "./actions";
+import { FunnelCreateDrawerLauncher } from "./funnel-create-drawer";
 import { FunnelList } from "./funnel-list";
 import styles from "./funnels.module.css";
 
@@ -65,12 +65,21 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
       <FunnelModuleShell businessId={businessId} activeTab="structure" />
       <FunnelHierarchyBack businessId={businessId} />
 
-      <div className={styles.headingRow}>
-        <PageHeading
-          title="الفانلز"
-          description={`نظّم فانلز ${business.name} كطبقة اختيارية للتحليل. أرقام البزنس الأساسية تظل مستقلة عن وجود أي فانل.`}
-        />
-      </div>
+      <PageHeader
+        title="الفانلز"
+        description={`نظّم فانلز ${business.name} كطبقة اختيارية للتحليل. أرقام البزنس الأساسية تظل مستقلة عن وجود أي فانل.`}
+        actionState={canManage ? "normal" : "read-only"}
+        actionsAriaLabel="إجراءات الفانلز"
+        actions={
+          canManage ? (
+            <FunnelCreateDrawerLauncher
+              businessId={businessId}
+              typeOptions={FUNNEL_TYPE_OPTIONS}
+              creationRequestId={randomUUID()}
+            />
+          ) : undefined
+        }
+      />
 
       {statusMessage && (
         <div className={isErrorStatus ? styles.errorStatus : styles.successStatus} role="status">
@@ -99,47 +108,6 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
           <p>عند توقف فانل، عطّلها بدل حذفها حتى تبقى البيانات التاريخية قابلة للربط بها لاحقًا.</p>
         </div>
       </section>
-
-      {canManage && (
-        <section className={styles.panel}>
-          <div className={styles.panelHeading}>
-            <div>
-              <span className={styles.kicker}>إضافة فانل</span>
-              <h2>فانل جديدة</h2>
-            </div>
-          </div>
-
-          <form action={createFunnel} className={styles.createForm}>
-            <input type="hidden" name="business_id" value={businessId} />
-            <input type="hidden" name="creation_request_id" value={randomUUID()} />
-
-            <label>
-              <span>اسم الفانل</span>
-              <input
-                type="text"
-                name="name"
-                maxLength={120}
-                required
-                placeholder="مثال: ويبينار البرنامج الأساسي"
-                autoComplete="off"
-              />
-            </label>
-
-            <label>
-              <span>نوع الفانل</span>
-              <select name="funnel_type" defaultValue="webinar">
-                {FUNNEL_TYPE_OPTIONS.map((option) => (
-                  <option value={option.value} key={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <button type="submit">إضافة الفانل</button>
-          </form>
-        </section>
-      )}
 
       <section className={styles.panel}>
         <div className={styles.panelHeading}>
