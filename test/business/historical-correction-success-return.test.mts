@@ -6,10 +6,6 @@ import {
   redirectHistoricalCorrectionSuccess,
 } from "../../src/lib/historical-correction-navigation.ts";
 
-const correctionActionsSource = readFileSync(
-  "src/app/(app)/businesses/[businessId]/monthly/correction/actions.ts",
-  "utf8",
-);
 const monthlyPageSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/monthly/page.tsx",
   "utf8",
@@ -20,8 +16,11 @@ const successSource = readFileSync(
 );
 
 class RedirectCapture extends Error {
-  constructor(readonly location: string) {
+  location: string;
+
+  constructor(location: string) {
     super(location);
+    this.location = location;
   }
 }
 
