@@ -6,6 +6,10 @@ import type { MetricAudit } from "@/lib/business/metric-audit";
 export const dynamic = "force-dynamic";
 
 const businessId = "123e4567-e89b-42d3-a456-426614174000";
+const fixtureShellProps = {
+  role: "admin" as const,
+  email: "admin.fixture@example.test",
+};
 
 const audit: MetricAudit = {
   key: "realNetProfit",
@@ -36,7 +40,7 @@ export default function DashboardMetricDrawerFixturePage() {
   }
 
   return (
-    <AppShell role="admin" email="admin.fixture@example.test">
+    <AppShell {...fixtureShellProps}>
       <section className="page-stack" aria-label="اختبار تفاصيل مؤشر الداشبورد">
         <article>
           <span>صافي الربح الحقيقي</span>
