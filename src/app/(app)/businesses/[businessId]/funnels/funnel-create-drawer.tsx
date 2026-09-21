@@ -24,6 +24,7 @@ export function FunnelCreateDrawerLauncher({
   const dialogId = `funnel-create-drawer-${generatedId}`;
   const titleId = `${dialogId}-title`;
 
+  /** Opens the modal drawer and moves focus to its explicit close control. */
   function openDrawer() {
     const dialog = dialogRef.current;
     if (!dialog || dialog.open) return;
@@ -31,6 +32,7 @@ export function FunnelCreateDrawerLauncher({
     queueMicrotask(() => closeRef.current?.focus());
   }
 
+  /** Resets unsaved create input and restores keyboard focus to the launcher. */
   function handleClose() {
     formRef.current?.reset();
     queueMicrotask(() => openerRef.current?.focus());
