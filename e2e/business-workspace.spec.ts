@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const fixtureEnabled = process.env.MIZAN_E2E_UI_FIXTURE === "true";
 const fixturePath = "/auth/e2e-business-workspace";
 
+/** Captures browser console and page errors so the workspace fixture fails on runtime regressions. */
 function captureBrowserErrors(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
