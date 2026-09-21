@@ -9,6 +9,7 @@ type BusinessOverviewPageProps = {
   params: Promise<{ businessId: string }>;
 };
 
+/** Loads the selected business and renders the Overview tab inside the shared workspace shell. */
 export default async function BusinessOverviewPage({ params }: BusinessOverviewPageProps) {
   const { businessId: rawBusinessId } = await params;
   const businessId = parseResourceId(rawBusinessId);
