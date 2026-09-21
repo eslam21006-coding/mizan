@@ -54,6 +54,7 @@ function variableLabel(value: string) {
   return behavior && isVariableExpenseBehavior(behavior) ? "تكلفة متغيرة" : "تكلفة ثابتة";
 }
 
+/** Renders Expense Structure with existing permissions, CRUD behavior, return context, and workspace navigation. */
 export default async function ExpensesPage({ params, searchParams }: ExpensesPageProps) {
   const { businessId: rawBusinessId } = await params;
   const businessId = parseResourceId(rawBusinessId);
