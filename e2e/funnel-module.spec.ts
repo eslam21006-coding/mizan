@@ -4,6 +4,7 @@ const fixtureEnabled = process.env.MIZAN_E2E_UI_FIXTURE === "true";
 const fixturePath = "/auth/e2e-funnel-module";
 const businessId = "123e4567-e89b-42d3-a456-426614174000";
 
+/** Collects browser console and page errors so the N40 UI fixture fails on runtime regressions. */
 function captureBrowserErrors(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
