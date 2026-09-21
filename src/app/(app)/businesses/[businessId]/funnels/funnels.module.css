@@ -11,25 +11,6 @@
   align-items: flex-end;
 }
 
-.backLink {
-  min-height: 42px;
-  display: inline-flex;
-  align-items: center;
-  padding: 9px 14px;
-  color: var(--text-soft);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 800;
-}
-
-.backLink:hover {
-  color: var(--brand-strong);
-  border-color: #cbded9;
-}
-
-.backLink:focus-visible,
 .createForm button:focus-visible,
 .editForm button:focus-visible,
 .createForm input:focus-visible,
@@ -341,10 +322,6 @@
   .headingRow {
     align-items: stretch;
     flex-direction: column;
-  }
-
-  .backLink {
-    align-self: flex-start;
   }
 
   .createForm,
