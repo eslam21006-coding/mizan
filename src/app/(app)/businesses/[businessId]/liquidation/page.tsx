@@ -17,6 +17,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FunnelHierarchyBack } from "../funnel-hierarchy-back";
 import { FunnelModuleShell } from "../funnel-module-shell";
 import { saveFrontEndAllocations } from "./actions";
+import { LiquidationMissingDataActions } from "./liquidation-missing-data-actions";
 import styles from "./liquidation.module.css";
 
 type LiquidationPageProps = {
@@ -239,15 +240,19 @@ export default async function LiquidationPage({ params, searchParams }: Liquidat
             </article>
           </section>
 
-          {month.adSpendUnavailable && (
-            <section className={styles.warning}>
-              <strong>Ad Spend غير مكتمل</strong>
-              <p>
-                يمكن عرض Front-End Net Cash والتكاليف الموزعة، لكن Ad Liquidation Rate يحتاج Total Ad
-                Spend معتمدًا من صفحة أرقام الفانلز.
-              </p>
-            </section>
-          )}
+          <LiquidationMissingDataActions
+            businessId={businessId}
+            monthKey={selectedMonth.monthKey}
+            revenueIncomplete={
+              !month.result.frontEndNetCash.available &&
+              month.result.frontEndNetCash.reason === "FRONT_END_REVENUE_INCOMPLETE"
+            }
+            adSpendMissing={month.adSpendUnavailable}
+            allocationIncomplete={
+              !month.result.frontEndVariableCosts.available &&
+              month.result.frontEndVariableCosts.reason === "VARIABLE_COST_ALLOCATION_INCOMPLETE"
+            }
+          />
 
           <section className={styles.panel}>
             <div className={styles.panelHeading}>
@@ -275,7 +280,7 @@ export default async function LiquidationPage({ params, searchParams }: Liquidat
             )}
           </section>
 
-          <section className={styles.panel}>
+          <section className={styles.panel} id="front-end-allocations">
             <div className={styles.panelHeading}>
               <div>
                 <span>Variable cost allocation</span>
