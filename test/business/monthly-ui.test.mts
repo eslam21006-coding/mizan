@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
+import { resolveHistoricalMonthlyUiState } from "../../src/lib/historical-month-state.ts";
 
 const actions = await readFile(
   new URL("../../src/app/(app)/businesses/[businessId]/monthly/actions.ts", import.meta.url),
@@ -69,7 +70,15 @@ test("Task 8 page fails closed for mutations when any monthly data dependency fa
     page,
     /const dataLoadError = Boolean\([\s\S]*periodResult\.error[\s\S]*streamsResult\.error[\s\S]*expensesResult\.error[\s\S]*entryLoadError/,
   );
-  assert.match(page, /const canEditMonth = canManage && !dataLoadError && !isSavedHistorical/);
+
+  const failedLoadState = resolveHistoricalMonthlyUiState({
+    isHistorical: false,
+    hasSavedPeriod: false,
+    canManage: true,
+    dataLoadError: true,
+  });
+  assert.equal(failedLoadState.canEditMonth, false);
+
   assert.match(page, /\{canEditMonth && \(/);
   assert.match(page, /\{!dataLoadError &&[\s\S]*canManage && !isSavedHistorical \? \(/);
 });
