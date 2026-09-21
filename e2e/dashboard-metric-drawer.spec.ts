@@ -72,16 +72,24 @@ test.describe("N47/N48 Dashboard KPI drawer and deep analysis", () => {
 
     await trigger.click();
     deepAnalysis = dialog.getByRole("link", { name: "تحليل أعمق" });
+    const analyticsRequestPromise = page.waitForRequest((request) => {
+      const url = new URL(request.url());
+      return (
+        url.pathname === "/analytics" &&
+        url.searchParams.get("business") === businessId &&
+        url.searchParams.get("month") === "2026-04"
+      );
+    });
     await deepAnalysis.click();
-    await page.waitForURL((url) =>
-      url.pathname === "/analytics" &&
-      url.searchParams.get("business") === businessId &&
-      url.searchParams.get("month") === "2026-04",
-    );
-    const destination = new URL(page.url());
-    expect(destination.pathname).toBe("/analytics");
-    expect(destination.searchParams.get("business")).toBe(businessId);
-    expect(destination.searchParams.get("month")).toBe("2026-04");
+    const analyticsRequest = await analyticsRequestPromise;
+    const requestedDestination = new URL(analyticsRequest.url());
+    expect(requestedDestination.pathname).toBe("/analytics");
+    expect(requestedDestination.searchParams.get("business")).toBe(businessId);
+    expect(requestedDestination.searchParams.get("month")).toBe("2026-04");
+
+    await page.waitForURL((url) => url.pathname === "/login");
+    const loginDestination = new URL(page.url());
+    expect(loginDestination.searchParams.get("next")).toBe(expectedAnalyticsHref);
   });
 
   test("uses a full-width mobile sheet without horizontal overflow", async ({ page }) => {
