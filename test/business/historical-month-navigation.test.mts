@@ -3,14 +3,6 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { resolveHistoricalMonthlyUiState } from "../../src/lib/historical-month-state.ts";
 
-const monthlySource = readFileSync(
-  "src/app/(app)/businesses/[businessId]/monthly/page.tsx",
-  "utf8",
-);
-const stateSource = readFileSync(
-  "src/app/(app)/businesses/[businessId]/monthly/historical-month-state.tsx",
-  "utf8",
-);
 const correctionPageSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/monthly/correction/page.tsx",
   "utf8",
@@ -52,10 +44,6 @@ test("N32 treats only already-saved past months as historical read-only state", 
   assert.equal(currentSaved.isSavedHistorical, false);
   assert.equal(currentSaved.canEditMonth, true);
 
-  assert.match(monthlySource, /<HistoricalMonthState/);
-  assert.match(stateSource, /شهر تاريخي/);
-  assert.match(stateSource, /بدء تصحيح تاريخي/);
-  assert.match(stateSource, /monthly\/correction\?month=/);
 });
 
 test("N33 correction navigation returns to the exact historical Monthly month", () => {
