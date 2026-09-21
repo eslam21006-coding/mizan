@@ -9,6 +9,17 @@ test("resolves the existing business dashboard route with safely encoded busines
   );
 });
 
+test("preserves a validated month when returning to the business overview", () => {
+  assert.equal(
+    resolveNavigationDestination({
+      route: "business-overview",
+      businessId: "business fixture/01",
+      month: "2026-09",
+    }),
+    "/?business=business+fixture%2F01&month=2026-09",
+  );
+});
+
 test("resolves nested business routes without accepting arbitrary href strings", () => {
   assert.equal(
     resolveNavigationDestination({ route: "business-workspace", businessId: "business/01" }),
