@@ -12,6 +12,7 @@ import { loadFunnelMonth, type FunnelMonthlyEntrySnapshot } from "@/lib/business
 import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
 import type { ExactRatio } from "@/lib/business/calculations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { FunnelHierarchyBack } from "../../funnel-hierarchy-back";
 import { FunnelModuleShell } from "../../funnel-module-shell";
 import { saveFunnelMonthlyActuals } from "./actions";
 import styles from "./monthly.module.css";
@@ -265,6 +266,8 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
         activeTab="monthly"
         monthKey={selectedMonth.monthKey}
       />
+
+      <FunnelHierarchyBack businessId={businessId} monthKey={selectedMonth.monthKey} />
 
       <div className={styles.headingRow}>
         <PageHeading
