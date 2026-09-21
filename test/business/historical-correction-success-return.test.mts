@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { buildHistoricalCorrectionSuccessHref } from "../../src/lib/historical-correction-navigation.ts";
 
 const correctionActionsSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/monthly/correction/actions.ts",
@@ -16,17 +17,20 @@ const successSource = readFileSync(
 );
 
 test("N34 returns successful historical corrections to the exact Monthly month", () => {
-  assert.match(
-    correctionActionsSource,
-    /new URLSearchParams\(\{ month: monthKey, status: "corrected" \}\)/,
-  );
-  assert.match(
-    correctionActionsSource,
-    /redirect\(`\/businesses\/\$\{businessId\}\/monthly\?\$\{query\.toString\(\)\}`\)/,
-  );
+  const successHref = buildHistoricalCorrectionSuccessHref("business / one", "2026-07");
+  const successUrl = new URL(successHref, "https://mizan.test");
+
+  assert.equal(successUrl.pathname, "/businesses/business%20%2F%20one/monthly");
+  assert.equal(successUrl.searchParams.get("month"), "2026-07");
+  assert.equal(successUrl.searchParams.get("status"), "corrected");
+  assert.equal([...successUrl.searchParams.keys()].length, 2);
   assert.match(
     correctionActionsSource,
     /if \(error\) redirectCorrection\(businessId, month\.monthKey, "correction-failed"\)/,
+  );
+  assert.match(
+    correctionActionsSource,
+    /redirect\(buildHistoricalCorrectionSuccessHref\(businessId, monthKey\)\)/,
   );
   assert.match(
     correctionActionsSource,
