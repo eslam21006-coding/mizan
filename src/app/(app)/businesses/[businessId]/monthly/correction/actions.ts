@@ -11,20 +11,32 @@ import {
   parseOptionalDecimalInput,
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import {
+  redirectHistoricalCorrection,
+  redirectHistoricalCorrectionSuccess,
+} from "@/lib/historical-correction-navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-function correctionPath(businessId: string, monthKey: string, status?: string) {
-  const query = new URLSearchParams({ month: monthKey });
-  if (status) query.set("status", status);
-  return `/businesses/${businessId}/monthly/correction?${query.toString()}`;
-}
+const correctionNavigationEffects = {
+  revalidatePath,
+  redirect,
+};
 
 function redirectCorrection(businessId: string, monthKey: string, status: string): never {
-  revalidatePath(`/businesses/${businessId}/monthly`);
-  revalidatePath(`/businesses/${businessId}/monthly/correction`);
-  revalidatePath(`/businesses/${businessId}/customers`);
-  revalidatePath(`/businesses/${businessId}/customers/review`);
-  redirect(correctionPath(businessId, monthKey, status));
+  return redirectHistoricalCorrection(
+    correctionNavigationEffects,
+    businessId,
+    monthKey,
+    status,
+  );
+}
+
+function redirectCorrectionSuccess(businessId: string, monthKey: string): never {
+  return redirectHistoricalCorrectionSuccess(
+    correctionNavigationEffects,
+    businessId,
+    monthKey,
+  );
 }
 
 function uniqueResourceIds(values: FormDataEntryValue[]) {
@@ -133,5 +145,5 @@ export async function correctHistoricalMonthlyActuals(formData: FormData) {
   });
 
   if (error) redirectCorrection(businessId, month.monthKey, "correction-failed");
-  redirectCorrection(businessId, month.monthKey, "corrected");
+  redirectCorrectionSuccess(businessId, month.monthKey);
 }

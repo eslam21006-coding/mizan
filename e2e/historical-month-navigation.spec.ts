@@ -12,7 +12,7 @@ function captureBrowserErrors(page: Page) {
   return errors;
 }
 
-test.describe("N32 + N33 historical month UX", () => {
+test.describe("N32 + N33 + N34 historical month UX", () => {
   test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
 
   test("shows historical state and exact-month correction navigation in Arabic RTL", async ({
@@ -25,7 +25,17 @@ test.describe("N32 + N33 historical month UX", () => {
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
 
-    await expect(page.getByText("شهر تاريخي", { exact: true })).toBeVisible();
+    const historicalPanel = page.locator('[aria-label="حالة الشهر التاريخي"]');
+    await expect(historicalPanel).toBeVisible();
+    await expect(historicalPanel).toContainText("شهر تاريخي");
+    await expect(historicalPanel).toContainText("العرض هنا");
+    await expect(historicalPanel).toContainText("مسار تصحيح تاريخي صريح");
+    const correctionSuccess = page.locator(
+      '[role="status"][aria-label="تأكيد التصحيح التاريخي"]',
+    );
+    await expect(correctionSuccess).toBeVisible();
+    await expect(correctionSuccess).toContainText("تم حفظ التصحيح التاريخي");
+    await expect(correctionSuccess).toContainText("يوليو ٢٠٢٦");
     const correctionLink = page.getByRole("link", { name: "بدء تصحيح تاريخي" });
     await expect(correctionLink).toHaveAttribute(
       "href",

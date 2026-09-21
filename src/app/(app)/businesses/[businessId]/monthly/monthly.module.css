@@ -16,7 +16,8 @@
 .saveBar,
 .successStatus,
 .errorStatus,
-.readOnlyNotice {
+.readOnlyNotice,
+.correctionSuccess {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -289,6 +290,25 @@
   color: var(--brand-strong);
   background: var(--brand-soft);
   border-color: #d3e7e1;
+}
+
+.correctionSuccess {
+  display: grid;
+  gap: 5px;
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+  border-color: #d3e7e1;
+}
+
+.correctionSuccess strong {
+  font-size: 13px;
+}
+
+.correctionSuccess p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.75;
 }
 
 .errorStatus {

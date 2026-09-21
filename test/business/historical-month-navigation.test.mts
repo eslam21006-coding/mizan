@@ -1,15 +1,8 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { resolveHistoricalMonthlyUiState } from "../../src/lib/historical-month-state.ts";
 
-const monthlySource = readFileSync(
-  "src/app/(app)/businesses/[businessId]/monthly/page.tsx",
-  "utf8",
-);
-const stateSource = readFileSync(
-  "src/app/(app)/businesses/[businessId]/monthly/historical-month-state.tsx",
-  "utf8",
-);
 const correctionPageSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/monthly/correction/page.tsx",
   "utf8",
@@ -24,19 +17,33 @@ const correctionFormSource = readFileSync(
 );
 
 test("N32 treats only already-saved past months as historical read-only state", () => {
-  assert.match(monthlySource, /const currentMonthKey = currentMonthKeyForTimeZone/);
-  assert.match(monthlySource, /const isHistorical = selectedMonth\.monthKey < currentMonthKey/);
-  assert.match(monthlySource, /const isSavedHistorical = isHistorical && Boolean\(period\)/);
-  assert.match(
-    monthlySource,
-    /const canEditMonth = canManage && !dataLoadError && !isSavedHistorical/,
-  );
-  assert.match(monthlySource, /canManage && !isSavedHistorical \? \(/);
-  assert.match(monthlySource, /<HistoricalMonthState/);
+  const savedPast = resolveHistoricalMonthlyUiState({
+    isHistorical: true,
+    hasSavedPeriod: true,
+    canManage: true,
+    dataLoadError: false,
+  });
+  assert.equal(savedPast.isSavedHistorical, true);
+  assert.equal(savedPast.canEditMonth, false);
 
-  assert.match(stateSource, /شهر تاريخي/);
-  assert.match(stateSource, /بدء تصحيح تاريخي/);
-  assert.match(stateSource, /monthly\/correction\?month=/);
+  const unsavedPast = resolveHistoricalMonthlyUiState({
+    isHistorical: true,
+    hasSavedPeriod: false,
+    canManage: true,
+    dataLoadError: false,
+  });
+  assert.equal(unsavedPast.isSavedHistorical, false);
+  assert.equal(unsavedPast.canEditMonth, true);
+
+  const currentSaved = resolveHistoricalMonthlyUiState({
+    isHistorical: false,
+    hasSavedPeriod: true,
+    canManage: true,
+    dataLoadError: false,
+  });
+  assert.equal(currentSaved.isSavedHistorical, false);
+  assert.equal(currentSaved.canEditMonth, true);
+
 });
 
 test("N33 correction navigation returns to the exact historical Monthly month", () => {
