@@ -6,6 +6,10 @@ const pageSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/revenue-streams/page.tsx",
   "utf8",
 );
+const workspaceHeaderSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/revenue-streams/revenue-streams-workspace-header.tsx",
+  "utf8",
+);
 const drawerSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/revenue-streams/revenue-stream-drawer.tsx",
   "utf8",
@@ -16,8 +20,9 @@ const actionsSource = readFileSync(
 );
 
 test("N30 moves Revenue Source create/edit into an accessible native drawer", () => {
+  assert.match(workspaceHeaderSource, /RevenueStreamDrawerLauncher/);
+  assert.match(workspaceHeaderSource, /mode="create"/);
   assert.match(pageSource, /RevenueStreamDrawerLauncher/);
-  assert.match(pageSource, /mode="create"/);
   assert.match(pageSource, /mode="edit"/);
   assert.doesNotMatch(pageSource, /className=\{styles\.createForm\}/);
   assert.doesNotMatch(pageSource, /className=\{styles\.editForm\}/);
