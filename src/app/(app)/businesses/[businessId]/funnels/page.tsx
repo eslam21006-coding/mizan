@@ -25,6 +25,7 @@ const STATUS_MESSAGES: Record<string, string> = {
   "update-failed": "تعذر حفظ تعديلات الفانل. لم يتم تغيير أي بيانات.",
 };
 
+/** Returns the founder-facing label for a persisted Funnel type without changing its stored value. */
 function funnelTypeLabel(value: string) {
   return FUNNEL_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? value;
 }
