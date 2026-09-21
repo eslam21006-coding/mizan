@@ -1,6 +1,7 @@
 export type NavigationDestination =
   | { route: "businesses" }
   | { route: "business-overview"; businessId: string }
+  | { route: "business-workspace"; businessId: string }
   | {
       route: "business-customers";
       businessId: string;
@@ -47,6 +48,8 @@ export function resolveNavigationDestination(destination: NavigationDestination)
       const searchParams = new URLSearchParams({ business: destination.businessId });
       return `/?${searchParams.toString()}`;
     }
+    case "business-workspace":
+      return businessPath(destination.businessId);
     case "business-customers": {
       const pathname = `${businessPath(destination.businessId)}/customers`;
       const searchParams = new URLSearchParams();
