@@ -35,7 +35,7 @@ export default async function BusinessSettingsPage({ params }: BusinessSettingsP
 
       <PageHeading
         title="الإعدادات"
-        description={\`راجع بيانات \${business.name} الأساسية داخل نفس مساحة العمل.\`}
+        description={`راجع بيانات ${business.name} الأساسية داخل نفس مساحة العمل.`}
       />
 
       <section className={styles.panel}>
