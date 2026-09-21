@@ -1,4 +1,5 @@
 export type FunnelModuleTab = "structure" | "monthly" | "liquidation";
+export type FunnelModuleOrigin = "funnel-structure";
 
 export const FUNNEL_MODULE_TABS = [
   { id: "structure", label: "الهيكل" },
@@ -11,16 +12,20 @@ export function buildFunnelModuleHref(
   businessId: string,
   tab: FunnelModuleTab,
   monthKey?: string | null,
+  origin?: FunnelModuleOrigin | null,
 ) {
   const base = `/businesses/${encodeURIComponent(businessId)}`;
-  const month = monthKey ? `?month=${encodeURIComponent(monthKey)}` : "";
+  const query = new URLSearchParams();
+  if (monthKey) query.set("month", monthKey);
+  if (tab === "monthly" && origin) query.set("origin", origin);
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
 
   switch (tab) {
     case "structure":
       return `${base}/funnels`;
     case "monthly":
-      return `${base}/funnels/monthly${month}`;
+      return `${base}/funnels/monthly${suffix}`;
     case "liquidation":
-      return `${base}/liquidation${month}`;
+      return `${base}/liquidation${monthKey ? `?month=${encodeURIComponent(monthKey)}` : ""}`;
   }
 }

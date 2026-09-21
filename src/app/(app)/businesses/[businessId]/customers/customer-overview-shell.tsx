@@ -1,8 +1,11 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import type { CustomerAnalysisView, CustomerSearchParams } from "@/lib/customer-analysis-view";
-import { parseReturnOrigin, type ReturnOriginMetadata } from "@/lib/return-origin";
-import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
+import { parseReturnOrigin } from "@/lib/return-origin";
+import {
+  buildTransactionImportHref,
+  type TransactionImportReturnOrigin,
+} from "@/lib/transaction-import-navigation";
 import { CustomerAnalysisTabs } from "./customer-analysis-tabs";
 import { CustomerDataSourcesDrawer } from "./customer-data-sources-drawer";
 import { CustomerReviewNotice } from "./customer-review-notice";
@@ -42,13 +45,16 @@ export function CustomerOverviewShell({
   customers,
   tabBasePath,
 }: CustomerOverviewShellProps) {
-  let importOrigin: ReturnOriginMetadata = { origin: "customer-overview" };
+  let importOrigin: TransactionImportReturnOrigin = { origin: "customer-overview" };
   if (activeView === "profitability") {
+    const parsedImportOrigin = parseReturnOrigin({
+      origin: "customer-profitability",
+      month: searchParams.month,
+    });
     importOrigin =
-      parseReturnOrigin({
-        origin: "customer-profitability",
-        month: searchParams.month,
-      }) ?? { origin: "customer-profitability" };
+      parsedImportOrigin?.origin === "customer-profitability"
+        ? parsedImportOrigin
+        : { origin: "customer-profitability" };
   }
   const importHref = buildTransactionImportHref(businessId, importOrigin);
 

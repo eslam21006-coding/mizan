@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   buildTransactionImportHref,
+  parseTransactionImportReturnOrigin,
   transactionImportReturnAction,
 } from "../../src/lib/transaction-import-navigation.ts";
 
@@ -51,6 +52,10 @@ test("builds Import URLs only from structured allow-listed origin metadata", () 
     ),
     "/businesses/business%20fixture%2F01/customers/import?origin=monthly-editor&month=2026-09&historyStatus=complete",
   );
+  assert.equal(
+    parseTransactionImportReturnOrigin({ origin: "funnel-structure" }),
+    null,
+  );
 });
 
 test("resolves Import completion and Cancel actions from the same safe origin", () => {
@@ -88,12 +93,13 @@ test("resolves Import completion and Cancel actions from the same safe origin", 
 
 test("Import page uses breadcrumb plus origin-aware Cancel and keeps origin through status redirects", () => {
   assert.match(importPageSource, /TransactionImportNavigation/);
-  assert.match(importPageSource, /parseReturnOrigin\(\{ origin: query\.origin, month: query\.month \}\)/);
+  assert.match(importPageSource, /parseTransactionImportReturnOrigin\(\{/);
   assert.match(importPageSource, /name="origin" value=\{returnOrigin\.origin\}/);
   assert.match(importPageSource, /name="month" value=\{returnOrigin\.month\}/);
   assert.match(importNavigationSource, /Breadcrumb/);
   assert.match(importNavigationSource, /إلغاء الاستيراد/);
   assert.match(importActionsSource, /formData\.getAll\(key\)/);
+  assert.match(importActionsSource, /parseTransactionImportReturnOrigin\(\{/);
   assert.match(importActionsSource, /origin: readReturnMetadataField\(formData, "origin"\)/);
   assert.match(importActionsSource, /month: readReturnMetadataField\(formData, "month"\)/);
   assert.match(importActionsSource, /buildTransactionImportHref\(businessId, returnOrigin, historyStatus\)/);

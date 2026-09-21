@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
+import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { requireAuthContext } from "@/lib/auth/context";
 import {
   calculateFunnelMetrics,
@@ -9,6 +10,7 @@ import {
 import { FUNNEL_TYPE_OPTIONS, parseFunnelResourceId } from "@/lib/business/funnels";
 import { loadFunnelMonth, type FunnelMonthlyEntrySnapshot } from "@/lib/business/funnel-month";
 import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
+import { parseFunnelMonthlyReturnOrigin } from "@/lib/funnel-monthly-return-origin";
 import type { ExactRatio } from "@/lib/business/calculations";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FunnelHierarchyBack } from "../../funnel-hierarchy-back";
@@ -18,7 +20,7 @@ import styles from "./monthly.module.css";
 
 type FunnelMonthlyPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ month?: string; status?: string }>;
+  searchParams: Promise<{ month?: string; status?: string; origin?: string | string[] }>;
 };
 
 type BusinessRow = {
@@ -222,6 +224,7 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
   const fallbackMonth = currentMonthKeyForTimeZone(business.timezone);
   const selectedMonth = parseMonthKey(query.month) ?? parseMonthKey(fallbackMonth);
   if (!selectedMonth) throw new Error("Could not resolve a valid funnel month.");
+  const returnOrigin = parseFunnelMonthlyReturnOrigin({ origin: query.origin });
 
   const [funnelMonth, funnelsResult] = await Promise.all([
     loadFunnelMonth(supabase, businessId, selectedMonth.monthStart),
@@ -264,9 +267,20 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
         businessId={businessId}
         activeTab="monthly"
         monthKey={selectedMonth.monthKey}
+        origin={returnOrigin?.origin}
       />
 
       <FunnelHierarchyBack businessId={businessId} monthKey={selectedMonth.monthKey} />
+
+      {returnOrigin && (
+        <ReturnContextBanner
+          purpose="أرقام الفانلز الشهرية"
+          origin={returnOrigin}
+          context={{ businessId }}
+          returnLabel="العودة إلى هيكل الفانلز"
+          ariaLabel="سياق العودة من أرقام الفانلز الشهرية"
+        />
+      )}
 
       <div className={styles.headingRow}>
         <PageHeading
@@ -286,6 +300,7 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
 
       <section className={styles.monthControl}>
         <form>
+          {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
           <label>
             <span>الشهر</span>
             <input
@@ -335,6 +350,7 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
           <form action={canManage ? saveFunnelMonthlyActuals : undefined} className={styles.metricsForm}>
             <input type="hidden" name="business_id" value={businessId} />
             <input type="hidden" name="month" value={selectedMonth.monthKey} />
+            {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
 
             <section className={styles.businessSpendCard}>
               <div>

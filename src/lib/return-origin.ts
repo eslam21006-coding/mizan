@@ -16,6 +16,7 @@ export type CustomerReturnOriginMetadata =
 
 export type ReturnOriginMetadata =
   | CustomerReturnOriginMetadata
+  | { origin: "funnel-structure" }
   | {
       origin: "monthly-editor";
       month: string;
@@ -79,6 +80,8 @@ export function parseReturnOrigin(searchParams: ReturnOriginSearchParams): Retur
         : { origin: "customer-profitability" };
     case "monthly-editor":
       return month ? { origin: "monthly-editor", month } : null;
+    case "funnel-structure":
+      return { origin: "funnel-structure" };
     default:
       return null;
   }
@@ -99,6 +102,8 @@ export function resolveReturnOrigin(
         view: "profitability",
         month: origin.month,
       };
+    case "funnel-structure":
+      return { route: "business-funnels", businessId: context.businessId };
     case "monthly-editor":
       return {
         route: "business-monthly",

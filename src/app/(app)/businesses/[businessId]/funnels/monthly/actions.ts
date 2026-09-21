@@ -10,19 +10,42 @@ import {
   parseOptionalDecimalInput,
   parseOptionalSignedDecimalInput,
 } from "@/lib/business/monthly";
+import {
+  parseFunnelMonthlyReturnOrigin,
+  type FunnelMonthlyReturnOrigin,
+} from "@/lib/funnel-monthly-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-function funnelMonthlyPath(businessId: string, monthKey: string, status?: string) {
+function funnelMonthlyPath(
+  businessId: string,
+  monthKey: string,
+  status?: string,
+  returnOrigin?: FunnelMonthlyReturnOrigin | null,
+) {
   const query = new URLSearchParams({ month: monthKey });
   if (status) query.set("status", status);
+  if (returnOrigin) query.set("origin", returnOrigin.origin);
   return `/businesses/${businessId}/funnels/monthly?${query.toString()}`;
 }
 
-function redirectFunnelMonthly(businessId: string, monthKey: string, status: string): never {
+function redirectFunnelMonthly(
+  businessId: string,
+  monthKey: string,
+  status: string,
+  returnOrigin?: FunnelMonthlyReturnOrigin | null,
+): never {
   revalidatePath("/");
   revalidatePath("/analytics");
   revalidatePath(`/businesses/${businessId}/funnels/monthly`);
-  redirect(funnelMonthlyPath(businessId, monthKey, status));
+  redirect(funnelMonthlyPath(businessId, monthKey, status, returnOrigin));
+}
+
+/** Reads a single allow-listed workflow origin and fails closed on duplicates or unknown values. */
+function parseReturnOriginFromFormData(formData: FormData) {
+  const origins = formData.getAll("origin");
+  if (origins.length === 0) return null;
+  if (origins.length !== 1 || typeof origins[0] !== "string") return null;
+  return parseFunnelMonthlyReturnOrigin({ origin: origins[0] });
 }
 
 function uniqueFunnelIds(values: FormDataEntryValue[]) {
@@ -44,17 +67,22 @@ export async function saveFunnelMonthlyActuals(formData: FormData) {
 
   const businessId = parseFunnelResourceId(formData.get("business_id"));
   const month = parseMonthKey(formData.get("month"));
+  const returnOrigin = parseReturnOriginFromFormData(formData);
   if (!businessId) redirect("/businesses");
-  if (!month) redirect(`/businesses/${businessId}/funnels/monthly?status=invalid-month`);
+  if (!month) {
+    const query = new URLSearchParams({ status: "invalid-month" });
+    if (returnOrigin) query.set("origin", returnOrigin.origin);
+    redirect(`/businesses/${businessId}/funnels/monthly?${query.toString()}`);
+  }
 
   const businessAdSpend = parseOptionalDecimalInput(formData.get("business_ad_spend"));
   if (!businessAdSpend.ok) {
-    redirectFunnelMonthly(businessId, month.monthKey, "invalid-input");
+    redirectFunnelMonthly(businessId, month.monthKey, "invalid-input", returnOrigin);
   }
 
   const funnelIds = uniqueFunnelIds(formData.getAll("funnel_id"));
   if (!funnelIds) {
-    redirectFunnelMonthly(businessId, month.monthKey, "invalid-input");
+    redirectFunnelMonthly(businessId, month.monthKey, "invalid-input", returnOrigin);
   }
 
   const funnelEntries = [];
@@ -82,7 +110,7 @@ export async function saveFunnelMonthlyActuals(formData: FormData) {
       !cashCollected.ok ||
       !attributedRevenue.ok
     ) {
-      redirectFunnelMonthly(businessId, month.monthKey, "invalid-input");
+      redirectFunnelMonthly(businessId, month.monthKey, "invalid-input", returnOrigin);
     }
 
     funnelEntries.push({
@@ -108,8 +136,8 @@ export async function saveFunnelMonthlyActuals(formData: FormData) {
   });
 
   if (error) {
-    redirectFunnelMonthly(businessId, month.monthKey, "save-failed");
+    redirectFunnelMonthly(businessId, month.monthKey, "save-failed", returnOrigin);
   }
 
-  redirectFunnelMonthly(businessId, month.monthKey, "saved");
+  redirectFunnelMonthly(businessId, month.monthKey, "saved", returnOrigin);
 }

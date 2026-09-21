@@ -36,7 +36,7 @@ test.describe("N40 persistent Funnel module shell", () => {
     await expect(structure).toHaveAttribute("href", `/businesses/${businessId}/funnels`);
     await expect(monthly).toHaveAttribute(
       "href",
-      `/businesses/${businessId}/funnels/monthly?month=2026-09`,
+      `/businesses/${businessId}/funnels/monthly?month=2026-09&origin=funnel-structure`,
     );
     await expect(liquidation).toHaveAttribute(
       "href",
