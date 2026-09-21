@@ -30,9 +30,9 @@
 .successStatus,
 .errorStatus,
 .scopeNotice,
-.warning,
 .loadError,
-.readOnlyNotice {
+.readOnlyNotice,
+.missingDataPanel {
   padding: 14px 16px;
   border-radius: 12px;
 }
@@ -56,22 +56,17 @@
   border: 1px solid var(--border);
 }
 
-.warning {
-  background: #fff9eb;
-  border: 1px solid #ead9a7;
-}
-
 .readOnlyNotice {
   background: #fbfaf4;
   border: 1px solid #e8dfbf;
 }
 
 .scopeNotice p,
-.warning p,
 .loadError p,
 .readOnlyNotice p,
 .muted,
-.saveBar p {
+.saveBar p,
+.missingDataPanel p {
   margin: 6px 0 0;
   color: var(--text-soft);
   font-size: 12px;
@@ -81,7 +76,8 @@
 .monthControl,
 .panel,
 .metricGrid article,
-.emptyState {
+.emptyState,
+.missingDataPanel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
@@ -92,6 +88,59 @@
 .panel,
 .emptyState {
   padding: 22px;
+}
+
+.missingDataPanel {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  background: #fff9eb;
+  border: 1px solid #ead9a7;
+}
+
+.missingDataPanel h2 {
+  margin: 4px 0 0;
+  font-size: 18px;
+}
+
+.missingDataList {
+  display: grid;
+  gap: 10px;
+}
+
+.missingDataItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid #ead9a7;
+  border-radius: 11px;
+}
+
+.missingDataItem > div {
+  min-width: 0;
+}
+
+.missingDataItem p {
+  margin-top: 4px;
+}
+
+.missingDataItem a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 8px 13px;
+  color: var(--brand-strong);
+  background: var(--surface);
+  border: 1px solid var(--brand);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .monthControl form {
@@ -255,6 +304,7 @@
 .headerLinks a:focus-visible,
 .panelHeading a:focus-visible,
 .emptyState a:focus-visible,
+.missingDataItem a:focus-visible,
 .monthControl input:focus-visible,
 .monthControl button:focus-visible,
 .allocationRow input:focus-visible,
@@ -280,7 +330,8 @@
 @media (max-width: 640px) {
   .headingRow,
   .panelHeading,
-  .saveBar {
+  .saveBar,
+  .missingDataItem {
     align-items: stretch;
     flex-direction: column;
   }
@@ -303,5 +354,9 @@
 
   .headerLinks {
     align-self: flex-start;
+  }
+
+  .missingDataItem a {
+    width: 100%;
   }
 }
