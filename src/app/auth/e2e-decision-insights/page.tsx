@@ -81,6 +81,8 @@ export default async function DecisionInsightsE2eFixturePage({
         fallbackMessageAr={empty ? "البيانات غير كافية للحكم" : null}
         currentMonthLabel="سبتمبر ٢٠٢٦"
         previousMonthLabel="أغسطس ٢٠٢٦"
+        businessId="business-fixture"
+        currentMonthKey="2026-09"
         customerEconomicsEvidenceQuality={estimatedCustomerEconomics ? "estimated" : null}
       />
     </main>
