@@ -9,7 +9,8 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FunnelHierarchyBack } from "../funnel-hierarchy-back";
 import { FunnelModuleShell } from "../funnel-module-shell";
-import { createFunnel, updateFunnel } from "./actions";
+import { createFunnel } from "./actions";
+import { FunnelList } from "./funnel-list";
 import styles from "./funnels.module.css";
 
 type FunnelsPageProps = {
@@ -24,11 +25,6 @@ const STATUS_MESSAGES: Record<string, string> = {
   "create-failed": "تعذر إضافة الفانل. لم يتم تغيير أي بيانات.",
   "update-failed": "تعذر حفظ تعديلات الفانل. لم يتم تغيير أي بيانات.",
 };
-
-/** Returns the founder-facing label for a persisted Funnel type without changing its stored value. */
-function funnelTypeLabel(value: string) {
-  return FUNNEL_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? value;
-}
 
 /** Renders Funnel structure management with the persistent N40 module navigation. */
 export default async function FunnelsPage({ params, searchParams }: FunnelsPageProps) {
@@ -157,62 +153,7 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
         {funnelsError ? (
           <div className={styles.loadError}>تعذر تحميل الفانلز. لم يتم تغيير أي بيانات.</div>
         ) : funnels && funnels.length > 0 ? (
-          <div className={styles.funnelList}>
-            {funnels.map((funnel) => (
-              <article className={styles.funnelCard} key={funnel.id}>
-                <div className={styles.funnelTopline}>
-                  <div>
-                    <span className={funnel.is_active ? styles.activeBadge : styles.inactiveBadge}>
-                      {funnel.is_active ? "نشطة" : "غير نشطة"}
-                    </span>
-                    <span className={styles.typeBadge}>{funnelTypeLabel(funnel.funnel_type)}</span>
-                  </div>
-                </div>
-
-                {canManage ? (
-                  <form action={updateFunnel} className={styles.editForm}>
-                    <input type="hidden" name="business_id" value={businessId} />
-                    <input type="hidden" name="funnel_id" value={funnel.id} />
-
-                    <label>
-                      <span>الاسم</span>
-                      <input
-                        type="text"
-                        name="name"
-                        maxLength={120}
-                        required
-                        defaultValue={funnel.name}
-                        autoComplete="off"
-                      />
-                    </label>
-
-                    <label>
-                      <span>النوع</span>
-                      <select name="funnel_type" defaultValue={funnel.funnel_type}>
-                        {FUNNEL_TYPE_OPTIONS.map((option) => (
-                          <option value={option.value} key={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label className={styles.activeToggle}>
-                      <input type="checkbox" name="is_active" defaultChecked={funnel.is_active} />
-                      <span>الفانل نشطة وتظهر في الإدخالات الجديدة</span>
-                    </label>
-
-                    <button type="submit">حفظ التعديلات</button>
-                  </form>
-                ) : (
-                  <div className={styles.readOnlyFunnel}>
-                    <strong>{funnel.name}</strong>
-                    <span>{funnelTypeLabel(funnel.funnel_type)}</span>
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
+          <FunnelList businessId={businessId} funnels={funnels} canManage={canManage} />
         ) : (
           <div className={styles.emptyState}>
             <strong>لا توجد فانلز بعد</strong>
