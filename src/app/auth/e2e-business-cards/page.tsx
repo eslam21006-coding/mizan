@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { BusinessCard } from "@/app/(app)/businesses/business-card";
+import styles from "@/app/(app)/businesses/businesses.module.css";
 
 export const dynamic = "force-dynamic";
 
@@ -35,17 +36,11 @@ export default function BusinessCardsFixturePage() {
   return (
     <AppShell {...fixtureShellProps}>
       <section className="page-stack" aria-label="اختبار كروت البزنس">
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))",
-            gap: 16,
-          }}
-        >
+        <section className={styles.grid} aria-label="البزنسات المتاحة">
           {cards.map((business) => (
             <BusinessCard key={business.id} business={business} />
           ))}
-        </div>
+        </section>
       </section>
     </AppShell>
   );
