@@ -19,12 +19,22 @@ function correctionPath(businessId: string, monthKey: string, status?: string) {
   return `/businesses/${businessId}/monthly/correction?${query.toString()}`;
 }
 
-function redirectCorrection(businessId: string, monthKey: string, status: string): never {
+function revalidateCorrectionDependencies(businessId: string) {
   revalidatePath(`/businesses/${businessId}/monthly`);
   revalidatePath(`/businesses/${businessId}/monthly/correction`);
   revalidatePath(`/businesses/${businessId}/customers`);
   revalidatePath(`/businesses/${businessId}/customers/review`);
+}
+
+function redirectCorrection(businessId: string, monthKey: string, status: string): never {
+  revalidateCorrectionDependencies(businessId);
   redirect(correctionPath(businessId, monthKey, status));
+}
+
+function redirectCorrectionSuccess(businessId: string, monthKey: string): never {
+  revalidateCorrectionDependencies(businessId);
+  const query = new URLSearchParams({ month: monthKey, status: "corrected" });
+  redirect(`/businesses/${businessId}/monthly?${query.toString()}`);
 }
 
 function uniqueResourceIds(values: FormDataEntryValue[]) {
@@ -133,5 +143,5 @@ export async function correctHistoricalMonthlyActuals(formData: FormData) {
   });
 
   if (error) redirectCorrection(businessId, month.monthKey, "correction-failed");
-  redirectCorrection(businessId, month.monthKey, "corrected");
+  redirectCorrectionSuccess(businessId, month.monthKey);
 }
