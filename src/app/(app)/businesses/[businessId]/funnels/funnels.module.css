@@ -5,15 +5,6 @@
   gap: 18px;
 }
 
-.funnelSummary:focus-visible,
-.editForm button:focus-visible,
-.editForm input:focus-visible,
-.editForm select:focus-visible,
-.activeToggle input:focus-visible {
-  outline: 3px solid var(--brand-ring);
-  outline-offset: 2px;
-}
-
 .successStatus,
 .errorStatus,
 .readOnlyNotice {
@@ -120,47 +111,6 @@
   border-radius: 999px;
 }
 
-.editForm label:not(.activeToggle) {
-  display: grid;
-  gap: 7px;
-}
-
-.editForm label > span {
-  color: var(--text-soft);
-  font-size: 11px;
-  font-weight: 750;
-}
-
-.editForm input[type="text"],
-.editForm select {
-  width: 100%;
-  min-height: 44px;
-  padding: 9px 11px;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  font: inherit;
-  font-size: 13px;
-}
-
-.editForm button {
-  min-height: 44px;
-  padding: 9px 15px;
-  color: #fff;
-  background: var(--brand);
-  border: 0;
-  border-radius: 10px;
-  font: inherit;
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-}
-
-.editForm button:hover {
-  background: var(--brand-strong);
-}
-
 .funnelList {
   display: grid;
   gap: 10px;
@@ -174,7 +124,6 @@
   overflow: hidden;
 }
 
-.funnelSummary,
 .funnelSummaryStatic {
   min-height: 74px;
   display: flex;
@@ -182,32 +131,6 @@
   justify-content: space-between;
   gap: 16px;
   padding: 15px 18px;
-}
-
-.funnelSummary {
-  list-style: none;
-  cursor: pointer;
-  transition:
-    background 150ms ease,
-    border-color 150ms ease;
-}
-
-.funnelSummary::-webkit-details-marker {
-  display: none;
-}
-
-.funnelSummary:hover {
-  background: var(--surface);
-}
-
-.funnelSummary:focus-visible {
-  outline: 3px solid var(--brand-ring);
-  outline-offset: -3px;
-}
-
-.funnelCard[open] .funnelSummary {
-  background: var(--surface);
-  border-block-end: 1px solid var(--border);
 }
 
 .funnelIdentity {
@@ -229,7 +152,6 @@
   gap: 7px;
 }
 
-.editDisclosure,
 .readOnlyBadge {
   flex: 0 0 auto;
   min-height: 36px;
@@ -243,25 +165,10 @@
   font-weight: 800;
 }
 
-.editDisclosure {
-  color: var(--brand-strong);
-  background: var(--surface);
-  border: 1px solid #d3e7e1;
-}
-
 .readOnlyBadge {
   color: var(--text-soft);
   background: #eceeed;
   border: 1px solid var(--border);
-}
-
-.disclosureIcon {
-  display: inline-block;
-  transition: transform 150ms ease;
-}
-
-.funnelCard[open] .disclosureIcon {
-  transform: rotate(180deg);
 }
 
 .activeBadge,
@@ -290,35 +197,6 @@
   color: var(--text-soft);
   background: var(--surface);
   border: 1px solid var(--border);
-}
-
-.editForm {
-  display: grid;
-  padding: 18px;
-  grid-template-columns: minmax(0, 1.3fr) minmax(210px, 0.85fr) minmax(230px, 0.95fr) auto;
-  align-items: end;
-  gap: 12px;
-}
-
-.activeToggle {
-  min-height: 44px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 9px 11px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-}
-
-.activeToggle input {
-  width: 17px;
-  height: 17px;
-  accent-color: var(--brand);
-}
-
-.editForm .activeToggle > span {
-  line-height: 1.5;
 }
 
 .emptyState,
@@ -350,35 +228,18 @@
     grid-template-columns: 1fr;
   }
 
-  .editForm {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .activeToggle {
-    align-self: stretch;
-  }
 }
 
 @media (max-width: 640px) {
-  .editForm {
-    grid-template-columns: 1fr;
-  }
-
   .panel {
     padding: 18px;
   }
 
-  .editForm button {
-    width: 100%;
-  }
-
-  .funnelSummary,
   .funnelSummaryStatic {
     align-items: flex-start;
     flex-direction: column;
   }
 
-  .editDisclosure,
   .readOnlyBadge {
     align-self: flex-start;
   }
