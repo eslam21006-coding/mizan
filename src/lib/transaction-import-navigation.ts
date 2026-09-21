@@ -1,5 +1,15 @@
 import { resolveNavigationDestination } from "./navigation-hierarchy.ts";
-import { resolveReturnOrigin, type ReturnOriginMetadata } from "./return-origin.ts";
+import {
+  parseReturnOrigin,
+  resolveReturnOrigin,
+  type ReturnOriginMetadata,
+  type ReturnOriginSearchParams,
+} from "./return-origin.ts";
+
+export type TransactionImportReturnOrigin = Exclude<
+  ReturnOriginMetadata,
+  { origin: "funnel-structure" }
+>;
 
 export type TransactionImportReturnAction = {
   href: string;
@@ -7,10 +17,18 @@ export type TransactionImportReturnAction = {
   description: string;
 };
 
+/** Accepts only customer/Monthly origins that belong to the Transaction Import workflow. */
+export function parseTransactionImportReturnOrigin(
+  searchParams: ReturnOriginSearchParams,
+): TransactionImportReturnOrigin | null {
+  const parsed = parseReturnOrigin(searchParams);
+  return parsed?.origin === "funnel-structure" ? null : parsed;
+}
+
 /** Builds the canonical Import URL while carrying only allow-listed structured origin metadata. */
 export function buildTransactionImportHref(
   businessId: string,
-  origin: ReturnOriginMetadata | null = null,
+  origin: TransactionImportReturnOrigin | null = null,
   historyStatus?: string | null,
 ) {
   const pathname = `/businesses/${encodeURIComponent(businessId)}/customers/import`;
@@ -33,7 +51,7 @@ export function buildTransactionImportHref(
 
 /** Resolves the Import workflow's safe Cancel/completion destination and context-specific copy. */
 export function transactionImportReturnAction(
-  origin: ReturnOriginMetadata | null,
+  origin: TransactionImportReturnOrigin | null,
   businessId: string,
 ): TransactionImportReturnAction {
   if (!origin) {
