@@ -1,5 +1,3 @@
-import { buildBusinessWorkspaceHref } from "./business-workspace";
-
 export type BusinessOverviewHealthInput = {
   businessId: string;
   currentMonthKey: string;
@@ -63,13 +61,13 @@ export function resolveBusinessOverviewHealth(
   if (!revenueSourcesReady) {
     nextAction = {
       kind: "revenue-streams",
-      href: buildBusinessWorkspaceHref(input.businessId, "revenue-streams"),
+      href: `/businesses/${encodeURIComponent(input.businessId)}/revenue-streams`,
       label: input.canManage ? "إضافة مصدر إيراد" : "مراجعة مصادر الإيراد",
     };
   } else if (!expensesReady) {
     nextAction = {
       kind: "expenses",
-      href: buildBusinessWorkspaceHref(input.businessId, "expenses"),
+      href: `/businesses/${encodeURIComponent(input.businessId)}/expenses`,
       label: input.canManage ? "إضافة بند مصروف" : "مراجعة هيكل المصروفات",
     };
   } else {
