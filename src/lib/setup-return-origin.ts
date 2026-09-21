@@ -2,7 +2,7 @@ import {
   parseReturnOrigin,
   type CustomerReturnOriginMetadata,
   type ReturnOriginSearchParams,
-} from "./return-origin";
+} from "./return-origin.ts";
 
 type SearchParamRecord = Readonly<Record<string, string | string[] | undefined>>;
 type SearchParamReader = {
