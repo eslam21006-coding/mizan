@@ -42,6 +42,7 @@ function typeLabel(value: string) {
   return REVENUE_STREAM_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? value;
 }
 
+/** Renders Revenue Sources with existing permissions, CRUD behavior, return context, and workspace navigation. */
 export default async function RevenueStreamsPage({
   params,
   searchParams,
