@@ -57,7 +57,8 @@ test.describe("N40 persistent Funnel module shell", () => {
       "aria-current",
       "page",
     );
-    await expect(module.getByRole("link")).toHaveCount(3);
+    const tabs = module.getByRole("navigation", { name: "التنقل داخل وحدة الفانلز" });
+    await expect(tabs.getByRole("link")).toHaveCount(3);
 
     await page.goto(`${fixturePath}?tab=liquidation&month=2026-08`);
     module = page.getByRole("region", { name: "وحدة الفانلز" });
