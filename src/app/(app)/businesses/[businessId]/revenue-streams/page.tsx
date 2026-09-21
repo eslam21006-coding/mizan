@@ -11,6 +11,7 @@ import {
 } from "@/lib/business/revenue-streams";
 import { parseSetupReturnOrigin } from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { BusinessWorkspaceShell } from "../business-workspace-shell";
 import { deleteRevenueStream } from "./actions";
 import { RevenueStreamDrawerLauncher } from "./revenue-stream-drawer";
 import styles from "./revenue-streams.module.css";
@@ -41,6 +42,7 @@ function typeLabel(value: string) {
   return REVENUE_STREAM_TYPE_OPTIONS.find((option) => option.value === value)?.label ?? value;
 }
 
+/** Renders Revenue Sources with existing permissions, CRUD behavior, return context, and workspace navigation. */
 export default async function RevenueStreamsPage({
   params,
   searchParams,
@@ -58,7 +60,7 @@ export default async function RevenueStreamsPage({
     await Promise.all([
       supabase
         .from("businesses")
-        .select("id,name,base_currency,owner_user_id")
+        .select("id,name,base_currency,timezone,owner_user_id")
         .eq("id", businessId)
         .maybeSingle(),
       supabase
@@ -86,6 +88,14 @@ export default async function RevenueStreamsPage({
 
   return (
     <div className="page-stack">
+      <BusinessWorkspaceShell
+        businessId={businessId}
+        businessName={business.name}
+        baseCurrency={business.base_currency}
+        timezone={business.timezone}
+        activeTab="revenue-streams"
+      />
+
       <div className={styles.headingRow}>
         <PageHeading
           title="مصادر الإيراد"

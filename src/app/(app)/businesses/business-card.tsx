@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buildBusinessWorkspaceHref } from "@/lib/business-workspace";
 import styles from "./businesses.module.css";
 
 export type BusinessCardViewModel = {
@@ -9,10 +10,8 @@ export type BusinessCardViewModel = {
   timezoneLabel: string;
 };
 
-/** Presents business identity and one clear entry point into its dashboard. */
+/** Presents business identity and one clear entry point into its workspace. */
 export function BusinessCard({ business }: { business: BusinessCardViewModel }) {
-  const dashboardQuery = new URLSearchParams({ business: business.id });
-
   return (
     <article className={styles.businessCard} aria-label={`بزنس ${business.name}`}>
       <div className={styles.cardTopline}>
@@ -35,7 +34,10 @@ export function BusinessCard({ business }: { business: BusinessCardViewModel }) 
         </div>
       </dl>
 
-      <Link className={styles.openBusinessButton} href={`/?${dashboardQuery.toString()}`}>
+      <Link
+        className={styles.openBusinessButton}
+        href={buildBusinessWorkspaceHref(business.id, "overview")}
+      >
         فتح البزنس
       </Link>
     </article>

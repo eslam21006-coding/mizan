@@ -99,7 +99,7 @@ test("unused revenue streams have a guarded owner/admin delete path while histor
 
 test("read-only business members do not receive revenue stream mutation controls", () => {
   assert.match(page, /const auth = await requireAuthContext\(\)/);
-  assert.match(page, /\.select\("id,name,base_currency,owner_user_id"\)/);
+  assert.match(page, /\.select\("id,name,base_currency,timezone,owner_user_id"\)/);
   assert.match(
     page,
     /const canManageRevenueStreams = auth\.role === "admin" \|\| business\.owner_user_id === auth\.userId/,

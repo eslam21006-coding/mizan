@@ -100,7 +100,7 @@ test("expense writes rely on authenticated context and business RLS boundary", (
 
 test("read-only business members do not receive expense mutation controls", () => {
   assert.match(page, /const auth = await requireAuthContext\(\)/);
-  assert.match(page, /\.select\("id,name,base_currency,owner_user_id"\)/);
+  assert.match(page, /\.select\("id,name,base_currency,timezone,owner_user_id"\)/);
   assert.match(
     page,
     /const canManageExpenses = auth\.role === "admin" \|\| business\.owner_user_id === auth\.userId/,
