@@ -11,6 +11,7 @@ import {
   parseOptionalDecimalInput,
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import { buildHistoricalCorrectionSuccessHref } from "@/lib/historical-correction-navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function correctionPath(businessId: string, monthKey: string, status?: string) {
@@ -33,8 +34,7 @@ function redirectCorrection(businessId: string, monthKey: string, status: string
 
 function redirectCorrectionSuccess(businessId: string, monthKey: string): never {
   revalidateCorrectionDependencies(businessId);
-  const query = new URLSearchParams({ month: monthKey, status: "corrected" });
-  redirect(`/businesses/${businessId}/monthly?${query.toString()}`);
+  redirect(buildHistoricalCorrectionSuccessHref(businessId, monthKey));
 }
 
 function uniqueResourceIds(values: FormDataEntryValue[]) {
