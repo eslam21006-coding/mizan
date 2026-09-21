@@ -34,7 +34,10 @@ export function BusinessCard({ business }: { business: BusinessCardViewModel }) 
         </div>
       </dl>
 
-      <Link className={styles.openBusinessButton} href={buildBusinessWorkspaceHref(business.id, "overview")}>
+      <Link
+        className={styles.openBusinessButton}
+        href={buildBusinessWorkspaceHref(business.id, "overview")}
+      >
         فتح البزنس
       </Link>
     </article>
