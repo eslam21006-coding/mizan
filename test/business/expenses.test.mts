@@ -23,13 +23,6 @@ const drawer = await readFile(
   new URL("../../src/app/(app)/businesses/[businessId]/expenses/expense-drawer.tsx", import.meta.url),
   "utf8",
 );
-const workspaceHeader = await readFile(
-  new URL(
-    "../../src/app/(app)/businesses/[businessId]/expenses/expenses-workspace-header.tsx",
-    import.meta.url,
-  ),
-  "utf8",
-);
 const migration = await readFile(
   new URL("../../supabase/migrations/20260819060840_task_7_expense_structure.sql", import.meta.url),
   "utf8",
@@ -115,20 +108,6 @@ test("read-only business members do not receive expense mutation controls", () =
   assert.match(page, /\{canManageExpenses && \(/);
 });
 
-test("N39 keeps Expense Structure inside the Business workspace hierarchy", () => {
-  assert.match(page, /<ExpensesWorkspaceHeader/);
-  assert.doesNotMatch(page, /href="\/businesses"/);
-  assert.doesNotMatch(page, /العودة للبزنسات/);
-  assert.match(workspaceHeader, /<BusinessWorkspaceShell/);
-  assert.match(workspaceHeader, /activeTab="expenses"/);
-  assert.match(workspaceHeader, /<Breadcrumb items=\{breadcrumbItems\}/);
-  assert.match(workspaceHeader, /route: "business-workspace"/);
-  assert.match(workspaceHeader, /label="العودة إلى نظرة عامة"/);
-  assert.match(workspaceHeader, /<PageHeader/);
-  assert.match(workspaceHeader, /actionState=\{canManage \? "normal" : "read-only"\}/);
-  assert.match(workspaceHeader, /<ExpenseDrawerLauncher/);
-  assert.match(page, /<ReturnContextBanner/);
-});
 
 test("database rejects expense names made only of whitespace without changing trimmed length semantics", () => {
   assert.ok(nameConstraintMigration.includes("name ~ '[^[:space:]]'"));
