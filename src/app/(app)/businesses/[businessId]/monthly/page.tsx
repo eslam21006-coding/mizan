@@ -12,6 +12,7 @@ import {
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { parseMonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
+import { resolveHistoricalMonthlyUiState } from "@/lib/historical-month-state";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
 import { copyPreviousMonthExpenses, saveMonthlyActuals } from "./actions";
@@ -196,8 +197,17 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
 
   const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
   const isHistorical = selectedMonth.monthKey < currentMonthKey;
-  const isSavedHistorical = isHistorical && Boolean(period);
-  const canEditMonth = canManage && !dataLoadError && !isSavedHistorical;
+  const {
+    isSavedHistorical,
+    canEditMonth,
+    showCorrectionSuccess: isHistoricalCorrectionSuccess,
+  } = resolveHistoricalMonthlyUiState({
+    status: query.status,
+    isHistorical,
+    hasSavedPeriod: Boolean(period),
+    canManage,
+    dataLoadError,
+  });
   const previousMonth = shiftMonthKey(selectedMonth.monthKey, -1);
   const nextMonth = shiftMonthKey(selectedMonth.monthKey, 1);
   const monthlyHref = (monthKey: string) => {
@@ -229,7 +239,6 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
     timeZone: "UTC",
   }).format(new Date(`${selectedMonth.monthStart}T00:00:00.000Z`));
 
-  const isHistoricalCorrectionSuccess = query.status === "corrected" && isSavedHistorical;
   const copiedCount = Number(query.copied ?? 0);
   const statusMessage =
     isHistoricalCorrectionSuccess
