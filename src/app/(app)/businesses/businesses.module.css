@@ -24,7 +24,7 @@
 }
 
 .addButton:focus-visible,
-.manageLink:focus-visible {
+.openBusinessButton:focus-visible {
   outline: 3px solid var(--brand-ring);
   outline-offset: 2px;
 }
@@ -127,51 +127,24 @@
   text-align: end;
 }
 
-.nextStep {
-  display: grid;
-  align-items: start;
-  gap: 12px;
-  margin: 18px 0 0;
-  padding: 12px 13px;
-  color: var(--text-soft);
-  background: var(--surface-soft);
-  border-radius: 10px;
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.nextStep p {
-  min-width: 0;
-  margin: 0;
-}
-
-.manageLinks {
+.openBusinessButton {
   width: 100%;
-  min-width: 0;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-start;
-  gap: 7px;
-}
-
-.manageLink {
-  max-width: 100%;
+  min-height: 44px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
-  padding: 7px 10px;
-  color: var(--brand-strong);
-  background: var(--surface);
-  border: 1px solid #d3e7e1;
-  border-radius: 9px;
-  font-size: 11px;
+  margin-block-start: 20px;
+  padding: 10px 16px;
+  color: #fff;
+  background: var(--brand);
+  border-radius: 11px;
+  font-size: 13px;
   font-weight: 800;
   text-align: center;
 }
 
-.manageLink:hover {
-  border-color: var(--brand);
+.openBusinessButton:hover {
+  background: var(--brand-strong);
 }
 
 .emptyState {

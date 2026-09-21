@@ -2,6 +2,7 @@ import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
 import { CURRENCY_OPTIONS, TIMEZONE_OPTIONS } from "@/lib/business/onboarding";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { BusinessCard } from "./business-card";
 import styles from "./businesses.module.css";
 
 type BusinessesPageProps = {
@@ -50,48 +51,16 @@ export default async function BusinessesPage({ searchParams }: BusinessesPagePro
       ) : businesses && businesses.length > 0 ? (
         <section className={styles.grid} aria-label="البزنسات المتاحة">
           {businesses.map((business) => (
-            <article className={styles.businessCard} key={business.id}>
-              <div className={styles.cardTopline}>
-                <span className={styles.status}>جاهز للمتابعة</span>
-                <span className={styles.currencyCode}>{business.base_currency}</span>
-              </div>
-              <h2>{business.name}</h2>
-              <dl className={styles.metaList}>
-                <div>
-                  <dt>العملة الأساسية</dt>
-                  <dd>
-                    {business.base_currency} — {getCurrencyLabel(business.base_currency)}
-                  </dd>
-                </div>
-                <div>
-                  <dt>المنطقة الزمنية</dt>
-                  <dd>{getTimezoneLabel(business.timezone)}</dd>
-                </div>
-              </dl>
-              <div className={styles.nextStep}>
-                <p>افتح الداشبورد أو عدّل هيكل البزنس وأرقامه الشهرية.</p>
-                <div className={styles.manageLinks}>
-                  <Link className={styles.manageLink} href={`/?business=${business.id}`}>
-                    فتح الداشبورد
-                  </Link>
-                  <Link
-                    className={styles.manageLink}
-                    href={`/businesses/${business.id}/revenue-streams`}
-                  >
-                    إدارة مصادر الإيراد
-                  </Link>
-                  <Link className={styles.manageLink} href={`/businesses/${business.id}/expenses`}>
-                    إدارة المصروفات
-                  </Link>
-                  <Link className={styles.manageLink} href={`/businesses/${business.id}/funnels`}>
-                    إدارة الفانلز
-                  </Link>
-                  <Link className={styles.manageLink} href={`/businesses/${business.id}/monthly`}>
-                    الإدخال الشهري
-                  </Link>
-                </div>
-              </div>
-            </article>
+            <BusinessCard
+              key={business.id}
+              business={{
+                id: business.id,
+                name: business.name,
+                baseCurrency: business.base_currency,
+                currencyLabel: getCurrencyLabel(business.base_currency),
+                timezoneLabel: getTimezoneLabel(business.timezone),
+              }}
+            />
           ))}
         </section>
       ) : (
