@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { AppShell } from "@/components/app-shell";
 import { HistoricalCorrectionNavigation } from "@/app/(app)/businesses/[businessId]/monthly/correction/historical-correction-navigation";
+import { HistoricalCorrectionSuccess } from "@/app/(app)/businesses/[businessId]/monthly/historical-correction-success";
 import { HistoricalMonthState } from "@/app/(app)/businesses/[businessId]/monthly/historical-month-state";
 
 export const dynamic = "force-dynamic";
@@ -29,6 +30,8 @@ export default function HistoricalMonthFixturePage() {
           monthKey="2026-07"
           monthLabel="يوليو ٢٠٢٦"
         />
+
+        <HistoricalCorrectionSuccess monthLabel="يوليو ٢٠٢٦" />
 
         <HistoricalMonthState
           businessId={businessId}
