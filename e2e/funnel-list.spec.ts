@@ -29,7 +29,9 @@ test.describe("N42 simplified Funnel list", () => {
     await expect(list.getByText("تحدي قديم", { exact: true })).toBeVisible();
     await expect(list.getByText("نشطة", { exact: true })).toBeVisible();
     await expect(list.getByText("غير نشطة", { exact: true })).toBeVisible();
-    await expect(list.getByText("Webinar / ويبينار", { exact: true })).toBeVisible();
+    await expect(
+      list.locator("span").filter({ hasText: /^Webinar \/ ويبينار$/ }),
+    ).toBeVisible();
 
     await expect(list.locator("article")).toHaveCount(2);
     await expect(list.locator("details")).toHaveCount(0);
