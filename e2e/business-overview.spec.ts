@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 
 const fixtureEnabled = process.env.MIZAN_E2E_UI_FIXTURE === "true";
 const fixturePath = "/auth/e2e-business-overview";
+const businessId = "123e4567-e89b-42d3-a456-426614174000";
 
 /** Captures console and page errors so N37 browser verification fails on runtime regressions. */
 function captureBrowserErrors(page: Page) {
@@ -32,10 +33,11 @@ test.describe("N37 Business Overview setup health", () => {
       workspace.getByRole("link", { name: "نظرة عامة" }),
     ).toHaveAttribute("aria-current", "page");
 
-    await expect(page.getByRole("heading", { name: "هل البزنس جاهز للإدخال الشهري؟" })).toBeVisible();
-    await expect(page.getByText("USD", { exact: true })).toBeVisible();
-    await expect(page.getByText("Africa/Cairo", { exact: true })).toBeVisible();
-    await expect(page.getByText("الإعداد جاهز", { exact: true })).toBeVisible();
+    const setupHealth = page.getByRole("region", { name: "هل البزنس جاهز للإدخال الشهري؟" });
+    await expect(setupHealth).toBeVisible();
+    await expect(setupHealth.getByText("USD", { exact: true })).toBeVisible();
+    await expect(setupHealth.getByText("Africa/Cairo", { exact: true })).toBeVisible();
+    await expect(setupHealth.getByText("الإعداد جاهز", { exact: true })).toBeVisible();
 
     await expect(page.getByRole("heading", { name: "أين وصلت بيانات البزنس؟" })).toBeVisible();
     await expect(page.getByText("لم يُحفظ بعد", { exact: true })).toBeVisible();
@@ -44,7 +46,7 @@ test.describe("N37 Business Overview setup health", () => {
     await expect(primaryAction).toHaveCount(1);
     await expect(primaryAction).toHaveAttribute(
       "href",
-      `/businesses/${businessIdForTest()}/monthly?month=2026-09`,
+      `/businesses/${businessId}/monthly?month=2026-09`,
     );
     await primaryAction.focus();
     await expect(primaryAction).toBeFocused();
@@ -69,6 +71,3 @@ test.describe("N37 Business Overview setup health", () => {
   });
 });
 
-function businessIdForTest() {
-  return "123e4567-e89b-42d3-a456-426614174000";
-}
