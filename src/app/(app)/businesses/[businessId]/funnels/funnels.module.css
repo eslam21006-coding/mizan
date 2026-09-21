@@ -1,4 +1,3 @@
-.headingRow,
 .panelHeading {
   display: flex;
   align-items: center;
@@ -6,15 +5,8 @@
   gap: 18px;
 }
 
-.headingRow {
-  align-items: flex-end;
-}
-
 .funnelSummary:focus-visible,
-.createForm button:focus-visible,
 .editForm button:focus-visible,
-.createForm input:focus-visible,
-.createForm select:focus-visible,
 .editForm input:focus-visible,
 .editForm select:focus-visible,
 .activeToggle input:focus-visible {
@@ -128,28 +120,17 @@
   border-radius: 999px;
 }
 
-.createForm {
-  display: grid;
-  grid-template-columns: minmax(0, 1.7fr) minmax(210px, 0.9fr) auto;
-  align-items: end;
-  gap: 12px;
-}
-
-.createForm label,
 .editForm label:not(.activeToggle) {
   display: grid;
   gap: 7px;
 }
 
-.createForm label > span,
 .editForm label > span {
   color: var(--text-soft);
   font-size: 11px;
   font-weight: 750;
 }
 
-.createForm input,
-.createForm select,
 .editForm input[type="text"],
 .editForm select {
   width: 100%;
@@ -163,7 +144,6 @@
   font-size: 13px;
 }
 
-.createForm button,
 .editForm button {
   min-height: 44px;
   padding: 9px 15px;
@@ -177,7 +157,6 @@
   cursor: pointer;
 }
 
-.createForm button:hover,
 .editForm button:hover {
   background: var(--brand-strong);
 }
@@ -371,7 +350,6 @@
     grid-template-columns: 1fr;
   }
 
-  .createForm,
   .editForm {
     grid-template-columns: 1fr 1fr;
   }
@@ -382,12 +360,6 @@
 }
 
 @media (max-width: 640px) {
-  .headingRow {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .createForm,
   .editForm {
     grid-template-columns: 1fr;
   }
@@ -396,7 +368,6 @@
     padding: 18px;
   }
 
-  .createForm button,
   .editForm button {
     width: 100%;
   }
