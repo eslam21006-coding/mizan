@@ -40,6 +40,48 @@ function formatAuditValue(value: MetricAuditValue, currency: string) {
   return `${formatArabicExactRatio(value.metric.value, 2)} ${currency}`;
 }
 
+/** Renders the read-only audit body for one calculated metric without adding navigation or disclosure state. */
+export function MetricAuditContent({
+  audit,
+  currency,
+}: {
+  audit: MetricAudit;
+  currency: string;
+}) {
+  return (
+    <div className={styles.body}>
+      <div className={styles.heading}>
+        <div>
+          <span>تفاصيل الحساب</span>
+          <strong>{audit.title}</strong>
+        </div>
+        <code dir="rtl">{audit.formula}</code>
+      </div>
+
+      <div className={styles.lines}>
+        {audit.lines.map((line) => (
+          <div
+            key={line.id}
+            className={line.lineType === "subtotal" ? styles.subtotal : undefined}
+          >
+            <span>{line.label}</span>
+            <strong>{formatAuditValue(line.value, currency)}</strong>
+          </div>
+        ))}
+        <div className={styles.resultRow}>
+          <span>النتيجة</span>
+          <strong>{formatAuditValue(audit.result, currency)}</strong>
+        </div>
+      </div>
+
+      <p className={styles.source}>
+        <strong>المصدر:</strong> {audit.source}
+      </p>
+      {audit.note && <p className={styles.note}>{audit.note}</p>}
+    </div>
+  );
+}
+
 /** Renders a progressively disclosed, read-only explanation of one calculated metric. */
 export function MetricAuditDetails({
   audit,
@@ -53,36 +95,7 @@ export function MetricAuditDetails({
   return (
     <details className={`${styles.audit} ${compact ? styles.compact : ""}`}>
       <summary>الرقم ده جاي منين؟</summary>
-      <div className={styles.body}>
-        <div className={styles.heading}>
-          <div>
-            <span>تفاصيل الحساب</span>
-            <strong>{audit.title}</strong>
-          </div>
-          <code dir="rtl">{audit.formula}</code>
-        </div>
-
-        <div className={styles.lines}>
-          {audit.lines.map((line) => (
-            <div
-              key={line.id}
-              className={line.lineType === "subtotal" ? styles.subtotal : undefined}
-            >
-              <span>{line.label}</span>
-              <strong>{formatAuditValue(line.value, currency)}</strong>
-            </div>
-          ))}
-          <div className={styles.resultRow}>
-            <span>النتيجة</span>
-            <strong>{formatAuditValue(audit.result, currency)}</strong>
-          </div>
-        </div>
-
-        <p className={styles.source}>
-          <strong>المصدر:</strong> {audit.source}
-        </p>
-        {audit.note && <p className={styles.note}>{audit.note}</p>}
-      </div>
+      <MetricAuditContent audit={audit} currency={currency} />
     </details>
   );
 }
