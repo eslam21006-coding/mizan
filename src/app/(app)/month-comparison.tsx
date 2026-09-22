@@ -10,7 +10,11 @@ import {
   compareRatioMetrics,
   type MetricComparison,
 } from "@/lib/business/comparison";
-import { createCoreMetricAudits, type CoreMetricAuditKey } from "@/lib/business/metric-audit";
+import {
+  createCoreMetricAudits,
+  type CoreMetricAuditKey,
+  type MetricAudit,
+} from "@/lib/business/metric-audit";
 import { AnalyticsMetricDrawer } from "./analytics/analytics-metric-drawer";
 import {
   formatArabicExactDecimal,
@@ -99,14 +103,13 @@ function ComparisonCard({
   comparison,
   kind,
   currency,
-  auditKey,
   currentAudit,
   previousAudit,
   currentMonthLabel,
   previousMonthLabel,
 }: ComparisonCardProps & {
-  currentAudit: ReturnType<typeof createCoreMetricAudits>[CoreMetricAuditKey];
-  previousAudit: ReturnType<typeof createCoreMetricAudits>[CoreMetricAuditKey];
+  currentAudit: MetricAudit;
+  previousAudit: MetricAudit;
   currentMonthLabel: string;
   previousMonthLabel: string;
 }) {
