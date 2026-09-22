@@ -11,11 +11,13 @@ import {
   type ScenarioOverrideKey,
   type ScenarioOverrides,
 } from "@/lib/business/scenario-engine";
+import type { SimulatorTargetPlannerReturnContext } from "@/lib/simulator-return-context";
 import {
   deleteSimulatorScenario,
   duplicateSimulatorScenario,
   saveSimulatorScenario,
 } from "./actions";
+import { SimulatorReturnContextFields } from "./simulator-return-context";
 import styles from "./simulator.module.css";
 
 type SavedScenario = {
@@ -24,6 +26,8 @@ type SavedScenario = {
   creationRequestId: string;
   overrides: ScenarioOverrides;
 };
+
+type SimulatorMutationAction = (formData: FormData) => void | Promise<void>;
 
 type SimulatorWorkspaceProps = {
   businessId: string;
@@ -34,6 +38,10 @@ type SimulatorWorkspaceProps = {
   newCreationRequestId: string;
   duplicateCreationRequestId: string;
   canManage: boolean;
+  returnContext?: SimulatorTargetPlannerReturnContext | null;
+  saveAction?: SimulatorMutationAction;
+  duplicateAction?: SimulatorMutationAction;
+  deleteAction?: SimulatorMutationAction;
 };
 
 type ControlDefinition = {
@@ -224,6 +232,7 @@ function ComparisonRow({
   );
 }
 
+/** Renders the interactive Simulator workspace without mutating historical actuals. */
 export function SimulatorWorkspace({
   businessId,
   month,
@@ -233,6 +242,10 @@ export function SimulatorWorkspace({
   newCreationRequestId,
   duplicateCreationRequestId,
   canManage,
+  returnContext = null,
+  saveAction = saveSimulatorScenario,
+  duplicateAction = duplicateSimulatorScenario,
+  deleteAction = deleteSimulatorScenario,
 }: SimulatorWorkspaceProps) {
   const [scenarioName, setScenarioName] = useState(selectedScenario?.name ?? "سيناريو جديد");
   const [overrides, setOverrides] = useState<ScenarioOverrides>(selectedScenario?.overrides ?? {});
@@ -359,9 +372,10 @@ export function SimulatorWorkspace({
 
           {canManage ? (
             <div className={styles.saveActions}>
-              <form action={saveSimulatorScenario}>
+              <form action={saveAction}>
                 <input type="hidden" name="business_id" value={businessId} />
                 <input type="hidden" name="month" value={month} />
+                <SimulatorReturnContextFields context={returnContext} />
                 <input type="hidden" name="scenario_id" value={selectedScenario?.id ?? ""} />
                 <input
                   type="hidden"
@@ -377,9 +391,10 @@ export function SimulatorWorkspace({
 
               {selectedScenario && (
                 <>
-                  <form action={duplicateSimulatorScenario}>
+                  <form action={duplicateAction}>
                     <input type="hidden" name="business_id" value={businessId} />
                     <input type="hidden" name="month" value={month} />
+                    <SimulatorReturnContextFields context={returnContext} />
                     <input type="hidden" name="scenario_id" value={selectedScenario.id} />
                     <input
                       type="hidden"
@@ -391,9 +406,10 @@ export function SimulatorWorkspace({
                       إنشاء نسخة
                     </button>
                   </form>
-                  <form action={deleteSimulatorScenario}>
+                  <form action={deleteAction}>
                     <input type="hidden" name="business_id" value={businessId} />
                     <input type="hidden" name="month" value={month} />
+                    <SimulatorReturnContextFields context={returnContext} />
                     <input type="hidden" name="scenario_id" value={selectedScenario.id} />
                     <button type="submit" className={styles.dangerButton}>
                       حذف السيناريو

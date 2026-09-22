@@ -9,19 +9,30 @@ import {
   type ScenarioOverrides,
 } from "@/lib/business/scenario-engine";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import {
+  buildSimulatorHref,
+  parseSimulatorTargetPlannerReturnContextFromFormData,
+  type SimulatorTargetPlannerReturnContext,
+} from "@/lib/simulator-return-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const DECIMAL_PATTERN = /^\d{1,16}(?:\.\d{1,8})?$/;
 
+/** Builds the canonical Simulator redirect URL without accepting arbitrary return destinations. */
 function simulatorPath(
   businessId: string,
   month: string,
   status: string,
   scenarioId?: string | null,
+  returnContext?: SimulatorTargetPlannerReturnContext | null,
 ) {
-  const params = new URLSearchParams({ business: businessId, month, status });
-  if (scenarioId) params.set("scenario", scenarioId);
-  return `/simulator?${params.toString()}`;
+  return buildSimulatorHref({
+    businessId,
+    month,
+    status,
+    scenarioId: scenarioId ?? undefined,
+    returnContext,
+  });
 }
 
 function parseMonth(value: FormDataEntryValue | null) {
@@ -68,16 +79,19 @@ function parseOverrides(value: FormDataEntryValue | null): ScenarioOverrides | n
   return overrides;
 }
 
+/** Revalidates the Simulator and redirects while preserving only validated planner return context. */
 function redirectSimulator(
   businessId: string,
   month: string,
   status: string,
   scenarioId?: string | null,
+  returnContext?: SimulatorTargetPlannerReturnContext | null,
 ): never {
   revalidatePath("/simulator");
-  redirect(simulatorPath(businessId, month, status, scenarioId));
+  redirect(simulatorPath(businessId, month, status, scenarioId, returnContext));
 }
 
+/** Saves or updates a Simulator scenario, then returns to the canonical Simulator URL. */
 export async function saveSimulatorScenario(formData: FormData) {
   await requireAuthContext();
 
@@ -85,12 +99,13 @@ export async function saveSimulatorScenario(formData: FormData) {
   const scenarioId = parseResourceId(formData.get("scenario_id"));
   const creationRequestId = parseResourceId(formData.get("creation_request_id"));
   const month = parseMonth(formData.get("month"));
+  const returnContext = parseSimulatorTargetPlannerReturnContextFromFormData(formData);
   const name = parseScenarioName(formData.get("name"));
   const overrides = parseOverrides(formData.get("overrides_json"));
 
   if (!businessId) redirect("/simulator");
   if (!month || !name || !creationRequestId || !overrides) {
-    redirectSimulator(businessId, month ?? "invalid", "invalid", scenarioId);
+    redirectSimulator(businessId, month ?? "invalid", "invalid", scenarioId, returnContext);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -104,12 +119,13 @@ export async function saveSimulatorScenario(formData: FormData) {
 
   const savedScenarioId = typeof data === "string" ? data : null;
   if (error || !savedScenarioId) {
-    redirectSimulator(businessId, month, "save-failed", scenarioId);
+    redirectSimulator(businessId, month, "save-failed", scenarioId, returnContext);
   }
 
-  redirectSimulator(businessId, month, scenarioId ? "updated" : "saved", savedScenarioId);
+  redirectSimulator(businessId, month, scenarioId ? "updated" : "saved", savedScenarioId, returnContext);
 }
 
+/** Duplicates a Simulator scenario while preserving validated workflow return context. */
 export async function duplicateSimulatorScenario(formData: FormData) {
   await requireAuthContext();
 
@@ -117,11 +133,12 @@ export async function duplicateSimulatorScenario(formData: FormData) {
   const scenarioId = parseResourceId(formData.get("scenario_id"));
   const creationRequestId = parseResourceId(formData.get("creation_request_id"));
   const month = parseMonth(formData.get("month"));
+  const returnContext = parseSimulatorTargetPlannerReturnContextFromFormData(formData);
   const name = parseScenarioName(formData.get("name"));
 
   if (!businessId) redirect("/simulator");
   if (!month || !scenarioId || !creationRequestId || !name) {
-    redirectSimulator(businessId, month ?? "invalid", "invalid", scenarioId);
+    redirectSimulator(businessId, month ?? "invalid", "invalid", scenarioId, returnContext);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -134,22 +151,24 @@ export async function duplicateSimulatorScenario(formData: FormData) {
 
   const duplicatedScenarioId = typeof data === "string" ? data : null;
   if (error || !duplicatedScenarioId) {
-    redirectSimulator(businessId, month, "duplicate-failed", scenarioId);
+    redirectSimulator(businessId, month, "duplicate-failed", scenarioId, returnContext);
   }
 
-  redirectSimulator(businessId, month, "duplicated", duplicatedScenarioId);
+  redirectSimulator(businessId, month, "duplicated", duplicatedScenarioId, returnContext);
 }
 
+/** Deletes a Simulator scenario while preserving validated workflow return context. */
 export async function deleteSimulatorScenario(formData: FormData) {
   await requireAuthContext();
 
   const businessId = parseResourceId(formData.get("business_id"));
   const scenarioId = parseResourceId(formData.get("scenario_id"));
   const month = parseMonth(formData.get("month"));
+  const returnContext = parseSimulatorTargetPlannerReturnContextFromFormData(formData);
 
   if (!businessId) redirect("/simulator");
   if (!month || !scenarioId) {
-    redirectSimulator(businessId, month ?? "invalid", "invalid", scenarioId);
+    redirectSimulator(businessId, month ?? "invalid", "invalid", scenarioId, returnContext);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -162,8 +181,8 @@ export async function deleteSimulatorScenario(formData: FormData) {
     .maybeSingle();
 
   if (error || !data) {
-    redirectSimulator(businessId, month, "delete-failed", scenarioId);
+    redirectSimulator(businessId, month, "delete-failed", scenarioId, returnContext);
   }
 
-  redirectSimulator(businessId, month, "deleted");
+  redirectSimulator(businessId, month, "deleted", undefined, returnContext);
 }

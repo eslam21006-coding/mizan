@@ -9,7 +9,12 @@ import {
   type ScenarioOverrides,
 } from "@/lib/business/scenario-engine";
 import { loadSimulatorMonth, type SimulatorMonthBlocker } from "@/lib/business/simulator-month";
+import {
+  buildSimulatorHref,
+  parseSimulatorTargetPlannerReturnContext,
+} from "@/lib/simulator-return-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { SimulatorReturnContextBanner, SimulatorReturnContextFields } from "./simulator-return-context";
 import styles from "./simulator.module.css";
 import { SimulatorWorkspace } from "./simulator-workspace";
 
@@ -19,6 +24,11 @@ type SimulatorPageProps = {
     month?: string;
     scenario?: string;
     status?: string;
+    origin?: string | string[];
+    planner_business?: string | string[];
+    planner_step?: string | string[];
+    planner_goal?: string | string[];
+    planner_value?: string | string[];
   }>;
 };
 
@@ -72,6 +82,7 @@ function isScenarioOverrideKey(value: string): value is ScenarioOverrideKey {
   return SCENARIO_OVERRIDE_KEYS.includes(value as ScenarioOverrideKey);
 }
 
+/** Renders Simulator state from actual monthly data plus validated structured navigation context. */
 export default async function SimulatorPage({ searchParams }: SimulatorPageProps) {
   const query = await searchParams;
   const auth = await requireAuthContext();
@@ -114,6 +125,7 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
   const fallbackMonth = currentMonthKeyForTimeZone(selectedBusiness.timezone);
   const selectedMonth = parseMonthKey(query.month) ?? parseMonthKey(fallbackMonth);
   if (!selectedMonth) throw new Error("Could not resolve a valid simulator month.");
+  const returnContext = parseSimulatorTargetPlannerReturnContext(query);
 
   const [{ data: scenariosData, error: scenariosError }, simulatorMonth] = await Promise.all([
     supabase
@@ -170,15 +182,24 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
           <Link href={`/?business=${selectedBusiness.id}&month=${selectedMonth.monthKey}`}>
             فتح الداشبورد الحالي
           </Link>
-          <Link href={`/simulator?business=${selectedBusiness.id}&month=${selectedMonth.monthKey}`}>
+          <Link
+            href={buildSimulatorHref({
+              businessId: selectedBusiness.id,
+              month: selectedMonth.monthKey,
+              returnContext,
+            })}
+          >
             سيناريو جديد
           </Link>
         </div>
       </div>
 
+      <SimulatorReturnContextBanner context={returnContext} />
+
       <section className={styles.selectorPanel} aria-label="اختيار البزنس والشهر والسيناريو">
         <form>
           <input type="hidden" name="month" value={selectedMonth.monthKey} />
+          <SimulatorReturnContextFields context={returnContext} />
           <label>
             <span>البزنس</span>
             <select name="business" defaultValue={selectedBusiness.id}>
@@ -194,6 +215,7 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
 
         <form>
           <input type="hidden" name="business" value={selectedBusiness.id} />
+          <SimulatorReturnContextFields context={returnContext} />
           <label>
             <span>الشهر الفعلي المرجعي</span>
             <input dir="ltr" type="month" name="month" defaultValue={selectedMonth.monthKey} />
@@ -204,6 +226,7 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
         <form>
           <input type="hidden" name="business" value={selectedBusiness.id} />
           <input type="hidden" name="month" value={selectedMonth.monthKey} />
+          <SimulatorReturnContextFields context={returnContext} />
           <label>
             <span>السيناريو المحفوظ</span>
             <select name="scenario" defaultValue={selectedScenarioRow?.id ?? ""}>
@@ -235,7 +258,13 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
             لم يتم تحميل تعديلات هذا السيناريو بالكامل، لذلك لن نعرضه بقيم الشهر الحالية أو نفترض أن
             تعديلاته فارغة. أعد فتح الصفحة أو اختر سيناريو جديدًا.
           </p>
-          <Link href={`/simulator?business=${selectedBusiness.id}&month=${selectedMonth.monthKey}`}>
+          <Link
+            href={buildSimulatorHref({
+              businessId: selectedBusiness.id,
+              month: selectedMonth.monthKey,
+              returnContext,
+            })}
+          >
             فتح سيناريو جديد
           </Link>
         </section>
@@ -267,6 +296,7 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
           newCreationRequestId={randomUUID()}
           duplicateCreationRequestId={randomUUID()}
           canManage={canManage && !scenarioDataError}
+          returnContext={returnContext}
         />
       )}
     </div>
