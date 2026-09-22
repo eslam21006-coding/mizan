@@ -32,6 +32,14 @@ const funnelActionsSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/funnels/monthly/actions.ts",
   "utf8",
 );
+const expenseActionsSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/expenses/actions.ts",
+  "utf8",
+);
+const revenueActionsSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/revenue-streams/actions.ts",
+  "utf8",
+);
 
 /** Locks the structured Target Planner origin to allow-listed workflow state only. */
 test("N54 parses and resolves an exact Target Planner return origin", () => {
@@ -206,11 +214,19 @@ test("N54 production UI and save paths preserve structured planner return fields
     assert.doesNotMatch(source, /returnTo/);
   }
 
+  assert.match(monthlyPageSource, /query\.set\("planner_step", returnOrigin\.step\)/);
+  assert.match(monthlyPageSource, /query\.set\("planner_goal", returnOrigin\.goal\)/);
+  assert.match(monthlyPageSource, /query\.set\("planner_value", returnOrigin\.value\)/);
+
   for (const source of [monthlyActionsSource, funnelActionsSource]) {
     assert.match(source, /formData\.getAll\("planner_step"\)/);
     assert.match(source, /formData\.getAll\("planner_goal"\)/);
     assert.match(source, /query\.set\("planner_step", returnOrigin\.step\)/);
     assert.match(source, /revalidatePath\("\/target-plan"\)/);
     assert.doesNotMatch(source, /returnTo/);
+  }
+
+  for (const source of [expenseActionsSource, revenueActionsSource]) {
+    assert.match(source, /revalidatePath\("\/target-plan"\)/);
   }
 });
