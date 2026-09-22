@@ -82,6 +82,7 @@ function isScenarioOverrideKey(value: string): value is ScenarioOverrideKey {
   return SCENARIO_OVERRIDE_KEYS.includes(value as ScenarioOverrideKey);
 }
 
+/** Renders Simulator state from actual monthly data plus validated structured navigation context. */
 export default async function SimulatorPage({ searchParams }: SimulatorPageProps) {
   const query = await searchParams;
   const auth = await requireAuthContext();
