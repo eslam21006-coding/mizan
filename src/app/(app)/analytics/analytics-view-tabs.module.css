@@ -1,0 +1,66 @@
+.viewTabs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.viewTab {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+  padding: 14px 16px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.viewTab:hover {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+  border-color: var(--brand);
+}
+
+.viewTab:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.viewTab strong {
+  font-size: 0.95rem;
+}
+
+.viewTab span {
+  color: var(--text-soft);
+  font-size: 0.78rem;
+  line-height: 1.6;
+}
+
+.viewTabActive {
+  color: var(--surface);
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+  box-shadow: var(--shadow-soft);
+}
+
+.viewTabActive:hover {
+  color: var(--surface);
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+}
+
+.viewTabActive span {
+  color: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
+@media (max-width: 560px) {
+  .viewTabs {
+    grid-template-columns: 1fr;
+  }
+}
