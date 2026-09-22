@@ -27,6 +27,10 @@ import {
   buildTargetPlannerActualMonth,
   type TargetPlannerActualMonthBlocker,
 } from "@/lib/business/target-planner-actuals";
+import {
+  buildSimulatorHref,
+  type SimulatorTargetPlannerReturnContext,
+} from "@/lib/simulator-return-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseTargetPlannerStep } from "@/lib/target-planner-step";
 import {
@@ -285,6 +289,22 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
     }
   }
 
+  const simulatorReturnContext: SimulatorTargetPlannerReturnContext = {
+    origin: "target-planner",
+    plannerBusinessId: selectedBusiness.id,
+    step: selectedStep,
+    goal: selectedGoal,
+    ...(normalizedValue !== null ? { value: normalizedValue } : {}),
+  };
+  const simulatorHref =
+    plan?.status === "ready" && lastCompleteMonth
+      ? buildSimulatorHref({
+          businessId: selectedBusiness.id,
+          month: lastCompleteMonth,
+          returnContext: simulatorReturnContext,
+        })
+      : null;
+
   return (
     <div className="page-stack">
       <div className={dashboardStyles.dashboardHeader}>
@@ -499,6 +519,26 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
                   <div className={dashboardStyles.metricCard}><span>Leads</span><strong>{count(plan.requiredLeads)}</strong></div>
                 </div>
               </section>
+
+              {simulatorHref && (
+                <section className={dashboardStyles.sectionCard}>
+                  <div className={dashboardStyles.sectionHeading}>
+                    <div>
+                      <span className={dashboardStyles.eyebrow}>اختبار قبل التنفيذ</span>
+                      <h2>جرّب القرارات في المحاكي</h2>
+                    </div>
+                    <p>
+                      سيتم حفظ سياق الرجوع إلى هذه الخطة فقط. المحاكي لا يطبّق أرقام الهدف على
+                      السيناريو تلقائيًا ولا يغيّر البيانات التاريخية.
+                    </p>
+                  </div>
+                  <div className={dashboardStyles.headerActions}>
+                    <Link className={dashboardStyles.primaryAction} href={simulatorHref}>
+                      اختبار الخطة في المحاكي
+                    </Link>
+                  </div>
+                </section>
+              )}
             </>
           )}
         </>
