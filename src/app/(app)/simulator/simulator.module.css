@@ -97,6 +97,43 @@
   margin-bottom: 4px;
 }
 
+.scenarioStatePanel,
+.scenarioStateError {
+  display: grid;
+  gap: 4px;
+  border-radius: 14px;
+  padding: 14px 16px;
+}
+
+.scenarioStatePanel {
+  border: 1px solid color-mix(in srgb, var(--primary) 26%, var(--border));
+  background: color-mix(in srgb, var(--primary) 5%, var(--surface));
+}
+
+.scenarioStateError {
+  border: 1px solid color-mix(in srgb, #c53030 28%, var(--border));
+  background: color-mix(in srgb, #c53030 7%, var(--surface));
+}
+
+.scenarioStatePanel span,
+.scenarioStateError span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+.scenarioStatePanel strong,
+.scenarioStateError strong {
+  font-size: 0.98rem;
+}
+
+.scenarioStatePanel p,
+.scenarioStateError p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
 .returnContextBanner {
   display: flex;
   align-items: center;
