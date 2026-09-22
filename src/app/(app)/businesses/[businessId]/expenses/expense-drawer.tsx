@@ -55,6 +55,27 @@ function ReturnContextFields({ returnOrigin }: { returnOrigin: SetupReturnOrigin
           ) : null}
         </>
       ) : null}
+      {returnOrigin.upstream?.origin === "target-planner" ? (
+        <>
+          <input
+            type="hidden"
+            name="upstream_planner_step"
+            value={returnOrigin.upstream.step}
+          />
+          <input
+            type="hidden"
+            name="upstream_planner_goal"
+            value={returnOrigin.upstream.goal}
+          />
+          {returnOrigin.upstream.value !== undefined ? (
+            <input
+              type="hidden"
+              name="upstream_planner_value"
+              value={returnOrigin.upstream.value}
+            />
+          ) : null}
+        </>
+      ) : null}
     </>
   );
 }
