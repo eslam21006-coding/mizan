@@ -58,7 +58,12 @@ export function DecisionInsightsPanel({
             });
 
             return (
-              <li key={insight.id} className={styles.insightCard} data-severity={insight.severity}>
+              <li
+                key={insight.id}
+                id={`insight-${insight.id}`}
+                className={styles.insightCard}
+                data-severity={insight.severity}
+              >
                 <div className={styles.cardTopline}>
                   <span className={styles.rank} aria-hidden="true">
                     {index + 1}
