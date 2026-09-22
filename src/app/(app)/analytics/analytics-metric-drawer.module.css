@@ -1,0 +1,28 @@
+.periodAudit {
+  display: grid;
+  gap: 10px;
+}
+
+.periodAudit + .periodAudit {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-block-start: 1px solid var(--border);
+}
+
+.periodAudit h3 {
+  margin: 0;
+  color: var(--brand-strong);
+  font-size: 0.95rem;
+}
+
+.footerNote {
+  color: var(--text-soft);
+  font-size: 0.74rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 600px) {
+  .footerNote {
+    text-align: center;
+  }
+}
