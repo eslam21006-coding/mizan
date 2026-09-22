@@ -11,24 +11,12 @@ import {
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import {
   buildSimulatorHref,
-  parseSimulatorTargetPlannerReturnContext,
-  SIMULATOR_TARGET_PLANNER_RETURN_KEYS,
+  parseSimulatorTargetPlannerReturnContextFromFormData,
   type SimulatorTargetPlannerReturnContext,
 } from "@/lib/simulator-return-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const DECIMAL_PATTERN = /^\d{1,16}(?:\.\d{1,8})?$/;
-
-/** Reads validated Target Planner return metadata from a Simulator mutation form. */
-function parseSimulatorReturnContext(formData: FormData) {
-  const params = new URLSearchParams();
-  for (const key of SIMULATOR_TARGET_PLANNER_RETURN_KEYS) {
-    for (const value of formData.getAll(key)) {
-      if (typeof value === "string") params.append(key, value);
-    }
-  }
-  return parseSimulatorTargetPlannerReturnContext(params);
-}
 
 /** Builds the canonical Simulator redirect URL without accepting arbitrary return destinations. */
 function simulatorPath(
@@ -91,6 +79,7 @@ function parseOverrides(value: FormDataEntryValue | null): ScenarioOverrides | n
   return overrides;
 }
 
+/** Revalidates the Simulator and redirects while preserving only validated planner return context. */
 function redirectSimulator(
   businessId: string,
   month: string,
@@ -102,6 +91,7 @@ function redirectSimulator(
   redirect(simulatorPath(businessId, month, status, scenarioId, returnContext));
 }
 
+/** Saves or updates a Simulator scenario, then returns to the canonical Simulator URL. */
 export async function saveSimulatorScenario(formData: FormData) {
   await requireAuthContext();
 
@@ -109,7 +99,7 @@ export async function saveSimulatorScenario(formData: FormData) {
   const scenarioId = parseResourceId(formData.get("scenario_id"));
   const creationRequestId = parseResourceId(formData.get("creation_request_id"));
   const month = parseMonth(formData.get("month"));
-  const returnContext = parseSimulatorReturnContext(formData);
+  const returnContext = parseSimulatorTargetPlannerReturnContextFromFormData(formData);
   const name = parseScenarioName(formData.get("name"));
   const overrides = parseOverrides(formData.get("overrides_json"));
 
@@ -135,6 +125,7 @@ export async function saveSimulatorScenario(formData: FormData) {
   redirectSimulator(businessId, month, scenarioId ? "updated" : "saved", savedScenarioId, returnContext);
 }
 
+/** Duplicates a Simulator scenario while preserving validated workflow return context. */
 export async function duplicateSimulatorScenario(formData: FormData) {
   await requireAuthContext();
 
@@ -142,7 +133,7 @@ export async function duplicateSimulatorScenario(formData: FormData) {
   const scenarioId = parseResourceId(formData.get("scenario_id"));
   const creationRequestId = parseResourceId(formData.get("creation_request_id"));
   const month = parseMonth(formData.get("month"));
-  const returnContext = parseSimulatorReturnContext(formData);
+  const returnContext = parseSimulatorTargetPlannerReturnContextFromFormData(formData);
   const name = parseScenarioName(formData.get("name"));
 
   if (!businessId) redirect("/simulator");
@@ -166,13 +157,14 @@ export async function duplicateSimulatorScenario(formData: FormData) {
   redirectSimulator(businessId, month, "duplicated", duplicatedScenarioId, returnContext);
 }
 
+/** Deletes a Simulator scenario while preserving validated workflow return context. */
 export async function deleteSimulatorScenario(formData: FormData) {
   await requireAuthContext();
 
   const businessId = parseResourceId(formData.get("business_id"));
   const scenarioId = parseResourceId(formData.get("scenario_id"));
   const month = parseMonth(formData.get("month"));
-  const returnContext = parseSimulatorReturnContext(formData);
+  const returnContext = parseSimulatorTargetPlannerReturnContextFromFormData(formData);
 
   if (!businessId) redirect("/simulator");
   if (!month || !scenarioId) {
