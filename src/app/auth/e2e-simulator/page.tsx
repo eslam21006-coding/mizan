@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { SimulatorReturnContextBanner } from "@/app/(app)/simulator/simulator-return-context";
 import { SimulatorWorkspace } from "@/app/(app)/simulator/simulator-workspace";
 import type { ScenarioEngineInput, ScenarioOverrides } from "@/lib/business/scenario-engine";
+import {
+  buildSimulatorHref,
+  parseSimulatorTargetPlannerReturnContext,
+} from "@/lib/simulator-return-context";
 
 const FIXTURE_BUSINESS_ID = "00000000-0000-4000-8000-000000000034";
 const BASELINE: Omit<ScenarioEngineInput, "overrides"> = {
@@ -38,7 +43,14 @@ const SCENARIOS = {
 } as const;
 
 type SimulatorE2eFixturePageProps = {
-  searchParams: Promise<{ scenario?: string }>;
+  searchParams: Promise<{
+    scenario?: string;
+    origin?: string | string[];
+    planner_business?: string | string[];
+    planner_step?: string | string[];
+    planner_goal?: string | string[];
+    planner_value?: string | string[];
+  }>;
 };
 
 export default async function SimulatorE2eFixturePage({
@@ -49,18 +61,34 @@ export default async function SimulatorE2eFixturePage({
   }
 
   const query = await searchParams;
+  const returnContext = parseSimulatorTargetPlannerReturnContext(query);
   const selectedScenario =
     query.scenario === "a" ? SCENARIOS.a : query.scenario === "b" ? SCENARIOS.b : null;
   const workspaceKey = selectedScenario?.id ?? "new";
+  const scenarioHref = (scenarioId?: "a" | "b") =>
+    returnContext
+      ? buildSimulatorHref(
+          {
+            businessId: FIXTURE_BUSINESS_ID,
+            month: "2026-08",
+            scenarioId,
+            returnContext,
+          },
+          "/auth/e2e-simulator",
+        )
+      : scenarioId
+        ? `/auth/e2e-simulator?scenario=${scenarioId}`
+        : "/auth/e2e-simulator";
 
   return (
     <main className="page-stack">
       <h1>اختبار المحاكي</h1>
       <nav aria-label="سيناريوهات اختبار المحاكي">
-        <Link href="/auth/e2e-simulator">سيناريو جديد</Link>{" "}
-        <Link href="/auth/e2e-simulator?scenario=a">فتح سيناريو أ</Link>{" "}
-        <Link href="/auth/e2e-simulator?scenario=b">فتح سيناريو ب</Link>
+        <Link href={scenarioHref()}>سيناريو جديد</Link>{" "}
+        <Link href={scenarioHref("a")}>فتح سيناريو أ</Link>{" "}
+        <Link href={scenarioHref("b")}>فتح سيناريو ب</Link>
       </nav>
+      <SimulatorReturnContextBanner context={returnContext} />
       <SimulatorWorkspace
         key={workspaceKey}
         businessId={FIXTURE_BUSINESS_ID}
@@ -71,6 +99,7 @@ export default async function SimulatorE2eFixturePage({
         newCreationRequestId="00000000-0000-4000-8000-000000000345"
         duplicateCreationRequestId="00000000-0000-4000-8000-000000000346"
         canManage
+        returnContext={returnContext}
       />
     </main>
   );
