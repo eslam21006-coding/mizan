@@ -37,6 +37,12 @@ export function HistoricalCorrectionNavigation({
       returnOrigin?.origin === "insights" ? returnOrigin.ruleId : undefined,
     insightSubjectId:
       returnOrigin?.origin === "insights" ? returnOrigin.subjectId : undefined,
+    plannerStep:
+      returnOrigin?.origin === "target-planner" ? returnOrigin.step : undefined,
+    plannerGoal:
+      returnOrigin?.origin === "target-planner" ? returnOrigin.goal : undefined,
+    plannerValue:
+      returnOrigin?.origin === "target-planner" ? returnOrigin.value : undefined,
   };
 
   const breadcrumbItems = [
