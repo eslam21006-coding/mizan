@@ -1,7 +1,4 @@
-import type {
-  DecisionInsightCandidate,
-  DecisionInsightRuleId,
-} from "./business/decision-insights.ts";
+import type { DecisionInsightRuleId } from "./business/decision-insights.ts";
 
 export type InsightRemediation = {
   href: string;
@@ -13,6 +10,20 @@ type InsightRemediationContext = {
   monthKey: string;
 };
 
+type SubjectScopedInsightRule =
+  | "healthy_funnel_weak_lifetime"
+  | "funnel_attendance_bottleneck";
+
+type InsightRemediationInput =
+  | {
+      ruleId: SubjectScopedInsightRule;
+      subjectId: string;
+    }
+  | {
+      ruleId: Exclude<DecisionInsightRuleId, SubjectScopedInsightRule>;
+      subjectId?: never;
+    };
+
 function businessPath(businessId: string) {
   return `/businesses/${encodeURIComponent(businessId)}`;
 }
@@ -20,7 +31,7 @@ function businessPath(businessId: string) {
 /** Adds the allow-listed Insights return metadata shared by every remediation destination. */
 function appendInsightReturnParams(
   query: URLSearchParams,
-  insight: Pick<DecisionInsightCandidate, "ruleId" | "subjectId">,
+  insight: InsightRemediationInput,
   monthKey: string,
 ) {
   query.set("origin", "insights");
@@ -32,7 +43,7 @@ function appendInsightReturnParams(
 function monthlyHref(
   businessId: string,
   monthKey: string,
-  insight: Pick<DecisionInsightCandidate, "ruleId" | "subjectId">,
+  insight: InsightRemediationInput,
 ) {
   const query = new URLSearchParams({ month: monthKey });
   appendInsightReturnParams(query, insight, monthKey);
@@ -42,7 +53,7 @@ function monthlyHref(
 function customerProfitabilityHref(
   businessId: string,
   monthKey: string,
-  insight: Pick<DecisionInsightCandidate, "ruleId" | "subjectId">,
+  insight: InsightRemediationInput,
 ) {
   const query = new URLSearchParams({ view: "profitability", month: monthKey });
   appendInsightReturnParams(query, insight, monthKey);
@@ -52,7 +63,7 @@ function customerProfitabilityHref(
 function funnelMonthlyHref(
   businessId: string,
   monthKey: string,
-  insight: Pick<DecisionInsightCandidate, "ruleId" | "subjectId">,
+  insight: InsightRemediationInput,
 ) {
   const query = new URLSearchParams({ month: monthKey });
   appendInsightReturnParams(query, insight, monthKey);
@@ -72,7 +83,7 @@ const LABELS: Record<DecisionInsightRuleId, string> = {
 
 /** Resolves an insight to a known business-scoped source/fix without accepting arbitrary URLs. */
 export function resolveInsightRemediation(
-  insight: Pick<DecisionInsightCandidate, "ruleId" | "subjectId">,
+  insight: InsightRemediationInput,
   context: InsightRemediationContext,
 ): InsightRemediation {
   switch (insight.ruleId) {
