@@ -51,3 +51,28 @@ test("resolves nested business routes without accepting arbitrary href strings",
     "/businesses/business%2F01/monthly?month=2026-08",
   );
 });
+
+
+test("resolves exact Insights anchors and preserves Insights origin through Monthly", () => {
+  assert.equal(
+    resolveNavigationDestination({
+      route: "insights",
+      businessId: "business fixture/01",
+      month: "2026-09",
+      insightId: "funnel_attendance_bottleneck:123e4567-e89b-42d3-a456-426614174000",
+    }),
+    "/insights?business=business+fixture%2F01&month=2026-09#insight-funnel_attendance_bottleneck%3A123e4567-e89b-42d3-a456-426614174000",
+  );
+
+  assert.equal(
+    resolveNavigationDestination({
+      route: "business-monthly",
+      businessId: "business fixture/01",
+      month: "2026-10",
+      origin: "insights",
+      returnMonth: "2026-09",
+      insightRuleId: "non_media_cost_pressure",
+    }),
+    "/businesses/business%20fixture%2F01/monthly?month=2026-10&origin=insights&return_month=2026-09&insight_rule=non_media_cost_pressure",
+  );
+});
