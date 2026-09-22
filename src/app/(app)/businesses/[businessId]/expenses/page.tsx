@@ -25,6 +25,8 @@ type ExpensesPageProps = {
     month?: string | string[];
     upstream_origin?: string | string[];
     upstream_month?: string | string[];
+    upstream_insight_rule?: string | string[];
+    upstream_insight_subject?: string | string[];
   }>;
 };
 
@@ -88,6 +90,8 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
     month: query.month,
     upstream_origin: query.upstream_origin,
     upstream_month: query.upstream_month,
+    upstream_insight_rule: query.upstream_insight_rule,
+    upstream_insight_subject: query.upstream_insight_subject,
   });
   const statusMessage = query.status ? STATUS_MESSAGES[query.status] : null;
   const isErrorStatus =
@@ -218,7 +222,8 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
                               value={returnOrigin.upstream.origin}
                             />
                           )}
-                          {returnOrigin.upstream?.origin === "customer-profitability" &&
+                          {(returnOrigin.upstream?.origin === "customer-profitability" ||
+                            returnOrigin.upstream?.origin === "insights") &&
                             returnOrigin.upstream.month && (
                               <input
                                 type="hidden"
@@ -226,6 +231,22 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
                                 value={returnOrigin.upstream.month}
                               />
                             )}
+                          {returnOrigin.upstream?.origin === "insights" && (
+                            <>
+                              <input
+                                type="hidden"
+                                name="upstream_insight_rule"
+                                value={returnOrigin.upstream.ruleId}
+                              />
+                              {returnOrigin.upstream.subjectId && (
+                                <input
+                                  type="hidden"
+                                  name="upstream_insight_subject"
+                                  value={returnOrigin.upstream.subjectId}
+                                />
+                              )}
+                            </>
+                          )}
                         </>
                       )}
 
