@@ -24,6 +24,11 @@ function appendHistoricalReturnQuery(
     query.set("insight_rule", returnOrigin.ruleId);
     if (returnOrigin.subjectId) query.set("insight_subject", returnOrigin.subjectId);
   }
+  if (returnOrigin.origin === "target-planner") {
+    query.set("planner_step", returnOrigin.step);
+    query.set("planner_goal", returnOrigin.goal);
+    if (returnOrigin.value !== undefined) query.set("planner_value", returnOrigin.value);
+  }
 }
 
 export function buildHistoricalCorrectionPath(
@@ -56,6 +61,7 @@ export function historicalCorrectionRevalidationPaths(businessId: string) {
     `${base}/customers`,
     `${base}/customers/review`,
     "/insights",
+    "/target-plan",
   ] as const;
 }
 
