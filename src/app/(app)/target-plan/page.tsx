@@ -122,6 +122,7 @@ function renderMetric(
   return metric.available ? money(metric.value, currency) : unavailableMetricCopy(metric.reason);
 }
 
+/** Renders the Target Planner and exposes Simulator handoff only for a validated ready plan. */
 export default async function TargetPlanPage({ searchParams }: TargetPlanPageProps) {
   const query = await searchParams;
   const supabase = await createSupabaseServerClient();
