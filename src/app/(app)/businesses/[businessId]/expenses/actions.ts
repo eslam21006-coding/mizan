@@ -112,6 +112,7 @@ function expensesPath(
   return `/businesses/${businessId}/expenses?${query.toString()}`;
 }
 
+/** Revalidates every surface affected by an expense mutation before returning to setup. */
 function redirectToExpenses(
   businessId: string,
   status: string,
@@ -119,6 +120,7 @@ function redirectToExpenses(
 ): never {
   revalidatePath("/businesses");
   revalidatePath("/insights");
+  revalidatePath("/target-plan");
   revalidatePath(`/businesses/${businessId}/expenses`);
   revalidatePath(`/businesses/${businessId}/monthly`);
   redirect(expensesPath(businessId, status, returnOrigin));
