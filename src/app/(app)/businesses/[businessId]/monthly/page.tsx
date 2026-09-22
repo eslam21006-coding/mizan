@@ -42,6 +42,9 @@ type MonthlyPageProps = {
     return_month?: string | string[];
     insight_rule?: string | string[];
     insight_subject?: string | string[];
+    planner_step?: string | string[];
+    planner_goal?: string | string[];
+    planner_value?: string | string[];
   }>;
 };
 
@@ -99,6 +102,13 @@ function appendSetupUpstreamQuery(
       query.set("upstream_insight_subject", returnOrigin.subjectId);
     }
   }
+  if (returnOrigin.origin === "target-planner") {
+    query.set("upstream_planner_step", returnOrigin.step);
+    query.set("upstream_planner_goal", returnOrigin.goal);
+    if (returnOrigin.value !== undefined) {
+      query.set("upstream_planner_value", returnOrigin.value);
+    }
+  }
 }
 
 /** Renders hidden fields that preserve validated external Return metadata across Monthly forms. */
@@ -121,6 +131,15 @@ function MonthlyReturnOriginFields({
           <input type="hidden" name="insight_rule" value={returnOrigin.ruleId} />
           {returnOrigin.subjectId && (
             <input type="hidden" name="insight_subject" value={returnOrigin.subjectId} />
+          )}
+        </>
+      )}
+      {returnOrigin.origin === "target-planner" && (
+        <>
+          <input type="hidden" name="planner_step" value={returnOrigin.step} />
+          <input type="hidden" name="planner_goal" value={returnOrigin.goal} />
+          {returnOrigin.value !== undefined && (
+            <input type="hidden" name="planner_value" value={returnOrigin.value} />
           )}
         </>
       )}
@@ -155,6 +174,9 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
     month: query.return_month ?? query.month,
     insight_rule: query.insight_rule,
     insight_subject: query.insight_subject,
+    planner_step: query.planner_step,
+    planner_goal: query.planner_goal,
+    planner_value: query.planner_value,
   });
 
   const [periodResult, streamsResult, expensesResult, customerCountsResult] = await Promise.all([
@@ -358,18 +380,22 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
           purpose={
             returnOrigin.origin === "insights"
               ? "مراجعة وتحديث البيانات المرتبطة بهذه الملاحظة"
-              : returnOrigin.origin === "customer-profitability"
-                ? "بيانات مطلوبة في ربحية العميل"
-                : "بيانات مطلوبة في تحليل العملاء"
+              : returnOrigin.origin === "target-planner"
+                ? "البيانات الناقصة المطلوبة لإكمال خطة الوصول للهدف"
+                : returnOrigin.origin === "customer-profitability"
+                  ? "بيانات مطلوبة في ربحية العميل"
+                  : "بيانات مطلوبة في تحليل العملاء"
           }
           origin={returnOrigin}
           context={{ businessId }}
           returnLabel={
             returnOrigin.origin === "insights"
               ? "العودة إلى الملاحظة"
-              : returnOrigin.origin === "customer-profitability"
-                ? "العودة إلى ربحية العميل"
-                : "العودة إلى العملاء"
+              : returnOrigin.origin === "target-planner"
+                ? "العودة إلى خطة الهدف"
+                : returnOrigin.origin === "customer-profitability"
+                  ? "العودة إلى ربحية العميل"
+                  : "العودة إلى العملاء"
           }
           ariaLabel="سياق العودة من الإدخال الشهري"
         />
