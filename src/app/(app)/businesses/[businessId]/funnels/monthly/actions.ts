@@ -31,6 +31,11 @@ function funnelMonthlyPath(
       query.set("insight_rule", returnOrigin.ruleId);
       if (returnOrigin.subjectId) query.set("insight_subject", returnOrigin.subjectId);
     }
+    if (returnOrigin.origin === "target-planner") {
+      query.set("planner_step", returnOrigin.step);
+      query.set("planner_goal", returnOrigin.goal);
+      if (returnOrigin.value !== undefined) query.set("planner_value", returnOrigin.value);
+    }
   }
   return `/businesses/${businessId}/funnels/monthly?${query.toString()}`;
 }
@@ -44,6 +49,7 @@ function redirectFunnelMonthly(
   revalidatePath("/");
   revalidatePath("/analytics");
   revalidatePath("/insights");
+  revalidatePath("/target-plan");
   revalidatePath(`/businesses/${businessId}/funnels/monthly`);
   redirect(funnelMonthlyPath(businessId, monthKey, status, returnOrigin));
 }
@@ -54,6 +60,9 @@ function parseReturnOriginFromFormData(formData: FormData) {
   const returnMonths = formData.getAll("return_month");
   const insightRules = formData.getAll("insight_rule");
   const insightSubjects = formData.getAll("insight_subject");
+  const plannerSteps = formData.getAll("planner_step");
+  const plannerGoals = formData.getAll("planner_goal");
+  const plannerValues = formData.getAll("planner_value");
 
   if (origins.length === 0) return null;
   if (
@@ -61,6 +70,9 @@ function parseReturnOriginFromFormData(formData: FormData) {
     returnMonths.length > 1 ||
     insightRules.length > 1 ||
     insightSubjects.length > 1 ||
+    plannerSteps.length > 1 ||
+    plannerGoals.length > 1 ||
+    plannerValues.length > 1 ||
     typeof origins[0] !== "string"
   ) {
     return null;
@@ -69,10 +81,16 @@ function parseReturnOriginFromFormData(formData: FormData) {
   const returnMonth = returnMonths[0];
   const insightRule = insightRules[0];
   const insightSubject = insightSubjects[0];
+  const plannerStep = plannerSteps[0];
+  const plannerGoal = plannerGoals[0];
+  const plannerValue = plannerValues[0];
   if (
     (returnMonth !== undefined && typeof returnMonth !== "string") ||
     (insightRule !== undefined && typeof insightRule !== "string") ||
-    (insightSubject !== undefined && typeof insightSubject !== "string")
+    (insightSubject !== undefined && typeof insightSubject !== "string") ||
+    (plannerStep !== undefined && typeof plannerStep !== "string") ||
+    (plannerGoal !== undefined && typeof plannerGoal !== "string") ||
+    (plannerValue !== undefined && typeof plannerValue !== "string")
   ) {
     return null;
   }
@@ -82,6 +100,9 @@ function parseReturnOriginFromFormData(formData: FormData) {
     month: returnMonth,
     insight_rule: insightRule,
     insight_subject: insightSubject,
+    planner_step: plannerStep,
+    planner_goal: plannerGoal,
+    planner_value: plannerValue,
   });
 }
 
