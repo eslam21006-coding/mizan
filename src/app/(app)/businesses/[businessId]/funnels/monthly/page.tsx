@@ -431,7 +431,11 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
                   ] as const;
 
                   return (
-                    <article className={styles.funnelCard} key={funnel.id}>
+                    <article
+                      className={styles.funnelCard}
+                      id={`funnel-${funnel.id}`}
+                      key={funnel.id}
+                    >
                       <input type="hidden" name="funnel_id" value={funnel.id} />
                       <div className={styles.funnelHeading}>
                         <div>

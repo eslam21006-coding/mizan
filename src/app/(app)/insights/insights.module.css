@@ -245,6 +245,35 @@
   line-height: 1.8;
 }
 
+.remediationAction {
+  display: inline-flex;
+  min-height: 40px;
+  width: fit-content;
+  max-width: 100%;
+  align-items: center;
+  gap: 8px;
+  margin-top: 2px;
+  border-radius: 10px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--brand-strong);
+  padding: 8px 11px;
+  font-weight: 800;
+  line-height: 1.45;
+  text-decoration: none;
+}
+
+.remediationAction:hover,
+.remediationAction:focus-visible {
+  border-color: var(--brand);
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(39 103 80 / 12%);
+}
+
+.remediationAction span {
+  flex: 0 0 auto;
+}
+
 .fallback,
 .errorPanel,
 .emptyState {

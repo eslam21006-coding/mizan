@@ -21,6 +21,19 @@ test.describe("Decision Engine Top 3 UI", () => {
     await expect(panel.getByText("الحضور هو الاختناق الأوضح في الفانل")).toBeVisible();
     await expect(panel.getByText("التكلفة الكاملة للبزنس لكل عميل جديد", { exact: true })).toBeVisible();
 
+    await expect(panel.getByRole("link", { name: /مراجعة أرقام وتكاليف الشهر/ })).toHaveAttribute(
+      "href",
+      "/businesses/business-fixture/monthly?month=2026-09",
+    );
+    await expect(panel.getByRole("link", { name: /مراجعة المصروفات خارج الميديا/ })).toHaveAttribute(
+      "href",
+      "/businesses/business-fixture/monthly?month=2026-09",
+    );
+    await expect(panel.getByRole("link", { name: /مراجعة أرقام الفانل/ })).toHaveAttribute(
+      "href",
+      "/businesses/business-fixture/funnels/monthly?month=2026-09#funnel-funnel-a",
+    );
+
     await page.setViewportSize({ width: 390, height: 844 });
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
@@ -51,6 +64,10 @@ test.describe("Decision Engine Top 3 UI", () => {
     await expect(panel.getByText("ارتفاع التكلفة لا يعني وحده أن الاستحواذ سيئ")).toBeVisible();
     await expect(panel.getByRole("note")).toContainText("بعض التكاليف المرتبطة بالعملاء موزعة");
     await expect(panel.getByRole("note")).toContainText("تقديريًا");
+    await expect(panel.getByRole("link", { name: /مراجعة اقتصاديات العميل/ })).toHaveAttribute(
+      "href",
+      "/businesses/business-fixture/customers?view=profitability&month=2026-09",
+    );
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect

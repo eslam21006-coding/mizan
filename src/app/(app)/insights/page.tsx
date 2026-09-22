@@ -188,6 +188,8 @@ export default async function InsightsPage({ searchParams }: InsightsPageProps) 
         fallbackMessageAr={decision.model.fallbackMessageAr}
         currentMonthLabel={currentLabel}
         previousMonthLabel={previousLabel}
+        businessId={selectedBusiness.id}
+        currentMonthKey={selectedMonth.monthKey}
         customerEconomicsEvidenceQuality={decision.model.customerEconomicsEvidenceQuality}
       />
     </div>

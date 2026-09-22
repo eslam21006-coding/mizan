@@ -1,5 +1,7 @@
+import Link from "next/link";
 import type { DecisionInsightCandidate } from "@/lib/business/decision-insights";
 import { MAX_DECISION_INSIGHTS } from "@/lib/business/insight-prioritization";
+import { resolveInsightRemediation } from "@/lib/insight-remediation";
 import styles from "./insights.module.css";
 
 type DecisionInsightsPanelProps = {
@@ -7,6 +9,8 @@ type DecisionInsightsPanelProps = {
   fallbackMessageAr: string | null;
   currentMonthLabel: string;
   previousMonthLabel: string;
+  businessId: string;
+  currentMonthKey: string;
   customerEconomicsEvidenceQuality?: "actual" | "estimated" | null;
 };
 
@@ -22,6 +26,8 @@ export function DecisionInsightsPanel({
   fallbackMessageAr,
   currentMonthLabel,
   previousMonthLabel,
+  businessId,
+  currentMonthKey,
   customerEconomicsEvidenceQuality = null,
 }: DecisionInsightsPanelProps) {
   const visibleInsights = insights.slice(0, MAX_DECISION_INSIGHTS);
@@ -45,17 +51,32 @@ export function DecisionInsightsPanel({
 
       {visibleInsights.length > 0 ? (
         <ol className={styles.insightList}>
-          {visibleInsights.map((insight, index) => (
-            <li key={insight.id} className={styles.insightCard} data-severity={insight.severity}>
-              <div className={styles.cardTopline}>
-                <span className={styles.rank} aria-hidden="true">{index + 1}</span>
-                <span className={styles.severity}>{severityLabel[insight.severity]}</span>
-                {insight.subjectName && <span className={styles.subject}>الفانل: {insight.subjectName}</span>}
-              </div>
-              <h3>{insight.titleAr}</h3>
-              <p>{insight.messageAr}</p>
-            </li>
-          ))}
+          {visibleInsights.map((insight, index) => {
+            const remediation = resolveInsightRemediation(insight, {
+              businessId,
+              monthKey: currentMonthKey,
+            });
+
+            return (
+              <li key={insight.id} className={styles.insightCard} data-severity={insight.severity}>
+                <div className={styles.cardTopline}>
+                  <span className={styles.rank} aria-hidden="true">
+                    {index + 1}
+                  </span>
+                  <span className={styles.severity}>{severityLabel[insight.severity]}</span>
+                  {insight.subjectName && (
+                    <span className={styles.subject}>الفانل: {insight.subjectName}</span>
+                  )}
+                </div>
+                <h3>{insight.titleAr}</h3>
+                <p>{insight.messageAr}</p>
+                <Link className={styles.remediationAction} href={remediation.href}>
+                  {remediation.labelAr}
+                  <span aria-hidden="true">←</span>
+                </Link>
+              </li>
+            );
+          })}
         </ol>
       ) : (
         <div className={styles.fallback} role="status">
