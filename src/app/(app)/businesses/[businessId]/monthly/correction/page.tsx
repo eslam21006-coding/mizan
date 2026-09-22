@@ -33,6 +33,9 @@ type HistoricalCorrectionPageProps = {
     return_month?: string | string[];
     insight_rule?: string | string[];
     insight_subject?: string | string[];
+    planner_step?: string | string[];
+    planner_goal?: string | string[];
+    planner_value?: string | string[];
   }>;
 };
 
@@ -81,6 +84,15 @@ function HistoricalReturnFields({
           )}
         </>
       )}
+      {returnOrigin.origin === "target-planner" && (
+        <>
+          <input type="hidden" name="planner_step" value={returnOrigin.step} />
+          <input type="hidden" name="planner_goal" value={returnOrigin.goal} />
+          {returnOrigin.value !== undefined && (
+            <input type="hidden" name="planner_value" value={returnOrigin.value} />
+          )}
+        </>
+      )}
     </>
   );
 }
@@ -104,6 +116,11 @@ function buildMonthlyEntryHref(
     if (returnOrigin.origin === "insights") {
       query.set("insight_rule", returnOrigin.ruleId);
       if (returnOrigin.subjectId) query.set("insight_subject", returnOrigin.subjectId);
+    }
+    if (returnOrigin.origin === "target-planner") {
+      query.set("planner_step", returnOrigin.step);
+      query.set("planner_goal", returnOrigin.goal);
+      if (returnOrigin.value !== undefined) query.set("planner_value", returnOrigin.value);
     }
   }
   return `/businesses/${businessId}/monthly?${query.toString()}`;
@@ -133,6 +150,9 @@ export default async function HistoricalCorrectionPage({
     month: query.return_month ?? query.month,
     insight_rule: query.insight_rule,
     insight_subject: query.insight_subject,
+    planner_step: query.planner_step,
+    planner_goal: query.planner_goal,
+    planner_value: query.planner_value,
   });
   const currentMonthKey = currentMonthKeyForTimeZone(business.timezone);
   const latestHistoricalMonth = shiftMonthKey(currentMonthKey, -1) ?? currentMonthKey;
@@ -161,14 +181,18 @@ export default async function HistoricalCorrectionPage({
       purpose={
         returnOrigin.origin === "insights"
           ? "تصحيح البيانات المرتبطة بهذه الملاحظة"
-          : "تصحيح البيانات المرتبطة بمسار العمل السابق"
+          : returnOrigin.origin === "target-planner"
+            ? "تصحيح البيانات التاريخية المطلوبة لإكمال خطة الوصول للهدف"
+            : "تصحيح البيانات المرتبطة بمسار العمل السابق"
       }
       origin={returnOrigin}
       context={{ businessId }}
       returnLabel={
         returnOrigin.origin === "insights"
           ? "العودة إلى الملاحظة"
-          : "العودة إلى المهمة السابقة"
+          : returnOrigin.origin === "target-planner"
+            ? "العودة إلى خطة الهدف"
+            : "العودة إلى المهمة السابقة"
       }
       ariaLabel="سياق العودة من التصحيح التاريخي"
     />
