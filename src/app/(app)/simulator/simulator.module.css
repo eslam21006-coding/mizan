@@ -97,6 +97,52 @@
   margin-bottom: 4px;
 }
 
+.returnContextBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border));
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: color-mix(in srgb, var(--primary) 6%, var(--surface));
+}
+
+.returnContextBanner > div {
+  display: grid;
+  gap: 4px;
+}
+
+.returnContextBanner span {
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.returnContextBanner strong {
+  font-size: 0.98rem;
+}
+
+.returnContextBanner p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+.returnContextBanner a {
+  flex: 0 0 auto;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 15px;
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  background: var(--surface);
+  color: var(--text);
+  font-weight: 800;
+}
+
 .workspace {
   display: grid;
   gap: 20px;
@@ -368,8 +414,14 @@
 @media (max-width: 760px) {
   .pageHeader,
   .sectionHeading,
-  .savePanel {
+  .savePanel,
+  .returnContextBanner {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .returnContextBanner a {
+    width: 100%;
   }
 
   .selectorPanel,
