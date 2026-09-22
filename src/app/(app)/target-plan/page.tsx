@@ -29,6 +29,11 @@ import {
 } from "@/lib/business/target-planner-actuals";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseTargetPlannerStep } from "@/lib/target-planner-step";
+import {
+  buildTargetPlannerRepairHref,
+  targetPlannerRepairSurfaceForBlocker,
+  type TargetPlannerRepairSurface,
+} from "@/lib/target-planner-remediation";
 import dashboardStyles from "../dashboard.module.css";
 import { TargetPlanSteps } from "./target-plan-steps";
 
@@ -46,6 +51,7 @@ type BusinessRow = {
 type PlannerMonthIssue = {
   month: string;
   message: string;
+  repairSurface: TargetPlannerRepairSurface;
 };
 
 const ACTUAL_BLOCKER_COPY: Record<TargetPlannerActualMonthBlocker, string> = {
@@ -160,7 +166,7 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
   const actualMonths: Rolling3TargetActualMonth[] = [];
 
   if (rollingMonths.length !== 3 || rollingMonths.some((month) => month === null)) {
-    issues.push({ month: currentMonth, message: "تعذر تحديد آخر ثلاثة أشهر مكتملة بأمان." });
+    issues.push({ month: currentMonth, message: "تعذر تحديد آخر ثلاثة أشهر مكتملة بأمان.", repairSurface: "monthly" });
   } else {
     const monthKeys = rollingMonths as string[];
     const loads = await Promise.all(
@@ -176,11 +182,11 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
 
     for (const load of loads) {
       if (load.dashboard.dataLoadError || load.dashboard.calculationError) {
-        issues.push({ month: load.month, message: "تعذر حساب الأرقام المالية لهذا الشهر بأمان." });
+        issues.push({ month: load.month, message: "تعذر حساب الأرقام المالية لهذا الشهر بأمان.", repairSurface: "monthly" });
         continue;
       }
       if (!load.dashboard.periodExists || !load.dashboard.result) {
-        issues.push({ month: load.month, message: "لا توجد أرقام شهرية محفوظة." });
+        issues.push({ month: load.month, message: "لا توجد أرقام شهرية محفوظة.", repairSurface: "monthly" });
         continue;
       }
       if (
@@ -188,7 +194,7 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
         load.funnel.reconciliationError ||
         !load.funnel.reconciliation.canonicalAdSpend.available
       ) {
-        issues.push({ month: load.month, message: "بيانات الفانل أو الإنفاق الإعلاني غير مكتملة." });
+        issues.push({ month: load.month, message: "بيانات الفانل أو الإنفاق الإعلاني غير مكتملة.", repairSurface: "funnel-monthly" });
         continue;
       }
 
@@ -199,7 +205,11 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
         funnelEntries: load.funnel.entries,
       });
       if (actual.status === "insufficient") {
-        issues.push({ month: load.month, message: ACTUAL_BLOCKER_COPY[actual.blocker] });
+        issues.push({
+          month: load.month,
+          message: ACTUAL_BLOCKER_COPY[actual.blocker],
+          repairSurface: targetPlannerRepairSurfaceForBlocker(actual.blocker),
+        });
         continue;
       }
       actualMonths.push(actual.actual);
@@ -222,12 +232,16 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
                 : blocker.code === "INCONSISTENT_FUNNEL_SEQUENCE"
                   ? "تسلسل أرقام الفانل غير متسق."
                   : "بيانات الفترة غير كافية لبناء أحد افتراضات الخطة.",
+            repairSurface:
+              blocker.code === "INCONSISTENT_FUNNEL_SEQUENCE"
+                ? "funnel-monthly"
+                : "monthly",
           });
         }
       }
     } catch (error) {
       if (error instanceof TargetEngineInputError) {
-        issues.push({ month: lastCompleteMonth, message: "تعذر بناء افتراضات Rolling 3 Months من البيانات الحالية." });
+        issues.push({ month: lastCompleteMonth, message: "تعذر بناء افتراضات Rolling 3 Months من البيانات الحالية.", repairSurface: "monthly" });
       } else {
         throw error;
       }
@@ -327,8 +341,17 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
             {issues.map((issue) => (
               <Link
                 className={dashboardStyles.secondaryAction}
-                href={`/businesses/${selectedBusiness.id}/monthly?month=${issue.month}`}
-                key={`${issue.month}-${issue.message}`}
+                href={buildTargetPlannerRepairHref(
+                  {
+                    businessId: selectedBusiness.id,
+                    month: issue.month,
+                    step: selectedStep,
+                    goal: selectedGoal,
+                    value: query.value,
+                  },
+                  issue.repairSurface,
+                )}
+                key={`${issue.month}-${issue.repairSurface}-${issue.message}`}
               >
                 {monthLabel(issue.month)} — {issue.message}
               </Link>
