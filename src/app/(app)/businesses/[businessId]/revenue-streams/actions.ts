@@ -15,6 +15,7 @@ import {
 } from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+/** Parses and validates the structured Monthly/setup return origin carried by revenue mutations. */
 function parseRevenueSetupReturnOrigin(formData: FormData): SetupReturnOrigin | null {
   const origins = formData.getAll("origin");
   const months = formData.getAll("month");
