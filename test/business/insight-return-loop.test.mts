@@ -46,7 +46,7 @@ test("N50 parses and resolves a business insight without accepting arbitrary ret
 });
 
 test("N50 insight cards expose stable anchors matching structured Return destinations", () => {
-  assert.match(insightsPanelSource, /id=\{\`insight-\$\{insight\.id\}\`\}/);
+  assert.match(insightsPanelSource, /id=\{`insight-\$\{insight\.id\}`\}/);
   assert.doesNotMatch(insightsPanelSource, /returnTo/);
 });
 
