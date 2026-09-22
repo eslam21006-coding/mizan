@@ -217,9 +217,17 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         </form>
 
         <div className={dashboardStyles.periodBadge}>
-          <span>المقارنة الشهرية</span>
-          <strong>{currentLabel}</strong>
-          <small>مقابل {previousLabel}</small>
+          <span>{activeView === "comparison" ? "المقارنة الشهرية" : "الفترة التاريخية"}</span>
+          <strong>{activeView === "comparison" ? currentLabel : historicalPeriodLabel}</strong>
+          <small>
+            {activeView === "comparison"
+              ? `مقابل ${previousLabel}`
+              : historicalMode === "rolling3"
+                ? "آخر 3 أشهر"
+                : historicalMode === "ytd"
+                  ? "من بداية السنة YTD"
+                  : "فترة مخصصة"}
+          </small>
         </div>
       </section>
 
