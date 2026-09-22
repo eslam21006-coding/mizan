@@ -16,6 +16,7 @@ const FIXTURE_BUSINESS_ID = "00000000-0000-4000-8000-000000000056";
 const OTHER_BUSINESS_ID = "00000000-0000-4000-8000-000000000057";
 const SCENARIO_A_ID = "00000000-0000-4000-8000-000000000561";
 const SCENARIO_B_ID = "00000000-0000-4000-8000-000000000562";
+const LONG_SCENARIO_NAME = "س".repeat(120);
 
 const BASELINE: Omit<ScenarioEngineInput, "overrides"> = {
   financial: {
@@ -44,7 +45,7 @@ const SCENARIOS = [
   },
   {
     id: SCENARIO_B_ID,
-    name: "سيناريو كفاءة",
+    name: LONG_SCENARIO_NAME,
     creationRequestId: "00000000-0000-4000-8000-000000000564",
     overrides: { customer_value: "1100" } satisfies ScenarioOverrides,
   },
@@ -108,12 +109,18 @@ export default async function SimulatorScenarioStateFixture({
           <SimulatorScenarioStateFields state={scenarioState} />
           <label>
             الشهر
-            <select name="month" defaultValue={selectedMonth}>
+            <select
+              name="month"
+              defaultValue={selectedMonth}
+              disabled={scenarioState.kind === "unavailable"}
+            >
               <option value="2026-08">أغسطس 2026</option>
               <option value="2026-09">سبتمبر 2026</option>
             </select>
           </label>
-          <button type="submit">فتح الشهر</button>
+          <button type="submit" disabled={scenarioState.kind === "unavailable"}>
+            فتح الشهر
+          </button>
         </form>
 
         <form aria-label="تغيير البزنس">
