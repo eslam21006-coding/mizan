@@ -112,6 +112,7 @@ function revenueStreamsPath(
   return `/businesses/${businessId}/revenue-streams?${query.toString()}`;
 }
 
+/** Revalidates every surface affected by a revenue-stream mutation before returning to setup. */
 function redirectToRevenueStreams(
   businessId: string,
   status: string,
@@ -119,6 +120,7 @@ function redirectToRevenueStreams(
 ): never {
   revalidatePath("/businesses");
   revalidatePath("/insights");
+  revalidatePath("/target-plan");
   revalidatePath(`/businesses/${businessId}/revenue-streams`);
   revalidatePath(`/businesses/${businessId}/monthly`);
   redirect(revenueStreamsPath(businessId, status, returnOrigin));
