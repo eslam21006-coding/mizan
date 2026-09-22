@@ -2,6 +2,14 @@ import {
   DECISION_INSIGHT_RULE_IDS,
   type DecisionInsightRuleId,
 } from "./business/decision-insights.ts";
+import {
+  TARGET_GOAL_TYPES,
+  type TargetGoalType,
+} from "./business/target-engine.ts";
+import {
+  TARGET_PLANNER_STEPS,
+  type TargetPlannerStep,
+} from "./target-planner-step.ts";
 import type { NavigationDestination } from "./navigation-hierarchy";
 
 type SearchParamValue = string | string[] | undefined;
@@ -25,9 +33,17 @@ export type InsightReturnOriginMetadata = {
   subjectId?: string;
 };
 
+export type TargetPlannerReturnOriginMetadata = {
+  origin: "target-planner";
+  step: TargetPlannerStep;
+  goal: TargetGoalType;
+  value?: string;
+};
+
 export type ExternalReturnOriginMetadata =
   | CustomerReturnOriginMetadata
-  | InsightReturnOriginMetadata;
+  | InsightReturnOriginMetadata
+  | TargetPlannerReturnOriginMetadata;
 
 export type ReturnOriginMetadata =
   | ExternalReturnOriginMetadata
@@ -50,6 +66,9 @@ type SingleSearchParam =
 const MONTH_KEY_PATTERN = /^\d{4}-(0[1-9]|1[0-2])$/;
 const SUBJECT_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 const DECISION_INSIGHT_RULE_SET = new Set<string>(DECISION_INSIGHT_RULE_IDS);
+const TARGET_GOAL_TYPE_SET = new Set<string>(TARGET_GOAL_TYPES);
+const TARGET_PLANNER_STEP_SET = new Set<string>(TARGET_PLANNER_STEPS);
+const TARGET_VALUE_PATTERN = /^\d{1,18}(?:\.\d{1,12})?$/;
 const SUBJECT_RULES = new Set<DecisionInsightRuleId>([
   "healthy_funnel_weak_lifetime",
   "funnel_attendance_bottleneck",
@@ -84,12 +103,18 @@ export function parseReturnOrigin(searchParams: ReturnOriginSearchParams): Retur
   const monthParam = readSingleSearchParam(searchParams, "month");
   const insightRuleParam = readSingleSearchParam(searchParams, "insight_rule");
   const insightSubjectParam = readSingleSearchParam(searchParams, "insight_subject");
+  const plannerStepParam = readSingleSearchParam(searchParams, "planner_step");
+  const plannerGoalParam = readSingleSearchParam(searchParams, "planner_goal");
+  const plannerValueParam = readSingleSearchParam(searchParams, "planner_value");
 
   if (
     originParam.status !== "value" ||
     monthParam.status === "ambiguous" ||
     insightRuleParam.status === "ambiguous" ||
-    insightSubjectParam.status === "ambiguous"
+    insightSubjectParam.status === "ambiguous" ||
+    plannerStepParam.status === "ambiguous" ||
+    plannerGoalParam.status === "ambiguous" ||
+    plannerValueParam.status === "ambiguous"
   ) {
     return null;
   }
@@ -110,6 +135,24 @@ export function parseReturnOrigin(searchParams: ReturnOriginSearchParams): Retur
       return month ? { origin: "monthly-editor", month } : null;
     case "funnel-structure":
       return { origin: "funnel-structure" };
+    case "target-planner": {
+      if (plannerStepParam.status !== "value" || plannerGoalParam.status !== "value") {
+        return null;
+      }
+      if (!TARGET_PLANNER_STEP_SET.has(plannerStepParam.value)) return null;
+      if (!TARGET_GOAL_TYPE_SET.has(plannerGoalParam.value)) return null;
+
+      const plannerValue =
+        plannerValueParam.status === "value" ? plannerValueParam.value : undefined;
+      if (plannerValue !== undefined && !TARGET_VALUE_PATTERN.test(plannerValue)) return null;
+
+      return {
+        origin: "target-planner",
+        step: plannerStepParam.value as TargetPlannerStep,
+        goal: plannerGoalParam.value as TargetGoalType,
+        ...(plannerValue !== undefined ? { value: plannerValue } : {}),
+      };
+    }
     case "insights": {
       if (!month || insightRuleParam.status !== "value") return null;
       if (!DECISION_INSIGHT_RULE_SET.has(insightRuleParam.value)) return null;
@@ -151,6 +194,14 @@ export function resolveReturnOrigin(
       };
     case "funnel-structure":
       return { route: "business-funnels", businessId: context.businessId };
+    case "target-planner":
+      return {
+        route: "target-planner",
+        businessId: context.businessId,
+        step: origin.step,
+        goal: origin.goal,
+        value: origin.value,
+      };
     case "insights":
       return {
         route: "insights",
@@ -173,6 +224,12 @@ export function resolveReturnOrigin(
           origin.upstream?.origin === "insights" ? origin.upstream.ruleId : undefined,
         insightSubjectId:
           origin.upstream?.origin === "insights" ? origin.upstream.subjectId : undefined,
+        plannerStep:
+          origin.upstream?.origin === "target-planner" ? origin.upstream.step : undefined,
+        plannerGoal:
+          origin.upstream?.origin === "target-planner" ? origin.upstream.goal : undefined,
+        plannerValue:
+          origin.upstream?.origin === "target-planner" ? origin.upstream.value : undefined,
       };
   }
 }
