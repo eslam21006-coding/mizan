@@ -14,8 +14,9 @@ function appendHistoricalReturnQuery(
 
   query.set("origin", returnOrigin.origin);
   if (
-    returnOrigin.origin === "customer-profitability" ||
-    returnOrigin.origin === "insights"
+    (returnOrigin.origin === "customer-profitability" ||
+      returnOrigin.origin === "insights") &&
+    returnOrigin.month
   ) {
     query.set("return_month", returnOrigin.month);
   }
