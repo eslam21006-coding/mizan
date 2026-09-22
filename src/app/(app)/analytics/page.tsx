@@ -277,15 +277,23 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         </section>
       )}
 
-      {activeView === "comparison" && !comparisonHasLoadError && currentLoad.result && previousMonth && previousLoad.result && (
-        <MonthComparison
-          current={currentLoad.result}
-          previous={previousLoad.result}
-          currency={selectedBusiness.base_currency}
-          currentMonthLabel={currentLabel}
-          previousMonthLabel={previousLabel}
-        />
-      )}
+      {activeView === "comparison" &&
+        !comparisonHasLoadError &&
+        currentLoad.result &&
+        currentLoad.calculationInput &&
+        previousMonth &&
+        previousLoad.result &&
+        previousLoad.calculationInput && (
+          <MonthComparison
+            current={currentLoad.result}
+            previous={previousLoad.result}
+            currentInput={currentLoad.calculationInput}
+            previousInput={previousLoad.calculationInput}
+            currency={selectedBusiness.base_currency}
+            currentMonthLabel={currentLabel}
+            previousMonthLabel={previousLabel}
+          />
+        )}
 
       {activeView === "trends" && (
         <section className={dashboardStyles.sectionCard} aria-label="اختيار فترة التحليل التاريخي">
