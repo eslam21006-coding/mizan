@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { MonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
 import styles from "./monthly.module.css";
 
 type HistoricalMonthStateProps = {
@@ -6,6 +7,7 @@ type HistoricalMonthStateProps = {
   monthKey: string;
   monthLabel: string;
   canManage: boolean;
+  returnOrigin?: MonthlyExternalReturnOrigin | null;
 };
 
 /** Marks an already-saved past month as historical and routes edits into the audited correction workflow. */
@@ -14,8 +16,25 @@ export function HistoricalMonthState({
   monthKey,
   monthLabel,
   canManage,
+  returnOrigin = null,
 }: HistoricalMonthStateProps) {
-  const correctionHref = `/businesses/${businessId}/monthly/correction?month=${monthKey}`;
+  const correctionQuery = new URLSearchParams({ month: monthKey });
+  if (returnOrigin) {
+    correctionQuery.set("origin", returnOrigin.origin);
+    if (
+      returnOrigin.origin === "customer-profitability" ||
+      returnOrigin.origin === "insights"
+    ) {
+      correctionQuery.set("return_month", returnOrigin.month);
+    }
+    if (returnOrigin.origin === "insights") {
+      correctionQuery.set("insight_rule", returnOrigin.ruleId);
+      if (returnOrigin.subjectId) {
+        correctionQuery.set("insight_subject", returnOrigin.subjectId);
+      }
+    }
+  }
+  const correctionHref = `/businesses/${businessId}/monthly/correction?${correctionQuery.toString()}`;
 
   return (
     <section className={styles.historicalPanel} aria-label="حالة الشهر التاريخي">
