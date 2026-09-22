@@ -96,6 +96,7 @@ type ComparisonCardProps = {
   auditKey: CoreMetricAuditKey;
 };
 
+/** Renders one monthly comparison card with an in-context two-period metric audit drawer. */
 function ComparisonCard({
   label,
   current,
@@ -149,6 +150,7 @@ function ComparisonCard({
   );
 }
 
+/** Renders exact month-over-month metrics and exposes each calculation audit without leaving Analytics. */
 export function MonthComparison({
   current,
   previous,
