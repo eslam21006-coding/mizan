@@ -58,6 +58,19 @@ function readSingleSearchParam(
   return { status: "ambiguous" };
 }
 
+/** Parses validated Target Planner return metadata from mutation FormData using the same URL contract. */
+export function parseSimulatorTargetPlannerReturnContextFromFormData(
+  formData: Pick<FormData, "getAll">,
+): SimulatorTargetPlannerReturnContext | null {
+  const params = new URLSearchParams();
+  for (const key of SIMULATOR_TARGET_PLANNER_RETURN_KEYS) {
+    for (const value of formData.getAll(key)) {
+      if (typeof value === "string") params.append(key, value);
+    }
+  }
+  return parseSimulatorTargetPlannerReturnContext(params);
+}
+
 /** Parses only a complete, allow-listed Target Planner origin for Simulator return navigation. */
 export function parseSimulatorTargetPlannerReturnContext(
   searchParams: ReturnOriginSearchParams,
