@@ -68,7 +68,7 @@ const SUBJECT_ID_PATTERN = /^[A-Za-z0-9_-]{1,128}$/;
 const DECISION_INSIGHT_RULE_SET = new Set<string>(DECISION_INSIGHT_RULE_IDS);
 const TARGET_GOAL_TYPE_SET = new Set<string>(TARGET_GOAL_TYPES);
 const TARGET_PLANNER_STEP_SET = new Set<string>(TARGET_PLANNER_STEPS);
-const TARGET_VALUE_PATTERN = /^\d{1,18}(?:\.\d{1,12})?$/;
+const TARGET_VALUE_PATTERN = /^\d{1,16}(?:\.\d{1,8})?$/;
 const SUBJECT_RULES = new Set<DecisionInsightRuleId>([
   "healthy_funnel_weak_lifetime",
   "funnel_attendance_bottleneck",
