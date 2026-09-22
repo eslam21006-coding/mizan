@@ -22,8 +22,9 @@ export function HistoricalMonthState({
   if (returnOrigin) {
     correctionQuery.set("origin", returnOrigin.origin);
     if (
-      returnOrigin.origin === "customer-profitability" ||
-      returnOrigin.origin === "insights"
+      (returnOrigin.origin === "customer-profitability" ||
+        returnOrigin.origin === "insights") &&
+      returnOrigin.month
     ) {
       correctionQuery.set("return_month", returnOrigin.month);
     }
