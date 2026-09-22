@@ -12,6 +12,10 @@ import {
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import {
+  parseMonthlyExternalReturnOrigin,
+  type MonthlyExternalReturnOrigin,
+} from "@/lib/monthly-return-origin";
+import {
   redirectHistoricalCorrection,
   redirectHistoricalCorrectionSuccess,
 } from "@/lib/historical-correction-navigation";
@@ -22,20 +26,68 @@ const correctionNavigationEffects = {
   redirect,
 };
 
-function redirectCorrection(businessId: string, monthKey: string, status: string): never {
+/** Reads one validated external Return origin from a historical-correction submission. */
+function parseCorrectionReturnOrigin(formData: FormData): MonthlyExternalReturnOrigin | null {
+  const origins = formData.getAll("origin");
+  const returnMonths = formData.getAll("return_month");
+  const insightRules = formData.getAll("insight_rule");
+  const insightSubjects = formData.getAll("insight_subject");
+
+  if (origins.length === 0) return null;
+  if (
+    origins.length !== 1 ||
+    returnMonths.length > 1 ||
+    insightRules.length > 1 ||
+    insightSubjects.length > 1 ||
+    typeof origins[0] !== "string"
+  ) {
+    return null;
+  }
+
+  const returnMonth = returnMonths[0];
+  const insightRule = insightRules[0];
+  const insightSubject = insightSubjects[0];
+  if (
+    (returnMonth !== undefined && typeof returnMonth !== "string") ||
+    (insightRule !== undefined && typeof insightRule !== "string") ||
+    (insightSubject !== undefined && typeof insightSubject !== "string")
+  ) {
+    return null;
+  }
+
+  return parseMonthlyExternalReturnOrigin({
+    origin: origins[0],
+    month: returnMonth,
+    insight_rule: insightRule,
+    insight_subject: insightSubject,
+  });
+}
+
+function redirectCorrection(
+  businessId: string,
+  monthKey: string,
+  status: string,
+  returnOrigin?: MonthlyExternalReturnOrigin | null,
+): never {
   return redirectHistoricalCorrection(
     correctionNavigationEffects,
     businessId,
     monthKey,
     status,
+    returnOrigin,
   );
 }
 
-function redirectCorrectionSuccess(businessId: string, monthKey: string): never {
+function redirectCorrectionSuccess(
+  businessId: string,
+  monthKey: string,
+  returnOrigin?: MonthlyExternalReturnOrigin | null,
+): never {
   return redirectHistoricalCorrectionSuccess(
     correctionNavigationEffects,
     businessId,
     monthKey,
+    returnOrigin,
   );
 }
 
@@ -57,6 +109,7 @@ function uniqueResourceIds(values: FormDataEntryValue[]) {
 export async function correctHistoricalMonthlyActuals(formData: FormData) {
   await requireAuthContext();
 
+  const returnOrigin = parseCorrectionReturnOrigin(formData);
   const businessId = parseResourceId(formData.get("business_id"));
   const month = parseMonthKey(formData.get("month"));
   if (!businessId) redirect("/businesses");
@@ -78,7 +131,7 @@ export async function correctHistoricalMonthlyActuals(formData: FormData) {
     !unallocatedRefunds.ok ||
     adjustmentNote === null
   ) {
-    redirectCorrection(businessId, month.monthKey, "invalid-input");
+    redirectCorrection(businessId, month.monthKey, "invalid-input", returnOrigin);
   }
 
   if (
@@ -86,13 +139,13 @@ export async function correctHistoricalMonthlyActuals(formData: FormData) {
     payingCustomers.value !== null &&
     newCustomers.value > payingCustomers.value
   ) {
-    redirectCorrection(businessId, month.monthKey, "invalid-customers");
+    redirectCorrection(businessId, month.monthKey, "invalid-customers", returnOrigin);
   }
 
   const revenueStreamIds = uniqueResourceIds(formData.getAll("revenue_stream_id"));
   const expenseItemIds = uniqueResourceIds(formData.getAll("expense_item_id"));
   if (!revenueStreamIds || !expenseItemIds) {
-    redirectCorrection(businessId, month.monthKey, "invalid-input");
+    redirectCorrection(businessId, month.monthKey, "invalid-input", returnOrigin);
   }
 
   const revenueEntries = [];
@@ -100,7 +153,7 @@ export async function correctHistoricalMonthlyActuals(formData: FormData) {
     const gross = parseOptionalDecimalInput(formData.get(`gross_${streamId}`));
     const refunds = parseOptionalDecimalInput(formData.get(`refund_${streamId}`));
     if (!gross.ok || !refunds.ok) {
-      redirectCorrection(businessId, month.monthKey, "invalid-input");
+      redirectCorrection(businessId, month.monthKey, "invalid-input", returnOrigin);
     }
 
     revenueEntries.push({
@@ -114,13 +167,13 @@ export async function correctHistoricalMonthlyActuals(formData: FormData) {
   for (const expenseId of expenseItemIds) {
     const displayValue = parseOptionalDecimalInput(formData.get(`expense_value_${expenseId}`));
     if (!displayValue.ok) {
-      redirectCorrection(businessId, month.monthKey, "invalid-input");
+      redirectCorrection(businessId, month.monthKey, "invalid-input", returnOrigin);
     }
 
     const rawBasis = String(formData.get(`expense_basis_${expenseId}`) ?? "").trim();
     const basis = rawBasis ? parseCustomerCountBasis(rawBasis) : null;
     if (rawBasis && !basis) {
-      redirectCorrection(businessId, month.monthKey, "invalid-input");
+      redirectCorrection(businessId, month.monthKey, "invalid-input", returnOrigin);
     }
 
     expenseEntries.push({
@@ -144,6 +197,6 @@ export async function correctHistoricalMonthlyActuals(formData: FormData) {
     target_correction_reason: correctionReason,
   });
 
-  if (error) redirectCorrection(businessId, month.monthKey, "correction-failed");
-  redirectCorrectionSuccess(businessId, month.monthKey);
+  if (error) redirectCorrection(businessId, month.monthKey, "correction-failed", returnOrigin);
+  redirectCorrectionSuccess(businessId, month.monthKey, returnOrigin);
 }
