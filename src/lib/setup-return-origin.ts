@@ -62,7 +62,7 @@ function upstreamSearchParams(
   };
 }
 
-/** Accepts a Monthly-editor setup detour with an optional validated customer or Insights upstream origin. */
+/** Accepts a Monthly-editor setup detour with an optional validated customer, Insights, or Target Planner upstream origin. */
 export function parseSetupReturnOrigin(
   searchParams: ReturnOriginSearchParams,
 ): SetupReturnOrigin | null {
