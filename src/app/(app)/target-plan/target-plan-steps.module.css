@@ -1,0 +1,60 @@
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.step {
+  min-width: 0;
+  display: grid;
+  gap: 5px;
+  padding: 14px 16px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  text-decoration: none;
+}
+
+.step:hover {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+  border-color: var(--brand);
+}
+
+.step:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.step strong {
+  font-size: 0.92rem;
+}
+
+.step span {
+  color: var(--text-soft);
+  font-size: 0.77rem;
+  line-height: 1.6;
+}
+
+.active {
+  color: var(--surface);
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+}
+
+.active:hover {
+  color: var(--surface);
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+}
+
+.active span {
+  color: color-mix(in srgb, var(--surface) 80%, transparent);
+}
+
+@media (max-width: 720px) {
+  .steps {
+    grid-template-columns: 1fr;
+  }
+}
