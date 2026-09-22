@@ -27,6 +27,9 @@ type FunnelMonthlyPageProps = {
     return_month?: string | string[];
     insight_rule?: string | string[];
     insight_subject?: string | string[];
+    planner_step?: string | string[];
+    planner_goal?: string | string[];
+    planner_value?: string | string[];
   }>;
 };
 
@@ -236,6 +239,9 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
     month: query.return_month ?? query.month,
     insight_rule: query.insight_rule,
     insight_subject: query.insight_subject,
+    planner_step: query.planner_step,
+    planner_goal: query.planner_goal,
+    planner_value: query.planner_value,
   });
 
   const [funnelMonth, funnelsResult] = await Promise.all([
@@ -289,14 +295,18 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
           purpose={
             returnOrigin.origin === "insights"
               ? "مراجعة أرقام الفانل المرتبطة بهذه الملاحظة"
-              : "أرقام الفانلز الشهرية"
+              : returnOrigin.origin === "target-planner"
+                ? "بيانات الفانل الناقصة المطلوبة لإكمال خطة الوصول للهدف"
+                : "أرقام الفانلز الشهرية"
           }
           origin={returnOrigin}
           context={{ businessId }}
           returnLabel={
             returnOrigin.origin === "insights"
               ? "العودة إلى الملاحظة"
-              : "العودة إلى هيكل الفانلز"
+              : returnOrigin.origin === "target-planner"
+                ? "العودة إلى خطة الهدف"
+                : "العودة إلى هيكل الفانلز"
           }
           ariaLabel="سياق العودة من أرقام الفانلز الشهرية"
         />
@@ -327,6 +337,15 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
               <input type="hidden" name="insight_rule" value={returnOrigin.ruleId} />
               {returnOrigin.subjectId && (
                 <input type="hidden" name="insight_subject" value={returnOrigin.subjectId} />
+              )}
+            </>
+          )}
+          {returnOrigin?.origin === "target-planner" && (
+            <>
+              <input type="hidden" name="planner_step" value={returnOrigin.step} />
+              <input type="hidden" name="planner_goal" value={returnOrigin.goal} />
+              {returnOrigin.value !== undefined && (
+                <input type="hidden" name="planner_value" value={returnOrigin.value} />
               )}
             </>
           )}
@@ -386,6 +405,15 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
                 <input type="hidden" name="insight_rule" value={returnOrigin.ruleId} />
                 {returnOrigin.subjectId && (
                   <input type="hidden" name="insight_subject" value={returnOrigin.subjectId} />
+                )}
+              </>
+            )}
+            {returnOrigin?.origin === "target-planner" && (
+              <>
+                <input type="hidden" name="planner_step" value={returnOrigin.step} />
+                <input type="hidden" name="planner_goal" value={returnOrigin.goal} />
+                {returnOrigin.value !== undefined && (
+                  <input type="hidden" name="planner_value" value={returnOrigin.value} />
                 )}
               </>
             )}
