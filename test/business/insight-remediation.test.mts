@@ -44,7 +44,7 @@ test("routes lifetime-economics insights to the exact customer profitability mon
 test("routes attendance insights to the exact funnel card for the selected month", () => {
   assert.deepEqual(
     resolveInsightRemediation(
-      { ruleId: "funnel_attendance_bottleneck", subjectId: "funnel/a" },
+      { ruleId: "funnel_attendance_bottleneck", subjectId: "funnel-a" },
       context,
     ),
     {
