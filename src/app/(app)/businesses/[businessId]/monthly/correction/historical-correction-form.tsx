@@ -93,6 +93,15 @@ export function HistoricalCorrectionForm({
           )}
         </>
       )}
+      {returnOrigin?.origin === "target-planner" && (
+        <>
+          <input type="hidden" name="planner_step" value={returnOrigin.step} />
+          <input type="hidden" name="planner_goal" value={returnOrigin.goal} />
+          {returnOrigin.value !== undefined && (
+            <input type="hidden" name="planner_value" value={returnOrigin.value} />
+          )}
+        </>
+      )}
       {trustNotice}
       <MonthlyEntryForm
         editable
