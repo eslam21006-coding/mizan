@@ -26,9 +26,12 @@ test("routes profitability and non-media-cost insights to the exact business mon
 
 test("routes lifetime-economics insights to the exact customer profitability month", () => {
   assert.deepEqual(
-    resolveInsightRemediation({ ruleId: "healthy_funnel_weak_lifetime" }, context),
+    resolveInsightRemediation(
+      { ruleId: "healthy_funnel_weak_lifetime", subjectId: "funnel-a" },
+      context,
+    ),
     {
-      href: "/businesses/business%20fixture%2F01/customers?view=profitability&month=2026-09&origin=insights&return_month=2026-09&insight_rule=healthy_funnel_weak_lifetime",
+      href: "/businesses/business%20fixture%2F01/customers?view=profitability&month=2026-09&origin=insights&return_month=2026-09&insight_rule=healthy_funnel_weak_lifetime&insight_subject=funnel-a",
       labelAr: "مراجعة ربحية العميل",
     },
   );
@@ -48,7 +51,7 @@ test("routes attendance insights to the exact funnel card for the selected month
       context,
     ),
     {
-      href: "/businesses/business%20fixture%2F01/funnels/monthly?month=2026-09&origin=insights&return_month=2026-09&insight_rule=funnel_attendance_bottleneck&insight_subject=funnel%2Fa#funnel-funnel%2Fa",
+      href: "/businesses/business%20fixture%2F01/funnels/monthly?month=2026-09&origin=insights&return_month=2026-09&insight_rule=funnel_attendance_bottleneck&insight_subject=funnel-a#funnel-funnel-a",
       labelAr: "مراجعة أرقام الفانل",
     },
   );
