@@ -1,15 +1,13 @@
 import {
   parseReturnOrigin,
-  type ReturnOriginMetadata,
+  type CustomerReturnOriginMetadata,
+  type InsightReturnOriginMetadata,
   type ReturnOriginSearchParams,
 } from "./return-origin.ts";
 
-export type MonthlyExternalReturnOrigin = Extract<
-  ReturnOriginMetadata,
-  | { origin: "customer-overview" }
-  | { origin: "customer-profitability" }
-  | { origin: "insights" }
->;
+export type MonthlyExternalReturnOrigin =
+  | CustomerReturnOriginMetadata
+  | InsightReturnOriginMetadata;
 
 /** Accepts only cross-module origins that may legitimately return from the Monthly editor. */
 export function parseMonthlyExternalReturnOrigin(
