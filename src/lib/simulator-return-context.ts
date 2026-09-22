@@ -1,11 +1,11 @@
-import { parseResourceId } from "./business/revenue-streams";
-import type { TargetGoalType } from "./business/target-engine";
+import { parseResourceId } from "./business/revenue-streams.ts";
+import type { TargetGoalType } from "./business/target-engine.ts";
 import {
   parseReturnOrigin,
   type ReturnOriginSearchParams,
-} from "./return-origin";
-import type { TargetPlannerStep } from "./target-planner-step";
-import { resolveNavigationDestination } from "./navigation-hierarchy";
+} from "./return-origin.ts";
+import type { TargetPlannerStep } from "./target-planner-step.ts";
+import { resolveNavigationDestination } from "./navigation-hierarchy.ts";
 
 export const SIMULATOR_TARGET_PLANNER_RETURN_KEYS = [
   "origin",
