@@ -23,15 +23,15 @@ test.describe("Decision Engine Top 3 UI", () => {
 
     await expect(panel.getByRole("link", { name: /مراجعة أرقام وتكاليف الشهر/ })).toHaveAttribute(
       "href",
-      "/businesses/business-fixture/monthly?month=2026-09",
+      "/businesses/business-fixture/monthly?month=2026-09&origin=insights&return_month=2026-09&insight_rule=unhealthy_growth",
     );
     await expect(panel.getByRole("link", { name: /مراجعة المصروفات خارج الميديا/ })).toHaveAttribute(
       "href",
-      "/businesses/business-fixture/monthly?month=2026-09",
+      "/businesses/business-fixture/monthly?month=2026-09&origin=insights&return_month=2026-09&insight_rule=non_media_cost_pressure",
     );
     await expect(panel.getByRole("link", { name: /مراجعة أرقام الفانل/ })).toHaveAttribute(
       "href",
-      "/businesses/business-fixture/funnels/monthly?month=2026-09#funnel-funnel-a",
+      "/businesses/business-fixture/funnels/monthly?month=2026-09&origin=insights&return_month=2026-09&insight_rule=funnel_attendance_bottleneck&insight_subject=funnel-a#funnel-funnel-a",
     );
 
     await page.setViewportSize({ width: 390, height: 844 });
@@ -66,7 +66,7 @@ test.describe("Decision Engine Top 3 UI", () => {
     await expect(panel.getByRole("note")).toContainText("تقديريًا");
     await expect(panel.getByRole("link", { name: /مراجعة اقتصاديات العميل/ })).toHaveAttribute(
       "href",
-      "/businesses/business-fixture/customers?view=profitability&month=2026-09",
+      "/businesses/business-fixture/customers?view=profitability&month=2026-09&origin=insights&return_month=2026-09&insight_rule=rising_cac_lifetime_supported",
     );
 
     await page.setViewportSize({ width: 390, height: 844 });
