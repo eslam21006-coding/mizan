@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { parseMonthlyExternalReturnOrigin } from "../../src/lib/monthly-return-origin.ts";
 
 const monthlyOriginSource = readFileSync("src/lib/monthly-return-origin.ts", "utf8");
 const monthlyPageSource = readFileSync(
@@ -12,51 +13,66 @@ const monthlyActionsSource = readFileSync(
   "utf8",
 );
 
-/** Locks Monthly Return to safe cross-module origins and keeps same-module/import origins out of the banner. */
+/** Locks Monthly Return to known cross-module origins, including N50 Insights. */
 test("Monthly accepts only external structured Return origins", () => {
   assert.match(monthlyOriginSource, /parsed\?\.origin === "customer-overview"/);
   assert.match(monthlyOriginSource, /parsed\?\.origin === "customer-profitability"/);
-  assert.doesNotMatch(monthlyOriginSource, /returnTo/);
+  assert.match(monthlyOriginSource, /parsed\?\.origin === "insights"/);
+  assert.deepEqual(
+    parseMonthlyExternalReturnOrigin({
+      origin: "insights",
+      month: "2026-09",
+      insight_rule: "non_media_cost_pressure",
+    }),
+    {
+      origin: "insights",
+      month: "2026-09",
+      ruleId: "non_media_cost_pressure",
+    },
+  );
+  assert.equal(
+    parseMonthlyExternalReturnOrigin({
+      origin: "insights",
+      month: "2026-09",
+      insight_rule: "not-a-rule",
+    }),
+    null,
+  );
   assert.match(
     monthlyPageSource,
-    /parseMonthlyExternalReturnOrigin\(\{[\s\S]*origin: query\.origin,[\s\S]*month: query\.return_month \?\? query\.month/,
+    /parseMonthlyExternalReturnOrigin\(\{[\s\S]*origin: query\.origin,[\s\S]*month: query\.return_month \?\? query\.month,[\s\S]*insight_rule: query\.insight_rule/,
   );
   assert.match(monthlyPageSource, /ariaLabel="سياق العودة من الإدخال الشهري"/);
   assert.doesNotMatch(monthlyPageSource, /returnTo/);
 });
 
-/** Locks Monthly navigation controls to preserve the safe workflow origin and original Return month. */
-test("Monthly month navigation and setup-copy controls preserve Return context", () => {
-  assert.match(monthlyPageSource, /const monthlyHref = \(monthKey: string\) =>/);
-  assert.match(monthlyPageSource, /queryParams\.set\("origin", returnOrigin\.origin\)/);
-  assert.match(monthlyPageSource, /queryParams\.set\("return_month", returnOrigin\.month\)/);
+/** Locks Monthly navigation, forms, and setup detours to the original Insights context. */
+test("Monthly navigation and setup controls preserve Return context", () => {
+  assert.match(monthlyPageSource, /function appendMonthlyReturnQuery/);
+  assert.match(monthlyPageSource, /query\.set\("origin", returnOrigin\.origin\)/);
+  assert.match(monthlyPageSource, /query\.set\("return_month", returnOrigin\.month\)/);
+  assert.match(monthlyPageSource, /query\.set\("insight_rule", returnOrigin\.ruleId\)/);
+  assert.match(monthlyPageSource, /function appendSetupUpstreamQuery/);
+  assert.match(monthlyPageSource, /query\.set\("upstream_origin", returnOrigin\.origin\)/);
+  assert.match(monthlyPageSource, /query\.set\("upstream_insight_rule", returnOrigin\.ruleId\)/);
   assert.match(monthlyPageSource, /href=\{monthlyHref\(previousMonth\)\}/);
   assert.match(monthlyPageSource, /href=\{monthlyHref\(nextMonth\)\}/);
-  assert.match(
-    monthlyPageSource,
-    /className=\{styles\.monthPicker\}[\s\S]*name="origin" value=\{returnOrigin\.origin\}/,
-  );
-  assert.match(
-    monthlyPageSource,
-    /action=\{copyPreviousMonthExpenses\}[\s\S]*name="origin" value=\{returnOrigin\.origin\}/,
-  );
-  assert.match(monthlyPageSource, /name="return_month" value=\{returnOrigin\.month\}/);
+  assert.match(monthlyPageSource, /<MonthlyReturnOriginFields returnOrigin=\{returnOrigin\} \/>/);
+  assert.match(monthlyPageSource, /returnOrigin=\{returnOrigin\}/);
 });
 
 /** Locks save/copy redirects to the same validated origin and source Return month. */
 test("Monthly actions preserve safe Return context across save and copy outcomes", () => {
   assert.match(monthlyActionsSource, /formData\.getAll\("origin"\)/);
   assert.match(monthlyActionsSource, /formData\.getAll\("return_month"\)/);
-  assert.match(monthlyActionsSource, /formData\.getAll\("month"\)/);
+  assert.match(monthlyActionsSource, /formData\.getAll\("insight_rule"\)/);
+  assert.match(monthlyActionsSource, /formData\.getAll\("insight_subject"\)/);
+  assert.match(monthlyActionsSource, /insightRules\.length > 1/);
   assert.match(
     monthlyActionsSource,
-    /origins\.length !== 1 \|\| returnMonths\.length > 1 \|\| months\.length > 1/,
+    /parseMonthlyExternalReturnOrigin\(\{[\s\S]*origin: rawOrigin,[\s\S]*month: rawMonth,[\s\S]*insight_rule: rawInsightRule/,
   );
-  assert.match(
-    monthlyActionsSource,
-    /parseMonthlyExternalReturnOrigin\(\{ origin: rawOrigin, month: rawMonth \}\)/,
-  );
-  assert.match(monthlyActionsSource, /query\.set\("return_month", returnOrigin\.month\)/);
+  assert.match(monthlyActionsSource, /query\.set\("insight_rule", returnOrigin\.ruleId\)/);
   assert.match(
     monthlyActionsSource,
     /redirectMonthly\(businessId, month\.monthKey, "saved", returnOrigin\)/,
@@ -75,7 +91,7 @@ test("Monthly actions preserve safe Return context across save and copy outcomes
   );
   assert.match(
     monthlyActionsSource,
-    /monthlyPath\(businessId, month\.monthKey, "copied", copiedCount, returnOrigin\)/,
+    /redirectHistoricalCorrection\(businessId, month\.monthKey, returnOrigin\)/,
   );
   assert.doesNotMatch(monthlyActionsSource, /returnTo/);
 });
