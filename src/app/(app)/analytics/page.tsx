@@ -124,17 +124,20 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
 
   const previousResolution = resolvePreviousComparisonMonth(selectedMonth.monthKey);
   const previousMonth = previousResolution.parsed;
+  const neutralMonthLoad = {
+    periodExists: false,
+    result: null,
+    dataLoadError: false,
+    calculationError: false,
+  } as const;
   const [currentLoad, previousLoad, historicalLoad] = await Promise.all([
-    loadDashboardMonth(supabase, selectedBusiness.id, selectedMonth.monthStart),
-    previousMonth
+    activeView === "comparison"
+      ? loadDashboardMonth(supabase, selectedBusiness.id, selectedMonth.monthStart)
+      : Promise.resolve(neutralMonthLoad),
+    activeView === "comparison" && previousMonth
       ? loadDashboardMonth(supabase, selectedBusiness.id, previousMonth.monthStart)
-      : Promise.resolve({
-          periodExists: false,
-          result: null,
-          dataLoadError: false,
-          calculationError: false,
-        }),
-    historicalResolution.ok
+      : Promise.resolve(neutralMonthLoad),
+    activeView === "trends" && historicalResolution.ok
       ? loadDashboardRange(supabase, selectedBusiness.id, historicalResolution.monthKeys)
       : Promise.resolve(null),
   ]);
