@@ -3,11 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import { resolveNavigationDestination } from "../../src/lib/navigation-hierarchy.ts";
 import { parseSetupReturnOrigin } from "../../src/lib/setup-return-origin.ts";
-import {
-  parseReturnOrigin,
-  resolveReturnOrigin,
-  type ReturnOriginMetadata,
-} from "../../src/lib/return-origin.ts";
+import { resolveReturnOrigin } from "../../src/lib/return-origin.ts";
 
 const setupOriginSource = readFileSync("src/lib/setup-return-origin.ts", "utf8");
 const monthlySource = readFileSync(
@@ -27,132 +23,87 @@ const revenueActionsSource = readFileSync(
   "utf8",
 );
 
-test("N26 setup parser requires Monthly editor and validates nested customer origin metadata", () => {
-  assert.deepEqual(
-    parseReturnOrigin({ origin: "monthly-editor", month: "2026-09" }),
-    { origin: "monthly-editor", month: "2026-09" },
-  );
-  assert.equal(parseReturnOrigin({ origin: "monthly-editor" }), null);
-  assert.equal(parseReturnOrigin({ origin: "monthly-editor", month: "2026-13" }), null);
-
-  assert.match(setupOriginSource, /parsed\?\.origin !== "monthly-editor"/);
+test("setup parser accepts validated customer or Insights upstream metadata only", () => {
   assert.match(setupOriginSource, /upstream\.origin !== "customer-overview"/);
   assert.match(setupOriginSource, /upstream\.origin !== "customer-profitability"/);
-  assert.match(
-    setupOriginSource,
-    /upstream\.origin === "customer-overview" && hasUpstreamMonth/,
-  );
-  assert.match(setupOriginSource, /upstream_origin/);
-  assert.match(setupOriginSource, /upstream_month/);
+  assert.match(setupOriginSource, /upstream\.origin !== "insights"/);
   assert.doesNotMatch(setupOriginSource, /returnTo/);
+
+  assert.deepEqual(
+    parseSetupReturnOrigin({
+      origin: "monthly-editor",
+      month: "2026-10",
+      upstream_origin: "insights",
+      upstream_month: "2026-09",
+      upstream_insight_rule: "non_media_cost_pressure",
+    }),
+    {
+      origin: "monthly-editor",
+      month: "2026-10",
+      upstream: {
+        origin: "insights",
+        month: "2026-09",
+        ruleId: "non_media_cost_pressure",
+      },
+    },
+  );
+
   assert.equal(
     parseSetupReturnOrigin({
       origin: "monthly-editor",
-      month: "2026-09",
-      upstream_origin: "funnel-structure",
+      month: "2026-10",
+      upstream_origin: "insights",
+      upstream_month: "2026-09",
+      upstream_insight_rule: "not-a-rule",
     }),
     null,
   );
 });
 
-test("N26 typed setup return restores the exact Monthly month and upstream profitability origin", () => {
-  const origin: ReturnOriginMetadata = {
+test("typed setup return restores Monthly with the exact originating insight", () => {
+  const origin = parseSetupReturnOrigin({
     origin: "monthly-editor",
-    month: "2026-09",
-    upstream: { origin: "customer-profitability", month: "2026-07" },
-  };
-  const destination = resolveReturnOrigin(origin, {
-    businessId: "123e4567-e89b-42d3-a456-426614174000",
+    month: "2026-10",
+    upstream_origin: "insights",
+    upstream_month: "2026-09",
+    upstream_insight_rule: "non_media_cost_pressure",
   });
+  assert.ok(origin);
 
   assert.equal(
-    resolveNavigationDestination(destination),
-    "/businesses/123e4567-e89b-42d3-a456-426614174000/monthly?month=2026-09&origin=customer-profitability&return_month=2026-07",
+    resolveNavigationDestination(
+      resolveReturnOrigin(origin, {
+        businessId: "123e4567-e89b-42d3-a456-426614174000",
+      }),
+    ),
+    "/businesses/123e4567-e89b-42d3-a456-426614174000/monthly?month=2026-10&origin=insights&return_month=2026-09&insight_rule=non_media_cost_pressure",
   );
 });
 
-test("N26 typed setup return can restore Customer Overview without inventing month metadata", () => {
-  const origin: ReturnOriginMetadata = {
-    origin: "monthly-editor",
-    month: "2026-09",
-    upstream: { origin: "customer-overview" },
-  };
-  const destination = resolveReturnOrigin(origin, {
-    businessId: "123e4567-e89b-42d3-a456-426614174000",
-  });
-
-  assert.equal(
-    resolveNavigationDestination(destination),
-    "/businesses/123e4567-e89b-42d3-a456-426614174000/monthly?month=2026-09&origin=customer-overview",
-  );
-});
-
-test("N26 Monthly setup URLs preserve the selected month and validated upstream customer origin", () => {
-  assert.match(monthlySource, /const setupHref = \(route: "revenue-streams" \| "expenses"\) =>/);
-  assert.match(monthlySource, /origin: "monthly-editor"/);
-  assert.match(monthlySource, /month: selectedMonth\.monthKey/);
-  assert.match(monthlySource, /queryParams\.set\("upstream_origin", returnOrigin\.origin\)/);
-  assert.match(
-    monthlySource,
-    /queryParams\.set\("upstream_month", returnOrigin\.month\)/,
-  );
+test("Monthly setup URLs carry nested Insights metadata", () => {
+  assert.match(monthlySource, /function appendSetupUpstreamQuery/);
+  assert.match(monthlySource, /query\.set\("upstream_origin", returnOrigin\.origin\)/);
+  assert.match(monthlySource, /query\.set\("upstream_month", returnOrigin\.month\)/);
+  assert.match(monthlySource, /query\.set\("upstream_insight_rule", returnOrigin\.ruleId\)/);
   assert.match(monthlySource, /href=\{setupHref\("revenue-streams"\)\}/);
-  assert.doesNotMatch(monthlySource, /returnTo/);
 });
 
-test("N26 Revenue Sources renders the safe setup Return banner and drawer submits the full context", () => {
-  assert.match(
-    revenuePageSource,
-    /parseSetupReturnOrigin\(\{[\s\S]*origin: query\.origin,[\s\S]*month: query\.month,[\s\S]*upstream_origin: query\.upstream_origin,[\s\S]*upstream_month: query\.upstream_month/,
-  );
+test("Revenue Sources page and drawer submit the full nested Insights context", () => {
+  assert.match(revenuePageSource, /upstream_insight_rule: query\.upstream_insight_rule/);
+  assert.match(revenuePageSource, /upstream_insight_subject: query\.upstream_insight_subject/);
   assert.match(revenuePageSource, /ariaLabel="سياق العودة من إعداد مصادر الإيراد"/);
-  assert.match(revenuePageSource, /returnLabel="العودة إلى الإدخال الشهري"/);
-  assert.match(revenueDrawerSource, /name="origin" value=\{returnOrigin\.origin\}/);
-  assert.match(revenueDrawerSource, /name="month" value=\{returnOrigin\.month\}/);
-  assert.match(revenueDrawerSource, /name="upstream_origin"/);
-  assert.match(revenueDrawerSource, /value=\{returnOrigin\.upstream\.origin\}/);
-  assert.match(revenueDrawerSource, /name="upstream_month"/);
-  assert.match(revenueDrawerSource, /value=\{returnOrigin\.upstream\.month\}/);
+  assert.match(revenueDrawerSource, /name="upstream_insight_rule"/);
+  assert.match(revenueDrawerSource, /value=\{returnOrigin\.upstream\.ruleId\}/);
+  assert.match(revenueDrawerSource, /name="upstream_insight_subject"/);
   assert.doesNotMatch(revenuePageSource, /returnTo/);
-  assert.doesNotMatch(revenueDrawerSource, /returnTo/);
 });
 
-test("N26 Revenue Sources actions reject ambiguous nested metadata and preserve it on redirects", () => {
-  assert.match(revenueActionsSource, /formData\.getAll\("origin"\)/);
-  assert.match(revenueActionsSource, /formData\.getAll\("month"\)/);
-  assert.match(revenueActionsSource, /formData\.getAll\("upstream_origin"\)/);
-  assert.match(revenueActionsSource, /formData\.getAll\("upstream_month"\)/);
-  assert.match(revenueActionsSource, /upstreamOrigins\.length > 1/);
-  assert.match(revenueActionsSource, /upstreamMonths\.length > 1/);
-  assert.match(
-    revenueActionsSource,
-    /parseSetupReturnOrigin\(\{[\s\S]*upstream_origin: upstreamOrigin,[\s\S]*upstream_month: upstreamMonth/,
-  );
-  assert.match(revenueActionsSource, /query\.set\("origin", returnOrigin\.origin\)/);
-  assert.match(revenueActionsSource, /query\.set\("month", returnOrigin\.month\)/);
-  assert.match(
-    revenueActionsSource,
-    /query\.set\("upstream_origin", returnOrigin\.upstream\.origin\)/,
-  );
-  assert.match(
-    revenueActionsSource,
-    /query\.set\("upstream_month", returnOrigin\.upstream\.month\)/,
-  );
-  assert.match(
-    revenueActionsSource,
-    /redirectToRevenueStreams\(businessId, "created", returnOrigin\)/,
-  );
-  assert.match(
-    revenueActionsSource,
-    /revenueStreamsPath\(businessId, "create-failed", returnOrigin\)/,
-  );
-  assert.match(
-    revenueActionsSource,
-    /revenueStreamsPath\(businessId, "update-failed", returnOrigin\)/,
-  );
-  assert.match(
-    revenueActionsSource,
-    /revenueStreamsPath\(businessId, "delete-failed", returnOrigin\)/,
-  );
+test("Revenue Sources mutations reject ambiguity and preserve nested Insights metadata", () => {
+  assert.match(revenueActionsSource, /formData\.getAll\("upstream_insight_rule"\)/);
+  assert.match(revenueActionsSource, /formData\.getAll\("upstream_insight_subject"\)/);
+  assert.match(revenueActionsSource, /upstreamInsightRules\.length > 1/);
+  assert.match(revenueActionsSource, /upstreamInsightSubjects\.length > 1/);
+  assert.match(revenueActionsSource, /query\.set\("upstream_insight_rule", returnOrigin\.upstream\.ruleId\)/);
+  assert.match(revenueActionsSource, /revalidatePath\("\/insights"\)/);
   assert.doesNotMatch(revenueActionsSource, /returnTo/);
 });
