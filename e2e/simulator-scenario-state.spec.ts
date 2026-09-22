@@ -66,6 +66,21 @@ test.describe("N56 persistent Simulator scenario state", () => {
     expect(query(page).get("scenario")).toBe(SCENARIO_A_ID);
     expect(query(page).get("month")).toBe("2026-09");
 
+    await page.getByRole("link", { name: "فتح سيناريو كفاءة" }).click();
+    await expect.poll(() => query(page).get("scenario")).not.toBe(SCENARIO_A_ID);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator('[data-scenario-state="saved"] strong')).toBeVisible();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+      )
+      .toBe(true);
+
+    await page.goBack();
+    await expect.poll(() => query(page).get("scenario")).toBe(SCENARIO_A_ID);
+
     const businessForm = page.getByRole("form", { name: "تغيير البزنس" });
     await expect(businessForm.locator('input[name="scenario"]')).toHaveCount(0);
     await page.getByRole("combobox", { name: "البزنس" }).selectOption(OTHER_BUSINESS_ID);
@@ -74,7 +89,6 @@ test.describe("N56 persistent Simulator scenario state", () => {
     expect(query(page).get("scenario")).toBeNull();
     await expect(page.locator('[data-scenario-state="new"]')).toBeVisible();
 
-    await page.setViewportSize({ width: 390, height: 844 });
     await expect
       .poll(() =>
         page.evaluate(
@@ -96,6 +110,7 @@ test.describe("N56 persistent Simulator scenario state", () => {
     );
     await expect(page.getByRole("heading", { name: "عدّل السيناريو", level: 2 })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "بدء سيناريو جديد" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "فتح الشهر" })).toBeDisabled();
 
     await page.goto(
       `/auth/e2e-simulator-scenario-state?business=${BUSINESS_ID}&month=2026-08&scenario=not-a-scenario`,
