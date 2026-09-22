@@ -28,10 +28,12 @@ import {
   type TargetPlannerActualMonthBlocker,
 } from "@/lib/business/target-planner-actuals";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { parseTargetPlannerStep } from "@/lib/target-planner-step";
 import dashboardStyles from "../dashboard.module.css";
+import { TargetPlanSteps } from "./target-plan-steps";
 
 type TargetPlanPageProps = {
-  searchParams: Promise<{ business?: string; goal?: string; value?: string }>;
+  searchParams: Promise<{ business?: string; goal?: string; value?: string; step?: string }>;
 };
 
 type BusinessRow = {
@@ -233,6 +235,12 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
   }
 
   const selectedGoal: TargetGoalType = isGoalType(query.goal) ? query.goal : "revenue";
+  const selectedStep = parseTargetPlannerStep(query.step);
+  const plannerStepState = {
+    businessId: selectedBusiness.id,
+    goal: selectedGoal,
+    value: query.value,
+  };
   const parsedValue = parseOptionalDecimalInput(query.value);
   const normalizedValue = parsedValue.ok ? parsedValue.value : null;
   let inputError: string | null = null;
@@ -283,6 +291,7 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
       <section className={dashboardStyles.controls} aria-label="اختيار بزنس خطة الهدف">
         <form className={dashboardStyles.controlForm}>
           <input type="hidden" name="goal" value={selectedGoal} />
+          <input type="hidden" name="step" value={selectedStep} />
           {query.value !== undefined && <input type="hidden" name="value" value={query.value} />}
           <label>
             <span>البزنس</span>
@@ -308,6 +317,8 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
         </div>
       </section>
 
+      <TargetPlanSteps activeStep={selectedStep} state={plannerStepState} />
+
       {issues.length > 0 ? (
         <section className={dashboardStyles.errorPanel} role="alert">
           <strong>البيانات غير كافية لبناء خطة الهدف</strong>
@@ -326,16 +337,18 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
         </section>
       ) : assumptions ? (
         <>
-          <section className={dashboardStyles.sectionCard}>
-            <div className={dashboardStyles.sectionHeading}>
-              <div>
-                <span className={dashboardStyles.eyebrow}>الهدف</span>
+          {selectedStep === "goal" && (
+            <section className={dashboardStyles.sectionCard}>
+              <div className={dashboardStyles.sectionHeading}>
+                <div>
+                  <span className={dashboardStyles.eyebrow}>الهدف</span>
                 <h2>ما الذي تريد الوصول إليه شهريًا؟</h2>
               </div>
               <p>الخطة تستخدم نفس افتراضات Rolling 3 Months الظاهرة أدناه، بدون AI أو تخمينات مخفية.</p>
             </div>
             <form className={dashboardStyles.controlForm}>
               <input type="hidden" name="business" value={selectedBusiness.id} />
+              <input type="hidden" name="step" value="plan" />
               <label>
                 <span>نوع الهدف</span>
                 <select name="goal" defaultValue={selectedGoal}>
@@ -358,10 +371,12 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
               </label>
               <button type="submit">احسب الخطة</button>
             </form>
-            {inputError && <p className={dashboardStyles.definitionNote}>{inputError}</p>}
-          </section>
+              {inputError && <p className={dashboardStyles.definitionNote}>{inputError}</p>}
+            </section>
+          )}
 
-          <section className={dashboardStyles.sectionCard}>
+          {selectedStep === "assumptions" && (
+            <section className={dashboardStyles.sectionCard}>
             <div className={dashboardStyles.sectionHeading}>
               <div>
                 <span className={dashboardStyles.eyebrow}>الافتراضات المستخدمة</span>
@@ -381,10 +396,38 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
               <div className={dashboardStyles.metricCard}><span>تكاليف ثابتة غير اكتسابية</span><strong>{money(assumptions.monthlyFixedNonAcquisitionCosts, selectedBusiness.base_currency)}</strong></div>
               <div className={dashboardStyles.metricCard}><span>اكتساب متغير غير إعلاني / عميل جديد</span><strong>{money(assumptions.variableNonMediaAcquisitionCostPerNewCustomer, selectedBusiness.base_currency)}</strong></div>
               <div className={dashboardStyles.metricCard}><span>تكلفة متغيرة غير اكتسابية / عميل جديد</span><strong>{money(assumptions.variableNonAcquisitionCostPerNewCustomer, selectedBusiness.base_currency)}</strong></div>
-            </div>
-          </section>
+              </div>
+            </section>
+          )}
 
-          {plan?.status === "unattainable" && (
+          {selectedStep === "plan" && query.value === undefined && (
+            <section className={dashboardStyles.emptyState}>
+              <span className={dashboardStyles.eyebrow}>لم يتم تحديد الهدف بعد</span>
+              <h2>ابدأ بتحديد الهدف المالي</h2>
+              <p>لن يعرض ميزان متطلبات تشغيلية قبل تحديد نوع الهدف وقيمته.</p>
+              <Link
+                className={dashboardStyles.primaryAction}
+                href={`/target-plan?business=${encodeURIComponent(selectedBusiness.id)}&goal=${encodeURIComponent(selectedGoal)}&step=goal`}
+              >
+                تحديد الهدف
+              </Link>
+            </section>
+          )}
+
+          {selectedStep === "plan" && inputError && (
+            <section className={dashboardStyles.errorPanel} role="alert">
+              <strong>تعذر حساب الخطة من الهدف المدخل</strong>
+              <p>{inputError}</p>
+              <Link
+                className={dashboardStyles.secondaryAction}
+                href={`/target-plan?business=${encodeURIComponent(selectedBusiness.id)}&goal=${encodeURIComponent(selectedGoal)}&step=goal&value=${encodeURIComponent(query.value ?? "")}`}
+              >
+                مراجعة الهدف
+              </Link>
+            </section>
+          )}
+
+          {selectedStep === "plan" && plan?.status === "unattainable" && (
             <section className={dashboardStyles.errorPanel} role="alert">
               <strong>الهدف غير قابل للوصول بهذه الافتراضات</strong>
               <p>
@@ -395,7 +438,7 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
             </section>
           )}
 
-          {plan?.status === "ready" && (
+          {selectedStep === "plan" && plan?.status === "ready" && (
             <>
               <section className={dashboardStyles.sectionCard}>
                 <div className={dashboardStyles.sectionHeading}>
