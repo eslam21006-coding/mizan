@@ -27,6 +27,7 @@ type AnalyticsFixturePageProps = {
   }>;
 };
 
+/** Resolves one fixture query value while rejecting duplicate-array state. */
 function single(value: SearchParamValue, fallback: string) {
   return typeof value === "string" && value ? value : fallback;
 }
@@ -51,7 +52,7 @@ export default async function AnalyticsUrlStateFixturePage({
 
   return (
     <AppShell {...fixtureShellProps}>
-      <main className="page-stack">
+      <div className="page-stack">
         <h1>التحليلات المالية</h1>
         <AnalyticsViewTabs
           activeView={activeView}
@@ -66,7 +67,7 @@ export default async function AnalyticsUrlStateFixturePage({
           <p data-testid="analytics-period">الفترة: {state.period}</p>
           <p data-testid="analytics-month">الشهر: {state.month}</p>
         </section>
-      </main>
+      </div>
     </AppShell>
   );
 }
