@@ -115,12 +115,12 @@ export function parseReturnOrigin(searchParams: ReturnOriginSearchParams): Retur
       if (!DECISION_INSIGHT_RULE_SET.has(insightRuleParam.value)) return null;
 
       const ruleId = insightRuleParam.value as DecisionInsightRuleId;
-      const subjectId =
-        insightSubjectParam.status === "value" ? insightSubjectParam.value : undefined;
+      const hasSubject = insightSubjectParam.status === "value";
+      const subjectId = hasSubject ? insightSubjectParam.value : undefined;
       const subjectExpected = SUBJECT_RULES.has(ruleId);
 
-      if (subjectExpected !== Boolean(subjectId)) return null;
-      if (subjectId && !SUBJECT_ID_PATTERN.test(subjectId)) return null;
+      if (subjectExpected !== hasSubject) return null;
+      if (hasSubject && (!subjectId || !SUBJECT_ID_PATTERN.test(subjectId))) return null;
 
       return {
         origin: "insights",
