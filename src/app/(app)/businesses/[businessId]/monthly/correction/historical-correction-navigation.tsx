@@ -1,5 +1,6 @@
 import { BusinessContext } from "@/components/business-context";
 import { BackLink, Breadcrumb } from "@/components/navigation-hierarchy";
+import type { MonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
 import type { BreadcrumbItem } from "@/lib/navigation-hierarchy";
 
 type HistoricalCorrectionNavigationProps = {
@@ -9,6 +10,7 @@ type HistoricalCorrectionNavigationProps = {
   timezone: string;
   monthKey: string;
   monthLabel: string;
+  returnOrigin?: MonthlyExternalReturnOrigin | null;
 };
 
 /** Keeps historical correction inside the Monthly hierarchy and returns to the exact source month. */
@@ -19,11 +21,22 @@ export function HistoricalCorrectionNavigation({
   timezone,
   monthKey,
   monthLabel,
+  returnOrigin = null,
 }: HistoricalCorrectionNavigationProps) {
   const monthlyDestination = {
     route: "business-monthly" as const,
     businessId,
     month: monthKey,
+    origin: returnOrigin?.origin,
+    returnMonth:
+      returnOrigin?.origin === "customer-profitability" ||
+      returnOrigin?.origin === "insights"
+        ? returnOrigin.month
+        : undefined,
+    insightRuleId:
+      returnOrigin?.origin === "insights" ? returnOrigin.ruleId : undefined,
+    insightSubjectId:
+      returnOrigin?.origin === "insights" ? returnOrigin.subjectId : undefined,
   };
 
   const breadcrumbItems = [

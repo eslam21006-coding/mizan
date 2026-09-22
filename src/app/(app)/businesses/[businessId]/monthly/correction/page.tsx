@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { requireAuthContext } from "@/lib/auth/context";
 import { loadTransactionDerivedMonthlyCustomerCounts } from "@/lib/business/monthly-customer-counts";
 import {
@@ -9,6 +10,10 @@ import {
   storedExpenseValueForDisplay,
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import {
+  parseMonthlyExternalReturnOrigin,
+  type MonthlyExternalReturnOrigin,
+} from "@/lib/monthly-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type {
   ExpenseInputRow,
@@ -21,7 +26,14 @@ import styles from "./historical-correction.module.css";
 
 type HistoricalCorrectionPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ month?: string; status?: string }>;
+  searchParams: Promise<{
+    month?: string;
+    status?: string;
+    origin?: string | string[];
+    return_month?: string | string[];
+    insight_rule?: string | string[];
+    insight_subject?: string | string[];
+  }>;
 };
 
 const STATUS_MESSAGES: Record<string, string> = {
@@ -46,6 +58,57 @@ function monthLabel(monthStart: string) {
   }).format(new Date(`${monthStart}T00:00:00.000Z`));
 }
 
+/** Preserves validated external Return metadata through correction month-picker submissions. */
+function HistoricalReturnFields({
+  returnOrigin,
+}: {
+  returnOrigin: MonthlyExternalReturnOrigin | null;
+}) {
+  if (!returnOrigin) return null;
+
+  return (
+    <>
+      <input type="hidden" name="origin" value={returnOrigin.origin} />
+      {(returnOrigin.origin === "customer-profitability" ||
+        returnOrigin.origin === "insights") && (
+        <input type="hidden" name="return_month" value={returnOrigin.month} />
+      )}
+      {returnOrigin.origin === "insights" && (
+        <>
+          <input type="hidden" name="insight_rule" value={returnOrigin.ruleId} />
+          {returnOrigin.subjectId && (
+            <input type="hidden" name="insight_subject" value={returnOrigin.subjectId} />
+          )}
+        </>
+      )}
+    </>
+  );
+}
+
+/** Builds a Monthly-entry link that keeps the correction's external Return context intact. */
+function buildMonthlyEntryHref(
+  businessId: string,
+  monthKey: string,
+  returnOrigin: MonthlyExternalReturnOrigin | null,
+) {
+  const query = new URLSearchParams({ month: monthKey });
+  if (returnOrigin) {
+    query.set("origin", returnOrigin.origin);
+    if (
+      (returnOrigin.origin === "customer-profitability" ||
+        returnOrigin.origin === "insights") &&
+      returnOrigin.month
+    ) {
+      query.set("return_month", returnOrigin.month);
+    }
+    if (returnOrigin.origin === "insights") {
+      query.set("insight_rule", returnOrigin.ruleId);
+      if (returnOrigin.subjectId) query.set("insight_subject", returnOrigin.subjectId);
+    }
+  }
+  return `/businesses/${businessId}/monthly?${query.toString()}`;
+}
+
 /** Loads one existing past month and exposes only the explicit audited correction workflow. */
 export default async function HistoricalCorrectionPage({
   params,
@@ -65,6 +128,12 @@ export default async function HistoricalCorrectionPage({
   if (businessError || !business) notFound();
 
   const query = await searchParams;
+  const returnOrigin = parseMonthlyExternalReturnOrigin({
+    origin: query.origin,
+    month: query.return_month ?? query.month,
+    insight_rule: query.insight_rule,
+    insight_subject: query.insight_subject,
+  });
   const currentMonthKey = currentMonthKeyForTimeZone(business.timezone);
   const latestHistoricalMonth = shiftMonthKey(currentMonthKey, -1) ?? currentMonthKey;
   const selectedMonth = parseMonthKey(query.month ?? latestHistoricalMonth);
@@ -84,13 +153,32 @@ export default async function HistoricalCorrectionPage({
       timezone={business.timezone}
       monthKey={selectedMonth.monthKey}
       monthLabel={selectedMonthLabel}
+      returnOrigin={returnOrigin}
     />
   );
+  const returnBanner = returnOrigin ? (
+    <ReturnContextBanner
+      purpose={
+        returnOrigin.origin === "insights"
+          ? "تصحيح البيانات المرتبطة بهذه الملاحظة"
+          : "تصحيح البيانات المرتبطة بمسار العمل السابق"
+      }
+      origin={returnOrigin}
+      context={{ businessId }}
+      returnLabel={
+        returnOrigin.origin === "insights"
+          ? "العودة إلى الملاحظة"
+          : "العودة إلى المهمة السابقة"
+      }
+      ariaLabel="سياق العودة من التصحيح التاريخي"
+    />
+  ) : null;
 
   if (!isHistorical) {
     return (
       <div className={styles.page}>
         {correctionNavigation}
+        {returnBanner}
         <div className={styles.headingRow}>
           <div>
             <span className={styles.eyebrow}>تصحيح تاريخي صريح</span>
@@ -99,6 +187,7 @@ export default async function HistoricalCorrectionPage({
           </div>
         </div>
         <form className={styles.monthPicker}>
+          <HistoricalReturnFields returnOrigin={returnOrigin} />
           <label>
             <span>اختر شهرًا سابقًا</span>
             <input type="month" name="month" defaultValue={latestHistoricalMonth} max={latestHistoricalMonth} />
@@ -146,6 +235,7 @@ export default async function HistoricalCorrectionPage({
     return (
       <div className={styles.page}>
         {correctionNavigation}
+        {returnBanner}
         <div className={styles.headingRow}>
           <div>
             <span className={styles.eyebrow}>تصحيح تاريخي صريح</span>
@@ -161,6 +251,7 @@ export default async function HistoricalCorrectionPage({
     return (
       <div className={styles.page}>
         {correctionNavigation}
+        {returnBanner}
         <div className={styles.headingRow}>
           <div>
             <span className={styles.eyebrow}>تصحيح تاريخي صريح</span>
@@ -169,6 +260,7 @@ export default async function HistoricalCorrectionPage({
           </div>
         </div>
         <form className={styles.monthPicker}>
+          <HistoricalReturnFields returnOrigin={returnOrigin} />
           <label>
             <span>الشهر المراد تصحيحه</span>
             <input type="month" name="month" defaultValue={selectedMonth.monthKey} max={latestHistoricalMonth} />
@@ -187,7 +279,10 @@ export default async function HistoricalCorrectionPage({
             <p>التصحيح التاريخي لا ينشئ شهرًا مفقودًا. أدخل الشهر أول مرة من مسار الإدخال الشهري العادي، وبعدها تصبح أي تعديلات لاحقة تصحيحًا تاريخيًا مسجلًا.</p>
           </div>
           <div className={styles.emptyActions}>
-            <Link className={styles.monthlyLink} href={`/businesses/${businessId}/monthly?month=${selectedMonth.monthKey}`}>
+            <Link
+              className={styles.monthlyLink}
+              href={buildMonthlyEntryHref(businessId, selectedMonth.monthKey, returnOrigin)}
+            >
               إدخال هذا الشهر لأول مرة
             </Link>
           </div>
@@ -217,6 +312,7 @@ export default async function HistoricalCorrectionPage({
     return (
       <div className={styles.page}>
         {correctionNavigation}
+        {returnBanner}
         <div className={styles.errorStatus}>تعذر تحميل تفاصيل الشهر كاملة. لم يتم فتح نموذج التصحيح.</div>
       </div>
     );
@@ -280,6 +376,7 @@ export default async function HistoricalCorrectionPage({
   return (
     <div className={styles.page}>
       {correctionNavigation}
+      {returnBanner}
       <div className={styles.headingRow}>
         <div>
           <span className={styles.eyebrow}>تصحيح تاريخي صريح</span>
@@ -294,6 +391,7 @@ export default async function HistoricalCorrectionPage({
       </div>
 
       <form className={styles.monthPicker}>
+        <HistoricalReturnFields returnOrigin={returnOrigin} />
         <label>
           <span>الشهر المراد تصحيحه</span>
           <input type="month" name="month" defaultValue={selectedMonth.monthKey} max={latestHistoricalMonth} />
@@ -321,6 +419,7 @@ export default async function HistoricalCorrectionPage({
         payingCustomersCount={
           payingCustomersDerived ? customerCountsResult.counts.totalPayingCustomers : null
         }
+        returnOrigin={returnOrigin}
       />
     </div>
   );

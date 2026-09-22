@@ -1,13 +1,13 @@
 import {
   parseReturnOrigin,
-  type ReturnOriginMetadata,
+  type CustomerReturnOriginMetadata,
+  type InsightReturnOriginMetadata,
   type ReturnOriginSearchParams,
-} from "./return-origin";
+} from "./return-origin.ts";
 
-export type MonthlyExternalReturnOrigin = Extract<
-  ReturnOriginMetadata,
-  { origin: "customer-overview" } | { origin: "customer-profitability" }
->;
+export type MonthlyExternalReturnOrigin =
+  | CustomerReturnOriginMetadata
+  | InsightReturnOriginMetadata;
 
 /** Accepts only cross-module origins that may legitimately return from the Monthly editor. */
 export function parseMonthlyExternalReturnOrigin(
@@ -16,7 +16,8 @@ export function parseMonthlyExternalReturnOrigin(
   const parsed = parseReturnOrigin(searchParams);
   if (
     parsed?.origin === "customer-overview" ||
-    parsed?.origin === "customer-profitability"
+    parsed?.origin === "customer-profitability" ||
+    parsed?.origin === "insights"
   ) {
     return parsed;
   }

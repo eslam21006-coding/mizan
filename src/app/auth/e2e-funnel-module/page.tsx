@@ -46,7 +46,7 @@ export default async function FunnelModuleFixturePage({
           businessId={businessId}
           activeTab={activeTab}
           monthKey={monthKey}
-          origin={returnOrigin?.origin}
+          origin={returnOrigin?.origin === "funnel-structure" ? returnOrigin.origin : undefined}
         />
         <FunnelHierarchyBack
           businessId={businessId}

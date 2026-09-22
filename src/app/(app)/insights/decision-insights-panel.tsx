@@ -52,13 +52,27 @@ export function DecisionInsightsPanel({
       {visibleInsights.length > 0 ? (
         <ol className={styles.insightList}>
           {visibleInsights.map((insight, index) => {
-            const remediation = resolveInsightRemediation(insight, {
-              businessId,
-              monthKey: currentMonthKey,
-            });
+            const remediation =
+              insight.ruleId === "healthy_funnel_weak_lifetime" ||
+              insight.ruleId === "funnel_attendance_bottleneck"
+                ? insight.subjectId
+                  ? resolveInsightRemediation(
+                      { ruleId: insight.ruleId, subjectId: insight.subjectId },
+                      { businessId, monthKey: currentMonthKey },
+                    )
+                  : null
+                : resolveInsightRemediation(
+                    { ruleId: insight.ruleId },
+                    { businessId, monthKey: currentMonthKey },
+                  );
 
             return (
-              <li key={insight.id} className={styles.insightCard} data-severity={insight.severity}>
+              <li
+                key={insight.id}
+                id={`insight-${insight.id}`}
+                className={styles.insightCard}
+                data-severity={insight.severity}
+              >
                 <div className={styles.cardTopline}>
                   <span className={styles.rank} aria-hidden="true">
                     {index + 1}
@@ -70,10 +84,12 @@ export function DecisionInsightsPanel({
                 </div>
                 <h3>{insight.titleAr}</h3>
                 <p>{insight.messageAr}</p>
-                <Link className={styles.remediationAction} href={remediation.href}>
-                  {remediation.labelAr}
-                  <span aria-hidden="true">←</span>
-                </Link>
+                {remediation && (
+                  <Link className={styles.remediationAction} href={remediation.href}>
+                    {remediation.labelAr}
+                    <span aria-hidden="true">←</span>
+                  </Link>
+                )}
               </li>
             );
           })}

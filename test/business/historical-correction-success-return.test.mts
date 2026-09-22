@@ -49,6 +49,7 @@ test("N34 returns successful historical corrections to the exact Monthly month",
     "/businesses/business%20%2F%20one/monthly/correction",
     "/businesses/business%20%2F%20one/customers",
     "/businesses/business%20%2F%20one/customers/review",
+    "/insights",
   ]);
   assert.ok(navigation.redirectedTo);
 
@@ -129,4 +130,44 @@ test("N34 keeps a saved historical month read-only after a successful correction
 
   assert.equal(state.isSavedHistorical, true);
   assert.equal(state.canEditMonth, false);
+});
+
+
+test("N50 historical correction preserves the exact originating insight on failure and success", () => {
+  const returnOrigin = {
+    origin: "insights" as const,
+    month: "2026-07",
+    ruleId: "unhealthy_growth" as const,
+  };
+
+  const failure = captureNavigation((effects) =>
+    redirectHistoricalCorrection(
+      effects,
+      "business / one",
+      "2026-07",
+      "correction-failed",
+      returnOrigin,
+    ),
+  );
+  assert.ok(failure.redirectedTo);
+  const failureUrl = new URL(failure.redirectedTo, "https://mizan.test");
+  assert.equal(failureUrl.searchParams.get("origin"), "insights");
+  assert.equal(failureUrl.searchParams.get("return_month"), "2026-07");
+  assert.equal(failureUrl.searchParams.get("insight_rule"), "unhealthy_growth");
+
+  const success = captureNavigation((effects) =>
+    redirectHistoricalCorrectionSuccess(
+      effects,
+      "business / one",
+      "2026-07",
+      returnOrigin,
+    ),
+  );
+  assert.ok(success.redirectedTo);
+  const successUrl = new URL(success.redirectedTo, "https://mizan.test");
+  assert.equal(successUrl.pathname, "/businesses/business%20%2F%20one/monthly");
+  assert.equal(successUrl.searchParams.get("status"), "corrected");
+  assert.equal(successUrl.searchParams.get("origin"), "insights");
+  assert.equal(successUrl.searchParams.get("return_month"), "2026-07");
+  assert.equal(successUrl.searchParams.get("insight_rule"), "unhealthy_growth");
 });

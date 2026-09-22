@@ -6,13 +6,15 @@ import {
 
 export type FunnelMonthlyReturnOrigin = Extract<
   ReturnOriginMetadata,
-  { origin: "funnel-structure" }
+  { origin: "funnel-structure" } | { origin: "insights" }
 >;
 
-/** Accepts only the structured Funnel Structure origin for the Funnel Monthly workflow. */
+/** Accepts only structured Funnel Structure or Insights origins for the Funnel Monthly workflow. */
 export function parseFunnelMonthlyReturnOrigin(
   searchParams: ReturnOriginSearchParams,
 ): FunnelMonthlyReturnOrigin | null {
   const parsed = parseReturnOrigin(searchParams);
-  return parsed?.origin === "funnel-structure" ? parsed : null;
+  return parsed?.origin === "funnel-structure" || parsed?.origin === "insights"
+    ? parsed
+    : null;
 }

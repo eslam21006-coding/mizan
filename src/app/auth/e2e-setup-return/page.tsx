@@ -20,6 +20,8 @@ type SetupReturnFixtureProps = {
     month?: string | string[];
     upstream_origin?: string | string[];
     upstream_month?: string | string[];
+    upstream_insight_rule?: string | string[];
+    upstream_insight_subject?: string | string[];
   }>;
 };
 
@@ -39,6 +41,8 @@ export default async function SetupReturnE2eFixturePage({
     month: query.month,
     upstream_origin: query.upstream_origin,
     upstream_month: query.upstream_month,
+    upstream_insight_rule: query.upstream_insight_rule,
+    upstream_insight_subject: query.upstream_insight_subject,
   });
 
   return (

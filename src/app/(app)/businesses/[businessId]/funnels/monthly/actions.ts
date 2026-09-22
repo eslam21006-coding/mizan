@@ -24,7 +24,14 @@ function funnelMonthlyPath(
 ) {
   const query = new URLSearchParams({ month: monthKey });
   if (status) query.set("status", status);
-  if (returnOrigin) query.set("origin", returnOrigin.origin);
+  if (returnOrigin) {
+    query.set("origin", returnOrigin.origin);
+    if (returnOrigin.origin === "insights") {
+      query.set("return_month", returnOrigin.month);
+      query.set("insight_rule", returnOrigin.ruleId);
+      if (returnOrigin.subjectId) query.set("insight_subject", returnOrigin.subjectId);
+    }
+  }
   return `/businesses/${businessId}/funnels/monthly?${query.toString()}`;
 }
 
@@ -36,16 +43,46 @@ function redirectFunnelMonthly(
 ): never {
   revalidatePath("/");
   revalidatePath("/analytics");
+  revalidatePath("/insights");
   revalidatePath(`/businesses/${businessId}/funnels/monthly`);
   redirect(funnelMonthlyPath(businessId, monthKey, status, returnOrigin));
 }
 
-/** Reads a single allow-listed workflow origin and fails closed on duplicates or unknown values. */
+/** Reads one allow-listed Funnel Monthly return origin and fails closed on ambiguity. */
 function parseReturnOriginFromFormData(formData: FormData) {
   const origins = formData.getAll("origin");
+  const returnMonths = formData.getAll("return_month");
+  const insightRules = formData.getAll("insight_rule");
+  const insightSubjects = formData.getAll("insight_subject");
+
   if (origins.length === 0) return null;
-  if (origins.length !== 1 || typeof origins[0] !== "string") return null;
-  return parseFunnelMonthlyReturnOrigin({ origin: origins[0] });
+  if (
+    origins.length !== 1 ||
+    returnMonths.length > 1 ||
+    insightRules.length > 1 ||
+    insightSubjects.length > 1 ||
+    typeof origins[0] !== "string"
+  ) {
+    return null;
+  }
+
+  const returnMonth = returnMonths[0];
+  const insightRule = insightRules[0];
+  const insightSubject = insightSubjects[0];
+  if (
+    (returnMonth !== undefined && typeof returnMonth !== "string") ||
+    (insightRule !== undefined && typeof insightRule !== "string") ||
+    (insightSubject !== undefined && typeof insightSubject !== "string")
+  ) {
+    return null;
+  }
+
+  return parseFunnelMonthlyReturnOrigin({
+    origin: origins[0],
+    month: returnMonth,
+    insight_rule: insightRule,
+    insight_subject: insightSubject,
+  });
 }
 
 function uniqueFunnelIds(values: FormDataEntryValue[]) {

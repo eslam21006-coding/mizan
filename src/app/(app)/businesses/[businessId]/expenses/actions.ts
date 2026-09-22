@@ -20,12 +20,16 @@ function parseExpenseSetupReturnOrigin(formData: FormData): SetupReturnOrigin | 
   const months = formData.getAll("month");
   const upstreamOrigins = formData.getAll("upstream_origin");
   const upstreamMonths = formData.getAll("upstream_month");
+  const upstreamInsightRules = formData.getAll("upstream_insight_rule");
+  const upstreamInsightSubjects = formData.getAll("upstream_insight_subject");
 
   if (
     origins.length !== 1 ||
     months.length !== 1 ||
     upstreamOrigins.length > 1 ||
-    upstreamMonths.length > 1
+    upstreamMonths.length > 1 ||
+    upstreamInsightRules.length > 1 ||
+    upstreamInsightSubjects.length > 1
   ) {
     return null;
   }
@@ -34,11 +38,15 @@ function parseExpenseSetupReturnOrigin(formData: FormData): SetupReturnOrigin | 
   const month = months[0];
   const upstreamOrigin = upstreamOrigins[0];
   const upstreamMonth = upstreamMonths[0];
+  const upstreamInsightRule = upstreamInsightRules[0];
+  const upstreamInsightSubject = upstreamInsightSubjects[0];
   if (
     typeof origin !== "string" ||
     typeof month !== "string" ||
     (upstreamOrigin !== undefined && typeof upstreamOrigin !== "string") ||
-    (upstreamMonth !== undefined && typeof upstreamMonth !== "string")
+    (upstreamMonth !== undefined && typeof upstreamMonth !== "string") ||
+    (upstreamInsightRule !== undefined && typeof upstreamInsightRule !== "string") ||
+    (upstreamInsightSubject !== undefined && typeof upstreamInsightSubject !== "string")
   ) {
     return null;
   }
@@ -48,6 +56,8 @@ function parseExpenseSetupReturnOrigin(formData: FormData): SetupReturnOrigin | 
     month,
     upstream_origin: upstreamOrigin,
     upstream_month: upstreamMonth,
+    upstream_insight_rule: upstreamInsightRule,
+    upstream_insight_subject: upstreamInsightSubject,
   });
 }
 
@@ -63,10 +73,17 @@ function expensesPath(
     if (returnOrigin.upstream) {
       query.set("upstream_origin", returnOrigin.upstream.origin);
       if (
-        returnOrigin.upstream.origin === "customer-profitability" &&
+        (returnOrigin.upstream.origin === "customer-profitability" ||
+          returnOrigin.upstream.origin === "insights") &&
         returnOrigin.upstream.month
       ) {
         query.set("upstream_month", returnOrigin.upstream.month);
+      }
+      if (returnOrigin.upstream.origin === "insights") {
+        query.set("upstream_insight_rule", returnOrigin.upstream.ruleId);
+        if (returnOrigin.upstream.subjectId) {
+          query.set("upstream_insight_subject", returnOrigin.upstream.subjectId);
+        }
       }
     }
   }
@@ -79,6 +96,7 @@ function redirectToExpenses(
   returnOrigin?: SetupReturnOrigin | null,
 ): never {
   revalidatePath("/businesses");
+  revalidatePath("/insights");
   revalidatePath(`/businesses/${businessId}/expenses`);
   revalidatePath(`/businesses/${businessId}/monthly`);
   redirect(expensesPath(businessId, status, returnOrigin));

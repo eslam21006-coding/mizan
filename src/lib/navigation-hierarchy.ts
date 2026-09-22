@@ -3,6 +3,7 @@ export type NavigationDestination =
   | { route: "business-overview"; businessId: string; month?: string }
   | { route: "business-workspace"; businessId: string }
   | { route: "business-funnels"; businessId: string }
+  | { route: "insights"; businessId: string; month: string; insightId: string }
   | {
       route: "business-customers";
       businessId: string;
@@ -14,8 +15,10 @@ export type NavigationDestination =
       route: "business-monthly";
       businessId: string;
       month?: string;
-      origin?: "customer-overview" | "customer-profitability";
+      origin?: "customer-overview" | "customer-profitability" | "insights";
       returnMonth?: string;
+      insightRuleId?: string;
+      insightSubjectId?: string;
     };
 
 export type BreadcrumbItem =
@@ -54,6 +57,13 @@ export function resolveNavigationDestination(destination: NavigationDestination)
       return businessPath(destination.businessId);
     case "business-funnels":
       return `${businessPath(destination.businessId)}/funnels`;
+    case "insights": {
+      const searchParams = new URLSearchParams({
+        business: destination.businessId,
+        month: destination.month,
+      });
+      return `/insights?${searchParams.toString()}#insight-${encodeURIComponent(destination.insightId)}`;
+    }
     case "business-customers": {
       const pathname = `${businessPath(destination.businessId)}/customers`;
       const searchParams = new URLSearchParams();
@@ -69,8 +79,17 @@ export function resolveNavigationDestination(destination: NavigationDestination)
       const searchParams = new URLSearchParams();
       if (destination.month) searchParams.set("month", destination.month);
       if (destination.origin) searchParams.set("origin", destination.origin);
-      if (destination.origin === "customer-profitability" && destination.returnMonth) {
+      if (
+        (destination.origin === "customer-profitability" || destination.origin === "insights") &&
+        destination.returnMonth
+      ) {
         searchParams.set("return_month", destination.returnMonth);
+      }
+      if (destination.origin === "insights" && destination.insightRuleId) {
+        searchParams.set("insight_rule", destination.insightRuleId);
+      }
+      if (destination.origin === "insights" && destination.insightSubjectId) {
+        searchParams.set("insight_subject", destination.insightSubjectId);
       }
       const query = searchParams.toString();
       return query ? `${pathname}?${query}` : pathname;

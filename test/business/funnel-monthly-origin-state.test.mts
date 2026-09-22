@@ -18,20 +18,27 @@ const monthlyActionsSource = readFileSync(
   "utf8",
 );
 
-/** N45 accepts only the allow-listed Funnel Structure origin and rejects ambiguity. */
-test("N45 parses only a single Funnel Structure origin", () => {
+test("Funnel Monthly accepts only Funnel Structure or validated Insights origins", () => {
   assert.deepEqual(
     parseFunnelMonthlyReturnOrigin({ origin: "funnel-structure" }),
     { origin: "funnel-structure" },
   );
-  assert.equal(
-    parseFunnelMonthlyReturnOrigin({ origin: "customer-overview" }),
-    null,
+  assert.deepEqual(
+    parseFunnelMonthlyReturnOrigin({
+      origin: "insights",
+      month: "2026-09",
+      insight_rule: "funnel_attendance_bottleneck",
+      insight_subject: "123e4567-e89b-42d3-a456-426614174000",
+    }),
+    {
+      origin: "insights",
+      month: "2026-09",
+      ruleId: "funnel_attendance_bottleneck",
+      subjectId: "123e4567-e89b-42d3-a456-426614174000",
+    },
   );
-  assert.equal(
-    parseFunnelMonthlyReturnOrigin({ origin: "https://evil.example" }),
-    null,
-  );
+  assert.equal(parseFunnelMonthlyReturnOrigin({ origin: "customer-overview" }), null);
+  assert.equal(parseFunnelMonthlyReturnOrigin({ origin: "https://evil.example" }), null);
 
   const duplicated = new URLSearchParams();
   duplicated.append("origin", "funnel-structure");
@@ -39,8 +46,7 @@ test("N45 parses only a single Funnel Structure origin", () => {
   assert.equal(parseFunnelMonthlyReturnOrigin(duplicated), null);
 });
 
-/** N45 resolves Return through typed navigation and never through an arbitrary return URL. */
-test("N45 resolves Funnel Structure Return deterministically", () => {
+test("Funnel Structure Return remains deterministic", () => {
   const origin = parseReturnOrigin({
     origin: "funnel-structure",
     returnTo: "https://evil.example",
@@ -56,8 +62,7 @@ test("N45 resolves Funnel Structure Return deterministically", () => {
   );
 });
 
-/** N45 marks only Structure to Monthly local navigation with the workflow origin. */
-test("N45 builds the Structure to Monthly origin URL without contaminating other tabs", () => {
+test("Structure-to-Monthly local navigation remains isolated", () => {
   assert.equal(
     buildFunnelModuleHref(
       "business fixture/01",
@@ -78,50 +83,32 @@ test("N45 builds the Structure to Monthly origin URL without contaminating other
   );
 });
 
-/** N45 keeps the origin in Funnel Monthly UI month changes and saves. */
-test("N45 Funnel Monthly UI preserves the structured origin", () => {
+test("Funnel Monthly UI preserves the exact originating insight", () => {
   assert.match(
     monthlyPageSource,
-    /parseFunnelMonthlyReturnOrigin\(\{ origin: query\.origin \}\)/,
+    /parseFunnelMonthlyReturnOrigin\(\{[\s\S]*origin: query\.origin,[\s\S]*month: query\.return_month \?\? query\.month,[\s\S]*insight_rule: query\.insight_rule/,
   );
-  assert.match(
-    monthlyPageSource,
-    /ariaLabel="سياق العودة من أرقام الفانلز الشهرية"/,
-  );
-  assert.match(
-    monthlyPageSource,
-    /<form>[\s\S]*name="origin" value=\{returnOrigin\.origin\}[\s\S]*name="month"/,
-  );
-  assert.match(
-    monthlyPageSource,
-    /action=\{canManage \? saveFunnelMonthlyActuals : undefined\}[\s\S]*name="month" value=\{selectedMonth\.monthKey\}[\s\S]*name="origin" value=\{returnOrigin\.origin\}/,
-  );
+  assert.match(monthlyPageSource, /returnOrigin\.origin === "insights"/);
+  assert.match(monthlyPageSource, /name="return_month" value=\{returnOrigin\.month\}/);
+  assert.match(monthlyPageSource, /name="insight_rule" value=\{returnOrigin\.ruleId\}/);
+  assert.match(monthlyPageSource, /returnLabel=\{[\s\S]*"العودة إلى الملاحظة"/);
   assert.doesNotMatch(monthlyPageSource, /returnTo/);
 });
 
-/** N45 save redirects preserve only a single validated Funnel Structure origin. */
-test("N45 Funnel Monthly actions preserve safe origin across redirect outcomes", () => {
+test("Funnel Monthly saves preserve only validated return metadata", () => {
   assert.match(monthlyActionsSource, /formData\.getAll\("origin"\)/);
-  assert.match(monthlyActionsSource, /origins\.length !== 1/);
+  assert.match(monthlyActionsSource, /formData\.getAll\("return_month"\)/);
+  assert.match(monthlyActionsSource, /formData\.getAll\("insight_rule"\)/);
+  assert.match(monthlyActionsSource, /insightRules\.length > 1/);
   assert.match(
     monthlyActionsSource,
-    /parseFunnelMonthlyReturnOrigin\(\{ origin: origins\[0\] \}\)/,
+    /parseFunnelMonthlyReturnOrigin\(\{[\s\S]*origin: origins\[0\],[\s\S]*month: returnMonth,[\s\S]*insight_rule: insightRule/,
   );
-  assert.match(
-    monthlyActionsSource,
-    /if \(returnOrigin\) query\.set\("origin", returnOrigin\.origin\)/,
-  );
-  assert.match(
-    monthlyActionsSource,
-    /redirectFunnelMonthly\(businessId, month\.monthKey, "invalid-input", returnOrigin\)/,
-  );
-  assert.match(
-    monthlyActionsSource,
-    /redirectFunnelMonthly\(businessId, month\.monthKey, "save-failed", returnOrigin\)/,
-  );
+  assert.match(monthlyActionsSource, /query\.set\("insight_rule", returnOrigin\.ruleId\)/);
   assert.match(
     monthlyActionsSource,
     /redirectFunnelMonthly\(businessId, month\.monthKey, "saved", returnOrigin\)/,
   );
+  assert.match(monthlyActionsSource, /revalidatePath\("\/insights"\)/);
   assert.doesNotMatch(monthlyActionsSource, /returnTo/);
 });

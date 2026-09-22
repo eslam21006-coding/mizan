@@ -6,9 +6,11 @@ import {
   type ReturnOriginSearchParams,
 } from "./return-origin.ts";
 
-export type TransactionImportReturnOrigin = Exclude<
+export type TransactionImportReturnOrigin = Extract<
   ReturnOriginMetadata,
-  { origin: "funnel-structure" }
+  | { origin: "customer-overview" }
+  | { origin: "customer-profitability" }
+  | { origin: "monthly-editor" }
 >;
 
 export type TransactionImportReturnAction = {
@@ -22,7 +24,11 @@ export function parseTransactionImportReturnOrigin(
   searchParams: ReturnOriginSearchParams,
 ): TransactionImportReturnOrigin | null {
   const parsed = parseReturnOrigin(searchParams);
-  return parsed?.origin === "funnel-structure" ? null : parsed;
+  return parsed?.origin === "customer-overview" ||
+    parsed?.origin === "customer-profitability" ||
+    parsed?.origin === "monthly-editor"
+    ? parsed
+    : null;
 }
 
 /** Builds the canonical Import URL while carrying only allow-listed structured origin metadata. */

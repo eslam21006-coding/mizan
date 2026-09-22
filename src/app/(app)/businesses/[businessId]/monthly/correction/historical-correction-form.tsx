@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { MonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
 import {
   MonthlyEntryForm,
   type ExpenseInputRow,
@@ -23,6 +24,7 @@ type Props = {
   payingCustomersDerived: boolean;
   newCustomersDerived: boolean;
   payingCustomersCount: number | null;
+  returnOrigin?: MonthlyExternalReturnOrigin | null;
 };
 
 /** Presents one existing historical month as an explicit, reasoned, auditable correction. */
@@ -38,6 +40,7 @@ export function HistoricalCorrectionForm({
   payingCustomersDerived,
   newCustomersDerived,
   payingCustomersCount,
+  returnOrigin = null,
 }: Props) {
   const payingOnlyDerived = payingCustomersDerived && !newCustomersDerived;
   const trustNotice = payingOnlyDerived ? (
@@ -77,6 +80,19 @@ export function HistoricalCorrectionForm({
     >
       <input type="hidden" name="business_id" value={businessId} />
       <input type="hidden" name="month" value={monthKey} />
+      {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
+      {(returnOrigin?.origin === "customer-profitability" ||
+        returnOrigin?.origin === "insights") && (
+        <input type="hidden" name="return_month" value={returnOrigin.month} />
+      )}
+      {returnOrigin?.origin === "insights" && (
+        <>
+          <input type="hidden" name="insight_rule" value={returnOrigin.ruleId} />
+          {returnOrigin.subjectId && (
+            <input type="hidden" name="insight_subject" value={returnOrigin.subjectId} />
+          )}
+        </>
+      )}
       {trustNotice}
       <MonthlyEntryForm
         editable

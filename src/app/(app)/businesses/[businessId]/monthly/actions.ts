@@ -22,12 +22,36 @@ function parseMonthlyReturnOrigin(formData: FormData): MonthlyExternalReturnOrig
   const origins = formData.getAll("origin");
   const returnMonths = formData.getAll("return_month");
   const months = formData.getAll("month");
-  if (origins.length !== 1 || returnMonths.length > 1 || months.length > 1) return null;
+  const insightRules = formData.getAll("insight_rule");
+  const insightSubjects = formData.getAll("insight_subject");
+  if (
+    origins.length !== 1 ||
+    returnMonths.length > 1 ||
+    months.length > 1 ||
+    insightRules.length > 1 ||
+    insightSubjects.length > 1
+  ) {
+    return null;
+  }
 
   const rawOrigin = origins[0];
   const rawMonth = returnMonths.length === 1 ? returnMonths[0] : months[0];
-  if (typeof rawOrigin !== "string" || typeof rawMonth !== "string") return null;
-  return parseMonthlyExternalReturnOrigin({ origin: rawOrigin, month: rawMonth });
+  const rawInsightRule = insightRules[0];
+  const rawInsightSubject = insightSubjects[0];
+  if (
+    typeof rawOrigin !== "string" ||
+    typeof rawMonth !== "string" ||
+    (rawInsightRule !== undefined && typeof rawInsightRule !== "string") ||
+    (rawInsightSubject !== undefined && typeof rawInsightSubject !== "string")
+  ) {
+    return null;
+  }
+  return parseMonthlyExternalReturnOrigin({
+    origin: rawOrigin,
+    month: rawMonth,
+    insight_rule: rawInsightRule,
+    insight_subject: rawInsightSubject,
+  });
 }
 
 /** Builds the canonical monthly-entry URL with status, copy-result, and safe workflow-origin query parameters. */
@@ -43,23 +67,54 @@ function monthlyPath(
   if (copied !== undefined) query.set("copied", String(copied));
   if (returnOrigin) {
     query.set("origin", returnOrigin.origin);
-    if (returnOrigin.origin === "customer-profitability" && returnOrigin.month) {
+    if (
+      (returnOrigin.origin === "customer-profitability" ||
+        returnOrigin.origin === "insights") &&
+      returnOrigin.month
+    ) {
       query.set("return_month", returnOrigin.month);
+    }
+    if (returnOrigin.origin === "insights") {
+      query.set("insight_rule", returnOrigin.ruleId);
+      if (returnOrigin.subjectId) query.set("insight_subject", returnOrigin.subjectId);
     }
   }
   return `/businesses/${businessId}/monthly?${query.toString()}`;
 }
 
 /** Builds the explicit audited-correction URL for an existing historical month. */
-function historicalCorrectionPath(businessId: string, monthKey: string) {
+function historicalCorrectionPath(
+  businessId: string,
+  monthKey: string,
+  returnOrigin?: MonthlyExternalReturnOrigin | null,
+) {
   const query = new URLSearchParams({ month: monthKey, status: "historical-required" });
+  if (returnOrigin) {
+    query.set("origin", returnOrigin.origin);
+    if (
+      (returnOrigin.origin === "customer-profitability" ||
+        returnOrigin.origin === "insights") &&
+      returnOrigin.month
+    ) {
+      query.set("return_month", returnOrigin.month);
+    }
+    if (returnOrigin.origin === "insights") {
+      query.set("insight_rule", returnOrigin.ruleId);
+      if (returnOrigin.subjectId) query.set("insight_subject", returnOrigin.subjectId);
+    }
+  }
   return `/businesses/${businessId}/monthly/correction?${query.toString()}`;
 }
 
 /** Sends a rejected normal historical write to the explicit audited correction workflow. */
-function redirectHistoricalCorrection(businessId: string, monthKey: string): never {
+function redirectHistoricalCorrection(
+  businessId: string,
+  monthKey: string,
+  returnOrigin?: MonthlyExternalReturnOrigin | null,
+): never {
   revalidatePath(`/businesses/${businessId}/monthly`);
-  redirect(historicalCorrectionPath(businessId, monthKey));
+  revalidatePath("/insights");
+  redirect(historicalCorrectionPath(businessId, monthKey, returnOrigin));
 }
 
 /** Revalidates monthly views and redirects to the selected month with a status code and safe workflow origin. */
@@ -70,6 +125,7 @@ function redirectMonthly(
   returnOrigin?: MonthlyExternalReturnOrigin | null,
 ): never {
   revalidatePath("/businesses");
+  revalidatePath("/insights");
   revalidatePath(`/businesses/${businessId}/monthly`);
   redirect(monthlyPath(businessId, monthKey, status, undefined, returnOrigin));
 }
@@ -180,7 +236,7 @@ export async function saveMonthlyActuals(formData: FormData) {
 
   if (error) {
     if (error.message.includes("explicit historical correction workflow")) {
-      redirectHistoricalCorrection(businessId, month.monthKey);
+      redirectHistoricalCorrection(businessId, month.monthKey, returnOrigin);
     }
     redirectMonthly(businessId, month.monthKey, "save-failed", returnOrigin);
   }
@@ -206,7 +262,7 @@ export async function copyPreviousMonthExpenses(formData: FormData) {
 
   if (error) {
     if (error.message.includes("explicit historical correction workflow")) {
-      redirectHistoricalCorrection(businessId, month.monthKey);
+      redirectHistoricalCorrection(businessId, month.monthKey, returnOrigin);
     }
     redirectMonthly(businessId, month.monthKey, "copy-failed", returnOrigin);
   }

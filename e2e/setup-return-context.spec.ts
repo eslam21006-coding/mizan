@@ -62,6 +62,30 @@ test.describe("N26 Revenue Sources setup return context", () => {
     expect(errors).toEqual([]);
   });
 
+
+  test("restores the originating insight after a Monthly setup detour", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(
+      `${fixturePath}?origin=monthly-editor&month=2026-10&upstream_origin=insights&upstream_month=2026-09&upstream_insight_rule=non_media_cost_pressure`,
+    );
+
+    const returnLink = page.getByRole("link", { name: "العودة إلى الإدخال الشهري" });
+    await expect(returnLink).toHaveAttribute(
+      "href",
+      `/businesses/${businessId}/monthly?month=2026-10&origin=insights&return_month=2026-09&insight_rule=non_media_cost_pressure`,
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await returnLink.focus();
+    await expect(returnLink).toBeFocused();
+    const dimensions = await page.locator("html").evaluate((element) => ({
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
+    expect(errors).toEqual([]);
+  });
+
   test("fails closed for invalid, duplicated, or malformed nested return metadata", async ({
     page,
   }) => {
@@ -75,6 +99,9 @@ test.describe("N26 Revenue Sources setup return context", () => {
       "origin=monthly-editor&month=2026-09&upstream_origin=customer-profitability&upstream_month=2026-13",
       "origin=monthly-editor&month=2026-09&upstream_month=2026-07",
       "origin=monthly-editor&month=2026-09&upstream_origin=customer-overview&upstream_month=2026-07",
+      "origin=monthly-editor&month=2026-09&upstream_origin=insights&upstream_month=2026-09&upstream_insight_rule=not-a-rule",
+      "origin=monthly-editor&month=2026-09&upstream_origin=insights&upstream_month=2026-09&upstream_insight_rule=funnel_attendance_bottleneck",
+      "origin=monthly-editor&month=2026-09&upstream_insight_rule=unhealthy_growth",
     ]) {
       await page.goto(`${fixturePath}?${query}`);
       await expect(

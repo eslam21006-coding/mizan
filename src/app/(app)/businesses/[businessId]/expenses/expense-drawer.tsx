@@ -34,9 +34,26 @@ function ReturnContextFields({ returnOrigin }: { returnOrigin: SetupReturnOrigin
       {returnOrigin.upstream ? (
         <input type="hidden" name="upstream_origin" value={returnOrigin.upstream.origin} />
       ) : null}
-      {returnOrigin.upstream?.origin === "customer-profitability" &&
+      {(returnOrigin.upstream?.origin === "customer-profitability" ||
+        returnOrigin.upstream?.origin === "insights") &&
       returnOrigin.upstream.month ? (
         <input type="hidden" name="upstream_month" value={returnOrigin.upstream.month} />
+      ) : null}
+      {returnOrigin.upstream?.origin === "insights" ? (
+        <>
+          <input
+            type="hidden"
+            name="upstream_insight_rule"
+            value={returnOrigin.upstream.ruleId}
+          />
+          {returnOrigin.upstream.subjectId ? (
+            <input
+              type="hidden"
+              name="upstream_insight_subject"
+              value={returnOrigin.upstream.subjectId}
+            />
+          ) : null}
+        </>
       ) : null}
     </>
   );
