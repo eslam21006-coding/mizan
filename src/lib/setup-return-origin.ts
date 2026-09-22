@@ -1,6 +1,6 @@
 import {
   parseReturnOrigin,
-  type CustomerReturnOriginMetadata,
+  type ExternalReturnOriginMetadata,
   type ReturnOriginSearchParams,
 } from "./return-origin.ts";
 
@@ -12,7 +12,7 @@ type SearchParamReader = {
 export type SetupReturnOrigin = {
   origin: "monthly-editor";
   month: string;
-  upstream?: CustomerReturnOriginMetadata;
+  upstream?: ExternalReturnOriginMetadata;
 };
 
 /** Detects URLSearchParams-like readers while keeping setup parsing framework-agnostic. */
@@ -40,6 +40,8 @@ function upstreamSearchParams(
       getAll(name: string) {
         if (name === "origin") return searchParams.getAll("upstream_origin");
         if (name === "month") return searchParams.getAll("upstream_month");
+        if (name === "insight_rule") return searchParams.getAll("upstream_insight_rule");
+        if (name === "insight_subject") return searchParams.getAll("upstream_insight_subject");
         return [];
       },
     };
@@ -49,10 +51,12 @@ function upstreamSearchParams(
   return {
     origin: record.upstream_origin,
     month: record.upstream_month,
+    insight_rule: record.upstream_insight_rule,
+    insight_subject: record.upstream_insight_subject,
   };
 }
 
-/** Accepts only a Monthly-editor setup detour and an optional validated customer upstream origin. */
+/** Accepts a Monthly-editor setup detour with an optional validated customer or Insights upstream origin. */
 export function parseSetupReturnOrigin(
   searchParams: ReturnOriginSearchParams,
 ): SetupReturnOrigin | null {
@@ -61,18 +65,41 @@ export function parseSetupReturnOrigin(
 
   const hasUpstreamOrigin = hasSearchParam(searchParams, "upstream_origin");
   const hasUpstreamMonth = hasSearchParam(searchParams, "upstream_month");
-  if (!hasUpstreamOrigin && !hasUpstreamMonth) return parsed;
+  const hasUpstreamInsightRule = hasSearchParam(searchParams, "upstream_insight_rule");
+  const hasUpstreamInsightSubject = hasSearchParam(searchParams, "upstream_insight_subject");
+  if (
+    !hasUpstreamOrigin &&
+    !hasUpstreamMonth &&
+    !hasUpstreamInsightRule &&
+    !hasUpstreamInsightSubject
+  ) {
+    return parsed;
+  }
   if (!hasUpstreamOrigin) return null;
 
   const upstream = parseReturnOrigin(upstreamSearchParams(searchParams));
   if (
     !upstream ||
     (upstream.origin !== "customer-overview" &&
-      upstream.origin !== "customer-profitability")
+      upstream.origin !== "customer-profitability" &&
+      upstream.origin !== "insights")
   ) {
     return null;
   }
-  if (upstream.origin === "customer-overview" && hasUpstreamMonth) return null;
+
+  if (
+    upstream.origin === "customer-overview" &&
+    (hasUpstreamMonth || hasUpstreamInsightRule || hasUpstreamInsightSubject)
+  ) {
+    return null;
+  }
+
+  if (
+    upstream.origin === "customer-profitability" &&
+    (hasUpstreamInsightRule || hasUpstreamInsightSubject)
+  ) {
+    return null;
+  }
 
   return { ...parsed, upstream };
 }
