@@ -11,7 +11,10 @@ import {
   storedExpenseValueForDisplay,
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
-import { parseMonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
+import {
+  parseMonthlyExternalReturnOrigin,
+  type MonthlyExternalReturnOrigin,
+} from "@/lib/monthly-return-origin";
 import { resolveHistoricalMonthlyUiState } from "@/lib/historical-month-state";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
@@ -37,6 +40,8 @@ type MonthlyPageProps = {
     copied?: string;
     origin?: string | string[];
     return_month?: string | string[];
+    insight_rule?: string | string[];
+    insight_subject?: string | string[];
   }>;
 };
 
@@ -54,6 +59,72 @@ const STATUS_MESSAGES: Record<string, string> = {
 /** Converts nullable persisted values into monthly-form text values. */
 function asInputValue(value: unknown) {
   return value === null || value === undefined ? "" : String(value);
+}
+
+/** Appends validated external Return context while keeping the selected Monthly month independent. */
+function appendMonthlyReturnQuery(
+  query: URLSearchParams,
+  returnOrigin: MonthlyExternalReturnOrigin,
+) {
+  query.set("origin", returnOrigin.origin);
+  if (
+    (returnOrigin.origin === "customer-profitability" ||
+      returnOrigin.origin === "insights") &&
+    returnOrigin.month
+  ) {
+    query.set("return_month", returnOrigin.month);
+  }
+  if (returnOrigin.origin === "insights") {
+    query.set("insight_rule", returnOrigin.ruleId);
+    if (returnOrigin.subjectId) query.set("insight_subject", returnOrigin.subjectId);
+  }
+}
+
+/** Appends the same external Return context as a nested Monthly-editor setup origin. */
+function appendSetupUpstreamQuery(
+  query: URLSearchParams,
+  returnOrigin: MonthlyExternalReturnOrigin,
+) {
+  query.set("upstream_origin", returnOrigin.origin);
+  if (
+    returnOrigin.origin === "customer-profitability" ||
+    returnOrigin.origin === "insights"
+  ) {
+    query.set("upstream_month", returnOrigin.month);
+  }
+  if (returnOrigin.origin === "insights") {
+    query.set("upstream_insight_rule", returnOrigin.ruleId);
+    if (returnOrigin.subjectId) {
+      query.set("upstream_insight_subject", returnOrigin.subjectId);
+    }
+  }
+}
+
+/** Renders hidden fields that preserve validated external Return metadata across Monthly forms. */
+function MonthlyReturnOriginFields({
+  returnOrigin,
+}: {
+  returnOrigin: MonthlyExternalReturnOrigin | null;
+}) {
+  if (!returnOrigin) return null;
+
+  return (
+    <>
+      <input type="hidden" name="origin" value={returnOrigin.origin} />
+      {(returnOrigin.origin === "customer-profitability" ||
+        returnOrigin.origin === "insights") && (
+        <input type="hidden" name="return_month" value={returnOrigin.month} />
+      )}
+      {returnOrigin.origin === "insights" && (
+        <>
+          <input type="hidden" name="insight_rule" value={returnOrigin.ruleId} />
+          {returnOrigin.subjectId && (
+            <input type="hidden" name="insight_subject" value={returnOrigin.subjectId} />
+          )}
+        </>
+      )}
+    </>
+  );
 }
 
 /** Renders the business-scoped Monthly editor while keeping hierarchical Back separate from workflow Return. */
@@ -81,6 +152,8 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
   const returnOrigin = parseMonthlyExternalReturnOrigin({
     origin: query.origin,
     month: query.return_month ?? query.month,
+    insight_rule: query.insight_rule,
+    insight_subject: query.insight_subject,
   });
 
   const [periodResult, streamsResult, expensesResult, customerCountsResult] = await Promise.all([
@@ -212,12 +285,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
   const nextMonth = shiftMonthKey(selectedMonth.monthKey, 1);
   const monthlyHref = (monthKey: string) => {
     const queryParams = new URLSearchParams({ month: monthKey });
-    if (returnOrigin) {
-      queryParams.set("origin", returnOrigin.origin);
-      if (returnOrigin.origin === "customer-profitability" && returnOrigin.month) {
-        queryParams.set("return_month", returnOrigin.month);
-      }
-    }
+    if (returnOrigin) appendMonthlyReturnQuery(queryParams, returnOrigin);
     return `/businesses/${businessId}/monthly?${queryParams.toString()}`;
   };
   const setupHref = (route: "revenue-streams" | "expenses") => {
@@ -225,12 +293,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
       origin: "monthly-editor",
       month: selectedMonth.monthKey,
     });
-    if (returnOrigin) {
-      queryParams.set("upstream_origin", returnOrigin.origin);
-      if (returnOrigin.origin === "customer-profitability" && returnOrigin.month) {
-        queryParams.set("upstream_month", returnOrigin.month);
-      }
-    }
+    if (returnOrigin) appendSetupUpstreamQuery(queryParams, returnOrigin);
     return `/businesses/${businessId}/${route}?${queryParams.toString()}`;
   };
   const monthLabel = new Intl.DateTimeFormat("ar-EG", {
@@ -292,16 +355,20 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
       {returnOrigin && (
         <ReturnContextBanner
           purpose={
-            returnOrigin.origin === "customer-profitability"
-              ? "بيانات مطلوبة في ربحية العميل"
-              : "بيانات مطلوبة في تحليل العملاء"
+            returnOrigin.origin === "insights"
+              ? "مراجعة وتحديث البيانات المرتبطة بهذه الملاحظة"
+              : returnOrigin.origin === "customer-profitability"
+                ? "بيانات مطلوبة في ربحية العميل"
+                : "بيانات مطلوبة في تحليل العملاء"
           }
           origin={returnOrigin}
           context={{ businessId }}
           returnLabel={
-            returnOrigin.origin === "customer-profitability"
-              ? "العودة إلى ربحية العميل"
-              : "العودة إلى العملاء"
+            returnOrigin.origin === "insights"
+              ? "العودة إلى الملاحظة"
+              : returnOrigin.origin === "customer-profitability"
+                ? "العودة إلى ربحية العميل"
+                : "العودة إلى العملاء"
           }
           ariaLabel="سياق العودة من الإدخال الشهري"
         />
@@ -345,10 +412,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
       </section>
 
       <form key={`month-picker-${selectedMonth.monthKey}`} className={styles.monthPicker}>
-        {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
-        {returnOrigin?.origin === "customer-profitability" && returnOrigin.month && (
-          <input type="hidden" name="return_month" value={returnOrigin.month} />
-        )}
+        <MonthlyReturnOriginFields returnOrigin={returnOrigin} />
         <label>
           <span>انتقل مباشرة إلى شهر</span>
           <input type="month" name="month" defaultValue={selectedMonth.monthKey} aria-label="الشهر" />
@@ -378,6 +442,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
           monthKey={selectedMonth.monthKey}
           monthLabel={monthLabel}
           canManage={canManage}
+          returnOrigin={returnOrigin}
         />
       )}
 
@@ -423,10 +488,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
               <form action={copyPreviousMonthExpenses}>
                 <input type="hidden" name="business_id" value={businessId} />
                 <input type="hidden" name="month" value={selectedMonth.monthKey} />
-                {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
-                {returnOrigin?.origin === "customer-profitability" && returnOrigin.month && (
-                  <input type="hidden" name="return_month" value={returnOrigin.month} />
-                )}
+                <MonthlyReturnOriginFields returnOrigin={returnOrigin} />
                 <button type="submit" className={styles.secondaryButton}>
                   نسخ مصروفات الشهر السابق
                 </button>
@@ -448,10 +510,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
           >
             <input type="hidden" name="business_id" value={businessId} />
             <input type="hidden" name="month" value={selectedMonth.monthKey} />
-            {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
-            {returnOrigin?.origin === "customer-profitability" && returnOrigin.month && (
-              <input type="hidden" name="return_month" value={returnOrigin.month} />
-            )}
+            <MonthlyReturnOriginFields returnOrigin={returnOrigin} />
             {historyTrustNotice}
             <MonthlyEntryForm
               editable
