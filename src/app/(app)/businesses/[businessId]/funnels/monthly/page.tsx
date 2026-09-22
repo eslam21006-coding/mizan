@@ -20,7 +20,14 @@ import styles from "./monthly.module.css";
 
 type FunnelMonthlyPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ month?: string; status?: string; origin?: string | string[] }>;
+  searchParams: Promise<{
+    month?: string;
+    status?: string;
+    origin?: string | string[];
+    return_month?: string | string[];
+    insight_rule?: string | string[];
+    insight_subject?: string | string[];
+  }>;
 };
 
 type BusinessRow = {
@@ -224,7 +231,12 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
   const fallbackMonth = currentMonthKeyForTimeZone(business.timezone);
   const selectedMonth = parseMonthKey(query.month) ?? parseMonthKey(fallbackMonth);
   if (!selectedMonth) throw new Error("Could not resolve a valid funnel month.");
-  const returnOrigin = parseFunnelMonthlyReturnOrigin({ origin: query.origin });
+  const returnOrigin = parseFunnelMonthlyReturnOrigin({
+    origin: query.origin,
+    month: query.return_month ?? query.month,
+    insight_rule: query.insight_rule,
+    insight_subject: query.insight_subject,
+  });
 
   const [funnelMonth, funnelsResult] = await Promise.all([
     loadFunnelMonth(supabase, businessId, selectedMonth.monthStart),
@@ -267,17 +279,25 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
         businessId={businessId}
         activeTab="monthly"
         monthKey={selectedMonth.monthKey}
-        origin={returnOrigin?.origin}
+        origin={returnOrigin?.origin === "funnel-structure" ? returnOrigin.origin : undefined}
       />
 
       <FunnelHierarchyBack businessId={businessId} monthKey={selectedMonth.monthKey} />
 
       {returnOrigin && (
         <ReturnContextBanner
-          purpose="أرقام الفانلز الشهرية"
+          purpose={
+            returnOrigin.origin === "insights"
+              ? "مراجعة أرقام الفانل المرتبطة بهذه الملاحظة"
+              : "أرقام الفانلز الشهرية"
+          }
           origin={returnOrigin}
           context={{ businessId }}
-          returnLabel="العودة إلى هيكل الفانلز"
+          returnLabel={
+            returnOrigin.origin === "insights"
+              ? "العودة إلى الملاحظة"
+              : "العودة إلى هيكل الفانلز"
+          }
           ariaLabel="سياق العودة من أرقام الفانلز الشهرية"
         />
       )}
@@ -301,6 +321,15 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
       <section className={styles.monthControl}>
         <form>
           {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
+          {returnOrigin?.origin === "insights" && (
+            <>
+              <input type="hidden" name="return_month" value={returnOrigin.month} />
+              <input type="hidden" name="insight_rule" value={returnOrigin.ruleId} />
+              {returnOrigin.subjectId && (
+                <input type="hidden" name="insight_subject" value={returnOrigin.subjectId} />
+              )}
+            </>
+          )}
           <label>
             <span>الشهر</span>
             <input
@@ -351,6 +380,15 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
             <input type="hidden" name="business_id" value={businessId} />
             <input type="hidden" name="month" value={selectedMonth.monthKey} />
             {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
+            {returnOrigin?.origin === "insights" && (
+              <>
+                <input type="hidden" name="return_month" value={returnOrigin.month} />
+                <input type="hidden" name="insight_rule" value={returnOrigin.ruleId} />
+                {returnOrigin.subjectId && (
+                  <input type="hidden" name="insight_subject" value={returnOrigin.subjectId} />
+                )}
+              </>
+            )}
 
             <section className={styles.businessSpendCard}>
               <div>
