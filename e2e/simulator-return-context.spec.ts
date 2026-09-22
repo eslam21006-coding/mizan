@@ -55,6 +55,9 @@ test.describe("N55 Target Planner to Simulator return context", () => {
     await expect(saveForm.locator('input[name="planner_value"]')).toHaveValue("50000");
 
     await page.getByRole("link", { name: "فتح سيناريو أ" }).click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("scenario"))
+      .toBe("a");
     const scenarioUrl = new URL(page.url());
     expect(scenarioUrl.searchParams.get("scenario")).toBe("a");
     expect(scenarioUrl.searchParams.get("origin")).toBe("target-planner");
