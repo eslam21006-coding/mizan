@@ -9,19 +9,42 @@ import {
   type ScenarioOverrides,
 } from "@/lib/business/scenario-engine";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import {
+  buildSimulatorHref,
+  parseSimulatorTargetPlannerReturnContext,
+  SIMULATOR_TARGET_PLANNER_RETURN_KEYS,
+  type SimulatorTargetPlannerReturnContext,
+} from "@/lib/simulator-return-context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 const DECIMAL_PATTERN = /^\d{1,16}(?:\.\d{1,8})?$/;
 
+/** Reads validated Target Planner return metadata from a Simulator mutation form. */
+function parseSimulatorReturnContext(formData: FormData) {
+  const params = new URLSearchParams();
+  for (const key of SIMULATOR_TARGET_PLANNER_RETURN_KEYS) {
+    for (const value of formData.getAll(key)) {
+      if (typeof value === "string") params.append(key, value);
+    }
+  }
+  return parseSimulatorTargetPlannerReturnContext(params);
+}
+
+/** Builds the canonical Simulator redirect URL without accepting arbitrary return destinations. */
 function simulatorPath(
   businessId: string,
   month: string,
   status: string,
   scenarioId?: string | null,
+  returnContext?: SimulatorTargetPlannerReturnContext | null,
 ) {
-  const params = new URLSearchParams({ business: businessId, month, status });
-  if (scenarioId) params.set("scenario", scenarioId);
-  return `/simulator?${params.toString()}`;
+  return buildSimulatorHref({
+    businessId,
+    month,
+    status,
+    scenarioId: scenarioId ?? undefined,
+    returnContext,
+  });
 }
 
 function parseMonth(value: FormDataEntryValue | null) {
@@ -73,9 +96,10 @@ function redirectSimulator(
   month: string,
   status: string,
   scenarioId?: string | null,
+  returnContext?: SimulatorTargetPlannerReturnContext | null,
 ): never {
   revalidatePath("/simulator");
-  redirect(simulatorPath(businessId, month, status, scenarioId));
+  redirect(simulatorPath(businessId, month, status, scenarioId, returnContext));
 }
 
 export async function saveSimulatorScenario(formData: FormData) {
@@ -85,12 +109,13 @@ export async function saveSimulatorScenario(formData: FormData) {
   const scenarioId = parseResourceId(formData.get("scenario_id"));
   const creationRequestId = parseResourceId(formData.get("creation_request_id"));
   const month = parseMonth(formData.get("month"));
+  const returnContext = parseSimulatorReturnContext(formData);
   const name = parseScenarioName(formData.get("name"));
   const overrides = parseOverrides(formData.get("overrides_json"));
 
   if (!businessId) redirect("/simulator");
   if (!month || !name || !creationRequestId || !overrides) {
-    redirectSimulator(businessId, month ?? "invalid", "invalid", scenarioId);
+    redirectSimulator(businessId, month ?? "invalid", "invalid", scenarioId, returnContext);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -104,10 +129,10 @@ export async function saveSimulatorScenario(formData: FormData) {
 
   const savedScenarioId = typeof data === "string" ? data : null;
   if (error || !savedScenarioId) {
-    redirectSimulator(businessId, month, "save-failed", scenarioId);
+    redirectSimulator(businessId, month, "save-failed", scenarioId, returnContext);
   }
 
-  redirectSimulator(businessId, month, scenarioId ? "updated" : "saved", savedScenarioId);
+  redirectSimulator(businessId, month, scenarioId ? "updated" : "saved", savedScenarioId, returnContext);
 }
 
 export async function duplicateSimulatorScenario(formData: FormData) {
@@ -117,11 +142,12 @@ export async function duplicateSimulatorScenario(formData: FormData) {
   const scenarioId = parseResourceId(formData.get("scenario_id"));
   const creationRequestId = parseResourceId(formData.get("creation_request_id"));
   const month = parseMonth(formData.get("month"));
+  const returnContext = parseSimulatorReturnContext(formData);
   const name = parseScenarioName(formData.get("name"));
 
   if (!businessId) redirect("/simulator");
   if (!month || !scenarioId || !creationRequestId || !name) {
-    redirectSimulator(businessId, month ?? "invalid", "invalid", scenarioId);
+    redirectSimulator(businessId, month ?? "invalid", "invalid", scenarioId, returnContext);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -134,10 +160,10 @@ export async function duplicateSimulatorScenario(formData: FormData) {
 
   const duplicatedScenarioId = typeof data === "string" ? data : null;
   if (error || !duplicatedScenarioId) {
-    redirectSimulator(businessId, month, "duplicate-failed", scenarioId);
+    redirectSimulator(businessId, month, "duplicate-failed", scenarioId, returnContext);
   }
 
-  redirectSimulator(businessId, month, "duplicated", duplicatedScenarioId);
+  redirectSimulator(businessId, month, "duplicated", duplicatedScenarioId, returnContext);
 }
 
 export async function deleteSimulatorScenario(formData: FormData) {
@@ -146,10 +172,11 @@ export async function deleteSimulatorScenario(formData: FormData) {
   const businessId = parseResourceId(formData.get("business_id"));
   const scenarioId = parseResourceId(formData.get("scenario_id"));
   const month = parseMonth(formData.get("month"));
+  const returnContext = parseSimulatorReturnContext(formData);
 
   if (!businessId) redirect("/simulator");
   if (!month || !scenarioId) {
-    redirectSimulator(businessId, month ?? "invalid", "invalid", scenarioId);
+    redirectSimulator(businessId, month ?? "invalid", "invalid", scenarioId, returnContext);
   }
 
   const supabase = await createSupabaseServerClient();
@@ -162,8 +189,8 @@ export async function deleteSimulatorScenario(formData: FormData) {
     .maybeSingle();
 
   if (error || !data) {
-    redirectSimulator(businessId, month, "delete-failed", scenarioId);
+    redirectSimulator(businessId, month, "delete-failed", scenarioId, returnContext);
   }
 
-  redirectSimulator(businessId, month, "deleted");
+  redirectSimulator(businessId, month, "deleted", undefined, returnContext);
 }
