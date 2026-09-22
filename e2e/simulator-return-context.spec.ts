@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 const PLANNER_BUSINESS_ID = "00000000-0000-4000-8000-000000000055";
 
+/** Collects console and page errors so the N55 browser journey also guards runtime health. */
 function captureBrowserErrors(page: import("@playwright/test").Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
@@ -11,6 +12,7 @@ function captureBrowserErrors(page: import("@playwright/test").Page) {
   return errors;
 }
 
+/** Builds the canonical CI fixture URL for a valid originating Target Planner plan. */
 function plannerContextUrl(extra = "") {
   return (
     "/auth/e2e-simulator?" +
@@ -23,6 +25,16 @@ function plannerContextUrl(extra = "") {
     }).toString() +
     extra
   );
+}
+
+/** Asserts that a Simulator URL retains the exact structured Target Planner origin. */
+function expectPlannerContext(urlValue: string) {
+  const url = new URL(urlValue);
+  expect(url.searchParams.get("origin")).toBe("target-planner");
+  expect(url.searchParams.get("planner_business")).toBe(PLANNER_BUSINESS_ID);
+  expect(url.searchParams.get("planner_step")).toBe("plan");
+  expect(url.searchParams.get("planner_goal")).toBe("net_profit");
+  expect(url.searchParams.get("planner_value")).toBe("50000");
 }
 
 test.describe("N55 Target Planner to Simulator return context", () => {
@@ -60,11 +72,7 @@ test.describe("N55 Target Planner to Simulator return context", () => {
       .toBe("a");
     const scenarioUrl = new URL(page.url());
     expect(scenarioUrl.searchParams.get("scenario")).toBe("a");
-    expect(scenarioUrl.searchParams.get("origin")).toBe("target-planner");
-    expect(scenarioUrl.searchParams.get("planner_business")).toBe(PLANNER_BUSINESS_ID);
-    expect(scenarioUrl.searchParams.get("planner_step")).toBe("plan");
-    expect(scenarioUrl.searchParams.get("planner_goal")).toBe("net_profit");
-    expect(scenarioUrl.searchParams.get("planner_value")).toBe("50000");
+    expectPlannerContext(page.url());
 
     await page.reload();
     await expect(returnSection).toBeVisible();
@@ -75,6 +83,33 @@ test.describe("N55 Target Planner to Simulator return context", () => {
       "href",
       `/target-plan?business=${PLANNER_BUSINESS_ID}&goal=net_profit&step=plan&value=50000`,
     );
+
+    await page.getByRole("link", { name: "فتح سيناريو أ" }).click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("scenario"))
+      .toBe("a");
+
+    await page.getByRole("button", { name: "حفظ التعديلات" }).click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("status"))
+      .toBe("updated");
+    expect(new URL(page.url()).searchParams.get("scenario")).toBe("a");
+    expectPlannerContext(page.url());
+
+    await page.getByRole("button", { name: "إنشاء نسخة" }).click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("status"))
+      .toBe("duplicated");
+    expect(new URL(page.url()).searchParams.get("scenario")).toBe("b");
+    expectPlannerContext(page.url());
+
+    await page.getByRole("button", { name: "حذف السيناريو" }).click();
+    await expect
+      .poll(() => new URL(page.url()).searchParams.get("status"))
+      .toBe("deleted");
+    expect(new URL(page.url()).searchParams.get("scenario")).toBeNull();
+    expectPlannerContext(page.url());
+    await expect(returnSection).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect
