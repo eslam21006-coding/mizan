@@ -347,7 +347,7 @@ export default async function TargetPlanPage({ searchParams }: TargetPlanPagePro
                     month: issue.month,
                     step: selectedStep,
                     goal: selectedGoal,
-                    value: query.value,
+                    value: normalizedValue ?? undefined,
                   },
                   issue.repairSurface,
                 )}
