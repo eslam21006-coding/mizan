@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { parseCustomerHistoryOverviewSummary } from "@/lib/business/customer-history-overview";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import {
@@ -34,6 +35,14 @@ export default async function BusinessCustomersPage({
           month: customerSearchParams.month,
         })
       : null;
+  const parsedInsightReturnOrigin = parseReturnOrigin({
+    origin: customerSearchParams.origin,
+    month: customerSearchParams.return_month ?? customerSearchParams.month,
+    insight_rule: customerSearchParams.insight_rule,
+    insight_subject: customerSearchParams.insight_subject,
+  });
+  const insightReturnOrigin =
+    parsedInsightReturnOrigin?.origin === "insights" ? parsedInsightReturnOrigin : null;
   const businessId = parseResourceId(rawBusinessId);
   if (!businessId) notFound();
 
@@ -76,7 +85,17 @@ export default async function BusinessCustomersPage({
     : (reviewExceptionsResult.data?.length ?? 0) + (missingPeriodsResult.data?.length ?? 0);
 
   return (
-    <CustomerOverviewShell
+    <div className="page-stack">
+      {insightReturnOrigin && (
+        <ReturnContextBanner
+          purpose="مراجعة اقتصاديات العميل المرتبطة بهذه الملاحظة"
+          origin={insightReturnOrigin}
+          context={{ businessId: business.id }}
+          returnLabel="العودة إلى الملاحظة"
+          ariaLabel="سياق العودة من اقتصاديات العميل"
+        />
+      )}
+      <CustomerOverviewShell
       businessId={business.id}
       businessName={business.name}
       baseCurrency={business.base_currency}
@@ -117,5 +136,6 @@ export default async function BusinessCustomersPage({
         />
       }
     />
+    </div>
   );
 }
