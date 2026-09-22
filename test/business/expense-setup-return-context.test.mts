@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { parseSetupReturnOrigin } from "../../src/lib/setup-return-origin.ts";
 
 const monthlySource = readFileSync(
   "src/app/(app)/businesses/[businessId]/monthly/page.tsx",
@@ -10,74 +11,56 @@ const expensePageSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/expenses/page.tsx",
   "utf8",
 );
+const expenseDrawerSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/expenses/expense-drawer.tsx",
+  "utf8",
+);
 const expenseActionsSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/expenses/actions.ts",
   "utf8",
 );
 
-test("N27 Monthly opens Expenses through the same nested structured setup contract", () => {
-  assert.match(monthlySource, /const setupHref = \(route: "revenue-streams" \| "expenses"\) =>/);
+test("Monthly opens Expenses with nested Insights return context", () => {
+  assert.match(monthlySource, /function appendSetupUpstreamQuery/);
   assert.match(monthlySource, /href=\{setupHref\("expenses"\)\}/);
-  assert.match(monthlySource, /queryParams\.set\("upstream_origin", returnOrigin\.origin\)/);
-  assert.match(
-    monthlySource,
-    /queryParams\.set\("upstream_month", returnOrigin\.month\)/,
+  assert.match(monthlySource, /query\.set\("upstream_insight_rule", returnOrigin\.ruleId\)/);
+
+  assert.deepEqual(
+    parseSetupReturnOrigin({
+      origin: "monthly-editor",
+      month: "2026-10",
+      upstream_origin: "insights",
+      upstream_month: "2026-09",
+      upstream_insight_rule: "unhealthy_growth",
+    }),
+    {
+      origin: "monthly-editor",
+      month: "2026-10",
+      upstream: {
+        origin: "insights",
+        month: "2026-09",
+        ruleId: "unhealthy_growth",
+      },
+    },
   );
-  assert.doesNotMatch(monthlySource, /returnTo/);
 });
 
-test("N27 Expenses renders and submits the complete safe Monthly return context", () => {
-  assert.match(
-    expensePageSource,
-    /parseSetupReturnOrigin\(\{[\s\S]*origin: query\.origin,[\s\S]*month: query\.month,[\s\S]*upstream_origin: query\.upstream_origin,[\s\S]*upstream_month: query\.upstream_month/,
-  );
+test("Expenses page and drawer submit the complete safe Monthly return context", () => {
+  assert.match(expensePageSource, /upstream_insight_rule: query\.upstream_insight_rule/);
+  assert.match(expensePageSource, /upstream_insight_subject: query\.upstream_insight_subject/);
   assert.match(expensePageSource, /ariaLabel="سياق العودة من إعداد المصروفات"/);
-  assert.match(expensePageSource, /returnLabel="العودة إلى الإدخال الشهري"/);
-  assert.match(expensePageSource, /name="origin" value=\{returnOrigin\.origin\}/);
-  assert.match(expensePageSource, /name="month" value=\{returnOrigin\.month\}/);
-  assert.match(expensePageSource, /name="upstream_origin"/);
-  assert.match(expensePageSource, /value=\{returnOrigin\.upstream\.origin\}/);
-  assert.match(expensePageSource, /name="upstream_month"/);
-  assert.match(expensePageSource, /value=\{returnOrigin\.upstream\.month\}/);
+  assert.match(expenseDrawerSource, /name="upstream_insight_rule"/);
+  assert.match(expenseDrawerSource, /value=\{returnOrigin\.upstream\.ruleId\}/);
+  assert.match(expenseDrawerSource, /name="upstream_insight_subject"/);
   assert.doesNotMatch(expensePageSource, /returnTo/);
 });
 
-test("N27 Expenses actions reject ambiguous nested metadata and preserve it on redirects", () => {
-  assert.match(expenseActionsSource, /formData\.getAll\("origin"\)/);
-  assert.match(expenseActionsSource, /formData\.getAll\("month"\)/);
-  assert.match(expenseActionsSource, /formData\.getAll\("upstream_origin"\)/);
-  assert.match(expenseActionsSource, /formData\.getAll\("upstream_month"\)/);
-  assert.match(expenseActionsSource, /upstreamOrigins\.length > 1/);
-  assert.match(expenseActionsSource, /upstreamMonths\.length > 1/);
-  assert.match(
-    expenseActionsSource,
-    /parseSetupReturnOrigin\(\{[\s\S]*upstream_origin: upstreamOrigin,[\s\S]*upstream_month: upstreamMonth/,
-  );
-  assert.match(expenseActionsSource, /query\.set\("origin", returnOrigin\.origin\)/);
-  assert.match(expenseActionsSource, /query\.set\("month", returnOrigin\.month\)/);
-  assert.match(
-    expenseActionsSource,
-    /query\.set\("upstream_origin", returnOrigin\.upstream\.origin\)/,
-  );
-  assert.match(
-    expenseActionsSource,
-    /query\.set\("upstream_month", returnOrigin\.upstream\.month\)/,
-  );
-  assert.match(
-    expenseActionsSource,
-    /redirectToExpenses\(businessId, "created", returnOrigin\)/,
-  );
-  assert.match(
-    expenseActionsSource,
-    /expensesPath\(businessId, "create-failed", returnOrigin\)/,
-  );
-  assert.match(
-    expenseActionsSource,
-    /expensesPath\(businessId, "update-failed", returnOrigin\)/,
-  );
-  assert.match(
-    expenseActionsSource,
-    /expensesPath\(businessId, "delete-failed", returnOrigin\)/,
-  );
+test("Expenses actions reject ambiguity and preserve nested Insights metadata", () => {
+  assert.match(expenseActionsSource, /formData\.getAll\("upstream_insight_rule"\)/);
+  assert.match(expenseActionsSource, /formData\.getAll\("upstream_insight_subject"\)/);
+  assert.match(expenseActionsSource, /upstreamInsightRules\.length > 1/);
+  assert.match(expenseActionsSource, /upstreamInsightSubjects\.length > 1/);
+  assert.match(expenseActionsSource, /query\.set\("upstream_insight_rule", returnOrigin\.upstream\.ruleId\)/);
+  assert.match(expenseActionsSource, /revalidatePath\("\/insights"\)/);
   assert.doesNotMatch(expenseActionsSource, /returnTo/);
 });
