@@ -3,6 +3,7 @@ import { expect, test } from "@playwright/test";
 const BUSINESS_ID = "00000000-0000-4000-8000-000000000056";
 const OTHER_BUSINESS_ID = "00000000-0000-4000-8000-000000000057";
 const SCENARIO_A_ID = "00000000-0000-4000-8000-000000000561";
+const SCENARIO_B_ID = "00000000-0000-4000-8000-000000000562";
 const STALE_SCENARIO_ID = "00000000-0000-4000-8000-000000000599";
 
 /** Collects browser runtime errors during the persistent scenario journey. */
@@ -67,7 +68,7 @@ test.describe("N56 persistent Simulator scenario state", () => {
     expect(query(page).get("month")).toBe("2026-09");
 
     await page.getByRole("link", { name: "فتح سيناريو كفاءة" }).click();
-    await expect.poll(() => query(page).get("scenario")).not.toBe(SCENARIO_A_ID);
+    await expect.poll(() => query(page).get("scenario")).toBe(SCENARIO_B_ID);
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.locator('[data-scenario-state="saved"] strong')).toBeVisible();
     await expect
