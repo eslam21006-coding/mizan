@@ -99,7 +99,7 @@ test("Monthly preserves profitability origin through normal save redirects and r
   assert.match(monthlyActionsSource, /function parseMonthlyReturnOrigin/);
   assert.match(
     monthlyActionsSource,
-    /parseMonthlyExternalReturnOrigin\(\{ origin: rawOrigin, month: rawMonth \}\)/,
+    /parseMonthlyExternalReturnOrigin\(\{[\s\S]*origin: rawOrigin,[\s\S]*month: rawMonth,[\s\S]*\}\)/,
   );
   assert.match(
     monthlyActionsSource,
