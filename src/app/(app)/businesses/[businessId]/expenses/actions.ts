@@ -73,8 +73,9 @@ function expensesPath(
     if (returnOrigin.upstream) {
       query.set("upstream_origin", returnOrigin.upstream.origin);
       if (
-        returnOrigin.upstream.origin === "customer-profitability" ||
-        returnOrigin.upstream.origin === "insights"
+        (returnOrigin.upstream.origin === "customer-profitability" ||
+          returnOrigin.upstream.origin === "insights") &&
+        returnOrigin.upstream.month
       ) {
         query.set("upstream_month", returnOrigin.upstream.month);
       }
