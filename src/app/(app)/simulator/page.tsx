@@ -233,9 +233,22 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
           <SimulatorScenarioStateFields state={scenarioState} />
           <label>
             <span>الشهر الفعلي المرجعي</span>
-            <input dir="ltr" type="month" name="month" defaultValue={selectedMonth.monthKey} />
+            <input
+              dir="ltr"
+              type="month"
+              name="month"
+              defaultValue={selectedMonth.monthKey}
+              disabled={scenarioState.kind === "unavailable"}
+            />
           </label>
-          <button type="submit">فتح الشهر</button>
+          <button type="submit" disabled={scenarioState.kind === "unavailable"}>
+            فتح الشهر
+          </button>
+          {scenarioState.kind === "unavailable" && (
+            <small className={styles.selectorNote}>
+              اختر سيناريو محفوظًا أو ابدأ سيناريو جديدًا قبل تغيير الشهر.
+            </small>
+          )}
         </form>
 
         <form>
