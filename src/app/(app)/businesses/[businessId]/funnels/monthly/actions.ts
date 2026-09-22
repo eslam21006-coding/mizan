@@ -16,6 +16,26 @@ import {
 } from "@/lib/funnel-monthly-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+/** Appends one validated Funnel Monthly return origin to a query string. */
+function appendFunnelReturnQuery(
+  query: URLSearchParams,
+  returnOrigin?: FunnelMonthlyReturnOrigin | null,
+) {
+  if (!returnOrigin) return;
+
+  query.set("origin", returnOrigin.origin);
+  if (returnOrigin.origin === "insights") {
+    query.set("return_month", returnOrigin.month);
+    query.set("insight_rule", returnOrigin.ruleId);
+    if (returnOrigin.subjectId) query.set("insight_subject", returnOrigin.subjectId);
+  }
+  if (returnOrigin.origin === "target-planner") {
+    query.set("planner_step", returnOrigin.step);
+    query.set("planner_goal", returnOrigin.goal);
+    if (returnOrigin.value !== undefined) query.set("planner_value", returnOrigin.value);
+  }
+}
+
 function funnelMonthlyPath(
   businessId: string,
   monthKey: string,
@@ -24,19 +44,7 @@ function funnelMonthlyPath(
 ) {
   const query = new URLSearchParams({ month: monthKey });
   if (status) query.set("status", status);
-  if (returnOrigin) {
-    query.set("origin", returnOrigin.origin);
-    if (returnOrigin.origin === "insights") {
-      query.set("return_month", returnOrigin.month);
-      query.set("insight_rule", returnOrigin.ruleId);
-      if (returnOrigin.subjectId) query.set("insight_subject", returnOrigin.subjectId);
-    }
-    if (returnOrigin.origin === "target-planner") {
-      query.set("planner_step", returnOrigin.step);
-      query.set("planner_goal", returnOrigin.goal);
-      if (returnOrigin.value !== undefined) query.set("planner_value", returnOrigin.value);
-    }
-  }
+  appendFunnelReturnQuery(query, returnOrigin);
   return `/businesses/${businessId}/funnels/monthly?${query.toString()}`;
 }
 
@@ -129,7 +137,7 @@ export async function saveFunnelMonthlyActuals(formData: FormData) {
   if (!businessId) redirect("/businesses");
   if (!month) {
     const query = new URLSearchParams({ status: "invalid-month" });
-    if (returnOrigin) query.set("origin", returnOrigin.origin);
+    appendFunnelReturnQuery(query, returnOrigin);
     redirect(`/businesses/${businessId}/funnels/monthly?${query.toString()}`);
   }
 
