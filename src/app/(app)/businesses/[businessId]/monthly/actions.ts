@@ -24,12 +24,18 @@ function parseMonthlyReturnOrigin(formData: FormData): MonthlyExternalReturnOrig
   const months = formData.getAll("month");
   const insightRules = formData.getAll("insight_rule");
   const insightSubjects = formData.getAll("insight_subject");
+  const plannerSteps = formData.getAll("planner_step");
+  const plannerGoals = formData.getAll("planner_goal");
+  const plannerValues = formData.getAll("planner_value");
   if (
     origins.length !== 1 ||
     returnMonths.length > 1 ||
     months.length > 1 ||
     insightRules.length > 1 ||
-    insightSubjects.length > 1
+    insightSubjects.length > 1 ||
+    plannerSteps.length > 1 ||
+    plannerGoals.length > 1 ||
+    plannerValues.length > 1
   ) {
     return null;
   }
@@ -38,11 +44,17 @@ function parseMonthlyReturnOrigin(formData: FormData): MonthlyExternalReturnOrig
   const rawMonth = returnMonths.length === 1 ? returnMonths[0] : months[0];
   const rawInsightRule = insightRules[0];
   const rawInsightSubject = insightSubjects[0];
+  const rawPlannerStep = plannerSteps[0];
+  const rawPlannerGoal = plannerGoals[0];
+  const rawPlannerValue = plannerValues[0];
   if (
     typeof rawOrigin !== "string" ||
     typeof rawMonth !== "string" ||
     (rawInsightRule !== undefined && typeof rawInsightRule !== "string") ||
-    (rawInsightSubject !== undefined && typeof rawInsightSubject !== "string")
+    (rawInsightSubject !== undefined && typeof rawInsightSubject !== "string") ||
+    (rawPlannerStep !== undefined && typeof rawPlannerStep !== "string") ||
+    (rawPlannerGoal !== undefined && typeof rawPlannerGoal !== "string") ||
+    (rawPlannerValue !== undefined && typeof rawPlannerValue !== "string")
   ) {
     return null;
   }
@@ -51,6 +63,9 @@ function parseMonthlyReturnOrigin(formData: FormData): MonthlyExternalReturnOrig
     month: rawMonth,
     insight_rule: rawInsightRule,
     insight_subject: rawInsightSubject,
+    planner_step: rawPlannerStep,
+    planner_goal: rawPlannerGoal,
+    planner_value: rawPlannerValue,
   });
 }
 
@@ -78,6 +93,11 @@ function monthlyPath(
       query.set("insight_rule", returnOrigin.ruleId);
       if (returnOrigin.subjectId) query.set("insight_subject", returnOrigin.subjectId);
     }
+    if (returnOrigin.origin === "target-planner") {
+      query.set("planner_step", returnOrigin.step);
+      query.set("planner_goal", returnOrigin.goal);
+      if (returnOrigin.value !== undefined) query.set("planner_value", returnOrigin.value);
+    }
   }
   return `/businesses/${businessId}/monthly?${query.toString()}`;
 }
@@ -102,6 +122,11 @@ function historicalCorrectionPath(
       query.set("insight_rule", returnOrigin.ruleId);
       if (returnOrigin.subjectId) query.set("insight_subject", returnOrigin.subjectId);
     }
+    if (returnOrigin.origin === "target-planner") {
+      query.set("planner_step", returnOrigin.step);
+      query.set("planner_goal", returnOrigin.goal);
+      if (returnOrigin.value !== undefined) query.set("planner_value", returnOrigin.value);
+    }
   }
   return `/businesses/${businessId}/monthly/correction?${query.toString()}`;
 }
@@ -114,6 +139,7 @@ function redirectHistoricalCorrection(
 ): never {
   revalidatePath(`/businesses/${businessId}/monthly`);
   revalidatePath("/insights");
+  revalidatePath("/target-plan");
   redirect(historicalCorrectionPath(businessId, monthKey, returnOrigin));
 }
 
@@ -126,6 +152,7 @@ function redirectMonthly(
 ): never {
   revalidatePath("/businesses");
   revalidatePath("/insights");
+  revalidatePath("/target-plan");
   revalidatePath(`/businesses/${businessId}/monthly`);
   redirect(monthlyPath(businessId, monthKey, status, undefined, returnOrigin));
 }
@@ -274,5 +301,6 @@ export async function copyPreviousMonthExpenses(formData: FormData) {
 
   const copiedCount = Number(result.copied_count ?? 0);
   revalidatePath(`/businesses/${businessId}/monthly`);
+  revalidatePath("/target-plan");
   redirect(monthlyPath(businessId, month.monthKey, "copied", copiedCount, returnOrigin));
 }

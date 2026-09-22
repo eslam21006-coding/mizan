@@ -1,9 +1,18 @@
+import type { TargetGoalType } from "./business/target-engine";
+import type { TargetPlannerStep } from "./target-planner-step";
 export type NavigationDestination =
   | { route: "businesses" }
   | { route: "business-overview"; businessId: string; month?: string }
   | { route: "business-workspace"; businessId: string }
   | { route: "business-funnels"; businessId: string }
   | { route: "insights"; businessId: string; month: string; insightId: string }
+  | {
+      route: "target-planner";
+      businessId: string;
+      step: TargetPlannerStep;
+      goal: TargetGoalType;
+      value?: string;
+    }
   | {
       route: "business-customers";
       businessId: string;
@@ -15,10 +24,13 @@ export type NavigationDestination =
       route: "business-monthly";
       businessId: string;
       month?: string;
-      origin?: "customer-overview" | "customer-profitability" | "insights";
+      origin?: "customer-overview" | "customer-profitability" | "insights" | "target-planner";
       returnMonth?: string;
       insightRuleId?: string;
       insightSubjectId?: string;
+      plannerStep?: TargetPlannerStep;
+      plannerGoal?: TargetGoalType;
+      plannerValue?: string;
     };
 
 export type BreadcrumbItem =
@@ -57,6 +69,15 @@ export function resolveNavigationDestination(destination: NavigationDestination)
       return businessPath(destination.businessId);
     case "business-funnels":
       return `${businessPath(destination.businessId)}/funnels`;
+    case "target-planner": {
+      const searchParams = new URLSearchParams({
+        business: destination.businessId,
+        goal: destination.goal,
+        step: destination.step,
+      });
+      if (destination.value !== undefined) searchParams.set("value", destination.value);
+      return `/target-plan?${searchParams.toString()}`;
+    }
     case "insights": {
       const searchParams = new URLSearchParams({
         business: destination.businessId,
@@ -90,6 +111,13 @@ export function resolveNavigationDestination(destination: NavigationDestination)
       }
       if (destination.origin === "insights" && destination.insightSubjectId) {
         searchParams.set("insight_subject", destination.insightSubjectId);
+      }
+      if (destination.origin === "target-planner" && destination.plannerStep && destination.plannerGoal) {
+        searchParams.set("planner_step", destination.plannerStep);
+        searchParams.set("planner_goal", destination.plannerGoal);
+        if (destination.plannerValue !== undefined) {
+          searchParams.set("planner_value", destination.plannerValue);
+        }
       }
       const query = searchParams.toString();
       return query ? `${pathname}?${query}` : pathname;

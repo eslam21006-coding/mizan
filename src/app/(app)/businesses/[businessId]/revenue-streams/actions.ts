@@ -15,6 +15,7 @@ import {
 } from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+/** Parses and validates the structured Monthly/setup return origin carried by revenue mutations. */
 function parseRevenueSetupReturnOrigin(formData: FormData): SetupReturnOrigin | null {
   const origins = formData.getAll("origin");
   const months = formData.getAll("month");
@@ -22,6 +23,9 @@ function parseRevenueSetupReturnOrigin(formData: FormData): SetupReturnOrigin | 
   const upstreamMonths = formData.getAll("upstream_month");
   const upstreamInsightRules = formData.getAll("upstream_insight_rule");
   const upstreamInsightSubjects = formData.getAll("upstream_insight_subject");
+  const upstreamPlannerSteps = formData.getAll("upstream_planner_step");
+  const upstreamPlannerGoals = formData.getAll("upstream_planner_goal");
+  const upstreamPlannerValues = formData.getAll("upstream_planner_value");
 
   if (
     origins.length !== 1 ||
@@ -29,7 +33,10 @@ function parseRevenueSetupReturnOrigin(formData: FormData): SetupReturnOrigin | 
     upstreamOrigins.length > 1 ||
     upstreamMonths.length > 1 ||
     upstreamInsightRules.length > 1 ||
-    upstreamInsightSubjects.length > 1
+    upstreamInsightSubjects.length > 1 ||
+    upstreamPlannerSteps.length > 1 ||
+    upstreamPlannerGoals.length > 1 ||
+    upstreamPlannerValues.length > 1
   ) {
     return null;
   }
@@ -40,13 +47,19 @@ function parseRevenueSetupReturnOrigin(formData: FormData): SetupReturnOrigin | 
   const upstreamMonth = upstreamMonths[0];
   const upstreamInsightRule = upstreamInsightRules[0];
   const upstreamInsightSubject = upstreamInsightSubjects[0];
+  const upstreamPlannerStep = upstreamPlannerSteps[0];
+  const upstreamPlannerGoal = upstreamPlannerGoals[0];
+  const upstreamPlannerValue = upstreamPlannerValues[0];
   if (
     typeof origin !== "string" ||
     typeof month !== "string" ||
     (upstreamOrigin !== undefined && typeof upstreamOrigin !== "string") ||
     (upstreamMonth !== undefined && typeof upstreamMonth !== "string") ||
     (upstreamInsightRule !== undefined && typeof upstreamInsightRule !== "string") ||
-    (upstreamInsightSubject !== undefined && typeof upstreamInsightSubject !== "string")
+    (upstreamInsightSubject !== undefined && typeof upstreamInsightSubject !== "string") ||
+    (upstreamPlannerStep !== undefined && typeof upstreamPlannerStep !== "string") ||
+    (upstreamPlannerGoal !== undefined && typeof upstreamPlannerGoal !== "string") ||
+    (upstreamPlannerValue !== undefined && typeof upstreamPlannerValue !== "string")
   ) {
     return null;
   }
@@ -58,6 +71,9 @@ function parseRevenueSetupReturnOrigin(formData: FormData): SetupReturnOrigin | 
     upstream_month: upstreamMonth,
     upstream_insight_rule: upstreamInsightRule,
     upstream_insight_subject: upstreamInsightSubject,
+    upstream_planner_step: upstreamPlannerStep,
+    upstream_planner_goal: upstreamPlannerGoal,
+    upstream_planner_value: upstreamPlannerValue,
   });
 }
 
@@ -85,11 +101,19 @@ function revenueStreamsPath(
           query.set("upstream_insight_subject", returnOrigin.upstream.subjectId);
         }
       }
+      if (returnOrigin.upstream.origin === "target-planner") {
+        query.set("upstream_planner_step", returnOrigin.upstream.step);
+        query.set("upstream_planner_goal", returnOrigin.upstream.goal);
+        if (returnOrigin.upstream.value !== undefined) {
+          query.set("upstream_planner_value", returnOrigin.upstream.value);
+        }
+      }
     }
   }
   return `/businesses/${businessId}/revenue-streams?${query.toString()}`;
 }
 
+/** Revalidates every surface affected by a revenue-stream mutation before returning to setup. */
 function redirectToRevenueStreams(
   businessId: string,
   status: string,
@@ -97,6 +121,7 @@ function redirectToRevenueStreams(
 ): never {
   revalidatePath("/businesses");
   revalidatePath("/insights");
+  revalidatePath("/target-plan");
   revalidatePath(`/businesses/${businessId}/revenue-streams`);
   revalidatePath(`/businesses/${businessId}/monthly`);
   redirect(revenueStreamsPath(businessId, status, returnOrigin));

@@ -50,6 +50,7 @@ test("N34 returns successful historical corrections to the exact Monthly month",
     "/businesses/business%20%2F%20one/customers",
     "/businesses/business%20%2F%20one/customers/review",
     "/insights",
+    "/target-plan",
   ]);
   assert.ok(navigation.redirectedTo);
 

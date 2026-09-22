@@ -42,6 +42,9 @@ function upstreamSearchParams(
         if (name === "month") return searchParams.getAll("upstream_month");
         if (name === "insight_rule") return searchParams.getAll("upstream_insight_rule");
         if (name === "insight_subject") return searchParams.getAll("upstream_insight_subject");
+        if (name === "planner_step") return searchParams.getAll("upstream_planner_step");
+        if (name === "planner_goal") return searchParams.getAll("upstream_planner_goal");
+        if (name === "planner_value") return searchParams.getAll("upstream_planner_value");
         return [];
       },
     };
@@ -53,10 +56,13 @@ function upstreamSearchParams(
     month: record.upstream_month,
     insight_rule: record.upstream_insight_rule,
     insight_subject: record.upstream_insight_subject,
+    planner_step: record.upstream_planner_step,
+    planner_goal: record.upstream_planner_goal,
+    planner_value: record.upstream_planner_value,
   };
 }
 
-/** Accepts a Monthly-editor setup detour with an optional validated customer or Insights upstream origin. */
+/** Accepts a Monthly-editor setup detour with an optional validated customer, Insights, or Target Planner upstream origin. */
 export function parseSetupReturnOrigin(
   searchParams: ReturnOriginSearchParams,
 ): SetupReturnOrigin | null {
@@ -67,11 +73,17 @@ export function parseSetupReturnOrigin(
   const hasUpstreamMonth = hasSearchParam(searchParams, "upstream_month");
   const hasUpstreamInsightRule = hasSearchParam(searchParams, "upstream_insight_rule");
   const hasUpstreamInsightSubject = hasSearchParam(searchParams, "upstream_insight_subject");
+  const hasUpstreamPlannerStep = hasSearchParam(searchParams, "upstream_planner_step");
+  const hasUpstreamPlannerGoal = hasSearchParam(searchParams, "upstream_planner_goal");
+  const hasUpstreamPlannerValue = hasSearchParam(searchParams, "upstream_planner_value");
   if (
     !hasUpstreamOrigin &&
     !hasUpstreamMonth &&
     !hasUpstreamInsightRule &&
-    !hasUpstreamInsightSubject
+    !hasUpstreamInsightSubject &&
+    !hasUpstreamPlannerStep &&
+    !hasUpstreamPlannerGoal &&
+    !hasUpstreamPlannerValue
   ) {
     return parsed;
   }
@@ -82,21 +94,45 @@ export function parseSetupReturnOrigin(
     !upstream ||
     (upstream.origin !== "customer-overview" &&
       upstream.origin !== "customer-profitability" &&
-      upstream.origin !== "insights")
+      upstream.origin !== "insights" &&
+      upstream.origin !== "target-planner")
   ) {
     return null;
   }
 
   if (
     upstream.origin === "customer-overview" &&
-    (hasUpstreamMonth || hasUpstreamInsightRule || hasUpstreamInsightSubject)
+    (hasUpstreamMonth ||
+      hasUpstreamInsightRule ||
+      hasUpstreamInsightSubject ||
+      hasUpstreamPlannerStep ||
+      hasUpstreamPlannerGoal ||
+      hasUpstreamPlannerValue)
   ) {
     return null;
   }
 
   if (
     upstream.origin === "customer-profitability" &&
-    (hasUpstreamInsightRule || hasUpstreamInsightSubject)
+    (hasUpstreamInsightRule ||
+      hasUpstreamInsightSubject ||
+      hasUpstreamPlannerStep ||
+      hasUpstreamPlannerGoal ||
+      hasUpstreamPlannerValue)
+  ) {
+    return null;
+  }
+
+  if (
+    upstream.origin === "insights" &&
+    (hasUpstreamPlannerStep || hasUpstreamPlannerGoal || hasUpstreamPlannerValue)
+  ) {
+    return null;
+  }
+
+  if (
+    upstream.origin === "target-planner" &&
+    (hasUpstreamMonth || hasUpstreamInsightRule || hasUpstreamInsightSubject)
   ) {
     return null;
   }

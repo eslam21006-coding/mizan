@@ -24,6 +24,9 @@ type RevenueStreamsPageProps = {
     upstream_month?: string | string[];
     upstream_insight_rule?: string | string[];
     upstream_insight_subject?: string | string[];
+    upstream_planner_step?: string | string[];
+    upstream_planner_goal?: string | string[];
+    upstream_planner_value?: string | string[];
   }>;
 };
 
@@ -83,6 +86,9 @@ export default async function RevenueStreamsPage({
     upstream_month: query.upstream_month,
     upstream_insight_rule: query.upstream_insight_rule,
     upstream_insight_subject: query.upstream_insight_subject,
+    upstream_planner_step: query.upstream_planner_step,
+    upstream_planner_goal: query.upstream_planner_goal,
+    upstream_planner_value: query.upstream_planner_value,
   });
   const statusMessage = query.status ? STATUS_MESSAGES[query.status] : null;
   const isErrorStatus =
@@ -218,6 +224,27 @@ export default async function RevenueStreamsPage({
                                   type="hidden"
                                   name="upstream_insight_subject"
                                   value={returnOrigin.upstream.subjectId}
+                                />
+                              )}
+                            </>
+                          )}
+                          {returnOrigin.upstream?.origin === "target-planner" && (
+                            <>
+                              <input
+                                type="hidden"
+                                name="upstream_planner_step"
+                                value={returnOrigin.upstream.step}
+                              />
+                              <input
+                                type="hidden"
+                                name="upstream_planner_goal"
+                                value={returnOrigin.upstream.goal}
+                              />
+                              {returnOrigin.upstream.value !== undefined && (
+                                <input
+                                  type="hidden"
+                                  name="upstream_planner_value"
+                                  value={returnOrigin.upstream.value}
                                 />
                               )}
                             </>
