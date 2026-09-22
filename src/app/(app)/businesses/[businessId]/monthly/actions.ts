@@ -301,5 +301,6 @@ export async function copyPreviousMonthExpenses(formData: FormData) {
 
   const copiedCount = Number(result.copied_count ?? 0);
   revalidatePath(`/businesses/${businessId}/monthly`);
+  revalidatePath("/target-plan");
   redirect(monthlyPath(businessId, month.monthKey, "copied", copiedCount, returnOrigin));
 }
