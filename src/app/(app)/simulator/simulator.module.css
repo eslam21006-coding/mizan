@@ -85,6 +85,19 @@
   align-self: end;
 }
 
+.selectorPanel button:disabled,
+.selectorPanel input:disabled,
+.selectorPanel select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.selectorNote {
+  color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
 .statusPanel {
   border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--border));
   border-radius: 14px;
@@ -124,6 +137,8 @@
 
 .scenarioStatePanel strong,
 .scenarioStateError strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
   font-size: 0.98rem;
 }
 
