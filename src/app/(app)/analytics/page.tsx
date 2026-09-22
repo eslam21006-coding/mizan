@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
+import { parseAnalyticsView } from "@/lib/analytics-view";
 import { resolvePreviousComparisonMonth } from "@/lib/business/comparison-period";
 import { loadDashboardMonth } from "@/lib/business/dashboard-month";
 import { loadDashboardRange } from "@/lib/business/dashboard-range";
@@ -13,6 +14,7 @@ import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthl
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import dashboardStyles from "../dashboard.module.css";
 import { HistoricalAnalytics } from "../historical-analytics";
+import { AnalyticsViewTabs } from "./analytics-view-tabs";
 import { MonthComparison } from "../month-comparison";
 
 type AnalyticsPageProps = {
@@ -20,6 +22,7 @@ type AnalyticsPageProps = {
     business?: string;
     month?: string;
     period?: string;
+    view?: string;
     start?: string;
     end?: string;
   }>;
@@ -102,6 +105,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
   if (!selectedMonth) throw new Error("Could not resolve a valid analytics month.");
 
   const historicalMode = parseHistoricalPeriodMode(query.period);
+  const activeView = parseAnalyticsView(query.view);
   const customStart = query.start ?? selectedMonth.monthKey;
   const customEnd = query.end ?? selectedMonth.monthKey;
   const historicalResolution = resolveHistoricalPeriod(
@@ -110,6 +114,13 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
     customStart,
     customEnd,
   );
+  const analyticsViewState = {
+    businessId: selectedBusiness.id,
+    month: selectedMonth.monthKey,
+    period: historicalMode,
+    start: customStart,
+    end: customEnd,
+  };
 
   const previousResolution = resolvePreviousComparisonMonth(selectedMonth.monthKey);
   const previousMonth = previousResolution.parsed;
@@ -164,9 +175,12 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         </div>
       </div>
 
-      <section className={dashboardStyles.controls} aria-label="اختيار البزنس وشهر المقارنة">
+      <AnalyticsViewTabs activeView={activeView} state={analyticsViewState} />
+
+      <section className={dashboardStyles.controls} aria-label="اختيار البزنس وشهر التحليلات">
         <form className={dashboardStyles.controlForm}>
           <input type="hidden" name="month" value={selectedMonth.monthKey} />
+          <input type="hidden" name="view" value={activeView} />
           <input type="hidden" name="period" value={historicalMode} />
           <input type="hidden" name="start" value={customStart} />
           <input type="hidden" name="end" value={customEnd} />
@@ -185,6 +199,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
 
         <form className={dashboardStyles.controlForm}>
           <input type="hidden" name="business" value={selectedBusiness.id} />
+          <input type="hidden" name="view" value={activeView} />
           <input type="hidden" name="period" value={historicalMode} />
           <input type="hidden" name="start" value={customStart} />
           <input type="hidden" name="end" value={customEnd} />
@@ -208,14 +223,14 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         </div>
       </section>
 
-      {comparisonHasLoadError && (
+      {activeView === "comparison" && comparisonHasLoadError && (
         <section className={dashboardStyles.errorPanel} role="alert">
           <strong>تعذر حساب المقارنة بأمان</strong>
           <p>أحد الشهرين لم يُحمّل كاملًا أو يحتوي على لقطة تاريخية غير صالحة. لم يتم تخمين أي رقم.</p>
         </section>
       )}
 
-      {!comparisonHasLoadError && !currentLoad.periodExists && (
+      {activeView === "comparison" && !comparisonHasLoadError && !currentLoad.periodExists && (
         <section className={dashboardStyles.emptyState}>
           <span className={dashboardStyles.eyebrow}>الشهر الحالي بلا بيانات</span>
           <h2>لا توجد أرقام محفوظة لـ {currentLabel}</h2>
@@ -229,7 +244,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         </section>
       )}
 
-      {!comparisonHasLoadError && currentLoad.result && !previousMonth && (
+      {activeView === "comparison" && !comparisonHasLoadError && currentLoad.result && !previousMonth && (
         <section className={dashboardStyles.emptyState}>
           <span className={dashboardStyles.eyebrow}>بداية النطاق الزمني المدعوم</span>
           <h2>لا يوجد شهر سابق قابل للمقارنة قبل {currentLabel}</h2>
@@ -237,7 +252,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         </section>
       )}
 
-      {!comparisonHasLoadError && currentLoad.result && previousMonth && !previousLoad.periodExists && (
+      {activeView === "comparison" && !comparisonHasLoadError && currentLoad.result && previousMonth && !previousLoad.periodExists && (
         <section className={dashboardStyles.emptyState}>
           <span className={dashboardStyles.eyebrow}>لا توجد قاعدة مقارنة</span>
           <h2>لا توجد أرقام محفوظة لـ {previousLabel}</h2>
@@ -251,7 +266,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         </section>
       )}
 
-      {!comparisonHasLoadError && currentLoad.result && previousMonth && previousLoad.result && (
+      {activeView === "comparison" && !comparisonHasLoadError && currentLoad.result && previousMonth && previousLoad.result && (
         <MonthComparison
           current={currentLoad.result}
           previous={previousLoad.result}
@@ -261,7 +276,8 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         />
       )}
 
-      <section className={dashboardStyles.sectionCard} aria-label="اختيار فترة التحليل التاريخي">
+      {activeView === "trends" && (
+        <section className={dashboardStyles.sectionCard} aria-label="اختيار فترة التحليل التاريخي">
         <div className={dashboardStyles.sectionHeading}>
           <div>
             <span className={dashboardStyles.eyebrow}>الفترة التاريخية</span>
@@ -272,6 +288,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         <form className={dashboardStyles.controlForm}>
           <input type="hidden" name="business" value={selectedBusiness.id} />
           <input type="hidden" name="month" value={selectedMonth.monthKey} />
+          <input type="hidden" name="view" value={activeView} />
           <label>
             <span>نوع الفترة</span>
             <select name="period" defaultValue={historicalMode} aria-label="نوع الفترة التاريخية">
@@ -305,9 +322,10 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         <p className={dashboardStyles.definitionNote}>
           حقلا البداية والنهاية يُستخدمان فقط عند اختيار «فترة مخصصة». آخر 3 أشهر وYTD يُحسبان تلقائيًا من الشهر المرجعي أعلاه.
         </p>
-      </section>
+        </section>
+      )}
 
-      {!historicalResolution.ok && (
+      {activeView === "trends" && !historicalResolution.ok && (
         <section className={dashboardStyles.emptyState}>
           <span className={dashboardStyles.eyebrow}>الفترة غير قابلة للحساب</span>
           <h2>اختر فترة تاريخية صالحة داخل النطاق المدعوم</h2>
@@ -321,21 +339,22 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         </section>
       )}
 
-      {historicalResolution.ok && historicalLoad?.dataLoadError && (
+      {activeView === "trends" && historicalResolution.ok && historicalLoad?.dataLoadError && (
         <section className={dashboardStyles.errorPanel} role="alert">
           <strong>تعذر تحميل الفترة التاريخية بأمان</strong>
           <p>فشل تحميل جزء من البيانات المحفوظة. لم يتم عرض مجموع جزئي على أنه نتيجة كاملة.</p>
         </section>
       )}
 
-      {historicalResolution.ok && historicalLoad?.calculationError && (
+      {activeView === "trends" && historicalResolution.ok && historicalLoad?.calculationError && (
         <section className={dashboardStyles.errorPanel} role="alert">
           <strong>توجد لقطة شهرية غير صالحة للحساب</strong>
           <p>أوقف ميزان النتيجة المجمعة بدل تجاهل الشهر أو تصحيح بياناته تلقائيًا.</p>
         </section>
       )}
 
-      {historicalResolution.ok &&
+      {activeView === "trends" &&
+        historicalResolution.ok &&
         historicalLoad &&
         !historicalLoad.dataLoadError &&
         !historicalLoad.calculationError &&
@@ -354,7 +373,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
           </section>
         )}
 
-      {historicalResolution.ok && historicalLoad?.aggregate && (
+      {activeView === "trends" && historicalResolution.ok && historicalLoad?.aggregate && (
         <HistoricalAnalytics
           aggregate={historicalLoad.aggregate}
           months={historicalLoad.months}
@@ -363,17 +382,19 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         />
       )}
 
-      <section className={dashboardStyles.sectionCard}>
-        <div className={dashboardStyles.sectionHeading}>
-          <div>
-            <span className={dashboardStyles.eyebrow}>حدود الدقة</span>
+      {activeView === "trends" && (
+        <section className={dashboardStyles.sectionCard}>
+          <div className={dashboardStyles.sectionHeading}>
+            <div>
+              <span className={dashboardStyles.eyebrow}>حدود الدقة</span>
             <h2>لا توجد دقة وهمية عبر الأشهر</h2>
           </div>
         </div>
-        <p className={dashboardStyles.definitionNote}>
-          الهوامش تُعاد من الإجماليات ولا يتم أخذ متوسط الهوامش الشهرية. أما المقاييس التي تحتاج عدد عملاء فريدًا عبر عدة أشهر فتظل محجوبة كقيمة دقيقة إلى أن يتوفر تاريخ معاملات يسمح بإزالة التكرار بين الأشهر. الفترات المخصصة في هذه النسخة تبدأ وتنتهي على حدود شهر كامل فقط.
-        </p>
-      </section>
+          <p className={dashboardStyles.definitionNote}>
+            الهوامش تُعاد من الإجماليات ولا يتم أخذ متوسط الهوامش الشهرية. أما المقاييس التي تحتاج عدد عملاء فريدًا عبر عدة أشهر فتظل محجوبة كقيمة دقيقة إلى أن يتوفر تاريخ معاملات يسمح بإزالة التكرار بين الأشهر. الفترات المخصصة في هذه النسخة تبدأ وتنتهي على حدود شهر كامل فقط.
+          </p>
+        </section>
+      )}
     </div>
   );
 }
