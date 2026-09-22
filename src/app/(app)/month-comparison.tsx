@@ -1,5 +1,6 @@
 import type {
   CalculatedMetric,
+  CoreCalculationInput,
   CoreCalculationResult,
   ExactRatio,
 } from "@/lib/business/calculations";
@@ -9,6 +10,12 @@ import {
   compareRatioMetrics,
   type MetricComparison,
 } from "@/lib/business/comparison";
+import {
+  createCoreMetricAudits,
+  type CoreMetricAuditKey,
+  type MetricAudit,
+} from "@/lib/business/metric-audit";
+import { AnalyticsMetricDrawer } from "./analytics/analytics-metric-drawer";
 import {
   formatArabicExactDecimal,
   formatArabicExactPercent,
@@ -86,8 +93,10 @@ type ComparisonCardProps = {
   comparison: MetricComparison;
   kind: "money" | "count" | "percentage-point";
   currency: string;
+  auditKey: CoreMetricAuditKey;
 };
 
+/** Renders one monthly comparison card with an in-context two-period metric audit drawer. */
 function ComparisonCard({
   label,
   current,
@@ -95,7 +104,16 @@ function ComparisonCard({
   comparison,
   kind,
   currency,
-}: ComparisonCardProps) {
+  currentAudit,
+  previousAudit,
+  currentMonthLabel,
+  previousMonthLabel,
+}: ComparisonCardProps & {
+  currentAudit: MetricAudit;
+  previousAudit: MetricAudit;
+  currentMonthLabel: string;
+  previousMonthLabel: string;
+}) {
   return (
     <article className={comparisonStyles.comparisonCard}>
       <span className={comparisonStyles.comparisonLabel}>{label}</span>
@@ -115,6 +133,13 @@ function ComparisonCard({
       >
         {comparisonText(comparison, kind, currency)}
       </strong>
+      <AnalyticsMetricDrawer
+        currentAudit={currentAudit}
+        previousAudit={previousAudit}
+        currency={currency}
+        currentMonthLabel={currentMonthLabel}
+        previousMonthLabel={previousMonthLabel}
+      />
       {comparison.available &&
         comparison.relativeChange === null &&
         comparison.direction !== "flat" &&
@@ -125,22 +150,30 @@ function ComparisonCard({
   );
 }
 
+/** Renders exact month-over-month metrics and exposes each calculation audit without leaving Analytics. */
 export function MonthComparison({
   current,
   previous,
+  currentInput,
+  previousInput,
   currency,
   currentMonthLabel,
   previousMonthLabel,
 }: {
   current: CoreCalculationResult;
   previous: CoreCalculationResult;
+  currentInput: CoreCalculationInput;
+  previousInput: CoreCalculationInput;
   currency: string;
   currentMonthLabel: string;
   previousMonthLabel: string;
 }) {
+  const currentAudits = createCoreMetricAudits(current, currentInput);
+  const previousAudits = createCoreMetricAudits(previous, previousInput);
   const cards: ComparisonCardProps[] = [
     {
       label: "هامش صافي الربح الحقيقي",
+      auditKey: "realNetProfitMargin",
       current: ratioText(current.realNetProfitMargin, "percent", currency),
       previous: ratioText(previous.realNetProfitMargin, "percent", currency),
       comparison: compareRatioMetrics(current.realNetProfitMargin, previous.realNetProfitMargin),
@@ -149,6 +182,7 @@ export function MonthComparison({
     },
     {
       label: "صافي الربح الحقيقي",
+      auditKey: "realNetProfit",
       current: decimalText(current.realNetProfit, currency),
       previous: decimalText(previous.realNetProfit, currency),
       comparison: compareDecimalMetrics(current.realNetProfit, previous.realNetProfit),
@@ -157,6 +191,7 @@ export function MonthComparison({
     },
     {
       label: "Ultimate CAC",
+      auditKey: "ultimateCac",
       current: ratioText(current.ultimateCac, "money", currency),
       previous: ratioText(previous.ultimateCac, "money", currency),
       comparison: compareRatioMetrics(current.ultimateCac, previous.ultimateCac),
@@ -165,6 +200,7 @@ export function MonthComparison({
     },
     {
       label: "صافي الكاش المحصل",
+      auditKey: "netCashCollected",
       current: decimalText(current.netCashCollected, currency),
       previous: decimalText(previous.netCashCollected, currency),
       comparison: compareDecimalMetrics(current.netCashCollected, previous.netCashCollected),
@@ -173,6 +209,7 @@ export function MonthComparison({
     },
     {
       label: "Acquisition CAC",
+      auditKey: "acquisitionCac",
       current: ratioText(current.acquisitionCac, "money", currency),
       previous: ratioText(previous.acquisitionCac, "money", currency),
       comparison: compareRatioMetrics(current.acquisitionCac, previous.acquisitionCac),
@@ -181,6 +218,7 @@ export function MonthComparison({
     },
     {
       label: "هامش المساهمة",
+      auditKey: "contributionMargin",
       current: ratioText(current.contributionMargin, "percent", currency),
       previous: ratioText(previous.contributionMargin, "percent", currency),
       comparison: compareRatioMetrics(current.contributionMargin, previous.contributionMargin),
@@ -189,6 +227,7 @@ export function MonthComparison({
     },
     {
       label: "ربح المساهمة",
+      auditKey: "contributionProfit",
       current: decimalText(current.contributionProfit, currency),
       previous: decimalText(previous.contributionProfit, currency),
       comparison: compareDecimalMetrics(current.contributionProfit, previous.contributionProfit),
@@ -197,6 +236,7 @@ export function MonthComparison({
     },
     {
       label: "العملاء الجدد",
+      auditKey: "newCustomers",
       current: countText(current.newCustomers),
       previous: countText(previous.newCustomers),
       comparison: compareCountMetrics(current.newCustomers, previous.newCustomers),
@@ -205,6 +245,7 @@ export function MonthComparison({
     },
     {
       label: "إجمالي العملاء الدافعين",
+      auditKey: "totalPayingCustomers",
       current: countText(current.totalPayingCustomers),
       previous: countText(previous.totalPayingCustomers),
       comparison: compareCountMetrics(current.totalPayingCustomers, previous.totalPayingCustomers),
@@ -213,6 +254,7 @@ export function MonthComparison({
     },
     {
       label: "الإيراد لكل عميل دافع",
+      auditKey: "revenuePerPayingCustomer",
       current: ratioText(current.revenuePerPayingCustomer, "money", currency),
       previous: ratioText(previous.revenuePerPayingCustomer, "money", currency),
       comparison: compareRatioMetrics(
@@ -237,7 +279,14 @@ export function MonthComparison({
       </div>
       <div className={comparisonStyles.comparisonGrid}>
         {cards.map((card) => (
-          <ComparisonCard key={card.label} {...card} />
+          <ComparisonCard
+            key={card.label}
+            {...card}
+            currentAudit={currentAudits[card.auditKey]}
+            previousAudit={previousAudits[card.auditKey]}
+            currentMonthLabel={currentMonthLabel}
+            previousMonthLabel={previousMonthLabel}
+          />
         ))}
       </div>
       <p className={dashboardStyles.definitionNote}>
