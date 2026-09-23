@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const fixtureEnabled = process.env.MIZAN_E2E_UI_FIXTURE === "true";
 const fixturePath = "/auth/e2e-empty-state-audit";
 
+/** Collects console and page errors so the N62 fixture fails on browser regressions. */
 function captureBrowserErrors(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
