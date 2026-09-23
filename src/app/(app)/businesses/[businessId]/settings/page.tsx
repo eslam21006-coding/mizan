@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { BackLink, Breadcrumb } from "@/components/navigation-hierarchy";
 import { PageHeading } from "@/components/page-heading";
 import { requireAuthContext } from "@/lib/auth/context";
 import { parseResourceId } from "@/lib/business/revenue-streams";
@@ -39,6 +40,23 @@ export default async function BusinessSettingsPage({ params }: BusinessSettingsP
         baseCurrency={business.base_currency}
         timezone={business.timezone}
         activeTab="settings"
+      />
+
+      <Breadcrumb
+        items={[
+          { label: "البزنسات", destination: { route: "businesses" } },
+          {
+            label: business.name,
+            destination: { route: "business-workspace", businessId },
+          },
+          { label: "الإعدادات", current: true },
+        ]}
+        ariaLabel="مسار إعدادات البزنس"
+      />
+
+      <BackLink
+        label="العودة إلى نظرة عامة"
+        destination={{ route: "business-workspace", businessId }}
       />
 
       <PageHeading
