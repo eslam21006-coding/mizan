@@ -134,6 +134,28 @@
   border: 1px solid var(--brand-strong);
 }
 
+.readOnlyAction {
+  min-height: 40px;
+  display: grid;
+  align-content: center;
+  gap: 1px;
+  padding: 7px 11px;
+  color: var(--text-soft);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.readOnlyAction strong {
+  color: var(--brand-strong);
+  font-size: 11px;
+}
+
+.readOnlyAction small {
+  font-size: 9px;
+  line-height: 1.45;
+}
+
 .secondaryAction {
   color: var(--brand-strong);
   background: var(--surface);
@@ -653,7 +675,8 @@
   .retryButton,
   .primaryAction,
   .secondaryAction,
-  .workflowLink {
+  .workflowLink,
+  .readOnlyAction {
     width: 100%;
   }
 
