@@ -8,7 +8,7 @@ import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 function deleteBusinessPath(businessId: string, status: string) {
-  return `/settings/businesses/${businessId}/delete?status=${status}`;
+  return `/businesses/${encodeURIComponent(businessId)}/settings/delete?status=${encodeURIComponent(status)}`;
 }
 
 export async function deleteBusiness(formData: FormData) {
@@ -17,7 +17,7 @@ export async function deleteBusiness(formData: FormData) {
   const confirmation = formData.get("confirmation");
 
   if (!businessId) {
-    redirect("/settings");
+    redirect("/businesses");
   }
 
   if (!isBusinessDeletionConfirmation(confirmation)) {
