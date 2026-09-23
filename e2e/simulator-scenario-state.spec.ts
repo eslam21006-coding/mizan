@@ -1,5 +1,8 @@
 import { expect, test } from "@playwright/test";
 
+const fixtureEnabled = process.env.MIZAN_E2E_UI_FIXTURE === "true";
+test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
 const BUSINESS_ID = "00000000-0000-4000-8000-000000000056";
 const OTHER_BUSINESS_ID = "00000000-0000-4000-8000-000000000057";
 const SCENARIO_A_ID = "00000000-0000-4000-8000-000000000561";
