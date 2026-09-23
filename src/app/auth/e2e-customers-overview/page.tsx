@@ -36,6 +36,7 @@ export default async function CustomerOverviewE2eFixturePage({
         businessName="بزنس الاختبار"
         baseCurrency="USD"
         timezone="Africa/Cairo"
+        canManage={true}
         activeView={activeView}
         searchParams={customerSearchParams}
         reviewIssueCount={reviewIssueCount}
