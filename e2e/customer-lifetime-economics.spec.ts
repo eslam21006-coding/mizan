@@ -136,7 +136,7 @@ test.describe("Customer profitability UX", () => {
 
     await page.goto("/auth/e2e-lifetime-economics?readOnly=1");
 
-    await expect(page.getByText("لا توجد بيانات كافية لحساب ربحية العملاء حتى الآن")).toBeVisible();
+    await expect(page.getByText("لا توجد مجموعات عملاء مكتسبة لحساب الربحية بعد.")).toBeVisible();
     await expect(page.getByRole("link", { name: "استيراد معاملات" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "العودة إلى نظرة عامة" })).toBeVisible();
     await expect(page.getByRole("link", { name: "مراجعة البيانات الشهرية" })).toBeVisible();
