@@ -4,62 +4,6 @@
   gap: 12px;
 }
 
-
-.adminViewingBanner {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 18px;
-  padding: 14px 16px;
-  border: 1px solid color-mix(in srgb, #b7791f 34%, var(--border));
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, #b7791f 8%, var(--surface));
-}
-
-.adminViewingBanner > div {
-  min-width: 0;
-  display: grid;
-  gap: 4px;
-}
-
-.adminViewingBanner span {
-  color: #8a5a13;
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.adminViewingBanner strong {
-  font-size: 14px;
-}
-
-.adminViewingBanner p {
-  margin: 0;
-  color: var(--text-soft);
-  font-size: 12px;
-  line-height: 1.7;
-}
-
-.adminViewingBanner a {
-  flex: 0 0 auto;
-  min-height: 40px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0 14px;
-  border: 1px solid color-mix(in srgb, #b7791f 28%, var(--border));
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.adminViewingBanner a:focus-visible {
-  outline: 3px solid var(--brand-ring);
-  outline-offset: 2px;
-}
-
 .tabs {
   min-width: 0;
   display: grid;
@@ -109,15 +53,6 @@
 }
 
 @media (max-width: 520px) {
-  .adminViewingBanner {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .adminViewingBanner a {
-    width: 100%;
-  }
-
   .tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
