@@ -72,7 +72,7 @@ test("direct table deletion remains guarded so only the confirmed workflow can e
 
 test("settings exposes deletion as a separate danger-zone workflow with irreversible wording", () => {
   assert.match(businessSettingsViewSource, /منطقة خطرة/);
-  assert.match(businessSettingsViewSource, /route: "business-settings-delete"/);
+  assert.match(businessSettingsViewSource, /route: "business-delete"/);
   assert.match(deletePageSource, /«حذف» أو «Delete»/);
   assert.match(deletePageSource, /سيتم حذف كل بيانات البزنس/);
 });
