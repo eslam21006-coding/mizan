@@ -29,7 +29,12 @@ export default async function LifetimeEconomicsE2eFixturePage({
     <main className="page-stack">
       <h1>اختبار اقتصاديات العملاء</h1>
       <LifetimeRevenueStreamTable businessId={FIXTURE_BUSINESS_ID} baseCurrency="EGP" />
-      <LifetimeContributionTable businessId={FIXTURE_BUSINESS_ID} baseCurrency="EGP" returnMonth={returnMonth} />
+      <LifetimeContributionTable
+        businessId={FIXTURE_BUSINESS_ID}
+        baseCurrency="EGP"
+        canManage
+        returnMonth={returnMonth}
+      />
     </main>
   );
 }
