@@ -13,7 +13,7 @@ export default function CustomerCohortUxE2eFixturePage() {
   return (
     <main className="page-stack">
       <Suspense fallback={<div role="status">جاري تحميل مجموعات العملاء…</div>}>
-        <CustomerCohortLtvTable businessId={FIXTURE_BUSINESS_ID} baseCurrency="USD" />
+        <CustomerCohortLtvTable businessId={FIXTURE_BUSINESS_ID} baseCurrency="USD" canManage />
       </Suspense>
     </main>
   );
