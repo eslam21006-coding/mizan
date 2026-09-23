@@ -98,8 +98,15 @@ export function DecisionInsightsPanel({
         <div className={styles.fallback} role="status">
           <strong>{fallbackMessageAr ?? "لا توجد ملاحظة حاسمة من القواعد الحالية"}</strong>
           <p>
-            ميزان لا يحول البيانات المفقودة إلى صفر ولا يخترع تفسيرًا عند غياب الأدلة اللازمة.
+            هذا قد يكون طبيعيًا إذا لم ترَ القواعد الحالية مشكلة حاسمة، أو قد يعني أن الأدلة غير
+            كافية. ميزان لا يحول البيانات المفقودة إلى صفر ولا يخترع تفسيرًا.
           </p>
+          <Link
+            className={styles.fallbackAction}
+            href={`/analytics?business=${encodeURIComponent(businessId)}&month=${encodeURIComponent(currentMonthKey)}`}
+          >
+            مراجعة التحليلات
+          </Link>
         </div>
       )}
 
