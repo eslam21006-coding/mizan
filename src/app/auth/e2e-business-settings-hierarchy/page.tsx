@@ -5,6 +5,10 @@ import { AppShell } from "@/components/app-shell";
 
 const BUSINESS_ID = "123e4567-e89b-42d3-a456-426614174000";
 const SECOND_BUSINESS_ID = "123e4567-e89b-42d3-a456-426614174001";
+const fixtureShellProps = {
+  role: "admin" as const,
+  email: "admin.fixture@example.test",
+};
 
 type BusinessSettingsHierarchyFixtureProps = {
   searchParams: Promise<{ view?: string }>;
@@ -25,7 +29,7 @@ export default async function BusinessSettingsHierarchyFixture({
   };
 
   return (
-    <AppShell role="admin" email="admin.fixture@example.test">
+    <AppShell {...fixtureShellProps}>
       {query.view === "business" || query.view === "readonly" ? (
         <BusinessSettingsView business={business} canDelete={query.view !== "readonly"} />
       ) : (
