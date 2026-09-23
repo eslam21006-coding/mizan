@@ -41,9 +41,11 @@ test("business deletion requires exactly the Arabic or English confirmation word
 });
 
 test("business deletion is owner/admin gated in UI, server action, and database RPC", () => {
+  assert.match(businessSettingsSource, /ownerUserId: business\.owner_user_id/);
+  assert.match(businessSettingsSource, /viewer=\{\{ userId: auth\.userId, role: auth\.role \}\}/);
   assert.match(
-    businessSettingsSource,
-    /auth\.role === "admin" \|\| business\.owner_user_id === auth\.userId/,
+    businessSettingsViewSource,
+    /viewer\.role === "admin" \|\| business\.ownerUserId === viewer\.userId/,
   );
   assert.match(actionsSource, /auth\.role === "admin" \|\| business\.owner_user_id === auth\.userId/);
   assert.match(actionsSource, /redirect\("\/access-denied"\)/);

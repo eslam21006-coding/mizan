@@ -100,8 +100,15 @@ test.describe("N59 Business Settings hierarchy", () => {
     expect(errors).toEqual([]);
   });
 
-  test("hides destructive settings when the viewer cannot delete the business", async ({ page }) => {
+  test("hides destructive settings for a non-owner mentee through the production permission gate", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
     await page.goto(`${fixturePath}?view=readonly`);
+
+    await expect(page.getByRole("heading", { name: "إعدادات البزنس" })).toBeVisible();
     await expect(page.getByRole("link", { name: "حذف البزنس" })).toHaveCount(0);
+
+    expect(errors).toEqual([]);
   });
 });

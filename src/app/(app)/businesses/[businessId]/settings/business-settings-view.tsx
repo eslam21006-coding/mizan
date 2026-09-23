@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BackLink, Breadcrumb } from "@/components/navigation-hierarchy";
 import { PageHeading } from "@/components/page-heading";
+import type { MizanRole } from "@/lib/auth/role";
 import { resolveNavigationDestination } from "@/lib/navigation-hierarchy";
 import { BusinessWorkspaceShell } from "../business-workspace-shell";
 import styles from "../workspace-page.module.css";
@@ -13,10 +14,34 @@ export type BusinessSettingsIdentity = {
   timezone: string;
 };
 
+export type BusinessSettingsRecord = BusinessSettingsIdentity & {
+  ownerUserId: string | null;
+};
+
+export type BusinessSettingsViewer = {
+  userId: string;
+  role: MizanRole;
+};
+
+type BusinessSettingsPageContentProps = {
+  business: BusinessSettingsRecord;
+  viewer: BusinessSettingsViewer;
+};
+
 type BusinessSettingsViewProps = {
   business: BusinessSettingsIdentity;
   canDelete: boolean;
 };
+
+/** Derives the canonical Business Settings permission gate from the authenticated viewer and owner. */
+export function BusinessSettingsPageContent({
+  business,
+  viewer,
+}: BusinessSettingsPageContentProps) {
+  const canDelete = viewer.role === "admin" || business.ownerUserId === viewer.userId;
+
+  return <BusinessSettingsView business={business} canDelete={canDelete} />;
+}
 
 /** Renders the authoritative Business Settings hierarchy independently from data loading. */
 export function BusinessSettingsView({ business, canDelete }: BusinessSettingsViewProps) {

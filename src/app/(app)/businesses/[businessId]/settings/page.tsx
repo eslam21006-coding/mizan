@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireAuthContext } from "@/lib/auth/context";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { BusinessSettingsView } from "./business-settings-view";
+import { BusinessSettingsPageContent } from "./business-settings-view";
 
 type BusinessSettingsPageProps = {
   params: Promise<{ businessId: string }>;
@@ -25,14 +25,15 @@ export default async function BusinessSettingsPage({ params }: BusinessSettingsP
   if (error || !business) notFound();
 
   return (
-    <BusinessSettingsView
+    <BusinessSettingsPageContent
       business={{
         id: business.id,
         name: business.name,
         baseCurrency: business.base_currency,
         timezone: business.timezone,
+        ownerUserId: business.owner_user_id,
       }}
-      canDelete={auth.role === "admin" || business.owner_user_id === auth.userId}
+      viewer={{ userId: auth.userId, role: auth.role }}
     />
   );
 }
