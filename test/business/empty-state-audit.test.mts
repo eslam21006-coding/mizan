@@ -45,11 +45,16 @@ test("N62 keeps every major empty-state surface connected to a meaningful next a
 
   assert.match(customers, /استيراد معاملات/);
   assert.match(customers, /مسح البحث والفلاتر/);
+  assert.match(cohorts, /canManage \?/);
   assert.match(cohorts, /استيراد معاملات/);
+  assert.match(cohorts, /العودة إلى نظرة عامة/);
+  assert.match(profitability, /canManage \?/);
   assert.match(profitability, /استيراد معاملات/);
+  assert.match(profitability, /العودة إلى نظرة عامة/);
   assert.match(profitability, /مراجعة البيانات الشهرية/);
 
-  assert.match(simulator, /فتح أرقام الفانلز/);
+  assert.match(simulator, /canManage \? "فتح أرقام الفانلز" : "مراجعة أرقام الفانلز"/);
+  assert.match(simulator, /canManage \? "إكمال أرقام الفانلز" : "مراجعة أرقام الفانلز"/);
   assert.match(targetPlanner, /تحديد الهدف/);
   assert.match(insights, /مراجعة التحليلات/);
   assert.match(analytics, /عرض الاتجاهات التاريخية/);
@@ -74,4 +79,12 @@ test("N62 keeps the browser-only empty-state fixture request-time gated", () => 
   assert.match(fixture, /export default async function EmptyStateAuditFixture/);
   assert.match(fixture, /await connection\(\)/);
   assert.match(fixture, /process\.env\.MIZAN_E2E_UI_FIXTURE/);
+});
+
+
+test("N62 hides mutation-oriented empty-state actions from read-only customer viewers", () => {
+  const customerPage = source("src/app/(app)/businesses/[businessId]/customers/page.tsx");
+  assert.match(customerPage, /requireAuthContext/);
+  assert.match(customerPage, /owner_user_id/);
+  assert.match(customerPage, /canManage=\{canManage\}/);
 });
