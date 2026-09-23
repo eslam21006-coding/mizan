@@ -1,6 +1,8 @@
 import type { TargetGoalType } from "./business/target-engine";
 import type { TargetPlannerStep } from "./target-planner-step";
 export type NavigationDestination =
+  | { route: "admin-mentees" }
+  | { route: "admin-mentee"; menteeUserId: string }
   | { route: "businesses" }
   | { route: "business-overview"; businessId: string; month?: string }
   | { route: "business-workspace"; businessId: string }
@@ -58,6 +60,10 @@ function businessPath(businessId: string) {
 /** Resolves a known navigation destination to its canonical application URL. */
 export function resolveNavigationDestination(destination: NavigationDestination) {
   switch (destination.route) {
+    case "admin-mentees":
+      return "/admin/mentees";
+    case "admin-mentee":
+      return `/admin/mentees/${encodeURIComponent(destination.menteeUserId)}`;
     case "businesses":
       return "/businesses";
     case "business-overview": {
