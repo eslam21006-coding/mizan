@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
 import { requireAuthContext } from "@/lib/auth/context";
@@ -125,7 +126,23 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
         ) : (
           <div className={styles.emptyState}>
             <strong>لا توجد فانلز بعد</strong>
-            <p>هذا طبيعي. الفانلز اختيارية، ولا يحتاج البزنس إلى فانل حتى يعمل حساب ميزان الأساسي.</p>
+            <p>
+              هذا طبيعي. الفانلز اختيارية، ولا يحتاج البزنس إلى فانل حتى يعمل حساب ميزان الأساسي.
+              أضف فانل فقط إذا أردت تتبع رحلة اكتساب مستقلة وأرقامها الشهرية.
+            </p>
+            <div className={styles.emptyActions}>
+              {canManage ? (
+                <FunnelCreateDrawerLauncher
+                  businessId={businessId}
+                  typeOptions={FUNNEL_TYPE_OPTIONS}
+                  creationRequestId={randomUUID()}
+                />
+              ) : (
+                <Link className={styles.emptyLink} href={`/businesses/${businessId}`}>
+                  العودة إلى نظرة عامة
+                </Link>
+              )}
+            </div>
           </div>
         )}
       </section>
