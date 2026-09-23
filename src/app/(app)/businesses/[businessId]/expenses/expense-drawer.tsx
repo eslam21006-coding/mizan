@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef } from "react";
+import { StableSubmitButton } from "@/components/stable-submit-button";
 import type { SetupReturnOrigin } from "@/lib/setup-return-origin";
 import { createExpenseItem, updateExpenseItem } from "./actions";
 import styles from "./expense-drawer.module.css";
@@ -221,9 +222,12 @@ export function ExpenseDrawerLauncher({
               ) : null}
 
               <div className={styles.footer}>
-                <button type="submit" className={styles.submitButton}>
+                <StableSubmitButton
+                  className={styles.submitButton}
+                  pendingLabel={isCreate ? "جارٍ إضافة المصروف…" : "جارٍ حفظ التعديلات…"}
+                >
                   {submitLabel}
-                </button>
+                </StableSubmitButton>
                 <button
                   type="button"
                   className={styles.cancelButton}
