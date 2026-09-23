@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { ExactRatio } from "@/lib/business/calculations";
 import { compareCurrentToScenario } from "@/lib/business/scenario-comparison";
@@ -301,8 +302,17 @@ export function SimulatorWorkspace({
 
         {!funnelAvailable && (
           <div className={styles.notice} role="status">
-            بيانات الفانل لهذا الشهر غير مكتملة بما يكفي للتنبؤ بعدد عملاء جديد. لذلك يظل عدد
-            العملاء الفعلي ثابتًا، وتُعطّل إعدادات CPL ونسب الفانل بدل تخمين قيم غير موجودة.
+            <strong>مقارنة أحجام الفانل غير متاحة بعد</strong>
+            <span>
+              يمكنك الاستمرار في محاكاة القيم المالية. بيانات الفانل لهذا الشهر فقط غير مكتملة بما
+              يكفي للتنبؤ بعدد عملاء جديد، لذلك يظل العدد الفعلي ثابتًا وتُعطّل إعدادات CPL والنسب.
+            </span>
+            <Link
+              className={styles.noticeAction}
+              href={`/businesses/${businessId}/funnels/monthly?month=${month}`}
+            >
+              فتح أرقام الفانلز
+            </Link>
           </div>
         )}
 
@@ -587,8 +597,17 @@ export function SimulatorWorkspace({
               </div>
             ) : (
               <div className={styles.notice}>
-                لا توجد بيانات فعلية مكتملة بما يكفي لعرض مقارنة أحجام الفانل. لم يتم اختراع نسب
-                بديلة.
+                <strong>لا توجد مقارنة تشغيلية للفانل بعد</strong>
+                <span>
+                  البيانات الفعلية غير مكتملة بما يكفي لعرض الأحجام؛ هذا لا يمنع المقارنة المالية
+                  أعلاه، وميزان لن يخترع نسبًا بديلة.
+                </span>
+                <Link
+                  className={styles.noticeAction}
+                  href={`/businesses/${businessId}/funnels/monthly?month=${month}`}
+                >
+                  إكمال أرقام الفانلز
+                </Link>
               </div>
             )}
           </section>
