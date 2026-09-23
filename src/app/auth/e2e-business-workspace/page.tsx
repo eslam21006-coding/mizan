@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
-import { AppShell } from "@/components/app-shell";
 import { BusinessWorkspaceShell } from "@/app/(app)/businesses/[businessId]/business-workspace-shell";
+import { AdminBusinessViewingBanner } from "@/components/admin-business-viewing-banner";
+import { AppShell } from "@/components/app-shell";
 
 export const dynamic = "force-dynamic";
 
@@ -28,13 +29,15 @@ export default async function BusinessWorkspaceFixturePage({
   return (
     <AppShell {...fixtureShellProps}>
       <section className="page-stack" aria-label="اختبار مساحة عمل البزنس">
+        {adminViewingMenteeUserId && (
+          <AdminBusinessViewingBanner menteeUserId={adminViewingMenteeUserId} />
+        )}
         <BusinessWorkspaceShell
           businessId="123e4567-e89b-42d3-a456-426614174000"
           businessName="أكاديمية ميزان"
           baseCurrency="USD"
           timezone="Africa/Cairo"
           activeTab="expenses"
-          adminViewingMenteeUserId={adminViewingMenteeUserId}
         />
       </section>
     </AppShell>
