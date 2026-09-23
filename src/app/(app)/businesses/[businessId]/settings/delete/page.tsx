@@ -2,7 +2,6 @@ import { notFound, redirect } from "next/navigation";
 import { BackLink, Breadcrumb } from "@/components/navigation-hierarchy";
 import { requireAuthContext } from "@/lib/auth/context";
 import { parseResourceId } from "@/lib/business/revenue-streams";
-import { resolveNavigationDestination } from "@/lib/navigation-hierarchy";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { BusinessWorkspaceShell } from "../../business-workspace-shell";
 import { BusinessDeleteForm } from "@/app/(app)/settings/businesses/[businessId]/delete/business-delete-form";
