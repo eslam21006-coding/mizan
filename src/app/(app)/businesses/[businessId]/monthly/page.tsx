@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
+import { ReadOnlyNotice } from "@/components/read-only-notice";
 import { StableSubmitButton } from "@/components/stable-submit-button";
 import { requireAuthContext } from "@/lib/auth/context";
 import { loadTransactionDerivedMonthlyCustomerCounts } from "@/lib/business/monthly-customer-counts";
@@ -482,9 +483,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
       )}
 
       {!canManage && !dataLoadError && (
-        <div className={styles.readOnlyNotice}>
-          صلاحيتك في هذا البزنس للعرض فقط. يمكنك مراجعة الأرقام الشهرية بدون تعديلها.
-        </div>
+        <ReadOnlyNotice description="يمكنك مراجعة الأرقام الشهرية، لكن تعديل الشهر ونسخ المصروفات متاحان لمالك البزنس أو الأدمن." />
       )}
 
       {!dataLoadError && canManage && (
