@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
+import { requireAuthContext } from "@/lib/auth/context";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { LifetimeContributionTable } from "../lifetime-contribution-table";
@@ -14,13 +15,15 @@ export default async function LifetimeContributionPage({ params }: Props) {
   const businessId = parseResourceId(rawBusinessId);
   if (!businessId) notFound();
 
+  const auth = await requireAuthContext();
   const supabase = await createSupabaseServerClient();
   const { data: business, error } = await supabase
     .from("businesses")
-    .select("id,name,base_currency")
+    .select("id,name,base_currency,owner_user_id")
     .eq("id", businessId)
     .maybeSingle();
   if (error || !business) notFound();
+  const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
 
   return (
     <div className="page-stack">
@@ -33,7 +36,11 @@ export default async function LifetimeContributionPage({ params }: Props) {
           العودة إلى العملاء وقيمة العميل
         </Link>
       </div>
-      <LifetimeContributionTable businessId={business.id} baseCurrency={business.base_currency} />
+      <LifetimeContributionTable
+        businessId={business.id}
+        baseCurrency={business.base_currency}
+        canManage={canManage}
+      />
     </div>
   );
 }

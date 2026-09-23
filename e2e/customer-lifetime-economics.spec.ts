@@ -126,6 +126,22 @@ async function installLifetimeEconomicsMocks(page: Page) {
 }
 
 test.describe("Customer profitability UX", () => {
+  test("read-only empty state never offers transaction import", async ({ page }) => {
+    await page.route("**/rest/v1/customer_lifetime_revenue_stream_analysis**", (route) =>
+      fulfillSupabaseJson(route, []),
+    );
+    await page.route("**/rest/v1/customer_lifetime_contribution_profit_display**", (route) =>
+      fulfillSupabaseJson(route, []),
+    );
+
+    await page.goto("/auth/e2e-lifetime-economics?readOnly=1");
+
+    await expect(page.getByText("لا توجد مجموعات عملاء مكتسبة لحساب الربحية بعد.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "استيراد معاملات" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "العودة إلى نظرة عامة" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "مراجعة البيانات الشهرية" })).toBeVisible();
+  });
+
   test("shows automatic profitability states and calculation details without manual monthly allocation", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {

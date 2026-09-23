@@ -238,8 +238,49 @@
 }
 
 .notice {
+  display: grid;
+  gap: 6px;
   background: color-mix(in srgb, #b7791f 9%, var(--surface));
   border: 1px solid color-mix(in srgb, #b7791f 28%, var(--border));
+}
+
+.noticeCopy {
+  display: grid;
+  gap: 4px;
+}
+
+.notice strong {
+  color: var(--text);
+}
+
+.notice span {
+  color: var(--muted);
+}
+
+.noticeAction {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  padding: 7px 11px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.noticeAction:hover {
+  border-color: var(--primary);
+}
+
+.noticeAction:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  outline-offset: 2px;
 }
 
 .errorPanel {

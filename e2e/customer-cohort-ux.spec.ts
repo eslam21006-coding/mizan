@@ -85,7 +85,31 @@ async function fulfillCohorts(route: Route) {
   });
 }
 
+/** Serves an empty cohort response so read-only empty-state actions can be verified in the browser. */
+async function fulfillEmptyCohorts(route: Route) {
+  if (route.request().method() === "OPTIONS") {
+    await route.fulfill({ status: 204, headers: corsHeaders, body: "" });
+    return;
+  }
+
+  await route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    headers: { ...corsHeaders, "Content-Range": "*/0" },
+    body: "[]",
+  });
+}
+
 test.describe("Customer first-purchase-group UX", () => {
+  test("read-only empty state never offers transaction import", async ({ page }) => {
+    await page.route("**/rest/v1/customer_observed_ltv**", fulfillEmptyCohorts);
+    await page.goto("/auth/e2e-customer-cohort-ux?readOnly=1");
+
+    await expect(page.getByText("لا توجد مجموعات عملاء حسب شهر أول شراء بعد.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "استيراد معاملات" })).toHaveCount(0);
+    await expect(page.getByRole("link", { name: "العودة إلى نظرة عامة" })).toBeVisible();
+  });
+
   test("shows cumulative customer value in four clear columns without redundant month-age labels", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {

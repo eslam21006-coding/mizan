@@ -291,6 +291,32 @@
   font-size: 1.05rem;
 }
 
+.fallbackAction {
+  min-height: 40px;
+  width: fit-content;
+  max-width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 12px;
+  padding: 8px 12px;
+  color: var(--brand-strong);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.fallbackAction:hover {
+  border-color: var(--brand);
+}
+
+.fallbackAction:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
 .fallback p,
 .errorPanel p,
 .emptyState p {

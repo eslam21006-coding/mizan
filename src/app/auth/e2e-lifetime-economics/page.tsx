@@ -6,7 +6,7 @@ import { parseReturnOrigin } from "@/lib/return-origin";
 const FIXTURE_BUSINESS_ID = "00000000-0000-4000-8000-000000000025";
 
 type LifetimeEconomicsE2eFixturePageProps = {
-  searchParams: Promise<{ month?: string | string[] }>;
+  searchParams: Promise<{ month?: string | string[]; readOnly?: string | string[] }>;
 };
 
 /** Renders isolated lifetime economics with an optional validated profitability return month. */
@@ -18,6 +18,7 @@ export default async function LifetimeEconomicsE2eFixturePage({
   }
 
   const query = await searchParams;
+  const canManage = query.readOnly !== "1";
   const parsedOrigin = parseReturnOrigin({
     origin: "customer-profitability",
     month: query.month,
@@ -29,7 +30,12 @@ export default async function LifetimeEconomicsE2eFixturePage({
     <main className="page-stack">
       <h1>اختبار اقتصاديات العملاء</h1>
       <LifetimeRevenueStreamTable businessId={FIXTURE_BUSINESS_ID} baseCurrency="EGP" />
-      <LifetimeContributionTable businessId={FIXTURE_BUSINESS_ID} baseCurrency="EGP" returnMonth={returnMonth} />
+      <LifetimeContributionTable
+        businessId={FIXTURE_BUSINESS_ID}
+        baseCurrency="EGP"
+        canManage={canManage}
+        returnMonth={returnMonth}
+      />
     </main>
   );
 }

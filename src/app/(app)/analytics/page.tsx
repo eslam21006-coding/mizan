@@ -259,7 +259,16 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
         <section className={dashboardStyles.emptyState}>
           <span className={dashboardStyles.eyebrow}>بداية النطاق الزمني المدعوم</span>
           <h2>لا يوجد شهر سابق قابل للمقارنة قبل {currentLabel}</h2>
-          <p>{previousLabel} يقع قبل أول شهر يدعمه ميزان. لن نعتبره صفرًا ولن ننشئ مقارنة وهمية.</p>
+          <p>
+            {previousLabel} يقع قبل أول شهر يدعمه ميزان. هذا حد طبيعي للنطاق الزمني، لذلك لن نعتبره
+            صفرًا ولن ننشئ مقارنة وهمية.
+          </p>
+          <Link
+            className={dashboardStyles.primaryAction}
+            href={`/analytics?business=${encodeURIComponent(selectedBusiness.id)}&month=${encodeURIComponent(selectedMonth.monthKey)}&view=trends&period=ytd`}
+          >
+            عرض الاتجاهات التاريخية
+          </Link>
         </section>
       )}
 

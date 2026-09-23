@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatCountText, formatMoneyText } from "@/lib/financial-display";
@@ -25,6 +26,7 @@ type CustomerObservedLtv = {
 type CustomerCohortLtvTableProps = {
   businessId: string;
   baseCurrency: string;
+  canManage: boolean;
 };
 
 type NavigationMode = "push" | "replace";
@@ -67,7 +69,11 @@ function parseCohortPage(values: string[]) {
 }
 
 /** Shows one year of first-purchase customer groups per page with cumulative realized customer value. */
-export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCohortLtvTableProps) {
+export function CustomerCohortLtvTable({
+  businessId,
+  baseCurrency,
+  canManage,
+}: CustomerCohortLtvTableProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -174,7 +180,18 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
     return (
       <section className={styles.compactEmptyPanel} dir="rtl">
         <strong>لا توجد مجموعات عملاء حسب شهر أول شراء بعد.</strong>
-        <span>ستظهر هنا بعد وجود أول تحصيل ناجح لعميل واحد على الأقل.</span>
+        <span>
+          هذا متوقع قبل استيراد أول تحصيل ناجح؛ ميزان لا ينشئ Cohort أو قيمة عميل من دون معاملات فعلية.
+        </span>
+        {canManage ? (
+          <Link className={styles.emptyAction} href={`/businesses/${businessId}/customers/import`}>
+            استيراد معاملات
+          </Link>
+        ) : (
+          <Link className={styles.emptyAction} href={`/businesses/${businessId}`}>
+            العودة إلى نظرة عامة
+          </Link>
+        )}
       </section>
     );
   }
