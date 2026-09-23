@@ -363,7 +363,11 @@ export function CustomerGroupsTable({
 
       {rows.length === 0 ? (
         <div className={uxStyles.noFilterResults} role="status">
-          لا توجد نتائج مطابقة للبحث أو الفلتر الحالي.
+          <strong>لا توجد نتائج مطابقة للبحث أو الفلتر الحالي</strong>
+          <span>هذا لا يعني أن سجل العملاء فارغ؛ القيود الحالية فقط لم تُرجع أي عميل.</span>
+          <button type="button" onClick={clearControls}>
+            مسح البحث والفلاتر
+          </button>
         </div>
       ) : (
         <div className={styles.tableShell}>
