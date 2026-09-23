@@ -301,12 +301,14 @@ export function SimulatorWorkspace({
         </div>
 
         {!funnelAvailable && (
-          <div className={styles.notice} role="status">
-            <strong>مقارنة أحجام الفانل غير متاحة بعد</strong>
-            <span>
-              يمكنك الاستمرار في محاكاة القيم المالية. بيانات الفانل لهذا الشهر فقط غير مكتملة بما
-              يكفي للتنبؤ بعدد عملاء جديد، لذلك يظل العدد الفعلي ثابتًا وتُعطّل إعدادات CPL والنسب.
-            </span>
+          <div className={styles.notice}>
+            <div className={styles.noticeCopy} role="status">
+              <strong>مقارنة أحجام الفانل غير متاحة بعد</strong>
+              <span>
+                يمكنك الاستمرار في محاكاة القيم المالية. بيانات الفانل لهذا الشهر فقط غير مكتملة بما
+                يكفي للتنبؤ بعدد عملاء جديد، لذلك يظل العدد الفعلي ثابتًا وتُعطّل إعدادات CPL والنسب.
+              </span>
+            </div>
             <Link
               className={styles.noticeAction}
               href={`/businesses/${businessId}/funnels/monthly?month=${month}`}
