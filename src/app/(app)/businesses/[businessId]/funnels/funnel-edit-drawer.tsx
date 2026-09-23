@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef } from "react";
+import { StableSubmitButton } from "@/components/stable-submit-button";
 import { updateFunnel } from "./actions";
 import styles from "./funnel-create-drawer.module.css";
 
@@ -121,9 +122,9 @@ export function FunnelEditDrawerLauncher({
               </label>
 
               <div className={styles.footer}>
-                <button type="submit" className={styles.submitButton}>
+                <StableSubmitButton className={styles.submitButton} pendingLabel="جارٍ حفظ التعديلات…">
                   حفظ التعديلات
-                </button>
+                </StableSubmitButton>
                 <button
                   type="button"
                   className={styles.cancelButton}
