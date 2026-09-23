@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeader } from "@/components/page-header";
+import { ReadOnlyNotice } from "@/components/read-only-notice";
 import { requireAuthContext } from "@/lib/auth/context";
 import {
   FUNNEL_TYPE_OPTIONS,
@@ -89,10 +90,7 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
       )}
 
       {!canManage && (
-        <section className={styles.readOnlyNotice}>
-          <strong>عرض فقط</strong>
-          <p>يمكنك مشاهدة فانلز هذا البزنس، لكن التعديل متاح للمالك أو الأدمن فقط.</p>
-        </section>
+        <ReadOnlyNotice description="يمكنك مراجعة فانلز هذا البزنس، لكن الإضافة والتعديل متاحة لمالك البزنس أو الأدمن." />
       )}
 
       <section className={styles.explainer}>
@@ -114,7 +112,7 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
         <div className={styles.panelHeading}>
           <div>
             <span className={styles.kicker}>الفانلز الحالية</span>
-            <h2>إدارة الفانلز</h2>
+            <h2>{canManage ? "إدارة الفانلز" : "عرض الفانلز"}</h2>
           </div>
           <span className={styles.count}>{funnels?.length ?? 0}</span>
         </div>

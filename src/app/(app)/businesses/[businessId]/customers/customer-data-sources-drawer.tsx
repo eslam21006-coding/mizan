@@ -7,13 +7,18 @@ import styles from "./customer-data-sources-drawer.module.css";
 type CustomerDataSourcesDrawerProps = {
   businessId: string;
   importHref: string;
+  canManage: boolean;
 };
 
 const DRAWER_ID = "customer-data-sources-drawer";
 const DRAWER_TITLE_ID = "customer-data-sources-title";
 
 /** Keeps Customer data-source guidance in context instead of expanding the page inline. */
-export function CustomerDataSourcesDrawer({ businessId, importHref }: CustomerDataSourcesDrawerProps) {
+export function CustomerDataSourcesDrawer({
+  businessId,
+  importHref,
+  canManage,
+}: CustomerDataSourcesDrawerProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   /** Opens the Data Sources dialog as a modal drawer with native focus management. */
@@ -72,9 +77,13 @@ export function CustomerDataSourcesDrawer({ businessId, importHref }: CustomerDa
               </div>
               <h3>استيراد التحصيلات والاسترجاعات</h3>
               <p>سجل بوابة الدفع هو المصدر الأساسي لأول شراء وصافي التحصيل وقيمة العميل المحققة.</p>
-              <Link className={styles.workflowLink} href={importHref}>
-                فتح الاستيراد
-              </Link>
+              {canManage ? (
+                <Link className={styles.workflowLink} href={importHref}>
+                  فتح الاستيراد
+                </Link>
+              ) : (
+                <span className={styles.workflowReadOnly}>عرض فقط</span>
+              )}
             </article>
 
             <article className={styles.workflowCard}>
@@ -85,7 +94,7 @@ export function CustomerDataSourcesDrawer({ businessId, importHref }: CustomerDa
               <h3>سجل المصروفات مرة واحدة</h3>
               <p>ميزان يستخدم تصنيف وسلوك المصروفات الشهرية ليحدد ما يدخل في ربحية العميل وما يبقى في Real Net Profit.</p>
               <Link className={styles.workflowLink} href={`/businesses/${businessId}/expenses`}>
-                فتح إعداد المصروفات
+                {canManage ? "فتح إعداد المصروفات" : "مراجعة المصروفات"}
               </Link>
             </article>
 
@@ -96,12 +105,16 @@ export function CustomerDataSourcesDrawer({ businessId, importHref }: CustomerDa
               </div>
               <h3>ربط مصادر الإيراد عند الحاجة</h3>
               <p>اربط Front-End وBackend والمصادر الأخرى فقط إذا كنت تريد تحليل مصدر القيمة. ميزان لا يخمّن Attribution.</p>
-              <Link
-                className={styles.workflowLink}
-                href={`/businesses/${businessId}/customers/revenue-stream-attribution`}
-              >
-                ربط مصادر الإيراد
-              </Link>
+              {canManage ? (
+                <Link
+                  className={styles.workflowLink}
+                  href={`/businesses/${businessId}/customers/revenue-stream-attribution`}
+                >
+                  ربط مصادر الإيراد
+                </Link>
+              ) : (
+                <span className={styles.workflowReadOnly}>عرض فقط</span>
+              )}
             </article>
           </div>
         </div>

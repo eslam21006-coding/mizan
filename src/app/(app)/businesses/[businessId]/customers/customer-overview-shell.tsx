@@ -16,6 +16,7 @@ type CustomerOverviewShellProps = {
   businessName: string;
   baseCurrency: string;
   timezone: string;
+  canManage: boolean;
   activeView: CustomerAnalysisView;
   searchParams: CustomerSearchParams;
   reviewIssueCount: number | null;
@@ -34,6 +35,7 @@ export function CustomerOverviewShell({
   businessName,
   baseCurrency,
   timezone,
+  canManage,
   activeView,
   searchParams,
   reviewIssueCount,
@@ -74,13 +76,24 @@ export function CustomerOverviewShell({
           </div>
         </div>
         <div className={styles.heroActions}>
-          <Link className={styles.primaryAction} href={importHref}>
-            استيراد معاملات
-          </Link>
+          {canManage ? (
+            <Link className={styles.primaryAction} href={importHref}>
+              استيراد معاملات
+            </Link>
+          ) : (
+            <div className={styles.readOnlyAction}>
+              <strong>عرض فقط</strong>
+              <small>استيراد المعاملات متاح للمالك أو الأدمن.</small>
+            </div>
+          )}
         </div>
       </section>
 
-      <CustomerDataSourcesDrawer businessId={businessId} importHref={importHref} />
+      <CustomerDataSourcesDrawer
+        businessId={businessId}
+        importHref={importHref}
+        canManage={canManage}
+      />
       <CustomerReviewNotice
         businessId={businessId}
         issueCount={reviewIssueCount}
