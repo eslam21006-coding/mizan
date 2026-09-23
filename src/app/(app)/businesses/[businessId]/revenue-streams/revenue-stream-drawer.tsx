@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useRef } from "react";
+import { StableSubmitButton } from "@/components/stable-submit-button";
 import type { SetupReturnOrigin } from "@/lib/setup-return-origin";
 import { createRevenueStream, updateRevenueStream } from "./actions";
 import styles from "./revenue-stream-drawer.module.css";
@@ -211,9 +212,12 @@ export function RevenueStreamDrawerLauncher({
               ) : null}
 
               <div className={styles.footer}>
-                <button type="submit" className={styles.submitButton}>
+                <StableSubmitButton
+                  className={styles.submitButton}
+                  pendingLabel={isCreate ? "جارٍ إضافة مصدر الإيراد…" : "جارٍ حفظ التعديلات…"}
+                >
                   {submitLabel}
-                </button>
+                </StableSubmitButton>
                 <button
                   type="button"
                   className={styles.cancelButton}
