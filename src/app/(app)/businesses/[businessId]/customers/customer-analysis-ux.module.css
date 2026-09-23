@@ -109,6 +109,11 @@
   text-align: center;
 }
 
+.noFilterResults > div {
+  display: grid;
+  gap: 4px;
+}
+
 .noFilterResults strong {
   color: var(--text);
   font-size: 12px;
