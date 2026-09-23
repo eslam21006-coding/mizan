@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
+import { StableSubmitButton } from "@/components/stable-submit-button";
 import { requireAuthContext } from "@/lib/auth/context";
 import { loadTransactionDerivedMonthlyCustomerCounts } from "@/lib/business/monthly-customer-counts";
 import {
@@ -523,9 +524,12 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
                 <input type="hidden" name="business_id" value={businessId} />
                 <input type="hidden" name="month" value={selectedMonth.monthKey} />
                 <MonthlyReturnOriginFields returnOrigin={returnOrigin} />
-                <button type="submit" className={styles.secondaryButton}>
+                <StableSubmitButton
+                  className={styles.secondaryButton}
+                  pendingLabel="جارٍ نسخ المصروفات…"
+                >
                   نسخ مصروفات الشهر السابق
-                </button>
+                </StableSubmitButton>
               </form>
             )}
           </div>
@@ -559,7 +563,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
                 <strong>حفظ أرقام {monthLabel}</strong>
                 <p>يتم حفظ الشهر كعملية واحدة. أي خطأ يمنع الحفظ الجزئي.</p>
               </div>
-              <button type="submit">حفظ الشهر</button>
+              <StableSubmitButton pendingLabel="جارٍ حفظ الشهر…">حفظ الشهر</StableSubmitButton>
             </div>
           </form>
         ) : (
