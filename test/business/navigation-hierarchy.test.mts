@@ -26,6 +26,14 @@ test("resolves nested business routes without accepting arbitrary href strings",
     "/businesses/business%2F01",
   );
   assert.equal(
+    resolveNavigationDestination({ route: "business-settings", businessId: "business/01" }),
+    "/businesses/business%2F01/settings",
+  );
+  assert.equal(
+    resolveNavigationDestination({ route: "business-delete", businessId: "business/01" }),
+    "/businesses/business%2F01/settings/delete",
+  );
+  assert.equal(
     resolveNavigationDestination({ route: "business-customers", businessId: "business/01" }),
     "/businesses/business%2F01/customers",
   );

@@ -18,12 +18,15 @@ const routes = [
   },
   {
     path: "src/app/(app)/settings/page.tsx",
+    required: ["SettingsBusinessSelector", "businesses", "base_currency", "timezone"],
+  },
+  {
+    path: "src/app/(app)/businesses/[businessId]/settings/page.tsx",
     required: [
-      "/revenue-streams",
-      "/expenses",
-      "/funnels",
-      "/customers",
-      "/monthly",
+      "BusinessSettingsPageContent",
+      "owner_user_id",
+      "ownerUserId: business.owner_user_id",
+      "viewer={{ userId: auth.userId, role: auth.role }}",
     ],
   },
 ] as const;

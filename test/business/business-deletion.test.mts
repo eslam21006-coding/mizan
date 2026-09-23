@@ -7,9 +7,16 @@ const actionsSource = readFileSync(
   "src/app/(app)/settings/businesses/[businessId]/delete/actions.ts",
   "utf8",
 );
-const settingsSource = readFileSync("src/app/(app)/settings/page.tsx", "utf8");
+const businessSettingsSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/settings/page.tsx",
+  "utf8",
+);
+const businessSettingsViewSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/settings/business-settings-view.tsx",
+  "utf8",
+);
 const deletePageSource = readFileSync(
-  "src/app/(app)/settings/businesses/[businessId]/delete/page.tsx",
+  "src/app/(app)/businesses/[businessId]/settings/delete/page.tsx",
   "utf8",
 );
 const historyGuardSource = readFileSync(
@@ -34,7 +41,12 @@ test("business deletion requires exactly the Arabic or English confirmation word
 });
 
 test("business deletion is owner/admin gated in UI, server action, and database RPC", () => {
-  assert.match(settingsSource, /auth\.role === "admin" \|\| business\.owner_user_id === auth\.userId/);
+  assert.match(businessSettingsSource, /ownerUserId: business\.owner_user_id/);
+  assert.match(businessSettingsSource, /viewer=\{\{ userId: auth\.userId, role: auth\.role \}\}/);
+  assert.match(
+    businessSettingsViewSource,
+    /viewer\.role === "admin" \|\| business\.ownerUserId === viewer\.userId/,
+  );
   assert.match(actionsSource, /auth\.role === "admin" \|\| business\.owner_user_id === auth\.userId/);
   assert.match(actionsSource, /redirect\("\/access-denied"\)/);
   assert.match(deletePageSource, /redirect\("\/access-denied"\)/);
@@ -61,8 +73,8 @@ test("direct table deletion remains guarded so only the confirmed workflow can e
 });
 
 test("settings exposes deletion as a separate danger-zone workflow with irreversible wording", () => {
-  assert.match(settingsSource, /منطقة خطرة/);
-  assert.match(settingsSource, /\/settings\/businesses\/\$\{business\.id\}\/delete/);
+  assert.match(businessSettingsViewSource, /منطقة خطرة/);
+  assert.match(businessSettingsViewSource, /route: "business-delete"/);
   assert.match(deletePageSource, /«حذف» أو «Delete»/);
   assert.match(deletePageSource, /سيتم حذف كل بيانات البزنس/);
 });

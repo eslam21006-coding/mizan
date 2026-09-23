@@ -6,6 +6,8 @@ export type NavigationDestination =
   | { route: "businesses" }
   | { route: "business-overview"; businessId: string; month?: string }
   | { route: "business-workspace"; businessId: string }
+  | { route: "business-settings"; businessId: string }
+  | { route: "business-delete"; businessId: string }
   | { route: "business-funnels"; businessId: string }
   | { route: "insights"; businessId: string; month: string; insightId: string }
   | {
@@ -73,6 +75,10 @@ export function resolveNavigationDestination(destination: NavigationDestination)
     }
     case "business-workspace":
       return businessPath(destination.businessId);
+    case "business-settings":
+      return `${businessPath(destination.businessId)}/settings`;
+    case "business-delete":
+      return `${businessPath(destination.businessId)}/settings/delete`;
     case "business-funnels":
       return `${businessPath(destination.businessId)}/funnels`;
     case "target-planner": {
