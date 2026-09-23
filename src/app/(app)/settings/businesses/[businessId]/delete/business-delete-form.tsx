@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { StableSubmitButton } from "@/components/stable-submit-button";
 import { isBusinessDeletionConfirmation } from "@/lib/business/business-deletion";
 import { deleteBusiness } from "./actions";
 import styles from "./business-delete.module.css";
@@ -30,9 +31,13 @@ export function BusinessDeleteForm({ businessId, businessName }: BusinessDeleteF
         />
       </label>
 
-      <button className={styles.deleteButton} type="submit" disabled={!isConfirmed}>
+      <StableSubmitButton
+        className={styles.deleteButton}
+        disabled={!isConfirmed}
+        pendingLabel="جارٍ حذف البزنس…"
+      >
         حذف {businessName}
-      </button>
+      </StableSubmitButton>
     </form>
   );
 }
