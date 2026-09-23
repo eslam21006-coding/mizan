@@ -5,21 +5,8 @@ import {
   type MenteeDirectoryRow,
 } from "@/lib/admin/mentee-directory";
 import { requireFreshAdmin } from "@/lib/auth/context";
-import { resolveNavigationDestination } from "@/lib/navigation-hierarchy";
+import { MenteeDirectoryCards } from "./mentee-hierarchy";
 import styles from "./mentees.module.css";
-
-const dateFormatter = new Intl.DateTimeFormat("ar-EG", {
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-  timeZone: "UTC",
-});
-
-function formatCreatedAt(value: string | null) {
-  if (!value) return "غير متاح";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "غير متاح" : dateFormatter.format(date);
-}
 
 export default async function AdminMenteesPage() {
   const { supabase } = await requireFreshAdmin();
@@ -75,50 +62,7 @@ export default async function AdminMenteesPage() {
               </Link>
             </section>
           ) : (
-            <section className={styles.menteeList} aria-label="قائمة المتدربين">
-              {mentees.map((mentee) => {
-                const headingId = `mentee-${mentee.userId}`;
-                return (
-                  <article
-                    className={styles.menteeCard}
-                    key={mentee.userId}
-                    aria-labelledby={headingId}
-                  >
-                    <div className={styles.menteeHeader}>
-                      <div className={styles.menteeIdentity}>
-                        <span>حساب Mentee</span>
-                        <h2 id={headingId} dir="ltr">{mentee.email ?? "بريد غير متاح"}</h2>
-                      </div>
-                      <div className={styles.menteeMeta}>
-                        <div>
-                          <span>البزنسات</span>
-                          <strong>{new Intl.NumberFormat("ar-EG").format(mentee.businesses.length)}</strong>
-                        </div>
-                        <div>
-                          <span>تاريخ إنشاء الحساب</span>
-                          <strong>{formatCreatedAt(mentee.createdAt)}</strong>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className={styles.menteeActions}>
-                      <Link
-                        className={styles.primaryAction}
-                        href={resolveNavigationDestination({
-                          route: "admin-mentee",
-                          menteeUserId: mentee.userId,
-                        })}
-                      >
-                        فتح المتدرب
-                      </Link>
-                      <span>
-                        افتح المتدرب أولًا ثم اختر البزنس المطلوب من صفحته.
-                      </span>
-                    </div>
-                  </article>
-                );
-              })}
-            </section>
+            <MenteeDirectoryCards mentees={mentees} />
           )}
         </>
       )}
