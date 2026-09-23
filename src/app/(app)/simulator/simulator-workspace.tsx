@@ -313,7 +313,7 @@ export function SimulatorWorkspace({
               className={styles.noticeAction}
               href={`/businesses/${businessId}/funnels/monthly?month=${month}`}
             >
-              فتح أرقام الفانلز
+              {canManage ? "فتح أرقام الفانلز" : "مراجعة أرقام الفانلز"}
             </Link>
           </div>
         )}
@@ -608,7 +608,7 @@ export function SimulatorWorkspace({
                   className={styles.noticeAction}
                   href={`/businesses/${businessId}/funnels/monthly?month=${month}`}
                 >
-                  إكمال أرقام الفانلز
+                  {canManage ? "إكمال أرقام الفانلز" : "مراجعة أرقام الفانلز"}
                 </Link>
               </div>
             )}
