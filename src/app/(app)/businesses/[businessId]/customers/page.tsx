@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
+import { requireAuthContext } from "@/lib/auth/context";
 import { parseCustomerHistoryOverviewSummary } from "@/lib/business/customer-history-overview";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import {
@@ -46,14 +47,16 @@ export default async function BusinessCustomersPage({
   const businessId = parseResourceId(rawBusinessId);
   if (!businessId) notFound();
 
+  const auth = await requireAuthContext();
   const supabase = await createSupabaseServerClient();
   const { data: business, error } = await supabase
     .from("businesses")
-    .select("id,name,base_currency,timezone")
+    .select("id,name,base_currency,timezone,owner_user_id")
     .eq("id", businessId)
     .maybeSingle();
 
   if (error || !business) notFound();
+  const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
 
   const [historyOverviewResult, reviewExceptionsResult, missingPeriodsResult] = await Promise.all([
     supabase
@@ -112,7 +115,11 @@ export default async function BusinessCustomersPage({
         />
       }
       observedLtv={
-        <CustomerCohortLtvTable businessId={business.id} baseCurrency={business.base_currency} />
+        <CustomerCohortLtvTable
+          businessId={business.id}
+          baseCurrency={business.base_currency}
+          canManage={canManage}
+        />
       }
       revenueStreams={
         <LifetimeRevenueStreamTable businessId={business.id} baseCurrency={business.base_currency} />
@@ -121,6 +128,7 @@ export default async function BusinessCustomersPage({
         <LifetimeContributionTable
           businessId={business.id}
           baseCurrency={business.base_currency}
+          canManage={canManage}
           returnMonth={
             profitabilityReturnOrigin?.origin === "customer-profitability"
               ? profitabilityReturnOrigin.month
