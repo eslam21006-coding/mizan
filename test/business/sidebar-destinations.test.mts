@@ -18,13 +18,11 @@ const routes = [
   },
   {
     path: "src/app/(app)/settings/page.tsx",
-    required: [
-      "/revenue-streams",
-      "/expenses",
-      "/funnels",
-      "/customers",
-      "/monthly",
-    ],
+    required: ["SettingsBusinessSelector", "businesses", "base_currency", "timezone"],
+  },
+  {
+    path: "src/app/(app)/businesses/[businessId]/settings/page.tsx",
+    required: ["BusinessSettingsView", "owner_user_id", 'auth.role === "admin"'],
   },
 ] as const;
 
