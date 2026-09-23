@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { formatCountText, formatMoneyText } from "@/lib/financial-display";
@@ -174,7 +175,12 @@ export function CustomerCohortLtvTable({ businessId, baseCurrency }: CustomerCoh
     return (
       <section className={styles.compactEmptyPanel} dir="rtl">
         <strong>لا توجد مجموعات عملاء حسب شهر أول شراء بعد.</strong>
-        <span>ستظهر هنا بعد وجود أول تحصيل ناجح لعميل واحد على الأقل.</span>
+        <span>
+          هذا متوقع قبل استيراد أول تحصيل ناجح؛ ميزان لا ينشئ Cohort أو قيمة عميل من دون معاملات فعلية.
+        </span>
+        <Link className={styles.emptyAction} href={`/businesses/${businessId}/customers/import`}>
+          استيراد معاملات
+        </Link>
       </section>
     );
   }
