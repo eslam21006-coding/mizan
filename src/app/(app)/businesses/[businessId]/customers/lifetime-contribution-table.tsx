@@ -35,6 +35,7 @@ type LifetimeContributionRow = {
 type Props = {
   businessId: string;
   baseCurrency: string;
+  canManage: boolean;
   returnMonth?: string;
 };
 
@@ -144,7 +145,12 @@ function completedQualityExplanation(row: LifetimeContributionRow) {
 }
 
 /** Renders automatic Customer Profitability by first-purchase month with calculation details on demand. */
-export function LifetimeContributionTable({ businessId, baseCurrency, returnMonth }: Props) {
+export function LifetimeContributionTable({
+  businessId,
+  baseCurrency,
+  canManage,
+  returnMonth,
+}: Props) {
   const [rows, setRows] = useState<LifetimeContributionRow[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -199,9 +205,15 @@ export function LifetimeContributionTable({ businessId, baseCurrency, returnMont
           هذا متوقع قبل اكتمال سجل المعاملات والبيانات الشهرية الفعلية؛ ميزان لا يقدّر ربحية عميل من دون أساس فعلي.
         </span>
         <div className={styles.emptyActions}>
-          <Link className={styles.emptyAction} href={`/businesses/${businessId}/customers/import`}>
-            استيراد معاملات
-          </Link>
+          {canManage ? (
+            <Link className={styles.emptyAction} href={`/businesses/${businessId}/customers/import`}>
+              استيراد معاملات
+            </Link>
+          ) : (
+            <Link className={styles.emptyAction} href={`/businesses/${businessId}`}>
+              العودة إلى نظرة عامة
+            </Link>
+          )}
           <Link
             className={styles.emptyAction}
             href={`/businesses/${businessId}/monthly`}
