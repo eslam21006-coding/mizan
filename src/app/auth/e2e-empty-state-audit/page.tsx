@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { connection } from "next/server";
 import { AppShell } from "@/components/app-shell";
 import dashboardStyles from "@/app/(app)/dashboard.module.css";
 
@@ -9,7 +10,8 @@ const fixtureShellProps = {
 };
 
 /** CI-only fixture for the N62 actionable empty-state contract. */
-export default function EmptyStateAuditFixture() {
+export default async function EmptyStateAuditFixture() {
+  await connection();
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") notFound();
 
   return (
