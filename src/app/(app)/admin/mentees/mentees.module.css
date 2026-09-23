@@ -43,9 +43,9 @@
 }
 
 .summaryGrid span,
-.joinedAt span,
-.sectionTitle span,
-.menteeHeader > div:first-child > span {
+.menteeIdentity > span,
+.menteeMeta span,
+.sectionTitle span {
   color: #68756e;
   font-size: 0.86rem;
 }
@@ -73,6 +73,10 @@
   border-bottom: 1px solid #edf0ee;
 }
 
+.menteeIdentity {
+  min-width: 0;
+}
+
 .menteeHeader h2 {
   margin: 6px 0 0;
   color: #17261f;
@@ -81,15 +85,35 @@
   overflow-wrap: anywhere;
 }
 
-.joinedAt {
-  display: grid;
-  gap: 5px;
-  text-align: left;
+.menteeMeta {
+  display: flex;
+  align-items: flex-start;
+  gap: 22px;
 }
 
-.joinedAt strong {
+.menteeMeta > div {
+  display: grid;
+  gap: 5px;
+  min-width: 118px;
+}
+
+.menteeMeta strong {
   color: #33433b;
   font-size: 0.92rem;
+}
+
+.menteeActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 18px;
+}
+
+.menteeActions > span {
+  color: #68756e;
+  font-size: 0.88rem;
+  line-height: 1.6;
 }
 
 .businessSection {
@@ -198,8 +222,10 @@
 
 @media (max-width: 760px) {
   .headingRow,
-  .menteeHeader {
+  .menteeHeader,
+  .menteeActions {
     flex-direction: column;
+    align-items: stretch;
   }
 
   .inviteButton {
@@ -211,8 +237,9 @@
     grid-template-columns: 1fr;
   }
 
-  .joinedAt {
-    text-align: right;
+  .menteeMeta {
+    width: 100%;
+    justify-content: space-between;
   }
 
   .menteeCard {
