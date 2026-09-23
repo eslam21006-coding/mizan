@@ -45,6 +45,7 @@ export default async function CustomerTabsFixturePage({ searchParams }: Customer
         businessName="أكاديمية ميزان"
         baseCurrency="EGP"
         timezone="Africa/Cairo"
+        canManage={true}
         activeView={activeView}
         searchParams={customerSearchParams}
         reviewIssueCount={0}
