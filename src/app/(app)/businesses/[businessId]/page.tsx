@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
+import { resolveAdminViewingMenteeUserId } from "@/lib/admin-business-viewing";
 import { requireAuthContext } from "@/lib/auth/context";
 import { currentMonthKeyForTimeZone } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
@@ -63,6 +64,11 @@ export default async function BusinessOverviewPage({ params }: BusinessOverviewP
       latestPeriodResult.error,
   );
   const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
+  const adminViewingMenteeUserId = resolveAdminViewingMenteeUserId(
+    auth.role,
+    auth.userId,
+    business.owner_user_id,
+  );
   const latestSavedMonthKey = latestPeriodResult.data?.month_start
     ? String(latestPeriodResult.data.month_start).slice(0, 7)
     : null;
@@ -85,6 +91,7 @@ export default async function BusinessOverviewPage({ params }: BusinessOverviewP
         baseCurrency={business.base_currency}
         timezone={business.timezone}
         activeTab="overview"
+        adminViewingMenteeUserId={adminViewingMenteeUserId}
       />
 
       <PageHeading
