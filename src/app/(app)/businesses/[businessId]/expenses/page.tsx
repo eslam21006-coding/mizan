@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
@@ -293,7 +294,26 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
         ) : (
           <div className={styles.emptyState}>
             <strong>لا توجد مصروفات معرفة بعد</strong>
-            <p>ابدأ بأكبر بنود التكلفة لديك، ثم صنف كل بند وحدد هل هو ثابت أم يتحرك مع العملاء أو الإيراد.</p>
+            <p>
+              هذا متوقع في البزنس الجديد، لكن الإدخال الشهري لن يعرض بنود التكلفة حتى تبني الهيكل.
+              ابدأ بأكبر بنود التكلفة لديك، ثم صنف كل بند وحدد هل هو ثابت أم يتحرك مع العملاء أو الإيراد.
+            </p>
+            <div className={styles.emptyActions}>
+              {canManageExpenses ? (
+                <ExpenseDrawerLauncher
+                  businessId={businessId}
+                  returnOrigin={returnOrigin}
+                  categoryOptions={EXPENSE_CATEGORY_OPTIONS}
+                  behaviorOptions={EXPENSE_COST_BEHAVIOR_OPTIONS}
+                  mode="create"
+                  creationRequestId={randomUUID()}
+                />
+              ) : (
+                <Link className={styles.emptyLink} href={`/businesses/${businessId}`}>
+                  العودة إلى نظرة عامة
+                </Link>
+              )}
+            </div>
           </div>
         )}
       </section>
