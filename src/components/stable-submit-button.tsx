@@ -24,21 +24,26 @@ export function StableSubmitButton({
   const isDisabled = disabled || pending;
 
   return (
-    <button
-      {...props}
-      type="submit"
-      className={className}
-      disabled={isDisabled}
-      aria-busy={pending || undefined}
-    >
-      <span className={styles.labelStack}>
-        <span className={pending ? styles.hiddenLabel : undefined} aria-hidden={pending}>
-          {children}
+    <>
+      <button
+        {...props}
+        type="submit"
+        className={className}
+        disabled={isDisabled}
+        aria-busy={pending || undefined}
+      >
+        <span className={styles.labelStack}>
+          <span className={pending ? styles.hiddenLabel : undefined} aria-hidden={pending}>
+            {children}
+          </span>
+          <span className={!pending ? styles.hiddenLabel : undefined} aria-hidden={!pending}>
+            {pendingLabel}
+          </span>
         </span>
-        <span className={!pending ? styles.hiddenLabel : undefined} aria-hidden={!pending}>
-          {pendingLabel}
-        </span>
+      </button>
+      <span className={styles.liveStatus} role="status" aria-atomic="true">
+        {pending ? pendingLabel : null}
       </span>
-    </button>
+    </>
   );
 }
