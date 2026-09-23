@@ -265,7 +265,7 @@ export default async function AnalyticsPage({ searchParams }: AnalyticsPageProps
           </p>
           <Link
             className={dashboardStyles.primaryAction}
-            href={`/analytics?business=${encodeURIComponent(selectedBusiness.id)}&month=${encodeURIComponent(selectedMonth.monthKey)}&view=trends&period=rolling3`}
+            href={`/analytics?business=${encodeURIComponent(selectedBusiness.id)}&month=${encodeURIComponent(selectedMonth.monthKey)}&view=trends&period=ytd`}
           >
             عرض الاتجاهات التاريخية
           </Link>
