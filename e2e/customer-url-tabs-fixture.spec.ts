@@ -66,8 +66,17 @@ test.describe("CI-only URL-backed Customer tabs fixture", () => {
     await page.goto(`${fixturePath}?view=overview&month=2026-08`);
 
     const tabs = page.getByRole("tab");
+    const tabList = page.getByRole("tablist", { name: "أقسام تحليل العملاء" });
     await expect(tabs).toHaveCount(5);
     await expect(tab(page, /نظرة عامة/)).toHaveAttribute("aria-selected", "true");
+
+    const tabListMetrics = await tabList.evaluate((element) => ({
+      position: getComputedStyle(element).position,
+      clientWidth: element.clientWidth,
+      scrollWidth: element.scrollWidth,
+    }));
+    expect(tabListMetrics.position).toBe("sticky");
+    expect(tabListMetrics.scrollWidth).toBeGreaterThan(tabListMetrics.clientWidth);
 
     await expect(tab(page, /متوسط ما دفعه العميل/)).toHaveAttribute(
       "href",
@@ -80,6 +89,21 @@ test.describe("CI-only URL-backed Customer tabs fixture", () => {
     await page.keyboard.press("ArrowLeft");
     await expect(page).toHaveURL(new RegExp(`${fixturePath}\\?view=value&month=2026-08$`));
     await expect(tab(page, /متوسط ما دفعه العميل/)).toHaveAttribute("aria-selected", "true");
+
+    await page.goto(`${fixturePath}?view=customers&month=2026-08`);
+    const activeCustomerTab = tab(page, /سجل العملاء/);
+    await expect(activeCustomerTab).toHaveAttribute("aria-selected", "true");
+    await expect
+      .poll(async () => {
+        const listBox = await tabList.boundingBox();
+        const activeBox = await activeCustomerTab.boundingBox();
+        if (!listBox || !activeBox) return false;
+        return (
+          activeBox.x >= listBox.x - 1 &&
+          activeBox.x + activeBox.width <= listBox.x + listBox.width + 1
+        );
+      })
+      .toBe(true);
 
     const dimensions = await page.locator("html").evaluate((element) => ({
       clientWidth: element.clientWidth,
