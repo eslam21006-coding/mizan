@@ -1,7 +1,5 @@
 import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
-import { resolveAdminViewingMenteeUserId } from "@/lib/admin-business-viewing";
-import { requireAuthContext } from "@/lib/auth/context";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { BusinessWorkspaceShell } from "../business-workspace-shell";
@@ -17,21 +15,14 @@ export default async function BusinessSettingsPage({ params }: BusinessSettingsP
   const businessId = parseResourceId(rawBusinessId);
   if (!businessId) notFound();
 
-  const auth = await requireAuthContext();
   const supabase = await createSupabaseServerClient();
   const { data: business, error } = await supabase
     .from("businesses")
-    .select("id,name,base_currency,timezone,owner_user_id")
+    .select("id,name,base_currency,timezone")
     .eq("id", businessId)
     .maybeSingle();
 
   if (error || !business) notFound();
-
-  const adminViewingMenteeUserId = resolveAdminViewingMenteeUserId(
-    auth.role,
-    auth.userId,
-    business.owner_user_id,
-  );
 
   return (
     <div className="page-stack">
@@ -41,7 +32,6 @@ export default async function BusinessSettingsPage({ params }: BusinessSettingsP
         baseCurrency={business.base_currency}
         timezone={business.timezone}
         activeTab="settings"
-        adminViewingMenteeUserId={adminViewingMenteeUserId}
       />
 
       <PageHeading
