@@ -18,6 +18,38 @@
   text-decoration: none;
   font-weight: 700;
   white-space: nowrap;
+  cursor: pointer;
+}
+
+.primaryAction,
+.businessOpenAction {
+  gap: 8px;
+}
+
+.primaryAction::after,
+.businessOpenAction::after {
+  content: "←";
+  flex: 0 0 auto;
+  line-height: 1;
+  transition: transform 150ms ease;
+}
+
+.primaryAction:hover,
+.businessOpenAction:hover {
+  background: #233a30;
+}
+
+.primaryAction:hover::after,
+.primaryAction:focus-visible::after,
+.businessOpenAction:hover::after,
+.businessOpenAction:focus-visible::after {
+  transform: translateX(-2px);
+}
+
+.primaryAction:focus-visible,
+.inviteButton:focus-visible {
+  outline: 3px solid color-mix(in srgb, #17261f 30%, transparent);
+  outline-offset: 2px;
 }
 
 .summaryGrid {
@@ -171,6 +203,7 @@
   text-decoration: none;
   font-weight: 700;
   white-space: nowrap;
+  cursor: pointer;
 }
 
 .businessOpenAction:focus-visible {
