@@ -70,6 +70,15 @@ test.describe("CI-only Analytics URL state", () => {
     await page.goto(`${fixturePath}?view=trends&period=rolling3&month=2026-08`);
 
     const comparisonLink = page.getByRole("link", { name: /مقارنة شهرية/ });
+    const trendsLink = page.getByRole("link", { name: /اتجاهات تاريخية/ });
+    const [comparisonBox, trendsBox] = await Promise.all([
+      comparisonLink.boundingBox(),
+      trendsLink.boundingBox(),
+    ]);
+    expect(comparisonBox).not.toBeNull();
+    expect(trendsBox).not.toBeNull();
+    expect(Math.abs((comparisonBox?.y ?? 0) - (trendsBox?.y ?? 0))).toBeLessThanOrEqual(1);
+
     await comparisonLink.focus();
     await expect(comparisonLink).toBeFocused();
     await page.keyboard.press("Enter");
