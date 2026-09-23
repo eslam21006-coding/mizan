@@ -12,6 +12,7 @@ type RevenueStreamsWorkspaceHeaderProps = {
   baseCurrency: string;
   timezone: string;
   canManage: boolean;
+  adminViewingMenteeUserId?: string | null;
   returnOrigin: SetupReturnOrigin | null;
   creationRequestId: string;
 };
@@ -23,6 +24,7 @@ export function RevenueStreamsWorkspaceHeader({
   baseCurrency,
   timezone,
   canManage,
+  adminViewingMenteeUserId,
   returnOrigin,
   creationRequestId,
 }: RevenueStreamsWorkspaceHeaderProps) {
@@ -43,6 +45,7 @@ export function RevenueStreamsWorkspaceHeader({
         baseCurrency={baseCurrency}
         timezone={timezone}
         activeTab="revenue-streams"
+        adminViewingMenteeUserId={adminViewingMenteeUserId}
       />
 
       <Breadcrumb items={breadcrumbItems} />
