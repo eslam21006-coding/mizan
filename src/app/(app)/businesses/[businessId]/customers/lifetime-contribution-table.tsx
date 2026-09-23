@@ -195,7 +195,20 @@ export function LifetimeContributionTable({ businessId, baseCurrency, returnMont
     return (
       <section className={styles.compactEmptyPanel} dir="rtl">
         <strong>لا توجد مجموعات عملاء مكتسبة لحساب الربحية بعد.</strong>
-        <span>يبدأ الحساب تلقائيًا بعد وجود سجل معاملات وبيانات شهرية فعلية.</span>
+        <span>
+          هذا متوقع قبل اكتمال سجل المعاملات والبيانات الشهرية الفعلية؛ ميزان لا يقدّر ربحية عميل من دون أساس فعلي.
+        </span>
+        <div className={styles.emptyActions}>
+          <Link className={styles.emptyAction} href={`/businesses/${businessId}/customers/import`}>
+            استيراد معاملات
+          </Link>
+          <Link
+            className={styles.emptyAction}
+            href={`/businesses/${businessId}/monthly`}
+          >
+            مراجعة البيانات الشهرية
+          </Link>
+        </div>
       </section>
     );
   }
