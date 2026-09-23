@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { PageHeading } from "@/components/page-heading";
+import { ReadOnlyNotice } from "@/components/read-only-notice";
 import { requireAuthContext } from "@/lib/auth/context";
 import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
 import {
@@ -209,6 +210,9 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
 
       <SimulatorReturnContextBanner context={returnContext} />
       <SimulatorScenarioStateBanner state={scenarioState} />
+      {!canManage && (
+        <ReadOnlyNotice description="يمكنك مراجعة السيناريوهات وتجربة القيم داخل المحاكي، لكن حفظ السيناريو أو نسخه أو حذفه متاح لمالك البزنس أو الأدمن." />
+      )}
 
       <section className={styles.selectorPanel} aria-label="اختيار البزنس والشهر والسيناريو">
         <form>
