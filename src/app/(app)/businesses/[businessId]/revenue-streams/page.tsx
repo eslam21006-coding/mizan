@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { notFound } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
-import { resolveAdminViewingMenteeUserId } from "@/lib/admin-business-viewing";
 import { requireAuthContext } from "@/lib/auth/context";
 import {
   REVENUE_STREAM_TYPE_OPTIONS,
@@ -79,11 +78,6 @@ export default async function RevenueStreamsPage({
   }
 
   const canManageRevenueStreams = auth.role === "admin" || business.owner_user_id === auth.userId;
-  const adminViewingMenteeUserId = resolveAdminViewingMenteeUserId(
-    auth.role,
-    auth.userId,
-    business.owner_user_id,
-  );
   const query = await searchParams;
   const returnOrigin = parseSetupReturnOrigin({
     origin: query.origin,
@@ -108,7 +102,6 @@ export default async function RevenueStreamsPage({
         baseCurrency={business.base_currency}
         timezone={business.timezone}
         canManage={canManageRevenueStreams}
-        adminViewingMenteeUserId={adminViewingMenteeUserId}
         returnOrigin={returnOrigin}
         creationRequestId={randomUUID()}
       />
