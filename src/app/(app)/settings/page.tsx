@@ -75,7 +75,7 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
               <div className={styles.nextStep}>
                 <p>افتح إعدادات هذا البزنس لمراجعة هويته والوصول إلى الإجراءات الخاصة به.</p>
                 <Link
-                  className={styles.primaryAction}
+                  className={styles.openBusinessButton}
                   href={resolveNavigationDestination({
                     route: "business-settings",
                     businessId: business.id,
