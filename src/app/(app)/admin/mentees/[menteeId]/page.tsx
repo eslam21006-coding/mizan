@@ -8,26 +8,12 @@ import {
 } from "@/lib/admin/mentee-directory";
 import { requireFreshAdmin } from "@/lib/auth/context";
 import { parseResourceId } from "@/lib/business/revenue-streams";
-import { resolveNavigationDestination } from "@/lib/navigation-hierarchy";
+import { MenteeAccountSummary, MenteeBusinessGrid } from "../mentee-hierarchy";
 import styles from "../mentees.module.css";
 
 type AdminMenteePageProps = {
   params: Promise<{ menteeId: string }>;
 };
-
-const dateFormatter = new Intl.DateTimeFormat("ar-EG", {
-  year: "numeric",
-  month: "short",
-  day: "numeric",
-  timeZone: "UTC",
-});
-
-/** Formats a stored account timestamp without inventing a date when the value is missing or invalid. */
-function formatCreatedAt(value: string | null) {
-  if (!value) return "غير متاح";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? "غير متاح" : dateFormatter.format(date);
-}
 
 /** Renders one Mentee as the parent context before exposing that Mentee's businesses. */
 export default async function AdminMenteePage({ params }: AdminMenteePageProps) {
@@ -89,57 +75,9 @@ export default async function AdminMenteePage({ params }: AdminMenteePageProps) 
         </Link>
       </div>
 
-      <section className={styles.menteeCard} aria-labelledby="mentee-account-heading">
-        <div className={styles.menteeHeader}>
-          <div className={styles.menteeIdentity}>
-            <span>حساب Mentee</span>
-            <h2 id="mentee-account-heading" dir="ltr">{displayEmail}</h2>
-          </div>
-          <div className={styles.menteeMeta}>
-            <div>
-              <span>البزنسات</span>
-              <strong>{new Intl.NumberFormat("ar-EG").format(mentee.businesses.length)}</strong>
-            </div>
-            <div>
-              <span>تاريخ إنشاء الحساب</span>
-              <strong>{formatCreatedAt(mentee.createdAt)}</strong>
-            </div>
-          </div>
-        </div>
-      </section>
+      <MenteeAccountSummary mentee={mentee} />
 
-      <section className={styles.businessSection} aria-labelledby="mentee-businesses-heading">
-        <div className={styles.sectionTitle}>
-          <strong id="mentee-businesses-heading">بزنسات المتدرب</strong>
-          <span>{new Intl.NumberFormat("ar-EG").format(mentee.businesses.length)}</span>
-        </div>
-
-        {mentee.businesses.length === 0 ? (
-          <div className={styles.noBusiness}>
-            لم يُنشئ هذا المتدرب أي بزنس حتى الآن.
-          </div>
-        ) : (
-          <div className={styles.businessGrid}>
-            {mentee.businesses.map((business) => (
-              <article className={styles.businessCard} key={business.id}>
-                <div>
-                  <strong>{business.name}</strong>
-                  <span>{business.baseCurrency} · {business.timezone}</span>
-                </div>
-                <Link
-                  className={styles.businessOpenAction}
-                  href={resolveNavigationDestination({
-                    route: "business-overview",
-                    businessId: business.id,
-                  })}
-                >
-                  فتح البزنس
-                </Link>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
+      <MenteeBusinessGrid businesses={mentee.businesses} />
     </div>
   );
 }
