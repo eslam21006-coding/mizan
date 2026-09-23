@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
+import { ReadOnlyNotice } from "@/components/read-only-notice";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { requireAuthContext } from "@/lib/auth/context";
 import {
@@ -124,9 +125,7 @@ export default async function RevenueStreamsPage({
       )}
 
       {!canManageRevenueStreams && (
-        <div className={styles.successStatus}>
-          صلاحيتك في هذا البزنس للعرض فقط. يمكنك مراجعة مصادر الإيراد بدون إضافة أو تعديل أو حذف المصادر.
-        </div>
+        <ReadOnlyNotice description="يمكنك مراجعة مصادر الإيراد، لكن الإضافة والتعديل والحذف متاحة لمالك البزنس أو الأدمن." />
       )}
 
       <section className={styles.explainer}>
