@@ -1,6 +1,10 @@
 import Link from "next/link";
+import { AdminBusinessViewingBanner } from "@/components/admin-business-viewing-banner";
 import { DashboardMetricDrawer } from "@/components/dashboard-metric-drawer";
 import { PageHeading } from "@/components/page-heading";
+import { resolveAdminViewingMentee } from "@/lib/admin-business-viewing";
+import type { MenteeDirectoryRow } from "@/lib/admin/mentee-directory";
+import { requireAuthContext } from "@/lib/auth/context";
 import type {
   CalculatedMetric,
   CalculationUnavailableReason,
@@ -23,6 +27,7 @@ type BusinessRow = {
   name: string;
   base_currency: string;
   timezone: string;
+  owner_user_id: string;
 };
 
 const UNAVAILABLE_LABELS: Record<CalculationUnavailableReason, string> = {
@@ -481,10 +486,11 @@ function DashboardMetrics({
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const query = await searchParams;
+  const auth = await requireAuthContext();
   const supabase = await createSupabaseServerClient();
   const { data: businessesData, error: businessesError } = await supabase
     .from("businesses")
-    .select("id,name,base_currency,timezone")
+    .select("id,name,base_currency,timezone,owner_user_id")
     .order("created_at", { ascending: false });
 
   const businesses = (businessesData ?? []) as BusinessRow[];
@@ -522,6 +528,23 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   const selectedBusiness =
     businesses.find((business) => business.id === query.business) ?? businesses[0];
+
+  let adminViewingMenteeUserId: string | null = null;
+  if (auth.role === "admin" && selectedBusiness.owner_user_id !== auth.userId) {
+    const { data: directoryRows, error: directoryError } = await supabase.rpc(
+      "admin_mentee_directory",
+    );
+    if (!directoryError) {
+      adminViewingMenteeUserId =
+        resolveAdminViewingMentee(
+          auth.role,
+          auth.userId,
+          selectedBusiness.owner_user_id,
+          (directoryRows ?? []) as MenteeDirectoryRow[],
+        )?.userId ?? null;
+    }
+  }
+
   const fallbackMonth = currentMonthKeyForTimeZone(selectedBusiness.timezone);
   const selectedMonth = parseMonthKey(query.month) ?? parseMonthKey(fallbackMonth);
 
@@ -544,6 +567,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   return (
     <div className="page-stack">
+      {adminViewingMenteeUserId && (
+        <AdminBusinessViewingBanner menteeUserId={adminViewingMenteeUserId} />
+      )}
+
       <div className={styles.dashboardHeader}>
         <PageHeading
           title="لوحة البزنس"
