@@ -22,7 +22,12 @@ const routes = [
   },
   {
     path: "src/app/(app)/businesses/[businessId]/settings/page.tsx",
-    required: ["BusinessSettingsView", "owner_user_id", 'auth.role === "admin"'],
+    required: [
+      "BusinessSettingsPageContent",
+      "owner_user_id",
+      "ownerUserId: business.owner_user_id",
+      "viewer={{ userId: auth.userId, role: auth.role }}",
+    ],
   },
 ] as const;
 
