@@ -76,3 +76,18 @@ test("resolves exact Insights anchors and preserves Insights origin through Mont
     "/businesses/business%20fixture%2F01/monthly?month=2026-10&origin=insights&return_month=2026-09&insight_rule=non_media_cost_pressure",
   );
 });
+
+
+test("resolves typed Admin Mentee hierarchy destinations", () => {
+  assert.equal(
+    resolveNavigationDestination({ route: "admin-mentees" }),
+    "/admin/mentees",
+  );
+  assert.equal(
+    resolveNavigationDestination({
+      route: "admin-mentee",
+      menteeUserId: "mentee fixture/01",
+    }),
+    "/admin/mentees/mentee%20fixture%2F01",
+  );
+});
