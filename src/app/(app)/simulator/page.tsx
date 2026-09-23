@@ -13,8 +13,16 @@ import {
   buildSimulatorHref,
   parseSimulatorTargetPlannerReturnContext,
 } from "@/lib/simulator-return-context";
+import {
+  persistentSimulatorScenarioId,
+  resolveSimulatorScenarioState,
+} from "@/lib/simulator-scenario-state";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { SimulatorReturnContextBanner, SimulatorReturnContextFields } from "./simulator-return-context";
+import {
+  SimulatorScenarioStateBanner,
+  SimulatorScenarioStateFields,
+} from "./simulator-scenario-state";
 import styles from "./simulator.module.css";
 import { SimulatorWorkspace } from "./simulator-workspace";
 
@@ -22,7 +30,7 @@ type SimulatorPageProps = {
   searchParams: Promise<{
     business?: string;
     month?: string;
-    scenario?: string;
+    scenario?: string | string[];
     status?: string;
     origin?: string | string[];
     planner_business?: string | string[];
@@ -148,6 +156,8 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
           .in("scenario_id", scenarioIds);
 
   const scenarioDataError = Boolean(scenariosError || overridesError);
+  const scenarioState = resolveSimulatorScenarioState(query.scenario, scenarios);
+  const persistentScenarioId = persistentSimulatorScenarioId(scenarioState);
   const overridesByScenario = new Map<string, ScenarioOverrides>();
   for (const row of (overridesData ?? []) as OverrideRow[]) {
     if (!isScenarioOverrideKey(row.override_key)) continue;
@@ -156,7 +166,10 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
     overridesByScenario.set(row.scenario_id, current);
   }
 
-  const selectedScenarioRow = scenarios.find((scenario) => scenario.id === query.scenario) ?? null;
+  const selectedScenarioRow =
+    scenarioState.kind === "saved"
+      ? scenarios.find((scenario) => scenario.id === scenarioState.scenario.id) ?? null
+      : null;
   const selectedScenarioOverridesUnavailable = Boolean(selectedScenarioRow && overridesError);
   const selectedScenario =
     selectedScenarioRow && !selectedScenarioOverridesUnavailable
@@ -195,6 +208,7 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
       </div>
 
       <SimulatorReturnContextBanner context={returnContext} />
+      <SimulatorScenarioStateBanner state={scenarioState} />
 
       <section className={styles.selectorPanel} aria-label="اختيار البزنس والشهر والسيناريو">
         <form>
@@ -216,11 +230,25 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
         <form>
           <input type="hidden" name="business" value={selectedBusiness.id} />
           <SimulatorReturnContextFields context={returnContext} />
+          <SimulatorScenarioStateFields state={scenarioState} />
           <label>
             <span>الشهر الفعلي المرجعي</span>
-            <input dir="ltr" type="month" name="month" defaultValue={selectedMonth.monthKey} />
+            <input
+              dir="ltr"
+              type="month"
+              name="month"
+              defaultValue={selectedMonth.monthKey}
+              disabled={scenarioState.kind === "unavailable"}
+            />
           </label>
-          <button type="submit">فتح الشهر</button>
+          <button type="submit" disabled={scenarioState.kind === "unavailable"}>
+            فتح الشهر
+          </button>
+          {scenarioState.kind === "unavailable" && (
+            <small className={styles.selectorNote}>
+              اختر سيناريو محفوظًا أو ابدأ سيناريو جديدًا قبل تغيير الشهر.
+            </small>
+          )}
         </form>
 
         <form>
@@ -229,7 +257,7 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
           <SimulatorReturnContextFields context={returnContext} />
           <label>
             <span>السيناريو المحفوظ</span>
-            <select name="scenario" defaultValue={selectedScenarioRow?.id ?? ""}>
+            <select name="scenario" defaultValue={persistentScenarioId ?? ""}>
               <option value="">سيناريو جديد غير محفوظ</option>
               {scenarios.map((scenario) => (
                 <option key={scenario.id} value={scenario.id}>
@@ -251,7 +279,24 @@ export default async function SimulatorPage({ searchParams }: SimulatorPageProps
         </section>
       )}
 
-      {selectedScenarioOverridesUnavailable ? (
+      {scenarioState.kind === "unavailable" ? (
+        <section className={styles.insufficientPanel}>
+          <h2>اختر سيناريو متاحًا</h2>
+          <p>
+            لم يتم استبدال السيناريو المطلوب بسيناريو جديد تلقائيًا. اختر سيناريو محفوظًا من القائمة
+            أو ابدأ سيناريو جديدًا بشكل صريح.
+          </p>
+          <Link
+            href={buildSimulatorHref({
+              businessId: selectedBusiness.id,
+              month: selectedMonth.monthKey,
+              returnContext,
+            })}
+          >
+            بدء سيناريو جديد
+          </Link>
+        </section>
+      ) : selectedScenarioOverridesUnavailable ? (
         <section className={styles.insufficientPanel} role="alert">
           <h2>تعذر فتح السيناريو المحفوظ</h2>
           <p>
