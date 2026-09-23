@@ -6,15 +6,41 @@
 
 .audit summary {
   width: fit-content;
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
   color: #2d5e47;
+  background: #f8faf9;
+  border: 1px solid #e0e8e3;
+  border-radius: 8px;
   font-size: 0.78rem;
   font-weight: 800;
   cursor: pointer;
-  list-style-position: inside;
+  list-style: none;
+}
+
+.audit summary::-webkit-details-marker {
+  display: none;
+}
+
+.audit summary::after {
+  content: "⌄";
+  flex: 0 0 auto;
+  font-size: 0.95rem;
+  line-height: 1;
+  transition: transform 150ms ease;
+}
+
+.audit[open] summary::after {
+  transform: rotate(180deg);
 }
 
 .audit summary:hover {
   color: #173d2b;
+  background: #f1f6f3;
+  border-color: #cfded5;
 }
 
 .audit summary:focus-visible {
