@@ -53,6 +53,7 @@ test("N62 keeps every major empty-state surface connected to a meaningful next a
   assert.match(targetPlanner, /تحديد الهدف/);
   assert.match(insights, /مراجعة التحليلات/);
   assert.match(analytics, /عرض الاتجاهات التاريخية/);
+  assert.match(analytics, /view=trends&period=ytd/);
   assert.match(settings, /إعداد أول بزنس/);
 });
 
@@ -64,4 +65,13 @@ test("N62 empty states explain why data is absent instead of treating missing da
   assert.match(simulator, /ميزان لن يخترع نسبًا بديلة/);
   assert.match(insights, /لا يحول البيانات المفقودة إلى صفر/);
   assert.match(analytics, /لن نعتبره\s*صفرًا/);
+});
+
+
+test("N62 keeps the browser-only empty-state fixture request-time gated", () => {
+  const fixture = source("src/app/auth/e2e-empty-state-audit/page.tsx");
+  assert.match(fixture, /import \{ connection \} from "next\/server"/);
+  assert.match(fixture, /export default async function EmptyStateAuditFixture/);
+  assert.match(fixture, /await connection\(\)/);
+  assert.match(fixture, /process\.env\.MIZAN_E2E_UI_FIXTURE/);
 });
