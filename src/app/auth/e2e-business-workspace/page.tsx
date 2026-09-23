@@ -9,11 +9,21 @@ const fixtureShellProps = {
   email: "admin.fixture@example.test",
 };
 
-/** CI-only fixture for N36 business workspace navigation. */
-export default function BusinessWorkspaceFixturePage() {
+type BusinessWorkspaceFixturePageProps = {
+  searchParams: Promise<{ owner?: string }>;
+};
+
+/** CI-only fixture for business workspace navigation and Admin viewing context. */
+export default async function BusinessWorkspaceFixturePage({
+  searchParams,
+}: BusinessWorkspaceFixturePageProps) {
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
     notFound();
   }
+
+  const query = await searchParams;
+  const adminViewingMenteeUserId =
+    query.owner === "self" ? null : "00000000-0000-4000-8000-000000000057";
 
   return (
     <AppShell {...fixtureShellProps}>
@@ -24,6 +34,7 @@ export default function BusinessWorkspaceFixturePage() {
           baseCurrency="USD"
           timezone="Africa/Cairo"
           activeTab="expenses"
+          adminViewingMenteeUserId={adminViewingMenteeUserId}
         />
       </section>
     </AppShell>
