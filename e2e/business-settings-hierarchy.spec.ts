@@ -39,6 +39,7 @@ test.describe("N59 Business Settings hierarchy", () => {
       `/businesses/${SECOND_BUSINESS_ID}/settings`,
     );
 
+    const settingsSelector = page.getByRole("region", { name: "اختيار بزنس للإعدادات" });
     for (const oldAction of [
       "مصادر الإيراد",
       "هيكل المصروفات",
@@ -47,7 +48,7 @@ test.describe("N59 Business Settings hierarchy", () => {
       "الأرقام الشهرية",
       "حذف البزنس",
     ]) {
-      await expect(page.getByRole("link", { name: oldAction, exact: true })).toHaveCount(0);
+      await expect(settingsSelector.getByRole("link", { name: oldAction, exact: true })).toHaveCount(0);
     }
 
     expect(errors).toEqual([]);
