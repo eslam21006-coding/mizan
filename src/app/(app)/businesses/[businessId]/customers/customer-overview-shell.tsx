@@ -81,7 +81,7 @@ export function CustomerOverviewShell({
               استيراد معاملات
             </Link>
           ) : (
-            <div className={styles.readOnlyAction} aria-label="استيراد المعاملات متاح للمالك أو الأدمن">
+            <div className={styles.readOnlyAction}>
               <strong>عرض فقط</strong>
               <small>استيراد المعاملات متاح للمالك أو الأدمن.</small>
             </div>
