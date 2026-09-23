@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
+import { ReadOnlyNotice } from "@/components/read-only-notice";
 import { requireAuthContext } from "@/lib/auth/context";
 import { parseCustomerHistoryOverviewSummary } from "@/lib/business/customer-history-overview";
 import { parseResourceId } from "@/lib/business/revenue-streams";
@@ -98,11 +99,15 @@ export default async function BusinessCustomersPage({
           ariaLabel="سياق العودة من اقتصاديات العميل"
         />
       )}
+      {!canManage && (
+        <ReadOnlyNotice description="يمكنك مراجعة اقتصاديات العميل وسجل العملاء، لكن استيراد المعاملات وتعديل إعدادات البيانات متاحان لمالك البزنس أو الأدمن." />
+      )}
       <CustomerOverviewShell
       businessId={business.id}
       businessName={business.name}
       baseCurrency={business.base_currency}
       timezone={business.timezone}
+      canManage={canManage}
       activeView={activeView}
       searchParams={customerSearchParams}
       reviewIssueCount={reviewIssueCount}
