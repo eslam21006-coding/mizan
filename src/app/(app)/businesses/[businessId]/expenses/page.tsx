@@ -2,7 +2,6 @@ import { randomUUID } from "node:crypto";
 import { notFound } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
-import { resolveAdminViewingMenteeUserId } from "@/lib/admin-business-viewing";
 import { requireAuthContext } from "@/lib/auth/context";
 import {
   EXPENSE_CATEGORY_OPTIONS,
@@ -88,11 +87,6 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
   }
 
   const canManageExpenses = auth.role === "admin" || business.owner_user_id === auth.userId;
-  const adminViewingMenteeUserId = resolveAdminViewingMenteeUserId(
-    auth.role,
-    auth.userId,
-    business.owner_user_id,
-  );
   const query = await searchParams;
   const returnOrigin = parseSetupReturnOrigin({
     origin: query.origin,
@@ -117,7 +111,6 @@ export default async function ExpensesPage({ params, searchParams }: ExpensesPag
         baseCurrency={business.base_currency}
         timezone={business.timezone}
         canManage={canManageExpenses}
-        adminViewingMenteeUserId={adminViewingMenteeUserId}
         returnOrigin={returnOrigin}
         creationRequestId={randomUUID()}
       />
