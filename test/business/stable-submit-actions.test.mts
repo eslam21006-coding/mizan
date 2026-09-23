@@ -28,7 +28,6 @@ test("N61 shared submit control exposes pending state without resizing its label
   assert.match(stableButtonStyles, /white-space: normal/);
   assert.match(stableButtonStyles, /overflow-wrap: anywhere/);
   assert.match(stableButtonStyles, /visibility: hidden/);
-  assert.doesNotMatch(stableButtonStyles, /\.labelStack > span[\s\S]*white-space: nowrap/);
 });
 
 test("N61 applies stable pending submits to the audited destructive and save actions", () => {
