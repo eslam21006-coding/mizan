@@ -9,6 +9,11 @@ import {
 } from "@/app/(app)/admin/mentees/mentee-hierarchy";
 import type { MenteeRecord } from "@/lib/admin/mentee-directory";
 
+const fixtureShellProps = {
+  role: "admin" as const,
+  email: "admin.fixture@example.test",
+};
+
 const MENTEE_A = "00000000-0000-4000-8000-000000000571";
 const MENTEE_B = "00000000-0000-4000-8000-000000000572";
 const LONG_EMAIL =
@@ -58,7 +63,7 @@ export default async function AdminMenteeHierarchyFixture({
   const selected = mentees.find((mentee) => mentee.userId === query.mentee) ?? null;
 
   return (
-    <AppShell role="admin" email="admin.fixture@example.test">
+    <AppShell {...fixtureShellProps}>
       <section className="page-stack" aria-label="اختبار هرم المتدربين">
         {selected ? (
           <>
