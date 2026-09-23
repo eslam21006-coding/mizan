@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
@@ -268,7 +269,25 @@ export default async function RevenueStreamsPage({
         ) : (
           <div className={styles.emptyState}>
             <strong>لا توجد مصادر إيراد بعد</strong>
-            <p>ابدأ بالمصدر الذي يدخل منه العميل أول مرة، ثم أضف الترقيات والتجديدات كمصادر Backend.</p>
+            <p>
+              هذا متوقع في البزنس الجديد، لكن الإدخال الشهري لن يعرض صفوفًا للإيراد حتى تضيف مصدرًا.
+              ابدأ بالمصدر الذي يدخل منه العميل أول مرة، ثم أضف الترقيات والتجديدات كمصادر Backend.
+            </p>
+            <div className={styles.emptyActions}>
+              {canManageRevenueStreams ? (
+                <RevenueStreamDrawerLauncher
+                  businessId={businessId}
+                  returnOrigin={returnOrigin}
+                  typeOptions={REVENUE_STREAM_TYPE_OPTIONS}
+                  mode="create"
+                  creationRequestId={randomUUID()}
+                />
+              ) : (
+                <Link className={styles.emptyLink} href={`/businesses/${businessId}`}>
+                  العودة إلى نظرة عامة
+                </Link>
+              )}
+            </div>
           </div>
         )}
       </section>
