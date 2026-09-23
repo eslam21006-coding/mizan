@@ -207,6 +207,21 @@
   border-color: var(--brand);
 }
 
+.workflowReadOnly {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  padding: 8px 13px;
+  color: var(--text-faint);
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
 @media (max-width: 600px) {
   .dataSourcesCard {
     align-items: flex-start;
@@ -234,7 +249,8 @@
     padding: 14px;
   }
 
-  .workflowLink {
+  .workflowLink,
+  .workflowReadOnly {
     width: 100%;
   }
 }
