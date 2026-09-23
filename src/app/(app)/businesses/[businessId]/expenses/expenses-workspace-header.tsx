@@ -15,7 +15,6 @@ type ExpensesWorkspaceHeaderProps = {
   baseCurrency: string;
   timezone: string;
   canManage: boolean;
-  adminViewingMenteeUserId?: string | null;
   returnOrigin: SetupReturnOrigin | null;
   creationRequestId: string;
 };
@@ -27,7 +26,6 @@ export function ExpensesWorkspaceHeader({
   baseCurrency,
   timezone,
   canManage,
-  adminViewingMenteeUserId,
   returnOrigin,
   creationRequestId,
 }: ExpensesWorkspaceHeaderProps) {
@@ -48,7 +46,6 @@ export function ExpensesWorkspaceHeader({
         baseCurrency={baseCurrency}
         timezone={timezone}
         activeTab="expenses"
-        adminViewingMenteeUserId={adminViewingMenteeUserId}
       />
 
       <Breadcrumb items={breadcrumbItems} />
