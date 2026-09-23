@@ -19,12 +19,19 @@
   font-weight: 800;
 }
 
+.addButton,
+.openBusinessButton,
+.manageLink {
+  cursor: pointer;
+}
+
 .addButton:hover {
   background: var(--brand-strong);
 }
 
 .addButton:focus-visible,
-.openBusinessButton:focus-visible {
+.openBusinessButton:focus-visible,
+.manageLink:focus-visible {
   outline: 3px solid var(--brand-ring);
   outline-offset: 2px;
 }
@@ -57,6 +64,7 @@
 .businessCard {
   min-width: 0;
   padding: 24px;
+  cursor: default;
 }
 
 .cardTopline {
@@ -82,6 +90,7 @@
   padding: 5px 9px;
   background: var(--brand-soft);
   border-radius: 999px;
+  cursor: default;
 }
 
 .currencyCode {
@@ -133,6 +142,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   margin-block-start: 20px;
   padding: 10px 16px;
   color: #fff;
@@ -143,8 +153,71 @@
   text-align: center;
 }
 
+.openBusinessButton::after,
+.manageLink::after {
+  content: "←";
+  flex: 0 0 auto;
+  font-size: 1.05em;
+  line-height: 1;
+  transition: transform 150ms ease;
+}
+
 .openBusinessButton:hover {
   background: var(--brand-strong);
+}
+
+.openBusinessButton:hover::after,
+.openBusinessButton:focus-visible::after,
+.manageLink:hover::after,
+.manageLink:focus-visible::after {
+  transform: translateX(-2px);
+}
+
+.nextStep {
+  margin-block-start: 18px;
+  padding-block-start: 16px;
+  border-block-start: 1px solid var(--border);
+}
+
+.nextStep p {
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.nextStep .openBusinessButton {
+  margin-block-start: 12px;
+}
+
+.manageLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-block-start: 12px;
+}
+
+.manageLink {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  flex: 1 1 135px;
+  padding: 8px 11px;
+  color: var(--brand-strong);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  text-decoration: none;
+}
+
+.manageLink:hover {
+  background: var(--brand-soft);
+  border-color: var(--brand);
 }
 
 .emptyState {
@@ -229,5 +302,9 @@
 
   .metaList dd {
     text-align: start;
+  }
+
+  .manageLink {
+    flex-basis: 100%;
   }
 }
