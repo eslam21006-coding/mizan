@@ -105,7 +105,7 @@ test.describe("Customer first-purchase-group UX", () => {
     await page.route("**/rest/v1/customer_observed_ltv**", fulfillEmptyCohorts);
     await page.goto("/auth/e2e-customer-cohort-ux?readOnly=1");
 
-    await expect(page.getByText("لا توجد بيانات كافية لحساب قيمة العميل المحققة حتى الآن")).toBeVisible();
+    await expect(page.getByText("لا توجد مجموعات عملاء حسب شهر أول شراء بعد.")).toBeVisible();
     await expect(page.getByRole("link", { name: "استيراد معاملات" })).toHaveCount(0);
     await expect(page.getByRole("link", { name: "العودة إلى نظرة عامة" })).toBeVisible();
   });
