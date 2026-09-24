@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { expectFullScreenMobileSheet } from "./mobile-sheet-assertions";
 
 const fixtureEnabled = process.env.MIZAN_E2E_UI_FIXTURE === "true";
 const fixturePath = "/auth/e2e-customer-tabs";
@@ -126,4 +127,35 @@ test.describe("CI-only URL-backed Customer tabs fixture", () => {
     });
     expect(errors).toEqual([]);
   });
+  test("uses a full-screen Data Sources sheet with internal scrolling at 390px", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 520 });
+    await page.goto(`${fixturePath}?view=overview&month=2026-08`);
+
+    const trigger = page.getByRole("button", { name: /مصادر بيانات اقتصاديات العميل/ });
+    await trigger.click();
+
+    const dialog = page.getByRole("dialog", { name: "مصادر بيانات اقتصاديات العميل" });
+    await expect(dialog).toBeVisible();
+    await expectFullScreenMobileSheet(page, dialog);
+
+    const scrollMetrics = await dialog.locator("article").first().evaluate((element) => {
+      const container = element.parentElement;
+      if (!container) return null;
+      return {
+        clientHeight: container.clientHeight,
+        scrollHeight: container.scrollHeight,
+        overflowY: getComputedStyle(container).overflowY,
+      };
+    });
+    expect(scrollMetrics).not.toBeNull();
+    expect(scrollMetrics?.overflowY).toBe("auto");
+    expect(scrollMetrics?.scrollHeight ?? 0).toBeGreaterThan(scrollMetrics?.clientHeight ?? 0);
+
+    await dialog.getByRole("button", { name: "إغلاق مصادر البيانات" }).click();
+    await expect(dialog).toBeHidden();
+
+    expect(errors).toEqual([]);
+  });
+
 });
