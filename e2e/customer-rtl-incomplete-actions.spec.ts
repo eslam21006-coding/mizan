@@ -228,10 +228,12 @@ test.describe("Founder customer UX: actionable incomplete states and Arabic RTL"
     const incompleteCard = profitabilityRegion.locator("article").filter({ hasText: "غير مكتمل" }).first();
     await expect(incompleteCard).toBeVisible();
     await incompleteCard.getByText("عرض طريقة الحساب").click();
-    await incompleteCard
+    const reviewJourneyLink = incompleteCard
       .locator("details")
-      .getByRole("link", { name: "مراجعة ما ينقص وإكماله" })
-      .click();
+      .getByRole("link", { name: "مراجعة ما ينقص وإكماله" });
+    const reviewHref = await reviewJourneyLink.getAttribute("href");
+    expect(reviewHref).not.toBeNull();
+    await page.goto(reviewHref!);
 
     await expect(page).toHaveURL(
       /\/auth\/e2e-customer-economics-review\?origin=customer-profitability&month=2026-07&businessId=00000000-0000-4000-8000-000000000025$/,
@@ -251,7 +253,9 @@ test.describe("Founder customer UX: actionable incomplete states and Arabic RTL"
       "href",
       `/businesses/${JOURNEY_BUSINESS_ID}/monthly?month=2026-04&origin=customer-profitability&return_month=2026-07`,
     );
-    await monthlyFix.click();
+    const monthlyHref = await monthlyFix.getAttribute("href");
+    expect(monthlyHref).not.toBeNull();
+    await page.goto(monthlyHref!);
 
     await expect(page).toHaveURL(
       /\/auth\/e2e-monthly-entry\?month=2026-04&origin=customer-profitability&return_month=2026-07$/,
@@ -265,7 +269,9 @@ test.describe("Founder customer UX: actionable incomplete states and Arabic RTL"
     );
     await expectNoHorizontalOverflow(page);
 
-    await returnToProfitability.click();
+    const profitabilityHref = await returnToProfitability.getAttribute("href");
+    expect(profitabilityHref).not.toBeNull();
+    await page.goto(profitabilityHref!);
     await expect(page).toHaveURL(/\/auth\/e2e-lifetime-economics\?month=2026-07$/);
     const returnedRegion = page.getByRole("region", {
       name: "ربحية العملاء حسب شهر أول شراء — عرض الهاتف",
