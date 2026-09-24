@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import mobileActionStyles from "@/components/mobile-editor-actions.module.css";
 import { PageHeading } from "@/components/page-heading";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { requireAuthContext } from "@/lib/auth/context";
@@ -395,7 +396,10 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
             </section>
           )}
 
-          <form action={canManage ? saveFunnelMonthlyActuals : undefined} className={styles.metricsForm}>
+          <form
+            action={canManage ? saveFunnelMonthlyActuals : undefined}
+            className={`${styles.metricsForm} ${mobileActionStyles.editorSurface}`}
+          >
             <input type="hidden" name="business_id" value={businessId} />
             <input type="hidden" name="month" value={selectedMonth.monthKey} />
             {returnOrigin && <input type="hidden" name="origin" value={returnOrigin.origin} />}
@@ -643,10 +647,24 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
               </div>
             )}
 
-            {canManage && (
-              <div className={styles.saveBar}>
+            {canManage ? (
+              <div
+                className={`${styles.saveBar} ${mobileActionStyles.actionBar}`}
+                data-editor-action-bar="funnel-monthly"
+              >
                 <p>الحفظ يغيّر أرقام هذا الشهر فقط ولا يغيّر البيانات التاريخية لأي شهر آخر.</p>
                 <button type="submit">حفظ أرقام الفانلز</button>
+              </div>
+            ) : (
+              <div
+                className={`${styles.saveBar} ${mobileActionStyles.actionBar} ${mobileActionStyles.readOnlyAction}`}
+                data-editor-action-bar="funnel-monthly-read-only"
+                aria-label="حالة إجراءات أرقام الفانلز"
+              >
+                <div>
+                  <strong>عرض فقط</strong>
+                  <p>حفظ أرقام الفانلز متاح لمالك البزنس أو الأدمن.</p>
+                </div>
               </div>
             )}
           </form>
