@@ -167,10 +167,25 @@ test.describe("Monthly entry UX fixture", () => {
       await expect(page.getByLabel(label)).toBeVisible();
     }
 
+    const saveBar = page.getByTestId("monthly-save-bar");
     const saveButton = page.getByRole("button", { name: "حفظ الشهر" });
-    const saveBox = await saveButton.boundingBox();
-    expect(saveBox?.height ?? 0).toBeGreaterThanOrEqual(44);
-    await expect(page.getByTestId("monthly-save-bar")).toHaveCSS("position", "static");
+    await expect(saveBar).toHaveCSS("position", "fixed");
+    await expect(saveButton).toBeVisible();
+
+    const barBox = await saveBar.boundingBox();
+    expect(barBox).not.toBeNull();
+    expect((barBox?.y ?? 999) + (barBox?.height ?? 999)).toBeLessThanOrEqual(844);
+
+    const lastField = page.getByLabel("Payment Fees — النسبة %");
+    await lastField.evaluate((element) => element.scrollIntoView({ block: "nearest" }));
+    await lastField.focus();
+    const fieldBox = await lastField.boundingBox();
+    const focusedBarBox = await saveBar.boundingBox();
+    expect(fieldBox).not.toBeNull();
+    expect(focusedBarBox).not.toBeNull();
+    expect((fieldBox?.y ?? 999) + (fieldBox?.height ?? 999)).toBeLessThanOrEqual(
+      (focusedBarBox?.y ?? 0) - 4,
+    );
 
     await page.screenshot({
       path: "test-results/screenshots/monthly-entry-fixture-mobile.png",

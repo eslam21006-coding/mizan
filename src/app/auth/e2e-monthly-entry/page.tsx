@@ -6,9 +6,9 @@ import {
   type ExpenseInputRow,
   type RevenueInputRow,
 } from "@/app/(app)/businesses/[businessId]/monthly/monthly-entry-form";
-import saveBarStyles from "@/app/(app)/businesses/[businessId]/monthly/monthly-save-bar.module.css";
 import styles from "@/app/(app)/businesses/[businessId]/monthly/monthly.module.css";
 import { AppShell } from "@/components/app-shell";
+import mobileActionStyles from "@/components/mobile-editor-actions.module.css";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { parseMonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
 
@@ -142,7 +142,7 @@ export default async function MonthlyEntryE2eFixturePage({
           </Link>
         </section>
 
-        <form className={styles.monthForm}>
+        <form className={`${styles.monthForm} ${mobileActionStyles.editorSurface}`}>
           <MonthlyEntryForm
             editable
             currency="USD"
@@ -157,7 +157,7 @@ export default async function MonthlyEntryE2eFixturePage({
             }}
           />
           <div
-            className={`${styles.saveBar} ${saveBarStyles.mobileSafeSaveBar}`}
+            className={`${styles.saveBar} ${mobileActionStyles.actionBar}`}
             data-testid="monthly-save-bar"
           >
             <div>
