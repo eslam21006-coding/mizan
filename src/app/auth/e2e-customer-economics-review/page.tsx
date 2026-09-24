@@ -55,7 +55,8 @@ export default async function CustomerEconomicsReviewFixturePage({
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") notFound();
 
   const query = await searchParams;
-  const businessId = query.businessId === JOURNEY_BUSINESS_ID ? JOURNEY_BUSINESS_ID : DEFAULT_BUSINESS_ID;
+  const journeyBusinessSelected = query.businessId === JOURNEY_BUSINESS_ID;
+  const businessId = journeyBusinessSelected ? JOURNEY_BUSINESS_ID : DEFAULT_BUSINESS_ID;
   const parsedOrigin = parseReturnOrigin({ origin: query.origin, month: query.month });
   const returnOrigin = parsedOrigin?.origin === "customer-profitability" ? parsedOrigin : null;
   const returnBanner = returnOrigin ? (
@@ -70,9 +71,13 @@ export default async function CustomerEconomicsReviewFixturePage({
 
   if (query.state === "error") {
     const retryHref = (() => {
-      if (!returnOrigin) return FIXTURE_PATH;
-      const retryParams = new URLSearchParams({ origin: returnOrigin.origin });
-      if (returnOrigin.month) retryParams.set("month", returnOrigin.month);
+      if (!returnOrigin && !journeyBusinessSelected) return FIXTURE_PATH;
+      const retryParams = new URLSearchParams();
+      if (returnOrigin) {
+        retryParams.set("origin", returnOrigin.origin);
+        if (returnOrigin.month) retryParams.set("month", returnOrigin.month);
+      }
+      if (journeyBusinessSelected) retryParams.set("businessId", businessId);
       return `${FIXTURE_PATH}?${retryParams.toString()}`;
     })();
     return (
