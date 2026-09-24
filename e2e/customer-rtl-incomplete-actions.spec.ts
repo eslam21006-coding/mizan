@@ -34,9 +34,12 @@ async function installIncompleteProfitabilityJourneyRedirects(page: Page) {
       return;
     }
     const url = new URL(route.request().url());
+    const fixtureUrl = new URL("/auth/e2e-customer-economics-review", url.origin);
+    for (const [key, value] of url.searchParams) fixtureUrl.searchParams.append(key, value);
+    fixtureUrl.searchParams.set("businessId", JOURNEY_BUSINESS_ID);
     await route.fulfill({
       status: 307,
-      headers: { Location: `${url.origin}/auth/e2e-customer-economics-review${url.search}` },
+      headers: { Location: fixtureUrl.toString() },
       body: "",
     });
   });
@@ -225,10 +228,13 @@ test.describe("Founder customer UX: actionable incomplete states and Arabic RTL"
     const incompleteCard = profitabilityRegion.locator("article").filter({ hasText: "غير مكتمل" }).first();
     await expect(incompleteCard).toBeVisible();
     await incompleteCard.getByText("عرض طريقة الحساب").click();
-    await incompleteCard.getByRole("link", { name: "مراجعة ما ينقص وإكماله" }).click();
+    await incompleteCard
+      .locator("details")
+      .getByRole("link", { name: "مراجعة ما ينقص وإكماله" })
+      .click();
 
     await expect(page).toHaveURL(
-      /\/auth\/e2e-customer-economics-review\?origin=customer-profitability&month=2026-07$/,
+      /\/auth\/e2e-customer-economics-review\?origin=customer-profitability&month=2026-07&businessId=00000000-0000-4000-8000-000000000025$/,
     );
     await expect(page.getByRole("link", { name: "العودة إلى ربحية العميل" }).first()).toHaveAttribute(
       "href",
