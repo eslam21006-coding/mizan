@@ -73,6 +73,13 @@ test("N66 attaches the shared sticky action primitive to every intended full-pag
   }
 });
 
+test("N66 keeps read-only mobile guidance visible while compacting editable action copy", () => {
+  const css = mobileRules(sharedStyles);
+  assert.match(css, /\.actionBar:not\(\.readOnlyAction\) p\s*\{[\s\S]*?display:\s*none;/);
+  const readOnlyParagraph = ruleBody(css, ".readOnlyAction p");
+  assert.match(readOnlyParagraph, /display:\s*block;/);
+});
+
 test("N66 keeps read-only editor action structure visible without mutation controls", () => {
   assert.match(monthlyPage, /data-editor-action-bar="monthly-read-only"/);
   assert.match(monthlyPage, /"عرض فقط — شهر تاريخي"\s*:\s*"عرض فقط"/);
