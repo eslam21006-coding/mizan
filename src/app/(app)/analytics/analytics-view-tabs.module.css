@@ -61,6 +61,14 @@
 
 @media (max-width: 560px) {
   .viewTabs {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+  }
+
+  .viewTab {
+    scroll-snap-align: start;
   }
 }

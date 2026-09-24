@@ -667,6 +667,24 @@
   }
 }
 
+@media (max-width: 560px) {
+  .analysisTabs {
+    position: sticky;
+    inset-block-start: 72px;
+    z-index: 10;
+    display: flex;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+  }
+
+  .analysisTab {
+    flex: 0 0 min(68vw, 210px);
+    scroll-snap-align: start;
+  }
+}
+
 @media (max-width: 430px) {
   .pageActions,
   .actionLink,
@@ -695,10 +713,6 @@
   .setupDisclosure > summary {
     align-items: flex-start;
     flex-direction: column;
-  }
-
-  .analysisTabs {
-    grid-template-columns: 1fr;
   }
 
   .analysisTab {

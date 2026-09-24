@@ -39,6 +39,7 @@ export function CustomerAnalysisTabs({
     panels.findIndex((panel) => panel.id === activeView),
   );
   const [visitedIndexes, setVisitedIndexes] = useState(() => new Set([activeIndex]));
+  const tabListRef = useRef<HTMLDivElement | null>(null);
   const tabRefs = useRef<Array<HTMLAnchorElement | null>>([]);
 
   useEffect(() => {
@@ -48,6 +49,23 @@ export function CustomerAnalysisTabs({
       next.add(activeIndex);
       return next;
     });
+
+    const tabList = tabListRef.current;
+    const activeTab = tabRefs.current[activeIndex];
+    if (tabList && activeTab && tabList.scrollWidth > tabList.clientWidth) {
+      const listRect = tabList.getBoundingClientRect();
+      const tabRect = activeTab.getBoundingClientRect();
+      const horizontalDelta =
+        tabRect.left < listRect.left
+          ? tabRect.left - listRect.left
+          : tabRect.right > listRect.right
+            ? tabRect.right - listRect.right
+            : 0;
+
+      if (horizontalDelta !== 0) {
+        tabList.scrollBy({ left: horizontalDelta, top: 0, behavior: "auto" });
+      }
+    }
   }, [activeIndex]);
 
   /** Moves focus and selection together through URL navigation for the RTL tab list. */
@@ -85,7 +103,12 @@ export function CustomerAnalysisTabs({
         </div>
       </div>
 
-      <div className={styles.analysisTabs} role="tablist" aria-label="أقسام تحليل العملاء">
+      <div
+        ref={tabListRef}
+        className={styles.analysisTabs}
+        role="tablist"
+        aria-label="أقسام تحليل العملاء"
+      >
         {panels.map((panel, index) => {
           const selected = activeIndex === index;
           return (
