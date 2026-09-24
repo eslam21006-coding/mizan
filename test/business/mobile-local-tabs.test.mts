@@ -17,7 +17,11 @@ const analyticsStyles = readFileSync(
 
 test("N64 keeps Customer local tabs horizontally usable and sticky on mobile", () => {
   assert.match(customerTabs, /tabListRef/);
-  assert.match(customerTabs, /scrollIntoView\(\{ block: "nearest", inline: "nearest" \}\)/);
+  assert.doesNotMatch(customerTabs, /scrollIntoView/);
+  assert.match(
+    customerTabs,
+    /tabList\.scrollBy\(\{ left: horizontalDelta, top: 0, behavior: "auto" \}\)/,
+  );
   assert.match(customerStyles, /@media \(max-width: 560px\)[\s\S]*\.analysisTabs \{[\s\S]*position: sticky/);
   assert.match(customerStyles, /overflow-x: auto/);
   assert.match(customerStyles, /scroll-snap-type: x proximity/);
