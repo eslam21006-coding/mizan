@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties } from "react";
+import mobileActionStyles from "@/components/mobile-editor-actions.module.css";
 import type { TransactionColumnMapping } from "@/lib/business/transaction-column-mapping";
 import {
   parseTransactionImportCompletionSummary,
@@ -886,7 +887,7 @@ export function TransactionImportValidator({
                 </div>
               )}
 
-              <fieldset className={task20Styles.importPanel}>
+              <fieldset className={`${task20Styles.importPanel} ${mobileActionStyles.editorSurface}`}>
                 <legend className={task20Styles.importLegend}>تأكيد الاستيراد</legend>
                 <p>
                   إذا توفر رقم المعاملة، يستخدمه ميزان لاكتشاف التكرار بدقة. وإذا لم يتوفر، يقارن البريد والتوقيت والمبلغ والمصدر ونوع المعاملة، ويطلب قرارك عندما لا يكون التكرار مؤكدًا.
@@ -979,20 +980,27 @@ export function TransactionImportValidator({
                   <small>يجب أن يحتوي الملف الواحد على نوع واحد فقط. إذا كان الملف يحتوي على تحصيلات واسترجاعات، افصلهما إلى ملفين.</small>
                 </div>
 
-                <button
-                  type="button"
-                  className={task20Styles.importButton}
-                  disabled={workflowLocked || !source || !transactionType || !successfulOnlyConfirmed || !currencyReady || isLoadingSources || isCreatingSource}
-                  onClick={() => void importTransactions()}
-                >
-                  {isImporting
-                    ? pendingVerification
-                      ? "جاري التحقق من الحفظ…"
-                      : "جاري الاستيراد…"
-                    : pendingVerification
-                      ? "إعادة التحقق من الحفظ"
-                      : `استيراد ${result.validRows} معاملة صالحة`}
-                </button>
+                {pendingCandidates.length === 0 && !completionSummary && (
+                  <div
+                    className={mobileActionStyles.actionBar}
+                    data-editor-action-bar="transaction-import"
+                  >
+                    <button
+                      type="button"
+                      className={task20Styles.importButton}
+                      disabled={workflowLocked || !source || !transactionType || !successfulOnlyConfirmed || !currencyReady || isLoadingSources || isCreatingSource}
+                      onClick={() => void importTransactions()}
+                    >
+                      {isImporting
+                        ? pendingVerification
+                          ? "جاري التحقق من الحفظ…"
+                          : "جاري الاستيراد…"
+                        : pendingVerification
+                          ? "إعادة التحقق من الحفظ"
+                          : `استيراد ${result.validRows} معاملة صالحة`}
+                    </button>
+                  </div>
+                )}
 
                 {nameImportWarning && (
                   <div className={task20Styles.importError} role="status">
@@ -1063,14 +1071,19 @@ export function TransactionImportValidator({
                         </tbody>
                       </table>
                     </div>
-                    <button
-                      type="button"
-                      className={task20Styles.importButton}
-                      disabled={isImporting || pendingCandidates.some((candidate) => candidateDecisions[candidate.row.row_number] === undefined)}
-                      onClick={() => void resolveCandidates()}
+                    <div
+                      className={mobileActionStyles.actionBar}
+                      data-editor-action-bar="transaction-import-candidates"
                     >
-                      {isImporting ? "جاري تطبيق القرارات…" : "تطبيق القرارات والمتابعة"}
-                    </button>
+                      <button
+                        type="button"
+                        className={task20Styles.importButton}
+                        disabled={isImporting || pendingCandidates.some((candidate) => candidateDecisions[candidate.row.row_number] === undefined)}
+                        onClick={() => void resolveCandidates()}
+                      >
+                        {isImporting ? "جاري تطبيق القرارات…" : "تطبيق القرارات والمتابعة"}
+                      </button>
+                    </div>
                   </div>
                 )}
 
