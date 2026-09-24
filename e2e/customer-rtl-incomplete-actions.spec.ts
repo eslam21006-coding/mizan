@@ -235,6 +235,7 @@ test.describe("Founder customer UX: actionable incomplete states and Arabic RTL"
     await monthlyFix.click();
 
     await expect(page.getByRole("heading", { name: "الإدخال الشهري" })).toBeVisible();
+    await expect(page.getByText("أبريل ٢٠٢٦", { exact: true })).toBeVisible();
     await expect.poll(() => new URL(page.url()).searchParams.get("month")).toBe("2026-04");
     await expect.poll(() => new URL(page.url()).searchParams.get("origin")).toBe("customer-profitability");
     await expect.poll(() => new URL(page.url()).searchParams.get("return_month")).toBe("2026-07");
