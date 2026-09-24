@@ -23,10 +23,11 @@
   .actionBar {
     position: fixed !important;
     inset-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
-    bottom: max(8px, env(safe-area-inset-bottom));
-    z-index: 40;
+    bottom: max(8px, env(safe-area-inset-bottom)) !important;
+    z-index: 40 !important;
     display: flex;
-    align-items: center;
+    flex-direction: row !important;
+    align-items: center !important;
     justify-content: space-between;
     gap: 10px;
     width: auto;
@@ -46,6 +47,8 @@
 
   .actionBar button {
     min-height: 48px;
+    width: auto !important;
+    max-width: 100%;
   }
 
   .readOnlyAction {
@@ -56,6 +59,6 @@
 @media (max-width: 430px) {
   .actionBar {
     inset-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right));
-    bottom: max(6px, env(safe-area-inset-bottom));
+    bottom: max(6px, env(safe-area-inset-bottom)) !important;
   }
 }
