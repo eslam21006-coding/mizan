@@ -53,7 +53,18 @@ export function CustomerAnalysisTabs({
     const tabList = tabListRef.current;
     const activeTab = tabRefs.current[activeIndex];
     if (tabList && activeTab && tabList.scrollWidth > tabList.clientWidth) {
-      activeTab.scrollIntoView({ block: "nearest", inline: "nearest" });
+      const listRect = tabList.getBoundingClientRect();
+      const tabRect = activeTab.getBoundingClientRect();
+      const horizontalDelta =
+        tabRect.left < listRect.left
+          ? tabRect.left - listRect.left
+          : tabRect.right > listRect.right
+            ? tabRect.right - listRect.right
+            : 0;
+
+      if (horizontalDelta !== 0) {
+        tabList.scrollBy({ left: horizontalDelta, top: 0, behavior: "auto" });
+      }
     }
   }, [activeIndex]);
 
