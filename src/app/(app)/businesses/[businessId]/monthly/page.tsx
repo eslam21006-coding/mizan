@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PageHeading } from "@/components/page-heading";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { ReadOnlyNotice } from "@/components/read-only-notice";
+import mobileActionStyles from "@/components/mobile-editor-actions.module.css";
 import { StableSubmitButton } from "@/components/stable-submit-button";
 import { requireAuthContext } from "@/lib/auth/context";
 import { loadTransactionDerivedMonthlyCustomerCounts } from "@/lib/business/monthly-customer-counts";
@@ -30,7 +31,6 @@ import {
   type MonthlyPeriodValues,
   type RevenueInputRow,
 } from "./monthly-entry-form";
-import saveBarStyles from "./monthly-save-bar.module.css";
 import { MonthlyNavigationShell } from "./monthly-navigation-shell";
 import styles from "./monthly.module.css";
 
@@ -543,7 +543,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
           <form
             key={`monthly-form-${selectedMonth.monthKey}`}
             action={saveMonthlyActuals}
-            className={`${styles.monthForm} ${payingCustomersDerived && !newCustomersDerived ? trustStyles.payingDerivedOnly : ""}`}
+            className={`${styles.monthForm} ${mobileActionStyles.editorSurface} ${payingCustomersDerived && !newCustomersDerived ? trustStyles.payingDerivedOnly : ""}`}
           >
             <input type="hidden" name="business_id" value={businessId} />
             <input type="hidden" name="month" value={selectedMonth.monthKey} />
@@ -557,7 +557,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
               period={effectivePeriod}
               customerCountsDerived={newCustomersDerived}
             />
-            <div className={`${styles.saveBar} ${saveBarStyles.mobileSafeSaveBar}`}>
+            <div className={`${styles.saveBar} ${mobileActionStyles.actionBar}`} data-editor-action-bar="monthly">
               <div>
                 <strong>حفظ أرقام {monthLabel}</strong>
                 <p>يتم حفظ الشهر كعملية واحدة. أي خطأ يمنع الحفظ الجزئي.</p>
@@ -566,7 +566,7 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
             </div>
           </form>
         ) : (
-          <div key={`monthly-read-${selectedMonth.monthKey}`} className={styles.monthForm}>
+          <div key={`monthly-read-${selectedMonth.monthKey}`} className={`${styles.monthForm} ${mobileActionStyles.editorSurface}`}>
             {historyTrustNotice}
             <MonthlyEntryForm
               editable={false}
@@ -576,6 +576,16 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
               period={effectivePeriod}
               customerCountsDerived={newCustomersDerived}
             />
+            <div
+              className={`${styles.saveBar} ${mobileActionStyles.actionBar} ${mobileActionStyles.readOnlyAction}`}
+              data-editor-action-bar="monthly-read-only"
+              aria-label="حالة إجراءات الإدخال الشهري"
+            >
+              <div>
+                <strong>عرض فقط</strong>
+                <p>حفظ الشهر متاح لمالك البزنس أو الأدمن.</p>
+              </div>
+            </div>
           </div>
         ))}
     </div>
