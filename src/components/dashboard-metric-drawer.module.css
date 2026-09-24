@@ -184,6 +184,7 @@
     inset: 0;
     border: 0;
     box-shadow: none;
+    overflow: hidden;
   }
 
   .drawerHeader {
