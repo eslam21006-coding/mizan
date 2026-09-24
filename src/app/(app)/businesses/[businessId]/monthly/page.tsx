@@ -582,8 +582,12 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
               aria-label="حالة إجراءات الإدخال الشهري"
             >
               <div>
-                <strong>عرض فقط</strong>
-                <p>حفظ الشهر متاح لمالك البزنس أو الأدمن.</p>
+                <strong>{isSavedHistorical ? "عرض فقط — شهر تاريخي" : "عرض فقط"}</strong>
+                <p>
+                  {isSavedHistorical
+                    ? "استخدم مسار التصحيح التاريخي لتعديل شهر محفوظ سابقًا."
+                    : "حفظ الشهر متاح لمالك البزنس أو الأدمن."}
+                </p>
               </div>
             </div>
           </div>
