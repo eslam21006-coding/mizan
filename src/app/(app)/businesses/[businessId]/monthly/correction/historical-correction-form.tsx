@@ -72,7 +72,6 @@ export function HistoricalCorrectionForm({
         <div
           className={`${monthlyStyles.saveBar} ${mobileActionStyles.actionBar} ${mobileActionStyles.readOnlyAction}`}
           data-editor-action-bar="historical-correction-read-only"
-          aria-label="حالة إجراءات التصحيح التاريخي"
         >
           <div>
             <strong>عرض فقط</strong>
