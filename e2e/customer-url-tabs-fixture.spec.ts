@@ -127,6 +127,7 @@ test.describe("CI-only URL-backed Customer tabs fixture", () => {
     });
     expect(errors).toEqual([]);
   });
+
   test("uses a full-screen Data Sources sheet with internal scrolling at 390px", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 390, height: 520 });
@@ -157,5 +158,4 @@ test.describe("CI-only URL-backed Customer tabs fixture", () => {
 
     expect(errors).toEqual([]);
   });
-
 });
