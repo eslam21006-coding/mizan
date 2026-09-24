@@ -1,4 +1,5 @@
 import Link from "next/link";
+import mobileActionStyles from "@/components/mobile-editor-actions.module.css";
 import type { MonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
 import {
   MonthlyEntryForm,
@@ -6,7 +7,6 @@ import {
   type MonthlyPeriodValues,
   type RevenueInputRow,
 } from "../monthly-entry-form";
-import saveBarStyles from "../monthly-save-bar.module.css";
 import monthlyStyles from "../monthly.module.css";
 import trustStyles from "../customer-history-trust.module.css";
 import { correctHistoricalMonthlyActuals } from "./actions";
@@ -58,7 +58,7 @@ export function HistoricalCorrectionForm({
 
   if (!canEdit) {
     return (
-      <div className={monthlyStyles.monthForm}>
+      <div className={`${monthlyStyles.monthForm} ${mobileActionStyles.editorSurface}`}>
         {trustNotice}
         <MonthlyEntryForm
           editable={false}
@@ -69,6 +69,16 @@ export function HistoricalCorrectionForm({
           customerCountsDerived={newCustomersDerived}
         />
         <div className={styles.readOnlyNotice}>هذه البيانات للعرض فقط حسب صلاحيتك الحالية.</div>
+        <div
+          className={`${monthlyStyles.saveBar} ${mobileActionStyles.actionBar} ${mobileActionStyles.readOnlyAction}`}
+          data-editor-action-bar="historical-correction-read-only"
+          aria-label="حالة إجراءات التصحيح التاريخي"
+        >
+          <div>
+            <strong>عرض فقط</strong>
+            <p>التصحيح التاريخي متاح لمالك البزنس أو الأدمن.</p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -76,7 +86,7 @@ export function HistoricalCorrectionForm({
   return (
     <form
       action={correctHistoricalMonthlyActuals}
-      className={`${monthlyStyles.monthForm} ${payingOnlyDerived ? trustStyles.payingDerivedOnly : ""}`}
+      className={`${monthlyStyles.monthForm} ${mobileActionStyles.editorSurface} ${payingOnlyDerived ? trustStyles.payingDerivedOnly : ""}`}
     >
       <input type="hidden" name="business_id" value={businessId} />
       <input type="hidden" name="month" value={monthKey} />
@@ -131,7 +141,7 @@ export function HistoricalCorrectionForm({
         </label>
       </section>
 
-      <div className={`${monthlyStyles.saveBar} ${saveBarStyles.mobileSafeSaveBar}`}>
+      <div className={`${monthlyStyles.saveBar} ${mobileActionStyles.actionBar}`} data-editor-action-bar="historical-correction">
         <div>
           <strong>حفظ تصحيح {monthLabel}</strong>
           <p>سيتم تسجيل قبل/بعد وسبب التصحيح. لا يوجد تطبيق تلقائي على الشهور الأخرى.</p>
