@@ -659,7 +659,6 @@ export default async function FunnelMonthlyPage({ params, searchParams }: Funnel
               <div
                 className={`${styles.saveBar} ${mobileActionStyles.actionBar} ${mobileActionStyles.readOnlyAction}`}
                 data-editor-action-bar="funnel-monthly-read-only"
-                aria-label="حالة إجراءات أرقام الفانلز"
               >
                 <div>
                   <strong>عرض فقط</strong>
