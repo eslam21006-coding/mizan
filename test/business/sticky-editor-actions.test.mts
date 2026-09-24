@@ -62,7 +62,7 @@ test("N66 attaches the shared sticky action primitive to every intended full-pag
 
 test("N66 keeps read-only editor action structure visible without mutation controls", () => {
   assert.match(monthlyPage, /data-editor-action-bar="monthly-read-only"/);
-  assert.match(monthlyPage, /<strong>عرض فقط<\/strong>/);
+  assert.match(monthlyPage, /"عرض فقط — شهر تاريخي"\s*:\s*"عرض فقط"/);
   assert.match(correctionForm, /data-editor-action-bar="historical-correction-read-only"/);
   assert.match(correctionForm, /<strong>عرض فقط<\/strong>/);
   assert.match(funnelMonthly, /data-editor-action-bar="funnel-monthly-read-only"/);
