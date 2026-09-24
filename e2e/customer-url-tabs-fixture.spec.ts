@@ -90,7 +90,16 @@ test.describe("CI-only URL-backed Customer tabs fixture", () => {
     await expect(page).toHaveURL(new RegExp(`${fixturePath}\\?view=value&month=2026-08$`));
     await expect(tab(page, /متوسط ما دفعه العميل/)).toHaveAttribute("aria-selected", "true");
 
+    await page.setViewportSize({ width: 390, height: 420 });
+    await page.goto(`${fixturePath}?view=overview&month=2026-08`);
+    const belowViewportBox = await tabList.boundingBox();
+    expect(belowViewportBox).not.toBeNull();
+    expect((belowViewportBox?.y ?? 0)).toBeGreaterThanOrEqual(420);
+    expect(await page.evaluate(() => window.scrollY)).toBe(0);
+
     await page.goto(`${fixturePath}?view=customers&month=2026-08`);
+    await expect.poll(async () => page.evaluate(() => window.scrollY)).toBe(0);
+
     const activeCustomerTab = tab(page, /سجل العملاء/);
     await expect(activeCustomerTab).toHaveAttribute("aria-selected", "true");
     await expect
