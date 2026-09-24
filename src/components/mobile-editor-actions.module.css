@@ -1,0 +1,61 @@
+.editorSurface {
+  min-width: 0;
+}
+
+.actionBar {
+  min-width: 0;
+}
+
+.readOnlyAction {
+  color: var(--text-soft, var(--muted));
+}
+
+@media (max-width: 720px) {
+  .editorSurface {
+    padding-bottom: calc(116px + env(safe-area-inset-bottom));
+    scroll-padding-bottom: calc(116px + env(safe-area-inset-bottom));
+  }
+
+  .editorSurface :is(input, select, textarea, button) {
+    scroll-margin-bottom: calc(116px + env(safe-area-inset-bottom));
+  }
+
+  .actionBar {
+    position: fixed !important;
+    inset-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: auto;
+    max-width: none;
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--primary, var(--brand-strong)) 24%, var(--border));
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--surface) 96%, transparent);
+    box-shadow: 0 14px 36px rgba(20, 50, 42, 0.18);
+    backdrop-filter: blur(14px);
+  }
+
+  .actionBar p {
+    display: none;
+  }
+
+  .actionBar button {
+    min-height: 48px;
+  }
+
+  .readOnlyAction {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 430px) {
+  .actionBar {
+    inset-inline: max(8px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-right));
+    bottom: max(6px, env(safe-area-inset-bottom));
+  }
+}
