@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { expectFullScreenMobileSheet } from "./mobile-sheet-assertions";
 
 const fixtureEnabled = process.env.MIZAN_E2E_UI_FIXTURE === "true";
 const fixturePath = "/auth/e2e-dashboard-metric-drawer";
@@ -104,14 +105,7 @@ test.describe("N47/N48 Dashboard KPI drawer and deep analysis", () => {
     const dialog = page.getByRole("dialog", { name: "صافي الربح الحقيقي" });
     await expect(dialog).toBeVisible();
 
-    const dimensions = await page.locator("html").evaluate((element) => ({
-      clientWidth: element.clientWidth,
-      scrollWidth: element.scrollWidth,
-    }));
-    expect(dimensions.scrollWidth).toBeLessThanOrEqual(dimensions.clientWidth + 1);
-
-    const box = await dialog.boundingBox();
-    expect(box?.width ?? 999).toBeLessThanOrEqual(390);
+    await expectFullScreenMobileSheet(page, dialog);
     await expect(dialog.getByRole("link", { name: "تحليل أعمق" })).toBeVisible();
 
     expect(errors).toEqual([]);

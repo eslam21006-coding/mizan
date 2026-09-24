@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Route } from "@playwright/test";
+import { expectFullScreenMobileSheet } from "./mobile-sheet-assertions";
 
 const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, apikey, content-profile, content-type, prefer, range-profile",
@@ -167,11 +168,7 @@ test.describe("N20 customer detail drawer", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await trigger.click();
     await expect(dialog).toBeVisible();
-    await expect
-      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth))
-      .toBe(true);
-    const box = await dialog.boundingBox();
-    expect(box?.width ?? 999).toBeLessThanOrEqual(390);
+    await expectFullScreenMobileSheet(page, dialog);
 
     await page.getByRole("button", { name: "إغلاق تفاصيل العميل" }).click();
     await expect(dialog).toBeHidden();
