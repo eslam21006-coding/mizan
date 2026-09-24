@@ -41,8 +41,15 @@
     backdrop-filter: blur(14px);
   }
 
-  .actionBar p {
+  .actionBar:not(.readOnlyAction) p {
     display: none;
+  }
+
+  .readOnlyAction p {
+    display: block;
+    margin: 2px 0 0;
+    font-size: 12px;
+    line-height: 1.5;
   }
 
   .actionBar button {
@@ -53,6 +60,7 @@
 
   .readOnlyAction {
     justify-content: flex-start;
+    align-items: flex-start !important;
   }
 }
 
