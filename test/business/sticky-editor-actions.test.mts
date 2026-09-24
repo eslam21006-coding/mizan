@@ -48,6 +48,19 @@ test("N66 mobile action bar is fixed, safe-area aware, and reserves editor space
   assert.match(bar, /z-index:\s*40\s*!important;/);
 });
 
+test("N66 preserves reserved bottom space when Transaction Import panel padding is also present", () => {
+  assert.match(
+    importValidator,
+    /className=\{\`\$\{task20Styles\.importPanel\} \$\{mobileActionStyles\.editorSurface\}\`\}/,
+  );
+  const css = mobileRules(sharedStyles);
+  const surface = ruleBody(css, ".editorSurface");
+  assert.match(
+    surface,
+    /padding-bottom:\s*calc\(116px \+ env\(safe-area-inset-bottom\)\)\s*!important;/,
+  );
+});
+
 test("N66 attaches the shared sticky action primitive to every intended full-page editor", () => {
   for (const [name, source] of [
     ["monthly", monthlyPage],
