@@ -12,7 +12,7 @@ import { AppShell } from "@/components/app-shell";
 import { InPageErrorState, ReturnContextBanner } from "@/components/workflow-recovery";
 import { parseReturnOrigin } from "@/lib/return-origin";
 
-const BUSINESS_ID = "99999999-9999-4999-8999-999999999999";
+const BUSINESS_ID = "00000000-0000-4000-8000-000000000025";
 const FIXTURE_PATH = "/auth/e2e-customer-economics-review";
 const fixtureShellProps = {
   role: "admin" as const,
