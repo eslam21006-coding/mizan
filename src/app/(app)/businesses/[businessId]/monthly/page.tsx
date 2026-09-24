@@ -579,7 +579,6 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
             <div
               className={`${styles.saveBar} ${mobileActionStyles.actionBar} ${mobileActionStyles.readOnlyAction}`}
               data-editor-action-bar="monthly-read-only"
-              aria-label="حالة إجراءات الإدخال الشهري"
             >
               <div>
                 <strong>{isSavedHistorical ? "عرض فقط — شهر تاريخي" : "عرض فقط"}</strong>
