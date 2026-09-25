@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { buildHistoricalCorrectionPath } from "@/lib/historical-correction-navigation";
 import type { MonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
 import styles from "./monthly.module.css";
 
@@ -18,24 +19,12 @@ export function HistoricalMonthState({
   canManage,
   returnOrigin = null,
 }: HistoricalMonthStateProps) {
-  const correctionQuery = new URLSearchParams({ month: monthKey });
-  if (returnOrigin) {
-    correctionQuery.set("origin", returnOrigin.origin);
-    if (
-      (returnOrigin.origin === "customer-profitability" ||
-        returnOrigin.origin === "insights") &&
-      returnOrigin.month
-    ) {
-      correctionQuery.set("return_month", returnOrigin.month);
-    }
-    if (returnOrigin.origin === "insights") {
-      correctionQuery.set("insight_rule", returnOrigin.ruleId);
-      if (returnOrigin.subjectId) {
-        correctionQuery.set("insight_subject", returnOrigin.subjectId);
-      }
-    }
-  }
-  const correctionHref = `/businesses/${businessId}/monthly/correction?${correctionQuery.toString()}`;
+  const correctionHref = buildHistoricalCorrectionPath(
+    businessId,
+    monthKey,
+    undefined,
+    returnOrigin,
+  );
 
   return (
     <section className={styles.historicalPanel} aria-label="حالة الشهر التاريخي">
