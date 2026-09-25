@@ -12,7 +12,8 @@ import { AppShell } from "@/components/app-shell";
 import { InPageErrorState, ReturnContextBanner } from "@/components/workflow-recovery";
 import { parseReturnOrigin } from "@/lib/return-origin";
 
-const BUSINESS_ID = "99999999-9999-4999-8999-999999999999";
+const DEFAULT_BUSINESS_ID = "99999999-9999-4999-8999-999999999999";
+const JOURNEY_BUSINESS_ID = "00000000-0000-4000-8000-000000000025";
 const FIXTURE_PATH = "/auth/e2e-customer-economics-review";
 const fixtureShellProps = {
   role: "admin" as const,
@@ -20,7 +21,7 @@ const fixtureShellProps = {
 };
 
 type CustomerEconomicsReviewFixturePageProps = {
-  searchParams: Promise<{ state?: string; origin?: string | string[]; month?: string | string[] }>;
+  searchParams: Promise<{ state?: string; origin?: string | string[]; month?: string | string[]; businessId?: string | string[] }>;
 };
 
 const revenueRows: RevenueInputRow[] = [
@@ -54,13 +55,15 @@ export default async function CustomerEconomicsReviewFixturePage({
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") notFound();
 
   const query = await searchParams;
+  const journeyBusinessSelected = query.businessId === JOURNEY_BUSINESS_ID;
+  const businessId = journeyBusinessSelected ? JOURNEY_BUSINESS_ID : DEFAULT_BUSINESS_ID;
   const parsedOrigin = parseReturnOrigin({ origin: query.origin, month: query.month });
   const returnOrigin = parsedOrigin?.origin === "customer-profitability" ? parsedOrigin : null;
   const returnBanner = returnOrigin ? (
     <ReturnContextBanner
       purpose="بيانات مطلوبة في ربحية العميل"
       origin={returnOrigin}
-      context={{ businessId: BUSINESS_ID }}
+      context={{ businessId }}
       returnLabel="العودة إلى ربحية العميل"
       ariaLabel="العودة إلى ربحية العميل"
     />
@@ -68,15 +71,19 @@ export default async function CustomerEconomicsReviewFixturePage({
 
   if (query.state === "error") {
     const retryHref = (() => {
-      if (!returnOrigin) return FIXTURE_PATH;
-      const retryParams = new URLSearchParams({ origin: returnOrigin.origin });
-      if (returnOrigin.month) retryParams.set("month", returnOrigin.month);
+      if (!returnOrigin && !journeyBusinessSelected) return FIXTURE_PATH;
+      const retryParams = new URLSearchParams();
+      if (returnOrigin) {
+        retryParams.set("origin", returnOrigin.origin);
+        if (returnOrigin.month) retryParams.set("month", returnOrigin.month);
+      }
+      if (journeyBusinessSelected) retryParams.set("businessId", businessId);
       return `${FIXTURE_PATH}?${retryParams.toString()}`;
     })();
     return (
       <AppShell {...fixtureShellProps}>
         <div className="page-stack">
-          <CustomerReviewNavigation businessId={BUSINESS_ID} businessName="بزنس مراجعة الاختبار" />
+          <CustomerReviewNavigation businessId={businessId} businessName="بزنس مراجعة الاختبار" />
           {returnBanner}
           <InPageErrorState
             title="تعذر تحميل بيانات المراجعة"
@@ -91,10 +98,10 @@ export default async function CustomerEconomicsReviewFixturePage({
   return (
     <AppShell {...fixtureShellProps}>
       <div className="page-stack">
-        <CustomerReviewNavigation businessId={BUSINESS_ID} businessName="بزنس مراجعة الاختبار" />
+        <CustomerReviewNavigation businessId={businessId} businessName="بزنس مراجعة الاختبار" />
         {returnBanner}
         <CustomerEconomicsReviewPanel
-          businessId={BUSINESS_ID}
+          businessId={businessId}
           baseCurrency="EGP"
           canManage
           statusMessage="تم تحميل مثال المراجعة بنجاح."
@@ -168,7 +175,7 @@ export default async function CustomerEconomicsReviewFixturePage({
           <h1>تصحيح شهر سابق</h1>
         </section>
         <HistoricalCorrectionForm
-          businessId={BUSINESS_ID}
+          businessId={businessId}
           monthKey="2026-08"
           monthLabel="أغسطس ٢٠٢٦"
           currency="EGP"

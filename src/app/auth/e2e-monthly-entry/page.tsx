@@ -10,6 +10,7 @@ import styles from "@/app/(app)/businesses/[businessId]/monthly/monthly.module.c
 import { AppShell } from "@/components/app-shell";
 import mobileActionStyles from "@/components/mobile-editor-actions.module.css";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
+import { parseMonthKey } from "@/lib/business/monthly";
 import { parseMonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
 
 const BUSINESS_ID = "00000000-0000-4000-8000-000000000025";
@@ -94,6 +95,16 @@ export default async function MonthlyEntryE2eFixturePage({
   }
 
   const query = await searchParams;
+  const requestedMonth = Array.isArray(query.month) ? query.month[0] : query.month;
+  const selectedMonth = parseMonthKey(requestedMonth) ?? {
+    monthKey: "2026-08",
+    monthStart: "2026-08-01",
+  };
+  const monthLabel = new Intl.DateTimeFormat("ar-EG", {
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${selectedMonth.monthStart}T00:00:00.000Z`));
   const returnOrigin = parseMonthlyExternalReturnOrigin({
     origin: query.origin,
     month: query.return_month ?? query.month,
@@ -133,7 +144,7 @@ export default async function MonthlyEntryE2eFixturePage({
           </Link>
           <div className={styles.monthCenter}>
             <span className={styles.monthEyebrow}>الشهر الحالي في النموذج</span>
-            <strong>أغسطس ٢٠٢٦</strong>
+            <strong>{monthLabel}</strong>
             <span className={styles.savedState}>محفوظ</span>
           </div>
           <Link className={styles.monthNavButton} href="#next">
@@ -161,7 +172,7 @@ export default async function MonthlyEntryE2eFixturePage({
             data-testid="monthly-save-bar"
           >
             <div>
-              <strong>حفظ أرقام أغسطس ٢٠٢٦</strong>
+              <strong>حفظ أرقام {monthLabel}</strong>
               <p>واجهة اختبار فقط — لا يتم حفظ أي بيانات.</p>
             </div>
             <button type="button">حفظ الشهر</button>

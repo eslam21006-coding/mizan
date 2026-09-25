@@ -1,6 +1,30 @@
 import { expect, test } from "@playwright/test";
 
 test.describe("Task 5 Customer Economics review UX", () => {
+  test("preserves the N67 business and profitability return context on error retry", async ({ page }) => {
+    const journeyBusinessId = "00000000-0000-4000-8000-000000000025";
+
+    await page.goto(
+      `/auth/e2e-customer-economics-review?state=error&businessId=${journeyBusinessId}&origin=customer-profitability&month=2026-02`,
+    );
+
+    const errorState = page.getByRole("alert", { name: "تعذر تحميل بيانات المراجعة" });
+    await expect(errorState).toBeVisible();
+
+    const retryLink = errorState.getByRole("link", { name: "إعادة المحاولة" });
+    await expect(retryLink).toHaveAttribute(
+      "href",
+      `/auth/e2e-customer-economics-review?origin=customer-profitability&month=2026-02&businessId=${journeyBusinessId}`,
+    );
+
+    await retryLink.click();
+
+    await expect.poll(() => new URL(page.url()).searchParams.get("businessId")).toBe(journeyBusinessId);
+    await expect.poll(() => new URL(page.url()).searchParams.get("origin")).toBe("customer-profitability");
+    await expect.poll(() => new URL(page.url()).searchParams.get("month")).toBe("2026-02");
+    await expect(page.getByRole("heading", { name: "ملاحظات تحتاج مراجعتك" })).toBeVisible();
+  });
+
   test("shows exception review, legacy reconciliation, and audited correction in Arabic RTL", async ({ page }) => {
     const browserErrors: string[] = [];
     page.on("console", (message) => {
