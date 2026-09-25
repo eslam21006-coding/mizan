@@ -59,6 +59,7 @@ export default async function TransactionImportCompletionFixture({ searchParams 
   });
   const returnAction = transactionImportReturnAction(returnOrigin, businessId);
   const completionParams = new URLSearchParams({ stage: "complete" });
+  if (duplicateOnly) completionParams.set("state", "duplicates");
   if (businessId === JOURNEY_BUSINESS_ID) {
     completionParams.set("businessId", businessId);
   }
