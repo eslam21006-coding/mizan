@@ -11,7 +11,10 @@ import { AppShell } from "@/components/app-shell";
 import mobileActionStyles from "@/components/mobile-editor-actions.module.css";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { parseMonthKey } from "@/lib/business/monthly";
-import { parseMonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
+import {
+  parseMonthlyExternalReturnOrigin,
+  type MonthlyExternalReturnOrigin,
+} from "@/lib/monthly-return-origin";
 import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
 
 const BUSINESS_ID = "00000000-0000-4000-8000-000000000025";
@@ -46,6 +49,41 @@ const revenueRows: RevenueInputRow[] = [
     refunds: "1000",
   },
 ];
+
+/** Builds the fixture's production-shaped setup link while preserving validated upstream Return context. */
+function buildSetupHref(
+  route: "revenue-streams" | "expenses",
+  monthKey: string,
+  returnOrigin: MonthlyExternalReturnOrigin | null,
+) {
+  const query = new URLSearchParams({ origin: "monthly-editor", month: monthKey });
+
+  if (returnOrigin) {
+    query.set("upstream_origin", returnOrigin.origin);
+    if (
+      (returnOrigin.origin === "customer-profitability" ||
+        returnOrigin.origin === "insights") &&
+      returnOrigin.month
+    ) {
+      query.set("upstream_month", returnOrigin.month);
+    }
+    if (returnOrigin.origin === "insights") {
+      query.set("upstream_insight_rule", returnOrigin.ruleId);
+      if (returnOrigin.subjectId) {
+        query.set("upstream_insight_subject", returnOrigin.subjectId);
+      }
+    }
+    if (returnOrigin.origin === "target-planner") {
+      query.set("upstream_planner_step", returnOrigin.step);
+      query.set("upstream_planner_goal", returnOrigin.goal);
+      if (returnOrigin.value !== undefined) {
+        query.set("upstream_planner_value", returnOrigin.value);
+      }
+    }
+  }
+
+  return `/businesses/${BUSINESS_ID}/${route}?${query.toString()}`;
+}
 
 const expenseRows: ExpenseInputRow[] = [
   {
@@ -137,6 +175,15 @@ export default async function MonthlyEntryE2eFixturePage({
             ariaLabel="سياق العودة من الإدخال الشهري"
           />
         )}
+
+        <section aria-label="إعداد الإدخال الشهري">
+          <Link href={buildSetupHref("revenue-streams", selectedMonth.monthKey, returnOrigin)}>
+            إدارة مصادر الإيراد
+          </Link>
+          <Link href={buildSetupHref("expenses", selectedMonth.monthKey, returnOrigin)}>
+            إدارة هيكل المصروفات
+          </Link>
+        </section>
 
         <section aria-label="حالة سجل معاملات العملاء">
           <Link
