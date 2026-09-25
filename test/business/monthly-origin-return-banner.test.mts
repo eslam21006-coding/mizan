@@ -12,6 +12,10 @@ const monthlyActionsSource = readFileSync(
   "src/app/(app)/businesses/[businessId]/monthly/actions.ts",
   "utf8",
 );
+const monthlySetupNavigationSource = readFileSync(
+  "src/lib/monthly-setup-navigation.ts",
+  "utf8",
+);
 
 /** Locks Monthly Return to known cross-module origins, including N50 Insights. */
 test("Monthly accepts only external structured Return origins", () => {
@@ -52,9 +56,15 @@ test("Monthly navigation and setup controls preserve Return context", () => {
   assert.match(monthlyPageSource, /query\.set\("origin", returnOrigin\.origin\)/);
   assert.match(monthlyPageSource, /query\.set\("return_month", returnOrigin\.month\)/);
   assert.match(monthlyPageSource, /query\.set\("insight_rule", returnOrigin\.ruleId\)/);
-  assert.match(monthlyPageSource, /function appendSetupUpstreamQuery/);
-  assert.match(monthlyPageSource, /query\.set\("upstream_origin", returnOrigin\.origin\)/);
-  assert.match(monthlyPageSource, /query\.set\("upstream_insight_rule", returnOrigin\.ruleId\)/);
+  assert.match(monthlyPageSource, /buildMonthlySetupHref/);
+  assert.match(
+    monthlySetupNavigationSource,
+    /query\.set\("upstream_origin", returnOrigin\.origin\)/,
+  );
+  assert.match(
+    monthlySetupNavigationSource,
+    /query\.set\("upstream_insight_rule", returnOrigin\.ruleId\)/,
+  );
   assert.match(monthlyPageSource, /href=\{monthlyHref\(previousMonth\)\}/);
   assert.match(monthlyPageSource, /href=\{monthlyHref\(nextMonth\)\}/);
   assert.match(monthlyPageSource, /<MonthlyReturnOriginFields returnOrigin=\{returnOrigin\} \/>/);
