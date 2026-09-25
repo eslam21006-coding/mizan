@@ -12,6 +12,7 @@ import mobileActionStyles from "@/components/mobile-editor-actions.module.css";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { parseMonthKey } from "@/lib/business/monthly";
 import { parseMonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
+import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
 
 const BUSINESS_ID = "00000000-0000-4000-8000-000000000025";
 const fixtureShellProps = {
@@ -136,6 +137,17 @@ export default async function MonthlyEntryE2eFixturePage({
             ariaLabel="سياق العودة من الإدخال الشهري"
           />
         )}
+
+        <section aria-label="حالة سجل معاملات العملاء">
+          <Link
+            href={buildTransactionImportHref(BUSINESS_ID, {
+              origin: "monthly-editor",
+              month: selectedMonth.monthKey,
+            })}
+          >
+            مراجعة وتأكيد اكتمال سجل المعاملات
+          </Link>
+        </section>
 
         <section className={styles.monthBar} aria-label="اختيار الشهر">
           <Link className={styles.monthNavButton} href="#previous">
