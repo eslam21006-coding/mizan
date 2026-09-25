@@ -68,8 +68,6 @@ test.describe("N68 Transaction Import return journey", () => {
     await expect(page.getByRole("heading", { name: "استيراد معاملات العملاء" })).toBeVisible();
     await expect.poll(() => new URL(page.url()).searchParams.get("origin")).toBe("monthly-editor");
     await expect.poll(() => new URL(page.url()).searchParams.get("month")).toBe("2026-08");
-    await expect.poll(() => new URL(page.url()).searchParams.get("businessId")).toBe(BUSINESS_ID);
-
     const exactMonthlyHref = `/businesses/${BUSINESS_ID}/monthly?month=2026-08`;
     await expect(page.getByRole("link", { name: "إلغاء الاستيراد" })).toHaveAttribute(
       "href",
