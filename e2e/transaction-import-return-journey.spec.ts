@@ -3,6 +3,7 @@ import { expect, test, type Page } from "@playwright/test";
 const fixtureEnabled = process.env.MIZAN_E2E_UI_FIXTURE === "true";
 const BUSINESS_ID = "00000000-0000-4000-8000-000000000025";
 
+/** Collects console and page errors so the journey fails on hidden browser failures. */
 function collectBrowserErrors(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
@@ -12,6 +13,7 @@ function collectBrowserErrors(page: Page) {
   return errors;
 }
 
+/** Requires the rendered journey stage to stay within the current viewport width. */
 async function expectNoHorizontalOverflow(page: Page) {
   await expect
     .poll(() =>
