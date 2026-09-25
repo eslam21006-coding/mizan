@@ -12,6 +12,7 @@ import mobileActionStyles from "@/components/mobile-editor-actions.module.css";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
 import { parseMonthKey } from "@/lib/business/monthly";
 import { parseMonthlyExternalReturnOrigin } from "@/lib/monthly-return-origin";
+import { buildMonthlySetupHref } from "@/lib/monthly-setup-navigation";
 import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
 
 const BUSINESS_ID = "00000000-0000-4000-8000-000000000025";
@@ -137,6 +138,15 @@ export default async function MonthlyEntryE2eFixturePage({
             ariaLabel="سياق العودة من الإدخال الشهري"
           />
         )}
+
+        <section aria-label="إعداد الإدخال الشهري">
+          <Link href={buildMonthlySetupHref(BUSINESS_ID, "revenue-streams", selectedMonth.monthKey, returnOrigin)}>
+            إدارة مصادر الإيراد
+          </Link>
+          <Link href={buildMonthlySetupHref(BUSINESS_ID, "expenses", selectedMonth.monthKey, returnOrigin)}>
+            إدارة هيكل المصروفات
+          </Link>
+        </section>
 
         <section aria-label="حالة سجل معاملات العملاء">
           <Link

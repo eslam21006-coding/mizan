@@ -2,12 +2,17 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { resolveNavigationDestination } from "../../src/lib/navigation-hierarchy.ts";
+import { buildMonthlySetupHref } from "../../src/lib/monthly-setup-navigation.ts";
 import { parseSetupReturnOrigin } from "../../src/lib/setup-return-origin.ts";
 import { resolveReturnOrigin } from "../../src/lib/return-origin.ts";
 
 const setupOriginSource = readFileSync("src/lib/setup-return-origin.ts", "utf8");
 const monthlySource = readFileSync(
   "src/app/(app)/businesses/[businessId]/monthly/page.tsx",
+  "utf8",
+);
+const monthlySetupNavigationSource = readFileSync(
+  "src/lib/monthly-setup-navigation.ts",
   "utf8",
 );
 const revenuePageSource = readFileSync(
@@ -80,12 +85,25 @@ test("typed setup return restores Monthly with the exact originating insight", (
   );
 });
 
-test("Monthly setup URLs carry nested Insights metadata", () => {
-  assert.match(monthlySource, /function appendSetupUpstreamQuery/);
-  assert.match(monthlySource, /query\.set\("upstream_origin", returnOrigin\.origin\)/);
-  assert.match(monthlySource, /query\.set\("upstream_month", returnOrigin\.month\)/);
-  assert.match(monthlySource, /query\.set\("upstream_insight_rule", returnOrigin\.ruleId\)/);
-  assert.match(monthlySource, /href=\{setupHref\("revenue-streams"\)\}/);
+test("Monthly setup URLs carry nested Insights metadata through the shared builder", () => {
+  assert.match(monthlySource, /buildMonthlySetupHref/);
+  assert.match(monthlySetupNavigationSource, /query\.set\("upstream_origin", returnOrigin\.origin\)/);
+  assert.match(monthlySetupNavigationSource, /query\.set\("upstream_month", returnOrigin\.month\)/);
+  assert.match(monthlySetupNavigationSource, /query\.set\("upstream_insight_rule", returnOrigin\.ruleId\)/);
+
+  assert.equal(
+    buildMonthlySetupHref(
+      "123e4567-e89b-42d3-a456-426614174000",
+      "revenue-streams",
+      "2026-10",
+      {
+        origin: "insights",
+        month: "2026-09",
+        ruleId: "non_media_cost_pressure",
+      },
+    ),
+    "/businesses/123e4567-e89b-42d3-a456-426614174000/revenue-streams?origin=monthly-editor&month=2026-10&upstream_origin=insights&upstream_month=2026-09&upstream_insight_rule=non_media_cost_pressure",
+  );
 });
 
 test("Revenue Sources page and drawer submit the full nested Insights context", () => {

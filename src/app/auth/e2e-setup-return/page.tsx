@@ -11,11 +11,13 @@ const fixtureShellProps = {
   role: "admin" as const,
   email: "admin.fixture@example.test",
 };
-const businessId = "123e4567-e89b-42d3-a456-426614174000";
+const DEFAULT_BUSINESS_ID = "123e4567-e89b-42d3-a456-426614174000";
+const JOURNEY_BUSINESS_ID = "00000000-0000-4000-8000-000000000025";
 
 type SetupReturnFixtureProps = {
   searchParams: Promise<{
     target?: string | string[];
+    businessId?: string | string[];
     origin?: string | string[];
     month?: string | string[];
     upstream_origin?: string | string[];
@@ -35,6 +37,8 @@ export default async function SetupReturnE2eFixturePage({
 
   const query = await searchParams;
   const isExpenses = query.target === "expenses";
+  const businessId =
+    query.businessId === JOURNEY_BUSINESS_ID ? JOURNEY_BUSINESS_ID : DEFAULT_BUSINESS_ID;
   const styles = isExpenses ? expenseStyles : revenueStyles;
   const returnOrigin = parseSetupReturnOrigin({
     origin: query.origin,

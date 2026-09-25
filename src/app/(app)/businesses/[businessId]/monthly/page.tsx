@@ -19,6 +19,7 @@ import {
   type MonthlyExternalReturnOrigin,
 } from "@/lib/monthly-return-origin";
 import { resolveHistoricalMonthlyUiState } from "@/lib/historical-month-state";
+import { buildMonthlySetupHref } from "@/lib/monthly-setup-navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
 import { copyPreviousMonthExpenses, saveMonthlyActuals } from "./actions";
@@ -88,34 +89,6 @@ function appendMonthlyReturnQuery(
     query.set("planner_goal", returnOrigin.goal);
     if (returnOrigin.value !== undefined) {
       query.set("planner_value", returnOrigin.value);
-    }
-  }
-}
-
-/** Appends the same external Return context as a nested Monthly-editor setup origin. */
-function appendSetupUpstreamQuery(
-  query: URLSearchParams,
-  returnOrigin: MonthlyExternalReturnOrigin,
-) {
-  query.set("upstream_origin", returnOrigin.origin);
-  if (
-    (returnOrigin.origin === "customer-profitability" ||
-      returnOrigin.origin === "insights") &&
-    returnOrigin.month
-  ) {
-    query.set("upstream_month", returnOrigin.month);
-  }
-  if (returnOrigin.origin === "insights") {
-    query.set("upstream_insight_rule", returnOrigin.ruleId);
-    if (returnOrigin.subjectId) {
-      query.set("upstream_insight_subject", returnOrigin.subjectId);
-    }
-  }
-  if (returnOrigin.origin === "target-planner") {
-    query.set("upstream_planner_step", returnOrigin.step);
-    query.set("upstream_planner_goal", returnOrigin.goal);
-    if (returnOrigin.value !== undefined) {
-      query.set("upstream_planner_value", returnOrigin.value);
     }
   }
 }
@@ -320,14 +293,6 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
     if (returnOrigin) appendMonthlyReturnQuery(queryParams, returnOrigin);
     return `/businesses/${businessId}/monthly?${queryParams.toString()}`;
   };
-  const setupHref = (route: "revenue-streams" | "expenses") => {
-    const queryParams = new URLSearchParams({
-      origin: "monthly-editor",
-      month: selectedMonth.monthKey,
-    });
-    if (returnOrigin) appendSetupUpstreamQuery(queryParams, returnOrigin);
-    return `/businesses/${businessId}/${route}?${queryParams.toString()}`;
-  };
   const monthLabel = new Intl.DateTimeFormat("ar-EG", {
     month: "long",
     year: "numeric",
@@ -508,13 +473,13 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
           <div className={styles.setupActions}>
             <Link
               className={styles.setupLinkButton}
-              href={setupHref("revenue-streams")}
+              href={buildMonthlySetupHref(businessId, "revenue-streams", selectedMonth.monthKey, returnOrigin)}
             >
               إدارة مصادر الإيراد
             </Link>
             <Link
               className={styles.setupLinkButton}
-              href={setupHref("expenses")}
+              href={buildMonthlySetupHref(businessId, "expenses", selectedMonth.monthKey, returnOrigin)}
             >
               إدارة هيكل المصروفات
             </Link>
