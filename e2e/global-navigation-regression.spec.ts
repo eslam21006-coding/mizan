@@ -3,7 +3,6 @@ import { expect, test, type Page } from "@playwright/test";
 const fixtureEnabled = process.env.MIZAN_E2E_UI_FIXTURE === "true";
 const customerTabsPath = "/auth/e2e-customer-tabs";
 const navigationFoundationPath = "/auth/e2e-navigation-foundation";
-const businessId = "business fixture/01";
 
 /** Collects console and uncaught page errors for one browser page. */
 function collectBrowserErrors(page: Page) {
@@ -139,7 +138,6 @@ test.describe("N72 global navigation regression", () => {
         .getByRole("link", { name: "العودة إلى ربحية العميل" }),
     ).toHaveAttribute("href", expectedWorkflowReturn);
 
-    expect(businessId).toBe("business fixture/01");
     expect(errors).toEqual([]);
   });
 });
