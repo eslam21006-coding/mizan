@@ -51,11 +51,17 @@ test("N32 treats only already-saved past months as historical read-only state", 
 });
 
 test("N33 correction navigation returns to the exact historical Monthly month", () => {
+  const componentStart = historicalMonthStateSource.indexOf("export function HistoricalMonthState");
+  const componentReturn = historicalMonthStateSource.indexOf("  return (", componentStart);
+  assert.notEqual(componentStart, -1);
+  assert.notEqual(componentReturn, -1);
+  const componentSetupSource = historicalMonthStateSource.slice(componentStart, componentReturn);
+
   assert.match(
-    historicalMonthStateSource,
-    /function HistoricalMonthState[\s\S]*const correctionHref = buildHistoricalCorrectionPath\(/,
+    componentSetupSource,
+    /const correctionHref = buildHistoricalCorrectionPath\(/,
   );
-  assert.doesNotMatch(historicalMonthStateSource, /new URLSearchParams/);
+  assert.doesNotMatch(componentSetupSource, /new URLSearchParams/);
   assert.match(correctionPageSource, /<HistoricalCorrectionNavigation/);
   assert.match(correctionNavigationSource, /<Breadcrumb items=\{breadcrumbItems\}/);
   assert.match(correctionNavigationSource, /route: "business-monthly" as const/);
