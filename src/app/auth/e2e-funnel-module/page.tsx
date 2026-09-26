@@ -115,7 +115,7 @@ export default async function FunnelModuleFixturePage({
   const journey = query.journey === "1";
   const returnOrigin =
     activeTab === "monthly"
-      ? parseFunnelMonthlyReturnOrigin({ origin: query.origin })
+      ? parseFunnelMonthlyReturnOrigin({ origin: query.origin, month: query.month })
       : null;
 
   return (
