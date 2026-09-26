@@ -22,7 +22,7 @@ export function buildFunnelModuleHref(
 
   switch (tab) {
     case "structure":
-      return `${base}/funnels`;
+      return `${base}/funnels${monthKey ? `?month=${encodeURIComponent(monthKey)}` : ""}`;
     case "monthly":
       return `${base}/funnels/monthly${suffix}`;
     case "liquidation":
