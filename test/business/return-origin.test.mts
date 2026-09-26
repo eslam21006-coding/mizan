@@ -19,6 +19,10 @@ test("parses allow-listed return origins with valid structured metadata", () => 
     origin: "funnel-structure",
   });
   assert.deepEqual(
+    parseReturnOrigin({ origin: "funnel-structure", month: "2026-08" }),
+    { origin: "funnel-structure", month: "2026-08" },
+  );
+  assert.deepEqual(
     parseReturnOrigin({
       origin: "insights",
       month: "2026-09",
@@ -137,14 +141,14 @@ test("URLSearchParams with duplicate structured keys is rejected as ambiguous", 
 });
 
 test("Funnel Structure origin resolves only to the current business Funnel Structure page", () => {
-  const origin = parseReturnOrigin({ origin: "funnel-structure" });
-  assert.deepEqual(origin, { origin: "funnel-structure" });
+  const origin = parseReturnOrigin({ origin: "funnel-structure", month: "2026-08" });
+  assert.deepEqual(origin, { origin: "funnel-structure", month: "2026-08" });
   assert.ok(origin);
 
   const destination = resolveReturnOrigin(origin, { businessId: "business fixture/01" });
   assert.equal(
     resolveNavigationDestination(destination),
-    "/businesses/business%20fixture%2F01/funnels",
+    "/businesses/business%20fixture%2F01/funnels?month=2026-08",
   );
 });
 
