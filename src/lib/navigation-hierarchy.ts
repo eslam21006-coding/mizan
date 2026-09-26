@@ -8,7 +8,7 @@ export type NavigationDestination =
   | { route: "business-workspace"; businessId: string }
   | { route: "business-settings"; businessId: string }
   | { route: "business-delete"; businessId: string }
-  | { route: "business-funnels"; businessId: string }
+  | { route: "business-funnels"; businessId: string; month?: string }
   | { route: "insights"; businessId: string; month: string; insightId: string }
   | {
       route: "target-planner";
@@ -79,8 +79,12 @@ export function resolveNavigationDestination(destination: NavigationDestination)
       return `${businessPath(destination.businessId)}/settings`;
     case "business-delete":
       return `${businessPath(destination.businessId)}/settings/delete`;
-    case "business-funnels":
-      return `${businessPath(destination.businessId)}/funnels`;
+    case "business-funnels": {
+      const pathname = `${businessPath(destination.businessId)}/funnels`;
+      return destination.month
+        ? `${pathname}?month=${encodeURIComponent(destination.month)}`
+        : pathname;
+    }
     case "target-planner": {
       const searchParams = new URLSearchParams({
         business: destination.businessId,
