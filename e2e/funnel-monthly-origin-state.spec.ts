@@ -39,7 +39,7 @@ test.describe("N45 Funnel Structure to Monthly origin state", () => {
     const returnLink = banner.getByRole("link", { name: "العودة إلى هيكل الفانلز" });
     await expect(returnLink).toHaveAttribute(
       "href",
-      `/businesses/${businessId}/funnels`,
+      `/businesses/${businessId}/funnels?month=2026-08`,
     );
 
     const activeMonthly = page.getByRole("link", { name: "الأداء الشهري" });
@@ -52,7 +52,7 @@ test.describe("N45 Funnel Structure to Monthly origin state", () => {
     await expect(banner).toBeVisible();
     await expect(returnLink).toHaveAttribute(
       "href",
-      `/businesses/${businessId}/funnels`,
+      `/businesses/${businessId}/funnels?month=2026-08`,
     );
 
     expect(errors).toEqual([]);
