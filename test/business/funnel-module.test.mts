@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   FUNNEL_MODULE_TABS,
   buildFunnelModuleHref,
 } from "../../src/lib/funnel-module.ts";
+
+const funnelsPageSource = readFileSync(
+  "src/app/(app)/businesses/[businessId]/funnels/page.tsx",
+  "utf8",
+);
 
 test("N40 exposes exactly the three persistent Funnel module tabs", () => {
   assert.deepEqual(FUNNEL_MODULE_TABS, [
@@ -69,5 +75,14 @@ test("N45 marks only Structure to Monthly navigation with a structured origin", 
   assert.equal(
     buildFunnelModuleHref(businessId, "liquidation", "2026-09", "funnel-structure"),
     `/businesses/${businessId}/liquidation?month=2026-09`,
+  );
+});
+
+
+test("N71 Funnel Structure page forwards validated month context into the persistent module", () => {
+  assert.match(funnelsPageSource, /const selectedMonthKey = parseMonthKey\(query\.month\)\?\.monthKey \?\? null/);
+  assert.match(
+    funnelsPageSource,
+    /<FunnelModuleShell[\s\S]*activeTab="structure"[\s\S]*monthKey=\{selectedMonthKey\}/,
   );
 });
