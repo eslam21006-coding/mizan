@@ -43,10 +43,6 @@ async function installFunnelJourneyRedirects(page: Page) {
     for (const [key, value] of url.searchParams) {
       fixtureUrl.searchParams.append(key, value);
     }
-    if (!fixtureUrl.searchParams.has("month")) {
-      fixtureUrl.searchParams.set("month", MONTH);
-    }
-
     await route.continue({ url: fixtureUrl.toString() });
   });
 
@@ -116,13 +112,14 @@ test.describe("N71 Funnel workflow journey", () => {
     });
     await expect(returnToStructure).toHaveAttribute(
       "href",
-      `/businesses/${BUSINESS_ID}/funnels`,
+      `/businesses/${BUSINESS_ID}/funnels?month=${MONTH}`,
     );
     await expectNoHorizontalOverflow(page);
 
     await returnToStructure.click();
 
     await expect(page.getByRole("heading", { name: "الفانلز" })).toBeVisible();
+    await expect.poll(() => new URL(page.url()).searchParams.get("month")).toBe(MONTH);
     const liquidationTab = page.getByRole("link", { name: "تسييل الإنفاق" });
     await expect(liquidationTab).toHaveAttribute(
       "href",
