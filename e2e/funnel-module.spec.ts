@@ -33,7 +33,7 @@ test.describe("N40 persistent Funnel module shell", () => {
     const liquidation = tabs.getByRole("link", { name: "تسييل الإنفاق" });
 
     await expect(structure).toHaveAttribute("aria-current", "page");
-    await expect(structure).toHaveAttribute("href", `/businesses/${businessId}/funnels`);
+    await expect(structure).toHaveAttribute("href", `/businesses/${businessId}/funnels?month=2026-09`);
     await expect(monthly).toHaveAttribute(
       "href",
       `/businesses/${businessId}/funnels/monthly?month=2026-09&origin=funnel-structure`,
