@@ -111,6 +111,23 @@ test.describe("N70 Historical correction journey", () => {
     ).toHaveAttribute("href", profitabilityHref);
     await expectNoHorizontalOverflow(page);
 
+    await backLink.click();
+
+    await expect(page.getByRole("heading", { name: "الإدخال الشهري" })).toBeVisible();
+    await expect(page.getByText("يوليو ٢٠٢٦", { exact: true })).toBeVisible();
+    await expect(
+      page
+        .getByRole("region", { name: "سياق العودة من رحلة التصحيح التاريخي" })
+        .getByRole("link", { name: "العودة إلى ربحية العميل" }),
+    ).toHaveAttribute("href", profitabilityHref);
+
+    const reopenedCorrectionLink = page
+      .getByRole("region", { name: "حالة الشهر التاريخي" })
+      .getByRole("link", { name: "بدء تصحيح تاريخي" });
+    await expect(reopenedCorrectionLink).toHaveAttribute("href", exactCorrectionHref);
+    await reopenedCorrectionLink.click();
+    await expect(page.getByRole("heading", { name: "تصحيح بيانات شهر سابق" })).toBeVisible();
+
     const simulateSave = page.getByRole("link", { name: "محاكاة حفظ التصحيح التاريخي" });
     await expect(simulateSave).toHaveAttribute("href", exactSuccessHref);
     await simulateSave.click();
