@@ -40,7 +40,7 @@ test("N40 preserves a validated selected month across analytical Funnel tabs", (
   );
   assert.equal(
     buildFunnelModuleHref(businessId, "structure", "2026-09"),
-    `/businesses/${businessId}/funnels`,
+    `/businesses/${businessId}/funnels?month=2026-09`,
   );
 });
 
@@ -64,7 +64,7 @@ test("N45 marks only Structure to Monthly navigation with a structured origin", 
   );
   assert.equal(
     buildFunnelModuleHref(businessId, "structure", "2026-09", "funnel-structure"),
-    `/businesses/${businessId}/funnels`,
+    `/businesses/${businessId}/funnels?month=2026-09`,
   );
   assert.equal(
     buildFunnelModuleHref(businessId, "liquidation", "2026-09", "funnel-structure"),
