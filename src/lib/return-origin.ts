@@ -47,7 +47,7 @@ export type ExternalReturnOriginMetadata =
 
 export type ReturnOriginMetadata =
   | ExternalReturnOriginMetadata
-  | { origin: "funnel-structure" }
+  | { origin: "funnel-structure"; month?: string }
   | {
       origin: "monthly-editor";
       month: string;
@@ -134,7 +134,7 @@ export function parseReturnOrigin(searchParams: ReturnOriginSearchParams): Retur
     case "monthly-editor":
       return month ? { origin: "monthly-editor", month } : null;
     case "funnel-structure":
-      return { origin: "funnel-structure" };
+      return month ? { origin: "funnel-structure", month } : { origin: "funnel-structure" };
     case "target-planner": {
       if (plannerStepParam.status !== "value" || plannerGoalParam.status !== "value") {
         return null;
@@ -193,7 +193,7 @@ export function resolveReturnOrigin(
         month: origin.month,
       };
     case "funnel-structure":
-      return { route: "business-funnels", businessId: context.businessId };
+      return { route: "business-funnels", businessId: context.businessId, month: origin.month };
     case "target-planner":
       return {
         route: "target-planner",

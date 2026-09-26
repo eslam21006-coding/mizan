@@ -24,6 +24,10 @@ test("Funnel Monthly accepts only Funnel Structure or validated Insights origins
     { origin: "funnel-structure" },
   );
   assert.deepEqual(
+    parseFunnelMonthlyReturnOrigin({ origin: "funnel-structure", month: "2026-08" }),
+    { origin: "funnel-structure", month: "2026-08" },
+  );
+  assert.deepEqual(
     parseFunnelMonthlyReturnOrigin({
       origin: "insights",
       month: "2026-09",
@@ -49,16 +53,17 @@ test("Funnel Monthly accepts only Funnel Structure or validated Insights origins
 test("Funnel Structure Return remains deterministic", () => {
   const origin = parseReturnOrigin({
     origin: "funnel-structure",
+    month: "2026-08",
     returnTo: "https://evil.example",
   });
-  assert.deepEqual(origin, { origin: "funnel-structure" });
+  assert.deepEqual(origin, { origin: "funnel-structure", month: "2026-08" });
   assert.ok(origin);
 
   assert.equal(
     resolveNavigationDestination(
       resolveReturnOrigin(origin, { businessId: "business fixture/01" }),
     ),
-    "/businesses/business%20fixture%2F01/funnels",
+    "/businesses/business%20fixture%2F01/funnels?month=2026-08",
   );
 });
 
