@@ -33,6 +33,23 @@ function relativeUrl(page: Page) {
   return `${url.pathname}${url.search}${url.hash}`;
 }
 
+/** Serves the existing Customer fixture when Return navigates to its production-shaped URL. */
+async function installWorkflowReturnRedirect(page: Page) {
+  await page.route("**/customers?**", async (route) => {
+    const url = new URL(route.request().url());
+    if (url.pathname !== "/businesses/business%20fixture%2F01/customers") {
+      await route.continue();
+      return;
+    }
+
+    const fixtureUrl = new URL(customerTabsPath, url.origin);
+    for (const [key, value] of url.searchParams) {
+      fixtureUrl.searchParams.append(key, value);
+    }
+    await route.continue({ url: fixtureUrl.toString() });
+  });
+}
+
 test.describe("N72 global navigation regression", () => {
   test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
 
@@ -88,6 +105,7 @@ test.describe("N72 global navigation regression", () => {
     page,
   }) => {
     const errors = collectBrowserErrors(page);
+    await installWorkflowReturnRedirect(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(navigationFoundationPath);
     await expectStableMobileShell(page);
@@ -117,7 +135,10 @@ test.describe("N72 global navigation regression", () => {
     const errorReturn = errorState.getByRole("link", { name: "العودة إلى ربحية العميل" });
     await expect(errorState).toBeVisible();
     await expect(errorState.getByRole("heading", { name: "تعذر تحميل تفاصيل المراجعة" })).toBeVisible();
-    await expect(retryLink).toHaveAttribute("href", navigationFoundationPath);
+    await expect(retryLink).toHaveAttribute(
+      "href",
+      `${navigationFoundationPath}?recovered=1`,
+    );
     await expect(errorReturn).toHaveAttribute("href", expectedWorkflowReturn);
 
     await retryLink.focus();
@@ -125,18 +146,35 @@ test.describe("N72 global navigation regression", () => {
     await page.keyboard.press("Tab");
     await expect(errorReturn).toBeFocused();
 
-    await page.reload();
-    await expectStableMobileShell(page);
-    await expect(page.getByRole("navigation", { name: "مسار التنقل" })).toBeVisible();
-    await expect(page.getByRole("link", { name: "العودة إلى البزنس" })).toHaveAttribute(
-      "href",
-      expectedBusinessOverview,
+    await retryLink.click();
+    await expect.poll(() => relativeUrl(page)).toBe(
+      `${navigationFoundationPath}?recovered=1`,
     );
     await expect(
-      page
-        .getByRole("alert", { name: "تعذر تحميل تفاصيل المراجعة" })
-        .getByRole("link", { name: "العودة إلى ربحية العميل" }),
-    ).toHaveAttribute("href", expectedWorkflowReturn);
+      page.getByRole("status", { name: "تم استرداد تفاصيل المراجعة" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("alert", { name: "تعذر تحميل تفاصيل المراجعة" }),
+    ).toHaveCount(0);
+    await expectStableMobileShell(page);
+
+    await page.goto(navigationFoundationPath);
+    await expect(
+      page.getByRole("alert", { name: "تعذر تحميل تفاصيل المراجعة" }),
+    ).toBeVisible();
+
+    await page
+      .getByRole("alert", { name: "تعذر تحميل تفاصيل المراجعة" })
+      .getByRole("link", { name: "العودة إلى ربحية العميل" })
+      .click();
+
+    await expect.poll(() => relativeUrl(page)).toBe(expectedWorkflowReturn);
+    await expect(page.getByRole("tab", { name: /ربحية العميل/ })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    await expect(page.getByTestId("fixture-profitability")).toBeVisible();
+    await expectStableMobileShell(page);
 
     expect(errors).toEqual([]);
   });
