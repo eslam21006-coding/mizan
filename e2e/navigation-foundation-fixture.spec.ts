@@ -86,7 +86,7 @@ test.describe("CI-only navigation foundation fixture", () => {
     const retryLink = inPageError.getByRole("link", { name: "إعادة المحاولة" });
     const errorReturn = inPageError.getByRole("link", { name: "العودة إلى ربحية العميل" });
     await expect(inPageError.getByText("حدث خطأ")).toBeVisible();
-    await expect(retryLink).toHaveAttribute("href", fixturePath);
+    await expect(retryLink).toHaveAttribute("href", `${fixturePath}?recovered=1`);
     await expect(errorReturn).toHaveAttribute("href", expectedProfitabilityReturn);
     await retryLink.focus();
     await expect(retryLink).toBeFocused();

@@ -27,11 +27,20 @@ const breadcrumbItems = [
   { label: "اقتصاديات العملاء", current: true },
 ] satisfies readonly BreadcrumbItem[];
 
+type NavigationFoundationFixtureProps = {
+  searchParams: Promise<{ recovered?: string }>;
+};
+
 /** Renders the CI-only page used to verify navigation foundation primitives without migrating production modules. */
-export default function NavigationFoundationE2eFixturePage() {
+export default async function NavigationFoundationE2eFixturePage({
+  searchParams,
+}: NavigationFoundationFixtureProps) {
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
     notFound();
   }
+
+  const query = await searchParams;
+  const recovered = query.recovered === "1";
 
   const parsedOrigin = parseReturnOrigin({
     origin: "customer-profitability",
@@ -96,14 +105,23 @@ export default function NavigationFoundationE2eFixturePage() {
           </article>
         </section>
 
-        <InPageErrorState
-          title="تعذر تحميل تفاصيل المراجعة"
-          description="ظل سياق البزنس ومسار التنقل والعنوان كما هو، وتم استبدال منطقة المحتوى فقط بحالة خطأ قابلة للاسترداد."
-          retryAction={<Link href="/auth/e2e-navigation-foundation">إعادة المحاولة</Link>}
-          returnOrigin={parsedOrigin}
-          returnContext={returnContext}
-          returnLabel="العودة إلى ربحية العميل"
-        />
+        {recovered ? (
+          <section className="shell-card" role="status" aria-label="تم استرداد تفاصيل المراجعة">
+            <strong>تم استرداد تفاصيل المراجعة</strong>
+            <p>نجحت إعادة المحاولة مع بقاء سياق الصفحة والتنقل كما هو.</p>
+          </section>
+        ) : (
+          <InPageErrorState
+            title="تعذر تحميل تفاصيل المراجعة"
+            description="ظل سياق البزنس ومسار التنقل والعنوان كما هو، وتم استبدال منطقة المحتوى فقط بحالة خطأ قابلة للاسترداد."
+            retryAction={
+              <Link href="/auth/e2e-navigation-foundation?recovered=1">إعادة المحاولة</Link>
+            }
+            returnOrigin={parsedOrigin}
+            returnContext={returnContext}
+            returnLabel="العودة إلى ربحية العميل"
+          />
+        )}
       </section>
     </AppShell>
   );
