@@ -8,6 +8,7 @@ import {
   FUNNEL_TYPE_OPTIONS,
   parseFunnelResourceId,
 } from "@/lib/business/funnels";
+import { parseMonthKey } from "@/lib/business/monthly";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { FunnelHierarchyBack } from "../funnel-hierarchy-back";
 import { FunnelModuleShell } from "../funnel-module-shell";
@@ -17,7 +18,7 @@ import styles from "./funnels.module.css";
 
 type FunnelsPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; month?: string | string[] }>;
 };
 
 const STATUS_MESSAGES: Record<string, string> = {
@@ -61,10 +62,15 @@ export default async function FunnelsPage({ params, searchParams }: FunnelsPageP
   const query = await searchParams;
   const statusMessage = query.status ? STATUS_MESSAGES[query.status] : null;
   const isErrorStatus = query.status?.endsWith("failed") || query.status === "invalid";
+  const selectedMonthKey = parseMonthKey(query.month)?.monthKey ?? null;
 
   return (
     <div className="page-stack">
-      <FunnelModuleShell businessId={businessId} activeTab="structure" />
+      <FunnelModuleShell
+        businessId={businessId}
+        activeTab="structure"
+        monthKey={selectedMonthKey}
+      />
       <FunnelHierarchyBack businessId={businessId} />
 
       <PageHeader
