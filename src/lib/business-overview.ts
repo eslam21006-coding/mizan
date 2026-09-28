@@ -1,4 +1,4 @@
-import { resolveCoreSetupReadiness } from "./business/readiness.ts";
+import { resolveBusinessSetupCompatibility } from "./business/setup-compatibility.ts";
 
 export type BusinessOverviewHealthInput = {
   businessId: string;
@@ -44,24 +44,24 @@ export function buildBusinessMonthlyHref(businessId: string, monthKey: string) {
 }
 
 /**
- * Preserves the existing Overview contract while delegating setup predicates to central readiness.
+ * Preserves the existing Overview contract while resolving pre-wizard businesses through B03.
  *
- * Until B02 persists explicit expense-review completion, the legacy Overview must translate its
- * existing "at least one active expense item" signal into a temporary reviewed/not-reviewed input.
- * This keeps current behavior stable without making that heuristic authoritative for V2 readiness.
+ * Legacy compatibility may accept explicit review, configured expense definitions, or saved monthly
+ * history as expense-setup evidence. The existing Overview still means "ready for monthly entry"
+ * when revenue and effective expense setup are ready; B03 Core completion itself also requires a
+ * first saved month.
  */
 export function resolveBusinessOverviewHealth(
   input: BusinessOverviewHealthInput,
 ): BusinessOverviewHealth {
-  const coreReadiness = resolveCoreSetupReadiness({
+  const compatibility = resolveBusinessSetupCompatibility({
     loadState: input.dataLoadError ? "load_error" : "loaded",
-    businessIdentityReady: input.dataLoadError ? null : true,
+    mode: "legacy",
     revenueSourceCount: input.dataLoadError ? null : input.revenueSourceCount,
-    expenseSetup: input.dataLoadError
-      ? "unknown"
-      : input.expenseItemCount > 0
-        ? "reviewed"
-        : "not_reviewed",
+    expenseSetupReviewedAt: input.expenseSetupReviewedAt ?? null,
+    configuredExpenseItemCount: input.dataLoadError
+      ? null
+      : (input.configuredExpenseItemCount ?? input.expenseItemCount),
     validMonthCount: input.dataLoadError ? null : input.latestSavedMonthKey === null ? 0 : 1,
   });
 
@@ -76,8 +76,8 @@ export function resolveBusinessOverviewHealth(
     };
   }
 
-  const revenueSourcesReady = coreReadiness.revenueSetupReady;
-  const expensesReady = coreReadiness.expenseSetup === "reviewed";
+  const revenueSourcesReady = compatibility.coreSetup.revenueSetupReady;
+  const expensesReady = compatibility.effectiveExpenseSetup === "reviewed";
   let nextAction: BusinessOverviewNextAction;
 
   if (!revenueSourcesReady) {
