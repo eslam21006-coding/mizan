@@ -13,6 +13,10 @@ import { resolveBusinessSetupReadiness } from "@/lib/business/setup-readiness";
 export const dynamic = "force-dynamic";
 
 const businessId = "123e4567-e89b-42d3-a456-426614174000";
+const fixtureShellProps = {
+  role: "admin" as const,
+  email: "admin.fixture@example.test",
+};
 
 type FixtureCase =
   | "empty"
@@ -94,7 +98,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     fixtureCase !== "load-error" && currentStep !== null && readiness.stepComplete[currentStep];
 
   return (
-    <AppShell role="admin" email="admin.fixture@example.test">
+    <AppShell {...fixtureShellProps}>
       <BusinessSetupShell
         businessId={businessId}
         businessName="أكاديمية ميزان"
