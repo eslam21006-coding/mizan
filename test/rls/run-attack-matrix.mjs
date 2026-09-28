@@ -91,6 +91,9 @@ export const sqlFiles = Object.freeze([
   "test/business/lifetime-contribution-cost-eligibility.test.sql",
   "supabase/migrations/20260912103000_customer_economics_foundation.sql",
   "test/business/customer-economics-foundation.test.sql",
+  "supabase/migrations/20260928074500_b02_setup_completion_state.sql",
+  "test/rls/b02-setup-completion-state.test.sql",
+  "test/business/b02-setup-completion-invariance.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));

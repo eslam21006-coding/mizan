@@ -29,6 +29,11 @@ export type CoreSetupStatus = (typeof CORE_SETUP_STATUSES)[number];
 export const EXPENSE_SETUP_REVIEW_STATES = ["reviewed", "not_reviewed", "unknown"] as const;
 export type ExpenseSetupReviewState = (typeof EXPENSE_SETUP_REVIEW_STATES)[number];
 
+export type ExpenseSetupReviewStateInput = {
+  loadState: ReadinessLoadState;
+  reviewedAt: string | null;
+};
+
 export const CORE_SETUP_REQUIREMENTS = [
   "business_identity",
   "revenue_setup",
@@ -217,6 +222,16 @@ function requiredLoadedBoolean(value: boolean | null, fieldName: string) {
 /** Preserves first-seen requirement order while removing duplicate blocker mappings. */
 function uniqueRequirements<T extends string>(requirements: readonly T[]) {
   return [...new Set(requirements)];
+}
+
+/** Maps persisted expense-review metadata into the storage-agnostic B01 readiness state. */
+export function resolveExpenseSetupReviewState(
+  input: ExpenseSetupReviewStateInput,
+): ExpenseSetupReviewState {
+  if (input.loadState === "load_error") {
+    return "unknown";
+  }
+  return input.reviewedAt === null ? "not_reviewed" : "reviewed";
 }
 
 /** Resolves only mandatory Core Setup readiness; optional capabilities never participate. */
