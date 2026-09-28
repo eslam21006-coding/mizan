@@ -5,6 +5,7 @@ const fixturePath = "/auth/e2e-business-setup";
 const businessId = "123e4567-e89b-42d3-a456-426614174000";
 const productionBase = `/businesses/${businessId}/setup`;
 
+/** Collects console and uncaught browser errors for one setup scenario. */
 function captureBrowserErrors(page: Page) {
   const errors: string[] = [];
   page.on("console", (message) => {
@@ -14,6 +15,7 @@ function captureBrowserErrors(page: Page) {
   return errors;
 }
 
+/** Verifies Arabic RTL and absence of page-level horizontal overflow. */
 async function expectStableRtl(page: Page) {
   await expect(page.locator("html")).toHaveAttribute("lang", "ar");
   await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
@@ -26,6 +28,7 @@ async function expectStableRtl(page: Page) {
     .toBe(true);
 }
 
+/** Serves the setup fixture behind production-shaped setup URLs for navigation tests. */
 async function routeProductionSetupToFixture(page: Page, fixtureCase: string) {
   await page.route("**/businesses/**/setup**", async (route) => {
     const requested = new URL(route.request().url());
@@ -54,10 +57,7 @@ test.describe("B04 business setup shell", () => {
 
     const revenueStep = page.getByRole("link").filter({ hasText: "كيف يدخل المال؟" });
     await expect(revenueStep).toHaveAttribute("aria-current", "step");
-    await expect(page.getByText("التالي", { exact: true }).last()).toHaveAttribute(
-      "aria-disabled",
-      "true",
-    );
+    await expect(page.getByRole("button", { name: "التالي" })).toBeDisabled();
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });

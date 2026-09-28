@@ -48,7 +48,10 @@ export async function loadBusinessSetup(
     .eq("id", businessId)
     .maybeSingle();
 
-  if (businessError || !business) {
+  if (businessError) {
+    throw new Error("Failed to load business for setup.");
+  }
+  if (!business) {
     return { kind: "not_found" };
   }
 

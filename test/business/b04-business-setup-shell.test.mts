@@ -243,3 +243,13 @@ test("B04 leaves current production entry and hardened setup detours unchanged",
   assert.match(monthlySetupNavigationSource, /"revenue-streams" \| "expenses"/);
   assert.doesNotMatch(monthlySetupNavigationSource, /\/setup/);
 });
+
+test("B04 distinguishes transient business query failure from an absent business", () => {
+  assert.match(setupLoaderSource, /if \(businessError\) \{[\s\S]*throw new Error/);
+  assert.match(setupLoaderSource, /if \(!business\) \{[\s\S]*kind: "not_found"/);
+});
+
+test("B04 load-error stepper never labels unknown facts as incomplete", () => {
+  assert.match(setupShellSource, /loadError[\s\S]*"غير متاحة"/);
+  assert.doesNotMatch(setupShellSource, /aria-disabled="true"/);
+});

@@ -120,7 +120,13 @@ export function BusinessSetupShell({
                 </span>
                 <span className={styles.stepLabel}>{STEP_LABELS[step]}</span>
                 <span className={styles.stepState}>
-                  {isComplete ? "مكتملة" : isCurrent ? "الحالية" : "غير مكتملة"}
+                  {loadError
+                    ? "غير متاحة"
+                    : isComplete
+                      ? "مكتملة"
+                      : isCurrent
+                        ? "الحالية"
+                        : "غير مكتملة"}
                 </span>
               </>
             );
@@ -196,9 +202,9 @@ export function BusinessSetupShell({
                 {nextLabel}
               </Link>
             ) : (
-              <span className={styles.disabledAction} aria-disabled="true">
+              <button className={styles.disabledAction} type="button" disabled>
                 {nextLabel}
-              </span>
+              </button>
             )}
           </nav>
         )}
@@ -287,6 +293,7 @@ function StepContent({
   );
 }
 
+/** Renders the shared step title and canonical completion badge. */
 function StepPanelHeading({
   step,
   complete,
