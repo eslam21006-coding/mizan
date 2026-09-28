@@ -190,12 +190,14 @@ export type BusinessReadinessInput = {
   planning: PlanningReadinessInput;
 };
 
+/** Rejects invalid count facts before they can be interpreted as readiness. */
 function assertNonNegativeSafeInteger(value: number, fieldName: string) {
   if (!Number.isSafeInteger(value) || value < 0) {
     throw new Error(`${fieldName} must be a non-negative safe integer.`);
   }
 }
 
+/** Requires a concrete non-negative count when the caller says the domain loaded successfully. */
 function requiredLoadedCount(value: number | null, fieldName: string) {
   if (value === null) {
     throw new Error(`${fieldName} must be available when readiness loadState is loaded.`);
@@ -204,6 +206,7 @@ function requiredLoadedCount(value: number | null, fieldName: string) {
   return value;
 }
 
+/** Requires a concrete boolean fact when the caller says the domain loaded successfully. */
 function requiredLoadedBoolean(value: boolean | null, fieldName: string) {
   if (value === null) {
     throw new Error(`${fieldName} must be available when readiness loadState is loaded.`);
@@ -211,6 +214,7 @@ function requiredLoadedBoolean(value: boolean | null, fieldName: string) {
   return value;
 }
 
+/** Preserves first-seen requirement order while removing duplicate blocker mappings. */
 function uniqueRequirements<T extends string>(requirements: readonly T[]) {
   return [...new Set(requirements)];
 }
