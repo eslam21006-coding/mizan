@@ -35,6 +35,7 @@
     ".next/dev/types/**/*.ts",
     "**/*.ts",
     "**/*.tsx",
+    "test/business/b02-setup-completion-state.test.mts",
     "test/business/business-readiness.test.mts",
     "test/business/monthly-comparison.test.mts",
     "test/business/historical-analytics.test.mts",
