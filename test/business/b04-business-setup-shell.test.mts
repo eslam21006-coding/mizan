@@ -164,3 +164,30 @@ test("B04 readiness load failure preserves unknown instead of fabricating zero p
     month: false,
   });
 });
+
+test("B04 explicit valid step remains addressable even when an earlier requirement is missing", () => {
+  const readiness = resolveBusinessSetupReadiness({
+    loadState: "loaded",
+    revenueSourceCount: 0,
+    expenseSetupReviewedAt: "2026-09-28T10:00:00.000Z",
+    validMonthCount: 1,
+  });
+
+  assert.deepEqual(parseBusinessSetupStep("month"), { kind: "valid", step: "month" });
+  assert.equal(resolveBusinessSetupResumeStep(readiness.coreSetup), "revenue");
+  assert.equal(readiness.stepComplete.month, true);
+});
+
+test("B04 Next gating is based on the selected step completion fact", () => {
+  const readiness = resolveBusinessSetupReadiness({
+    loadState: "loaded",
+    revenueSourceCount: 0,
+    expenseSetupReviewedAt: "2026-09-28T10:00:00.000Z",
+    validMonthCount: 1,
+  });
+
+  assert.equal(readiness.stepComplete.business, true);
+  assert.equal(readiness.stepComplete.revenue, false);
+  assert.equal(readiness.stepComplete.expenses, true);
+  assert.equal(readiness.stepComplete.month, true);
+});
