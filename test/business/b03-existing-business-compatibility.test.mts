@@ -7,6 +7,10 @@ const overviewPageSource = await readFile(
   new URL("../../src/app/(app)/businesses/[businessId]/page.tsx", import.meta.url),
   "utf8",
 );
+const compatibilitySource = await readFile(
+  new URL("../../src/lib/business/setup-compatibility.ts", import.meta.url),
+  "utf8",
+);
 
 test("B03 established legacy business remains ready from configured expenses and history", () => {
   const compatibility = resolveBusinessSetupCompatibility({
@@ -233,4 +237,10 @@ test("B03 Overview loads explicit review and derives configured versus active ex
   );
   assert.match(overviewPageSource, /expenseItemCount: activeExpenseItemCount/);
   assert.match(overviewPageSource, /expenseItemCount=\{activeExpenseItemCount\}/);
+});
+
+test("B03 compatibility path is read-only and cannot backfill explicit review or historical data", () => {
+  assert.doesNotMatch(compatibilitySource, /createSupabaseServerClient|\.from\(/);
+  assert.doesNotMatch(overviewPageSource, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
+  assert.doesNotMatch(compatibilitySource, /expense_setup_reviewed_at\s*=/);
 });
