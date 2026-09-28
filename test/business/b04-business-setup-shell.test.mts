@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   buildBusinessSetupHref,
@@ -190,4 +191,55 @@ test("B04 Next gating is based on the selected step completion fact", () => {
   assert.equal(readiness.stepComplete.revenue, false);
   assert.equal(readiness.stepComplete.expenses, true);
   assert.equal(readiness.stepComplete.month, true);
+});
+
+const setupPageSource = await readFile(
+  new URL("../../src/app/(app)/businesses/[businessId]/setup/page.tsx", import.meta.url),
+  "utf8",
+);
+const setupLoaderSource = await readFile(
+  new URL("../../src/lib/business/setup-loader.ts", import.meta.url),
+  "utf8",
+);
+const setupShellSource = await readFile(
+  new URL(
+    "../../src/app/(app)/businesses/[businessId]/setup/business-setup-shell.tsx",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const creationActionsSource = await readFile(
+  new URL("../../src/app/(app)/businesses/new/actions.ts", import.meta.url),
+  "utf8",
+);
+const overviewPageSource = await readFile(
+  new URL("../../src/app/(app)/businesses/[businessId]/page.tsx", import.meta.url),
+  "utf8",
+);
+const monthlySetupNavigationSource = await readFile(
+  new URL("../../src/lib/monthly-setup-navigation.ts", import.meta.url),
+  "utf8",
+);
+
+test("B04 production setup route is read-only and URL state is authoritative", () => {
+  assert.doesNotMatch(setupPageSource, /useState|useEffect|localStorage|sessionStorage/);
+  assert.doesNotMatch(setupLoaderSource, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
+  assert.doesNotMatch(setupLoaderSource, /\.from\("expense_items"\)/);
+  assert.match(setupPageSource, /parseBusinessSetupStep\(query\.step\)/);
+  assert.match(setupPageSource, /resolveBusinessSetupResumeStep/);
+  assert.match(setupPageSource, /redirect\(buildBusinessSetupHref/);
+});
+
+test("B04 shell is focused and does not reuse full business workspace navigation", () => {
+  assert.doesNotMatch(setupShellSource, /BusinessWorkspaceShell|BUSINESS_WORKSPACE_TABS/);
+  assert.match(setupShellSource, /BusinessContext/);
+  assert.match(setupShellSource, /من 4 خطوات مكتملة/);
+});
+
+test("B04 leaves current production entry and hardened setup detours unchanged", () => {
+  assert.match(creationActionsSource, /redirect\("\/businesses\?status=created"\)/);
+  assert.doesNotMatch(creationActionsSource, /\/setup/);
+  assert.doesNotMatch(overviewPageSource, /redirect\([^)]*\/setup/);
+  assert.match(monthlySetupNavigationSource, /"revenue-streams" \| "expenses"/);
+  assert.doesNotMatch(monthlySetupNavigationSource, /\/setup/);
 });

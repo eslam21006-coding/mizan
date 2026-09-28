@@ -7,7 +7,6 @@ import {
   parseBusinessSetupStep,
   previousBusinessSetupStep,
   resolveBusinessSetupResumeStep,
-  type BusinessSetupStep,
 } from "@/lib/business/setup-navigation";
 import { BusinessSetupShell } from "./business-setup-shell";
 
