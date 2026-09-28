@@ -121,7 +121,14 @@ test("N37 production Overview reads active setup and current/latest saved monthl
     overviewPage,
     /\.from\("revenue_streams"\)(?:(?!\.from\().)*\.eq\("is_active", true\)/s,
   );
-  assert.match(overviewPage, /\.from\("expense_items"\)[\s\S]*\.eq\("is_active", true\)/);
+  assert.match(
+    overviewPage,
+    /\.from\("expense_items"\)[\s\S]*?\.select\("id,is_active"\)[\s\S]*?\.eq\("business_id", businessId\)/,
+  );
+  assert.match(
+    overviewPage,
+    /const activeExpenseItemCount = \(expensesResult\.data \?\? \[\]\)\.filter\([\s\S]*?expense\.is_active[\s\S]*?\)\.length;/,
+  );
   assert.match(
     overviewPage,
     /\.from\("monthly_periods"\)[\s\S]*\.eq\("month_start", currentMonthStart\)[\s\S]*\.maybeSingle\(\)/,
@@ -132,4 +139,70 @@ test("N37 production Overview reads active setup and current/latest saved monthl
   );
   assert.match(overviewPage, /const dataLoadError = Boolean\(/);
   assert.match(overviewPage, /<BusinessOverviewPanel/);
+});
+
+test("B03 Overview accepts inactive legacy expense definitions without changing displayed active count semantics", () => {
+  const health = resolveBusinessOverviewHealth({
+    businessId,
+    currentMonthKey: "2026-09",
+    revenueSourceCount: 1,
+    expenseItemCount: 0,
+    configuredExpenseItemCount: 3,
+    expenseSetupReviewedAt: null,
+    currentMonthSaved: false,
+    latestSavedMonthKey: null,
+    canManage: true,
+    dataLoadError: false,
+  });
+
+  assert.equal(health.revenueSourcesReady, true);
+  assert.equal(health.expensesReady, true);
+  assert.equal(health.nextAction?.kind, "monthly");
+});
+
+test("B03 Overview protects legacy zero-expense businesses that already have saved history", () => {
+  const health = resolveBusinessOverviewHealth({
+    businessId,
+    currentMonthKey: "2026-09",
+    revenueSourceCount: 1,
+    expenseItemCount: 0,
+    configuredExpenseItemCount: 0,
+    expenseSetupReviewedAt: null,
+    currentMonthSaved: false,
+    latestSavedMonthKey: "2026-08",
+    canManage: true,
+    dataLoadError: false,
+  });
+
+  assert.equal(health.expensesReady, true);
+  assert.equal(health.nextAction?.kind, "monthly");
+});
+
+test("B03 Overview accepts explicit reviewed-none expense setup before the first month exists", () => {
+  const health = resolveBusinessOverviewHealth({
+    businessId,
+    currentMonthKey: "2026-09",
+    revenueSourceCount: 1,
+    expenseItemCount: 0,
+    configuredExpenseItemCount: 0,
+    expenseSetupReviewedAt: "2026-09-28T08:00:00.000Z",
+    currentMonthSaved: false,
+    latestSavedMonthKey: null,
+    canManage: true,
+    dataLoadError: false,
+  });
+
+  assert.equal(health.expensesReady, true);
+  assert.equal(health.nextAction?.kind, "monthly");
+});
+
+test("B03 Overview delegates legacy expense compatibility instead of using the active-count heuristic", async () => {
+  const source = await readFile(
+    new URL("../../src/lib/business-overview.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(source, /resolveBusinessSetupCompatibility/);
+  assert.match(source, /mode: "legacy"/);
+  assert.doesNotMatch(source, /input\.expenseItemCount\s*>\s*0/);
 });

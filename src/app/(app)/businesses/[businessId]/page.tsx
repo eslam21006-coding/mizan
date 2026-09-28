@@ -22,7 +22,7 @@ export default async function BusinessOverviewPage({ params }: BusinessOverviewP
   const supabase = await createSupabaseServerClient();
   const { data: business, error } = await supabase
     .from("businesses")
-    .select("id,name,base_currency,timezone,owner_user_id")
+    .select("id,name,base_currency,timezone,owner_user_id,expense_setup_reviewed_at")
     .eq("id", businessId)
     .maybeSingle();
 
@@ -38,9 +38,8 @@ export default async function BusinessOverviewPage({ params }: BusinessOverviewP
       .eq("is_active", true),
     supabase
       .from("expense_items")
-      .select("id")
-      .eq("business_id", businessId)
-      .eq("is_active", true),
+      .select("id,is_active")
+      .eq("business_id", businessId),
     supabase
       .from("monthly_periods")
       .select("month_start")
@@ -66,11 +65,17 @@ export default async function BusinessOverviewPage({ params }: BusinessOverviewP
   const latestSavedMonthKey = latestPeriodResult.data?.month_start
     ? String(latestPeriodResult.data.month_start).slice(0, 7)
     : null;
+  const configuredExpenseItemCount = expensesResult.data?.length ?? 0;
+  const activeExpenseItemCount = (expensesResult.data ?? []).filter(
+    (expense) => expense.is_active,
+  ).length;
   const overviewHealth = resolveBusinessOverviewHealth({
     businessId,
     currentMonthKey,
     revenueSourceCount: streamsResult.data?.length ?? 0,
-    expenseItemCount: expensesResult.data?.length ?? 0,
+    expenseItemCount: activeExpenseItemCount,
+    configuredExpenseItemCount,
+    expenseSetupReviewedAt: business.expense_setup_reviewed_at,
     currentMonthSaved: Boolean(currentPeriodResult.data),
     latestSavedMonthKey,
     canManage,
@@ -96,7 +101,7 @@ export default async function BusinessOverviewPage({ params }: BusinessOverviewP
         baseCurrency={business.base_currency}
         timezone={business.timezone}
         revenueSourceCount={streamsResult.data?.length ?? 0}
-        expenseItemCount={expensesResult.data?.length ?? 0}
+        expenseItemCount={activeExpenseItemCount}
         health={overviewHealth}
       />
     </div>

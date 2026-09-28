@@ -14,7 +14,7 @@ function captureBrowserErrors(page: Page) {
   return errors;
 }
 
-test.describe("N37 Business Overview setup health", () => {
+test.describe("B03 Business Overview existing-business compatibility", () => {
   test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
 
   test("shows setup health, monthly status, and one primary next action in Arabic RTL", async ({
@@ -71,3 +71,45 @@ test.describe("N37 Business Overview setup health", () => {
   });
 });
 
+
+test.describe("B03 Business Overview compatibility scenarios", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
+  test("keeps a historical zero-expense legacy business ready without destructive setup", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=zero-expense-history`);
+
+    await expect(page.getByText("الإعداد جاهز", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^فتح أرقام / })).toHaveAttribute(
+      "href",
+      `/businesses/${businessId}/monthly?month=2026-09`,
+    );
+    expect(errors).toEqual([]);
+  });
+
+  test("keeps partial read-only action deterministic across direct URL, refresh, and Back", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+
+    await page.goto(`${fixturePath}?case=zero-expense-history`);
+    await expect(page.getByRole("link", { name: /^فتح أرقام / })).toBeVisible();
+
+    await page.goto(`${fixturePath}?case=partial-readonly`);
+    const reviewExpenseAction = page.getByRole("link", { name: "مراجعة هيكل المصروفات" });
+    await expect(page.getByText("الإعداد يحتاج إكمال", { exact: true })).toBeVisible();
+    await expect(reviewExpenseAction).toHaveAttribute(
+      "href",
+      `/businesses/${businessId}/expenses`,
+    );
+
+    await page.reload();
+    await expect(page.getByRole("link", { name: "مراجعة هيكل المصروفات" })).toBeVisible();
+
+    await page.goBack();
+    await expect(page.getByRole("link", { name: /^فتح أرقام / })).toBeVisible();
+    expect(errors).toEqual([]);
+  });
+});

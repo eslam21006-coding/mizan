@@ -12,20 +12,73 @@ const fixtureShellProps = {
   email: "admin.fixture@example.test",
 };
 
-/** CI-only fixture for N37 Business Overview setup-health behavior. */
-export default function BusinessOverviewFixturePage() {
+type FixtureCase = "configured-legacy" | "zero-expense-history" | "partial-readonly";
+
+type FixtureScenario = {
+  revenueSourceCount: number;
+  activeExpenseItemCount: number;
+  configuredExpenseItemCount: number;
+  expenseSetupReviewedAt: string | null;
+  latestSavedMonthKey: string | null;
+  canManage: boolean;
+};
+
+const fixtureScenarios: Record<FixtureCase, FixtureScenario> = {
+  "configured-legacy": {
+    revenueSourceCount: 2,
+    activeExpenseItemCount: 0,
+    configuredExpenseItemCount: 5,
+    expenseSetupReviewedAt: null,
+    latestSavedMonthKey: "2026-08",
+    canManage: true,
+  },
+  "zero-expense-history": {
+    revenueSourceCount: 1,
+    activeExpenseItemCount: 0,
+    configuredExpenseItemCount: 0,
+    expenseSetupReviewedAt: null,
+    latestSavedMonthKey: "2026-08",
+    canManage: true,
+  },
+  "partial-readonly": {
+    revenueSourceCount: 1,
+    activeExpenseItemCount: 0,
+    configuredExpenseItemCount: 0,
+    expenseSetupReviewedAt: null,
+    latestSavedMonthKey: null,
+    canManage: false,
+  },
+};
+
+type BusinessOverviewFixturePageProps = {
+  searchParams: Promise<{ case?: string }>;
+};
+
+/** CI-only fixture for B03 Business Overview compatibility and setup-health behavior. */
+export default async function BusinessOverviewFixturePage({
+  searchParams,
+}: BusinessOverviewFixturePageProps) {
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
     notFound();
   }
 
+  const requestedCase = (await searchParams).case;
+  const fixtureCase: FixtureCase =
+    requestedCase === "zero-expense-history" || requestedCase === "partial-readonly"
+      ? requestedCase
+      : "configured-legacy";
+  const scenario = fixtureScenarios[fixtureCase];
+
   const health = resolveBusinessOverviewHealth({
     businessId,
     currentMonthKey: "2026-09",
-    revenueSourceCount: 2,
-    expenseItemCount: 5,
+    revenueSourceCount: scenario.revenueSourceCount,
+    expenseItemCount: scenario.activeExpenseItemCount,
+    configuredExpenseItemCount: scenario.configuredExpenseItemCount,
+    expenseSetupReviewedAt: scenario.expenseSetupReviewedAt,
     currentMonthSaved: false,
-    latestSavedMonthKey: "2026-08",
-    canManage: true,
+    latestSavedMonthKey: scenario.latestSavedMonthKey,
+    canManage: scenario.canManage,
     dataLoadError: false,
   });
 
@@ -42,8 +95,8 @@ export default function BusinessOverviewFixturePage() {
         <BusinessOverviewPanel
           baseCurrency="USD"
           timezone="Africa/Cairo"
-          revenueSourceCount={2}
-          expenseItemCount={5}
+          revenueSourceCount={scenario.revenueSourceCount}
+          expenseItemCount={scenario.activeExpenseItemCount}
           health={health}
         />
       </div>
