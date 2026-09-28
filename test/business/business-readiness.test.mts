@@ -298,10 +298,11 @@ test("B01 readiness resolution is deterministic for identical input", () => {
   assert.deepEqual(resolveBusinessReadiness(input), resolveBusinessReadiness(input));
 });
 
-test("B01 current Overview delegates setup predicates to central readiness", () => {
-  assert.match(overviewResolverSource, /resolveCoreSetupReadiness/);
+test("B01 current Overview reaches central readiness through the B03 compatibility layer", () => {
+  assert.match(overviewResolverSource, /resolveBusinessSetupCompatibility/);
   assert.doesNotMatch(
     overviewResolverSource,
     /const revenueSourcesReady\s*=\s*input\.revenueSourceCount\s*>\s*0/,
   );
+  assert.doesNotMatch(overviewResolverSource, /input\.expenseItemCount\s*>\s*0/);
 });
