@@ -9,6 +9,7 @@ import {
   resolveBusinessSetupResumeStep,
 } from "../../src/lib/business/setup-navigation.ts";
 import { resolveCoreSetupReadiness } from "../../src/lib/business/readiness.ts";
+import { resolveBusinessSetupReadiness } from "../../src/lib/business/setup-readiness.ts";
 
 test("B04 setup step parser accepts only one canonical semantic step", () => {
   for (const step of ["business", "revenue", "expenses", "month"] as const) {
@@ -98,4 +99,68 @@ test("B04 load errors never fabricate a resume step", () => {
   });
 
   assert.equal(resolveBusinessSetupResumeStep(failed), null);
+});
+
+test("B04 canonical readiness counts completed facts independently of order", () => {
+  const readiness = resolveBusinessSetupReadiness({
+    loadState: "loaded",
+    revenueSourceCount: 0,
+    expenseSetupReviewedAt: "2026-09-28T10:00:00.000Z",
+    validMonthCount: 1,
+  });
+
+  assert.equal(readiness.completedStepCount, 3);
+  assert.deepEqual(readiness.stepComplete, {
+    business: true,
+    revenue: false,
+    expenses: true,
+    month: true,
+  });
+  assert.deepEqual(readiness.coreSetup.missing, ["revenue_setup"]);
+});
+
+test("B04 canonical expense completion ignores legacy expense/history compatibility", () => {
+  const readiness = resolveBusinessSetupReadiness({
+    loadState: "loaded",
+    revenueSourceCount: 1,
+    expenseSetupReviewedAt: null,
+    validMonthCount: 12,
+  });
+
+  assert.equal(readiness.completedStepCount, 3);
+  assert.equal(readiness.stepComplete.expenses, false);
+  assert.equal(readiness.stepComplete.month, true);
+  assert.deepEqual(readiness.coreSetup.missing, ["expense_setup_review"]);
+});
+
+test("B04 explicit reviewed-none expense setup completes Step 3 with zero expense rows", () => {
+  const readiness = resolveBusinessSetupReadiness({
+    loadState: "loaded",
+    revenueSourceCount: 1,
+    expenseSetupReviewedAt: "2026-09-28T10:00:00.000Z",
+    validMonthCount: 0,
+  });
+
+  assert.equal(readiness.completedStepCount, 3);
+  assert.equal(readiness.stepComplete.expenses, true);
+  assert.deepEqual(readiness.coreSetup.missing, ["first_valid_month"]);
+});
+
+test("B04 readiness load failure preserves unknown instead of fabricating zero progress", () => {
+  const readiness = resolveBusinessSetupReadiness({
+    loadState: "load_error",
+    revenueSourceCount: null,
+    expenseSetupReviewedAt: null,
+    validMonthCount: null,
+  });
+
+  assert.equal(readiness.completedStepCount, null);
+  assert.equal(readiness.coreSetup.loadState, "load_error");
+  assert.equal(readiness.coreSetup.expenseSetup, "unknown");
+  assert.deepEqual(readiness.stepComplete, {
+    business: false,
+    revenue: false,
+    expenses: false,
+    month: false,
+  });
 });
