@@ -28,7 +28,7 @@ async function expectStableRtl(page: Page) {
     .toBe(true);
 }
 
-/** Serves the setup fixture behind production-shaped setup URLs for navigation tests. */
+/** Serves fixture HTML for production-shaped setup URLs while preserving the browser URL. */
 async function routeProductionSetupToFixture(page: Page, fixtureCase: string) {
   await page.route("**/businesses/**/setup**", async (route) => {
     const requested = new URL(route.request().url());
@@ -41,7 +41,9 @@ async function routeProductionSetupToFixture(page: Page, fixtureCase: string) {
     fixture.searchParams.set("case", fixtureCase);
     const step = requested.searchParams.get("step");
     if (step) fixture.searchParams.set("step", step);
-    await route.continue({ url: fixture.toString() });
+
+    const response = await route.fetch({ url: fixture.toString() });
+    await route.fulfill({ response });
   });
 }
 
@@ -138,7 +140,9 @@ test.describe("B04 business setup shell", () => {
     const errors = captureBrowserErrors(page);
     await page.goto(`${fixturePath}?case=load-error&step=expenses`);
 
-    await expect(page.getByRole("alert")).toContainText("تعذر تحميل حالة إعداد البزنس");
+    await expect(
+      page.getByRole("alert").filter({ hasText: "تعذر تحميل حالة إعداد البزنس" }),
+    ).toContainText("تعذر تحميل حالة إعداد البزنس");
     await expect(page.getByText("حالة التقدم غير متاحة", { exact: true })).toBeVisible();
     await expect(page.getByText(/من 4 خطوات مكتملة/)).toHaveCount(0);
     await expectStableRtl(page);
