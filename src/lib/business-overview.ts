@@ -1,3 +1,5 @@
+import { resolveCoreSetupReadiness } from "./business/readiness.ts";
+
 export type BusinessOverviewHealthInput = {
   businessId: string;
   currentMonthKey: string;
@@ -39,10 +41,28 @@ export function buildBusinessMonthlyHref(businessId: string, monthKey: string) {
   return `/businesses/${encodeURIComponent(businessId)}/monthly?${searchParams.toString()}`;
 }
 
-/** Resolves setup health and the single primary next action without changing any financial state. */
+/**
+ * Preserves the existing Overview contract while delegating setup predicates to central readiness.
+ *
+ * Until B02 persists explicit expense-review completion, the legacy Overview must translate its
+ * existing "at least one active expense item" signal into a temporary reviewed/not-reviewed input.
+ * This keeps current behavior stable without making that heuristic authoritative for V2 readiness.
+ */
 export function resolveBusinessOverviewHealth(
   input: BusinessOverviewHealthInput,
 ): BusinessOverviewHealth {
+  const coreReadiness = resolveCoreSetupReadiness({
+    loadState: input.dataLoadError ? "load_error" : "loaded",
+    businessIdentityReady: input.dataLoadError ? null : true,
+    revenueSourceCount: input.dataLoadError ? null : input.revenueSourceCount,
+    expenseSetup: input.dataLoadError
+      ? "unknown"
+      : input.expenseItemCount > 0
+        ? "reviewed"
+        : "not_reviewed",
+    validMonthCount: input.dataLoadError ? null : input.latestSavedMonthKey === null ? 0 : 1,
+  });
+
   if (input.dataLoadError) {
     return {
       revenueSourcesReady: false,
@@ -54,8 +74,8 @@ export function resolveBusinessOverviewHealth(
     };
   }
 
-  const revenueSourcesReady = input.revenueSourceCount > 0;
-  const expensesReady = input.expenseItemCount > 0;
+  const revenueSourcesReady = coreReadiness.revenueSetupReady;
+  const expensesReady = coreReadiness.expenseSetup === "reviewed";
   let nextAction: BusinessOverviewNextAction;
 
   if (!revenueSourcesReady) {
