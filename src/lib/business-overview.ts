@@ -5,6 +5,8 @@ export type BusinessOverviewHealthInput = {
   currentMonthKey: string;
   revenueSourceCount: number;
   expenseItemCount: number;
+  configuredExpenseItemCount?: number;
+  expenseSetupReviewedAt?: string | null;
   currentMonthSaved: boolean;
   latestSavedMonthKey: string | null;
   canManage: boolean;

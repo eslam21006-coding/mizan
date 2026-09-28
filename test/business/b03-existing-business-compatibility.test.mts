@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { resolveBusinessSetupCompatibility } from "../../src/lib/business/setup-compatibility.ts";
+
+const overviewPageSource = await readFile(
+  new URL("../../src/app/(app)/businesses/[businessId]/page.tsx", import.meta.url),
+  "utf8",
+);
 
 test("B03 established legacy business remains ready from configured expenses and history", () => {
   const compatibility = resolveBusinessSetupCompatibility({
@@ -201,4 +207,30 @@ test("B03 loaded legacy configured-expense count rejects unavailable or invalid 
       }),
     /non-negative safe integer/,
   );
+});
+
+test("B03 Overview loads explicit review and derives configured versus active expense counts", () => {
+  assert.match(
+    overviewPageSource,
+    /\.select\("id,name,base_currency,timezone,owner_user_id,expense_setup_reviewed_at"\)/,
+  );
+  assert.match(
+    overviewPageSource,
+    /\.from\("expense_items"\)[\s\S]*?\.select\("id,is_active"\)[\s\S]*?\.eq\("business_id", businessId\)/,
+  );
+  assert.match(
+    overviewPageSource,
+    /const configuredExpenseItemCount = expensesResult\.data\?\.length \?\? 0;/,
+  );
+  assert.match(
+    overviewPageSource,
+    /const activeExpenseItemCount = \(expensesResult\.data \?\? \[\]\)\.filter\([\s\S]*?expense\.is_active[\s\S]*?\)\.length;/,
+  );
+  assert.match(overviewPageSource, /configuredExpenseItemCount,/);
+  assert.match(
+    overviewPageSource,
+    /expenseSetupReviewedAt: business\.expense_setup_reviewed_at/,
+  );
+  assert.match(overviewPageSource, /expenseItemCount: activeExpenseItemCount/);
+  assert.match(overviewPageSource, /expenseItemCount=\{activeExpenseItemCount\}/);
 });

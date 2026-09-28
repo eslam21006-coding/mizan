@@ -121,7 +121,14 @@ test("N37 production Overview reads active setup and current/latest saved monthl
     overviewPage,
     /\.from\("revenue_streams"\)(?:(?!\.from\().)*\.eq\("is_active", true\)/s,
   );
-  assert.match(overviewPage, /\.from\("expense_items"\)[\s\S]*\.eq\("is_active", true\)/);
+  assert.match(
+    overviewPage,
+    /\.from\("expense_items"\)[\s\S]*?\.select\("id,is_active"\)[\s\S]*?\.eq\("business_id", businessId\)/,
+  );
+  assert.match(
+    overviewPage,
+    /const activeExpenseItemCount = \(expensesResult\.data \?\? \[\]\)\.filter\([\s\S]*?expense\.is_active[\s\S]*?\)\.length;/,
+  );
   assert.match(
     overviewPage,
     /\.from\("monthly_periods"\)[\s\S]*\.eq\("month_start", currentMonthStart\)[\s\S]*\.maybeSingle\(\)/,
