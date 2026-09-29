@@ -56,3 +56,35 @@ test("B06-B read-only setup hides revenue mutation form while still listing sour
   assert.match(setupShellSource, /revenueSources\.map/);
   assert.match(setupShellSource, /غير نشط/);
 });
+
+
+const revenueActionsSource = await readFile(
+  new URL(
+    "../../src/app/(app)/businesses/[businessId]/revenue-streams/actions.ts",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
+test("B06-C revenue creation reuses one action with a strict internal destination", () => {
+  assert.match(revenueActionsSource, /type RevenueMutationDestination = "workspace" \| "setup"/);
+  assert.match(revenueActionsSource, /formData\.getAll\("destination"\)/);
+  assert.doesNotMatch(revenueActionsSource, /https?:\/\//);
+  assert.match(revenueActionsSource, /destination === "setup"/);
+  assert.match(revenueActionsSource, /buildBusinessSetupHref\(businessId, "revenue"\)/);
+});
+
+test("B06-C setup creation preserves existing validation, idempotency, and the authoritative table", () => {
+  assert.match(revenueActionsSource, /normalizeRevenueStreamName/);
+  assert.match(revenueActionsSource, /parseRevenueStreamType/);
+  assert.match(revenueActionsSource, /parseResourceId\(formData\.get\("creation_request_id"\)\)/);
+  assert.match(revenueActionsSource, /\.from\("revenue_streams"\)\.insert/);
+  assert.match(revenueActionsSource, /!error \|\| error\.code === "23505"/);
+  assert.doesNotMatch(revenueActionsSource, /from\("setup_revenue/);
+});
+
+test("B06-C existing workspace and Monthly return behavior remains the default", () => {
+  assert.match(revenueActionsSource, /if \(values\.length === 0\) return "workspace"/);
+  assert.match(revenueActionsSource, /destination === "workspace" \? parseRevenueSetupReturnOrigin/);
+  assert.match(revenueActionsSource, /redirectToRevenueStreams\(businessId, status, returnOrigin\)/);
+});
