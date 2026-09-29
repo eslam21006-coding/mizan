@@ -50,6 +50,7 @@ export function BusinessOnboardingWizard({
   const timezoneLabel =
     TIMEZONE_OPTIONS.find((option) => option.value === timezone)?.label ?? timezone;
 
+  /** Prevents incomplete identity submission while leaving server validation authoritative. */
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     setLocalError(null);
 
@@ -193,7 +194,11 @@ export function BusinessOnboardingWizard({
         </div>
 
         <div className={styles.actions}>
-          <button className={styles.primaryButton} type="submit" disabled={isSubmitting}>
+          <button
+            className={styles.primaryButton}
+            type="submit"
+            disabled={isSubmitting || !timezone}
+          >
             {isSubmitting ? "جارٍ الإنشاء…" : "إنشاء البزنس والمتابعة"}
           </button>
         </div>

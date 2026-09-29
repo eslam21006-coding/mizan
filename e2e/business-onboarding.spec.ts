@@ -32,6 +32,22 @@ async function expectStableRtl(page: Page) {
     .toBe(true);
 }
 
+/** Waits for timezone detection/fallback UI, then opens and verifies the editor. */
+async function openTimezoneEditor(page: Page) {
+  const changeTimezone = page.getByRole("button", { name: "تغيير" });
+  const timezoneSelect = page.getByLabel("المنطقة الزمنية");
+
+  await expect
+    .poll(async () => (await changeTimezone.isVisible()) || (await timezoneSelect.isVisible()))
+    .toBe(true);
+
+  if (await changeTimezone.isVisible()) {
+    await changeTimezone.click();
+  }
+
+  await expect(timezoneSelect).toBeVisible();
+}
+
 /** Signs into a live Mizan environment when credentials are available. */
 async function login(page: Page) {
   if (liveInviteTokenHash) {
@@ -65,11 +81,7 @@ test.describe("B05 simplified business creation UI", () => {
     await expect(page.getByText("راجع البيانات")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "إنشاء البزنس والمتابعة" })).toBeVisible();
 
-    const changeTimezone = page.getByRole("button", { name: "تغيير" });
-    if (await changeTimezone.isVisible().catch(() => false)) {
-      await changeTimezone.click();
-    }
-    await expect(page.getByLabel("المنطقة الزمنية")).toBeVisible();
+    await openTimezoneEditor(page);
     await page.getByLabel("المنطقة الزمنية").selectOption("Africa/Cairo");
     await expect(page.getByRole("button", { name: "تم" })).toBeVisible();
 
@@ -103,10 +115,7 @@ test.describe("B05 live creation handoff", () => {
     await page.getByLabel("اسم البزنس").fill(businessName);
     await page.getByRole("button", { name: /EGP/ }).click();
 
-    const changeTimezone = page.getByRole("button", { name: "تغيير" });
-    if (await changeTimezone.isVisible().catch(() => false)) {
-      await changeTimezone.click();
-    }
+    await openTimezoneEditor(page);
     await page.getByLabel("المنطقة الزمنية").selectOption("Africa/Cairo");
 
     await page.getByRole("button", { name: "إنشاء البزنس والمتابعة" }).click();

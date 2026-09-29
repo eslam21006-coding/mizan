@@ -59,12 +59,16 @@ test("B05-A business creation is one form rather than a local micro-wizard", () 
 
 
 test("B05-B timezone is detected without a silent Cairo fallback and remains editable", () => {
-  assert.match(onboardingWizardSource, /const \[timezone, setTimezone\] = useState\("")/);
+  assert.ok(
+    onboardingWizardSource.includes('const [timezone, setTimezone] = useState("");'),
+    "timezone must start unknown instead of silently defaulting to Cairo",
+  );
   assert.match(onboardingWizardSource, /normalizeTimeZone\(detected\)/);
   assert.doesNotMatch(onboardingWizardSource, /useState\("Africa\/Cairo"\)/);
   assert.match(onboardingWizardSource, />تغيير</);
   assert.match(onboardingWizardSource, />تم</);
   assert.match(onboardingWizardSource, /اختر المنطقة الزمنية/);
+  assert.match(onboardingWizardSource, /disabled=\{isSubmitting \|\| !timezone\}/);
 });
 
 

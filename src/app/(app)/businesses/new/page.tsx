@@ -11,6 +11,7 @@ const errorMessages: Record<string, string> = {
   "create-failed": "تعذر إنشاء البزنس الآن. لم يتم حفظ أي إعدادات جديدة.",
 };
 
+/** Renders the B05 business-identity entry page with one server-generated creation request ID. */
 export default async function BusinessOnboardingPage({
   searchParams,
 }: BusinessOnboardingPageProps) {
