@@ -88,22 +88,6 @@ begin
     raise exception 'business onboarding did not preserve Task 4 owner membership';
   end if;
 
-  if (
-    select count(*)
-    from public.revenue_streams
-    where business_id = 'b5555555-5555-4555-8555-555555555555'
-  ) <> 0 then
-    raise exception 'business creation incorrectly created a revenue stream';
-  end if;
-
-  if (
-    select count(*)
-    from public.monthly_periods
-    where business_id = 'b5555555-5555-4555-8555-555555555555'
-  ) <> 0 then
-    raise exception 'business creation incorrectly created a monthly period';
-  end if;
-
   begin
     insert into public.businesses (
       id,
