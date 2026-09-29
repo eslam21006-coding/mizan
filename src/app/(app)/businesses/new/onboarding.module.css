@@ -7,17 +7,21 @@
   box-shadow: var(--shadow-soft);
 }
 
-.progressHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 24px;
+.heading {
+  max-width: 680px;
 }
 
-.progressHeader h2 {
+.heading h2 {
   margin: 7px 0 0;
   font-size: clamp(22px, 3vw, 30px);
   letter-spacing: -0.03em;
+}
+
+.heading p {
+  margin: 9px 0 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.85;
 }
 
 .kicker {
@@ -26,86 +30,22 @@
   font-weight: 800;
 }
 
-.stepCount {
-  flex: 0 0 auto;
-  padding: 7px 11px;
-  color: var(--brand-strong);
-  background: var(--brand-soft);
-  border: 1px solid #d3e7e1;
-  border-radius: 999px;
-  font-size: 12px;
-}
-
-.stepper {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  margin: 28px 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.stepper li {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 9px 10px;
-  color: var(--text-faint);
-  background: var(--surface-soft);
-  border: 1px solid var(--border);
-  border-radius: 11px;
-}
-
-.stepNumber {
-  width: 24px;
-  height: 24px;
-  flex: 0 0 24px;
-  display: grid;
-  place-items: center;
-  background: var(--surface);
-  border-radius: 50%;
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.stepper small {
-  overflow: hidden;
-  font-size: 11px;
-  font-weight: 750;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.stepper .activeStep,
-.stepper .doneStep {
-  color: var(--brand-strong);
-  border-color: #d3e7e1;
-}
-
-.stepper .activeStep {
-  background: var(--brand-soft);
-}
-
-.doneStep .stepNumber {
-  color: #fff;
-  background: var(--brand);
-}
-
 .form {
+  display: grid;
+  gap: 18px;
   margin-top: 26px;
 }
 
-.stepPanel {
-  min-height: 285px;
+.fieldGroup {
+  min-width: 0;
   margin: 0;
-  padding: 27px;
+  padding: 20px;
   background: #fbfcfc;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
 }
 
-fieldset.stepPanel {
+fieldset.fieldGroup {
   min-width: 0;
 }
 
@@ -114,22 +54,22 @@ fieldset.stepPanel {
   margin: 0;
   padding: 0;
   color: var(--text);
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 800;
 }
 
 .help {
   max-width: 650px;
-  margin: 8px 0 22px;
+  margin: 7px 0 14px;
   color: var(--text-soft);
-  font-size: 13px;
-  line-height: 1.85;
+  font-size: 12px;
+  line-height: 1.8;
 }
 
 .textInput,
 .select {
   width: 100%;
-  min-height: 52px;
+  min-height: 50px;
   padding: 12px 14px;
   color: var(--text);
   background: var(--surface);
@@ -142,8 +82,7 @@ fieldset.stepPanel {
 .select:focus,
 .currencyButton:focus-visible,
 .currencySelected:focus-visible,
-.primaryButton:focus-visible,
-.secondaryButton:focus-visible {
+.primaryButton:focus-visible {
   border-color: var(--brand);
   outline: 3px solid var(--brand-ring);
   outline-offset: 2px;
@@ -172,7 +111,7 @@ fieldset.stepPanel {
   text-align: start;
 }
 
-.currencyButton:hover {
+.currencyButton:hover:not(:disabled) {
   border-color: var(--border-strong);
   background: var(--surface-soft);
 }
@@ -181,6 +120,12 @@ fieldset.stepPanel {
   color: var(--brand-strong);
   background: var(--brand-soft);
   border-color: var(--brand);
+}
+
+.currencyButton:disabled,
+.currencySelected:disabled {
+  cursor: wait;
+  opacity: 0.65;
 }
 
 .currencyCode {
@@ -192,77 +137,29 @@ fieldset.stepPanel {
   font-size: 11px;
 }
 
-.reviewList {
-  display: grid;
-  gap: 10px;
-  margin: 0;
-}
-
-.reviewList > div {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 14px 16px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 11px;
-}
-
-.reviewList dt {
-  color: var(--text-soft);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.reviewList dd {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 800;
-  text-align: end;
-}
-
 .actions {
   display: flex;
-  align-items: center;
   justify-content: flex-end;
-  gap: 10px;
-  margin-top: 18px;
 }
 
-.primaryButton,
-.secondaryButton {
-  min-width: 120px;
+.primaryButton {
+  min-width: 190px;
   min-height: 46px;
   padding: 10px 17px;
+  color: #fff;
+  background: var(--brand);
+  border: 1px solid var(--brand);
   border-radius: 11px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 800;
 }
 
-.primaryButton {
-  color: #fff;
-  background: var(--brand);
-  border: 1px solid var(--brand);
-}
-
 .primaryButton:hover:not(:disabled) {
   background: var(--brand-strong);
 }
 
-.secondaryButton {
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border-strong);
-}
-
-.secondaryButton:hover:not(:disabled) {
-  background: var(--surface-soft);
-}
-
-.primaryButton:disabled,
-.secondaryButton:disabled {
+.primaryButton:disabled {
   cursor: wait;
   opacity: 0.65;
 }
@@ -283,45 +180,27 @@ fieldset.stepPanel {
     padding: 20px;
   }
 
-  .stepper {
-    grid-template-columns: repeat(4, 38px);
-    justify-content: space-between;
-  }
-
-  .stepper li {
-    justify-content: center;
-    padding: 7px;
-  }
-
-  .stepper small {
-    display: none;
-  }
-
   .currencyGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
 
-  .stepPanel {
-    min-height: 330px;
-    padding: 20px;
+@media (max-width: 520px) {
+  .wizard {
+    padding: 18px;
+    border-radius: 18px;
   }
 
-  .reviewList > div {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 5px;
+  .fieldGroup {
+    padding: 16px;
   }
 
-  .reviewList dd {
-    text-align: start;
+  .currencyGrid {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .actions {
-    justify-content: stretch;
-  }
-
-  .primaryButton,
-  .secondaryButton {
-    flex: 1;
+  .actions,
+  .primaryButton {
+    width: 100%;
   }
 }

@@ -22,7 +22,7 @@ export default async function BusinessOnboardingPage({
       <PageHeading
         eyebrow="إعداد البزنس"
         title="أضف بزنس جديد"
-        description="نبدأ فقط بالمعلومات الأساسية التي تحدد هوية البزنس وكيفية قراءة الفترات المالية. الإيرادات والمصروفات والفانلز لها خطوات مستقلة لاحقًا."
+        description="ابدأ باسم البزنس وعملته الأساسية فقط، ثم أكمل إعداد طريقة دخول وخروج المال داخل ميزان."
       />
       <BusinessOnboardingWizard
         creationRequestId={randomUUID()}

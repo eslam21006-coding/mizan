@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   normalizeBusinessName,
@@ -39,4 +40,19 @@ test("creation request IDs accept UUIDs only", () => {
   );
   assert.equal(parseCreationRequestId("not-a-uuid"), null);
   assert.equal(parseCreationRequestId(""), null);
+});
+
+
+const onboardingWizardSource = await readFile(
+  new URL("../../src/app/(app)/businesses/new/business-onboarding-wizard.tsx", import.meta.url),
+  "utf8",
+);
+
+test("B05-A business creation is one form rather than a local micro-wizard", () => {
+  assert.doesNotMatch(onboardingWizardSource, /const \[step, setStep\]/);
+  assert.doesNotMatch(onboardingWizardSource, /goForward|goBack|راجع البيانات|stepper/);
+  assert.match(onboardingWizardSource, /اسم البزنس/);
+  assert.match(onboardingWizardSource, /العملة الأساسية/);
+  assert.match(onboardingWizardSource, /المنطقة الزمنية/);
+  assert.match(onboardingWizardSource, /إنشاء البزنس والمتابعة/);
 });
