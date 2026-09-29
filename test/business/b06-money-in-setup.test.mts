@@ -131,3 +131,11 @@ test("B06 review fixes keep readiness authoritative and long source names mobile
   assert.match(setupShellSource, /className=\{styles\.moneyInSourceName\}/);
   assert.match(setupShellCssSource, /\.moneyInSourceName\s*\{[\s\S]*min-width:\s*0;[\s\S]*overflow-wrap:\s*anywhere;/);
 });
+
+
+test("B06 setup creation revalidates Monthly revenue rows before returning to setup", () => {
+  assert.match(
+    revenueActionsSource,
+    /destination === "setup"[\s\S]*revalidatePath\(`\/businesses\/\$\{businessId\}\/monthly`\)/,
+  );
+});

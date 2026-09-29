@@ -154,6 +154,7 @@ function redirectAfterRevenueCreation(
     revalidatePath("/businesses");
     revalidatePath(`/businesses/${businessId}`);
     revalidatePath(`/businesses/${businessId}/revenue-streams`);
+    revalidatePath(`/businesses/${businessId}/monthly`);
     revalidatePath(buildBusinessSetupHref(businessId));
     redirect(setupRevenuePath(businessId, status));
   }
