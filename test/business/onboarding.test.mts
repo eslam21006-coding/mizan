@@ -82,3 +82,10 @@ test("B05-C successful creation and idempotent retry both hand off to B04 setup"
   assert.doesNotMatch(onboardingActionsSource, /\/businesses\?status=created/);
   assert.doesNotMatch(onboardingActionsSource, /step=revenue/);
 });
+
+
+test("B05-D creation action does not manufacture later setup data", () => {
+  assert.doesNotMatch(onboardingActionsSource, /\.from\("revenue_streams"\)/);
+  assert.doesNotMatch(onboardingActionsSource, /\.from\("monthly_periods"\)/);
+  assert.doesNotMatch(onboardingActionsSource, /expense_setup_reviewed_at\s*:/);
+});
