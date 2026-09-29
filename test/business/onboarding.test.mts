@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   normalizeBusinessName,
@@ -39,4 +40,58 @@ test("creation request IDs accept UUIDs only", () => {
   );
   assert.equal(parseCreationRequestId("not-a-uuid"), null);
   assert.equal(parseCreationRequestId(""), null);
+});
+
+
+const onboardingWizardSource = await readFile(
+  new URL("../../src/app/(app)/businesses/new/business-onboarding-wizard.tsx", import.meta.url),
+  "utf8",
+);
+
+test("B05-A business creation is one form rather than a local micro-wizard", () => {
+  assert.doesNotMatch(onboardingWizardSource, /const \[step, setStep\]/);
+  assert.doesNotMatch(onboardingWizardSource, /goForward|goBack|راجع البيانات|stepper/);
+  assert.match(onboardingWizardSource, /اسم البزنس/);
+  assert.match(onboardingWizardSource, /العملة الأساسية/);
+  assert.match(onboardingWizardSource, /المنطقة الزمنية/);
+  assert.match(onboardingWizardSource, /إنشاء البزنس والمتابعة/);
+});
+
+
+test("B05-B timezone is detected without a silent Cairo fallback and remains editable", () => {
+  assert.ok(
+    onboardingWizardSource.includes('const [timezone, setTimezone] = useState("");'),
+    "timezone must start unknown instead of silently defaulting to Cairo",
+  );
+  assert.match(onboardingWizardSource, /normalizeTimeZone\(detected\)/);
+  assert.doesNotMatch(onboardingWizardSource, /useState\("Africa\/Cairo"\)/);
+  assert.ok(onboardingWizardSource.includes("تغيير"), "timezone edit affordance must remain visible");
+  assert.ok(onboardingWizardSource.includes("تم"), "timezone editor must expose a close action");
+  assert.match(onboardingWizardSource, /اختر المنطقة الزمنية/);
+  assert.match(onboardingWizardSource, /disabled=\{isSubmitting \|\| !timezone\}/);
+});
+
+
+const onboardingActionsSource = await readFile(
+  new URL("../../src/app/(app)/businesses/new/actions.ts", import.meta.url),
+  "utf8",
+);
+
+
+test("B05-C successful creation and idempotent retry both hand off to B04 setup", () => {
+  assert.match(onboardingActionsSource, /buildBusinessSetupHref/);
+  assert.match(onboardingActionsSource, /\.insert\(\{/);
+  assert.match(onboardingActionsSource, /\.select\("id"\)/);
+  assert.match(onboardingActionsSource, /\.single\(\)/);
+  assert.match(onboardingActionsSource, /redirectToCreatedBusinessSetup\(createdBusiness\.id\)/);
+  assert.match(onboardingActionsSource, /redirectToCreatedBusinessSetup\(existingBusiness\.id\)/);
+  assert.doesNotMatch(onboardingActionsSource, /\/businesses\?status=created/);
+  assert.doesNotMatch(onboardingActionsSource, /step=revenue/);
+});
+
+
+test("B05-D creation action does not manufacture later setup data", () => {
+  assert.doesNotMatch(onboardingActionsSource, /\.from\("revenue_streams"\)/);
+  assert.doesNotMatch(onboardingActionsSource, /\.from\("monthly_periods"\)/);
+  assert.doesNotMatch(onboardingActionsSource, /expense_setup_reviewed_at\s*:/);
 });

@@ -60,29 +60,27 @@ test("Task 5 staged migrations and attack matrices are passed to psql execution"
   assert.ok(task5Files.includes("test/business/task-5-business-onboarding.test.sql"));
 });
 
-test("implicit Enter submission advances inside handleSubmit before the final review step", () => {
+test("B05 single-form submission validates required identity fields before server submission", () => {
   const handlerStart = wizard.indexOf("function handleSubmit(event: FormEvent<HTMLFormElement>)");
-  const handlerEnd = wizard.indexOf("\n\n  const currencyLabel", handlerStart);
+  const handlerEnd = wizard.indexOf("\n\n  return (", handlerStart);
   assert.notEqual(handlerStart, -1, "handleSubmit implementation was not found");
   assert.notEqual(handlerEnd, -1, "handleSubmit boundary was not found");
   const handleSubmit = wizard.slice(handlerStart, handlerEnd);
 
   assert.match(wizard, /onSubmit=\{handleSubmit\}/);
-  assert.match(handleSubmit, /if \(step < steps\.length - 1\)/);
+  assert.match(handleSubmit, /name\.trim\(\)\.length === 0/);
+  assert.match(handleSubmit, /if \(!currency\)/);
+  assert.match(handleSubmit, /if \(!timezone\)/);
   assert.match(handleSubmit, /event\.preventDefault\(\)/);
-  assert.match(handleSubmit, /goForward\(\)/);
+  assert.doesNotMatch(handleSubmit, /step|goForward|goBack/);
 });
 
-test("next-step clicks cannot become a submit after React renders the review step", () => {
-  const handlerStart = wizard.indexOf("function handleForwardClick(event: MouseEvent<HTMLButtonElement>)");
-  const handlerEnd = wizard.indexOf("\n\n  function goBack", handlerStart);
-  assert.notEqual(handlerStart, -1, "handleForwardClick implementation was not found");
-  assert.notEqual(handlerEnd, -1, "handleForwardClick boundary was not found");
-  const handleForwardClick = wizard.slice(handlerStart, handlerEnd);
-
-  assert.match(handleForwardClick, /event\.preventDefault\(\)/);
-  assert.match(handleForwardClick, /goForward\(\)/);
-  assert.match(wizard, /type="button" onClick=\{handleForwardClick\}/);
+test("B05 non-submit controls cannot accidentally submit the creation form", () => {
+  assert.match(wizard, /type="button"[\s\S]*?setCurrency\(option\.code\)/);
+  assert.match(wizard, /type="button"[\s\S]*?setIsTimezoneEditing\(true\)/);
+  assert.match(wizard, /type="button"[\s\S]*?setIsTimezoneEditing\(false\)/);
+  assert.match(wizard, /className=\{styles\.primaryButton\}[\s\S]*?type="submit"/);
+  assert.doesNotMatch(wizard, /handleForwardClick|goForward|goBack/);
 });
 
 test("Task 5 wizard does not pull Task 6, 7, or funnel data entry forward", () => {

@@ -11,6 +11,7 @@ const errorMessages: Record<string, string> = {
   "create-failed": "تعذر إنشاء البزنس الآن. لم يتم حفظ أي إعدادات جديدة.",
 };
 
+/** Renders the B05 business-identity entry page with one server-generated creation request ID. */
 export default async function BusinessOnboardingPage({
   searchParams,
 }: BusinessOnboardingPageProps) {
@@ -22,7 +23,7 @@ export default async function BusinessOnboardingPage({
       <PageHeading
         eyebrow="إعداد البزنس"
         title="أضف بزنس جديد"
-        description="نبدأ فقط بالمعلومات الأساسية التي تحدد هوية البزنس وكيفية قراءة الفترات المالية. الإيرادات والمصروفات والفانلز لها خطوات مستقلة لاحقًا."
+        description="ابدأ باسم البزنس وعملته الأساسية فقط، ثم أكمل إعداد طريقة دخول وخروج المال داخل ميزان."
       />
       <BusinessOnboardingWizard
         creationRequestId={randomUUID()}

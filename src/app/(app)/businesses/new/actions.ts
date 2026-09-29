@@ -9,14 +9,19 @@ import {
   parseBaseCurrency,
   parseCreationRequestId,
 } from "@/lib/business/onboarding";
+import { buildBusinessSetupHref } from "@/lib/business/setup-navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
-function redirectToCreatedBusinessList(): never {
+/** Revalidates business surfaces and hands a created identity to the canonical B04 setup route. */
+function redirectToCreatedBusinessSetup(businessId: string): never {
   revalidatePath("/");
   revalidatePath("/businesses");
-  redirect("/businesses?status=created");
+  revalidatePath(`/businesses/${businessId}`);
+  revalidatePath(buildBusinessSetupHref(businessId));
+  redirect(buildBusinessSetupHref(businessId));
 }
 
+/** Validates and creates one authenticated user's business identity with idempotent retry recovery. */
 export async function createBusiness(formData: FormData) {
   const auth = await requireAuthContext();
   const name = normalizeBusinessName(formData.get("name"));
@@ -29,16 +34,20 @@ export async function createBusiness(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.from("businesses").insert({
-    name,
-    base_currency: baseCurrency,
-    timezone,
-    owner_user_id: auth.userId,
-    creation_request_id: creationRequestId,
-  });
+  const { data: createdBusiness, error } = await supabase
+    .from("businesses")
+    .insert({
+      name,
+      base_currency: baseCurrency,
+      timezone,
+      owner_user_id: auth.userId,
+      creation_request_id: creationRequestId,
+    })
+    .select("id")
+    .single();
 
-  if (!error) {
-    return redirectToCreatedBusinessList();
+  if (!error && createdBusiness) {
+    return redirectToCreatedBusinessSetup(createdBusiness.id);
   }
 
   if (error.code === "23505") {
@@ -55,7 +64,7 @@ export async function createBusiness(formData: FormData) {
       existingBusiness.timezone === timezone;
 
     if (!lookupError && existingBusiness && isSameRequestPayload) {
-      return redirectToCreatedBusinessList();
+      return redirectToCreatedBusinessSetup(existingBusiness.id);
     }
   }
 

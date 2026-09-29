@@ -236,9 +236,9 @@ test("B04 shell is focused and does not reuse full business workspace navigation
   assert.match(setupShellSource, /من 4 خطوات مكتملة/);
 });
 
-test("B04 leaves current production entry and hardened setup detours unchanged", () => {
-  assert.match(creationActionsSource, /redirect\("\/businesses\?status=created"\)/);
-  assert.doesNotMatch(creationActionsSource, /\/setup/);
+test("B04 remains the canonical resume owner after B05 creation handoff", () => {
+  assert.match(creationActionsSource, /buildBusinessSetupHref/);
+  assert.doesNotMatch(creationActionsSource, /step=revenue/);
   assert.doesNotMatch(overviewPageSource, /redirect\([^)]*\/setup/);
   assert.match(monthlySetupNavigationSource, /"revenue-streams" \| "expenses"/);
   assert.doesNotMatch(monthlySetupNavigationSource, /\/setup/);

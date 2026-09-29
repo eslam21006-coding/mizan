@@ -41,13 +41,11 @@ test.describe("Task 20 transaction duplicate protection", () => {
 
     await page.goto("/businesses/new");
     await page.getByLabel("اسم البزنس").fill(businessName);
-    await page.getByLabel("اسم البزنس").press("Enter");
     await page.getByRole("button", { name: /EGP/ }).click();
-    await page.getByRole("button", { name: "التالي" }).click();
-    await page.getByLabel("المنطقة الزمنية").selectOption("Africa/Cairo");
-    await page.getByRole("button", { name: "التالي" }).click();
-    await page.getByRole("button", { name: "إنشاء البزنس" }).click();
-    await expect(page).toHaveURL(/\/businesses\?status=created$/);
+    await page.getByRole("button", { name: "إنشاء البزنس والمتابعة" }).click();
+    await expect(page).toHaveURL(/\/businesses\/[0-9a-f-]+\/setup\?step=revenue$/);
+    await page.goto("/businesses");
+    await expect(page).toHaveURL(/\/businesses$/);
 
     await page.route("**/rest/v1/customer_transaction_sources**", async (route) => {
       await route.fulfill({ status: 200, contentType: "application/json", body: "[]" });
