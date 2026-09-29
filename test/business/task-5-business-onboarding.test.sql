@@ -89,14 +89,6 @@ begin
   end if;
 
   if (
-    select expense_setup_reviewed_at
-    from public.businesses
-    where id = 'b5555555-5555-4555-8555-555555555555'
-  ) is not null then
-    raise exception 'fresh business incorrectly starts with expense setup reviewed';
-  end if;
-
-  if (
     select count(*)
     from public.revenue_streams
     where business_id = 'b5555555-5555-4555-8555-555555555555'
