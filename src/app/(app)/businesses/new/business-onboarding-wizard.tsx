@@ -4,6 +4,7 @@ import { type FormEvent, useEffect, useMemo, useState } from "react";
 import {
   CURRENCY_OPTIONS,
   TIMEZONE_OPTIONS,
+  normalizeTimeZone,
   type SupportedCurrency,
 } from "@/lib/business/onboarding";
 import { createBusiness } from "./actions";
@@ -21,24 +22,33 @@ export function BusinessOnboardingWizard({
 }: BusinessOnboardingWizardProps) {
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState<SupportedCurrency | "">("");
-  const [timezone, setTimezone] = useState("Africa/Cairo");
+  const [timezone, setTimezone] = useState("");
+  const [isTimezoneEditing, setIsTimezoneEditing] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     const detected = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    if (detected) {
-      setTimezone(detected);
+    const normalized = normalizeTimeZone(detected);
+
+    if (normalized) {
+      setTimezone(normalized);
+      return;
     }
+
+    setIsTimezoneEditing(true);
   }, []);
 
   const timezoneOptions = useMemo(() => {
-    if (TIMEZONE_OPTIONS.some((option) => option.value === timezone)) {
+    if (!timezone || TIMEZONE_OPTIONS.some((option) => option.value === timezone)) {
       return TIMEZONE_OPTIONS;
     }
 
     return [{ value: timezone, label: `المنطقة الحالية — ${timezone}` }, ...TIMEZONE_OPTIONS];
   }, [timezone]);
+
+  const timezoneLabel =
+    TIMEZONE_OPTIONS.find((option) => option.value === timezone)?.label ?? timezone;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     setLocalError(null);
@@ -122,27 +132,64 @@ export function BusinessOnboardingWizard({
           </div>
         </fieldset>
 
-        <div className={styles.fieldGroup}>
-          <label className={styles.label} htmlFor="business-timezone">
-            المنطقة الزمنية
-          </label>
-          <p className={styles.help}>
-            نستخدمها فقط لتحديد بداية ونهاية الشهر بشكل صحيح.
-          </p>
-          <select
-            id="business-timezone"
-            name="timezone"
-            className={styles.select}
-            value={timezone}
-            onChange={(event) => setTimezone(event.target.value)}
-            disabled={isSubmitting}
-          >
-            {timezoneOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+        <div className={styles.timezoneGroup}>
+          <div className={styles.timezoneHeader}>
+            <div>
+              <span className={styles.secondaryLabel}>المنطقة الزمنية</span>
+              <p className={styles.timezoneHelp}>نستخدمها فقط لتحديد بداية ونهاية الشهر بشكل صحيح.</p>
+            </div>
+
+            {timezone && !isTimezoneEditing && (
+              <button
+                className={styles.inlineButton}
+                type="button"
+                onClick={() => setIsTimezoneEditing(true)}
+                disabled={isSubmitting}
+              >
+                تغيير
+              </button>
+            )}
+          </div>
+
+          <input type="hidden" name="timezone" value={timezone} />
+
+          {isTimezoneEditing ? (
+            <div className={styles.timezoneEditor}>
+              <label className="sr-only" htmlFor="business-timezone">
+                المنطقة الزمنية
+              </label>
+              <select
+                id="business-timezone"
+                className={styles.select}
+                value={timezone}
+                onChange={(event) => setTimezone(event.target.value)}
+                disabled={isSubmitting}
+              >
+                {!timezone && <option value="">اختر المنطقة الزمنية</option>}
+                {timezoneOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {timezone && (
+                <button
+                  className={styles.inlineButton}
+                  type="button"
+                  onClick={() => setIsTimezoneEditing(false)}
+                  disabled={isSubmitting}
+                >
+                  تم
+                </button>
+              )}
+            </div>
+          ) : timezone ? (
+            <strong className={styles.timezoneValue} dir="ltr">
+              {timezoneLabel}
+            </strong>
+          ) : (
+            <span className={styles.timezoneMissing}>اختر المنطقة الزمنية للمتابعة.</span>
+          )}
         </div>
 
         <div className={styles.actions}>
