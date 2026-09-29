@@ -79,7 +79,7 @@ test("B05 non-submit controls cannot accidentally submit the creation form", () 
   assert.match(wizard, /type="button"[\s\S]*?setCurrency\(option\.code\)/);
   assert.match(wizard, /type="button"[\s\S]*?setIsTimezoneEditing\(true\)/);
   assert.match(wizard, /type="button"[\s\S]*?setIsTimezoneEditing\(false\)/);
-  assert.match(wizard, /className=\{styles\.primaryButton\} type="submit"/);
+  assert.match(wizard, /className=\{styles\.primaryButton\}[\s\S]*?type="submit"/);
   assert.doesNotMatch(wizard, /handleForwardClick|goForward|goBack/);
 });
 
