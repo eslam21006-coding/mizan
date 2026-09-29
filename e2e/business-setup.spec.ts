@@ -6,8 +6,7 @@ const businessId = "123e4567-e89b-42d3-a456-426614174000";
 const productionBase = `/businesses/${businessId}/setup`;
 const liveEmail = process.env.MIZAN_E2E_EMAIL?.trim() ?? "";
 const livePassword = process.env.MIZAN_E2E_PASSWORD ?? "";
-const liveInviteTokenHash = process.env.MIZAN_E2E_INVITE_TOKEN_HASH?.trim() ?? "";
-const hasLiveAuth = Boolean(liveInviteTokenHash || (liveEmail && livePassword));
+const hasLiveAuth = Boolean(liveEmail && livePassword);
 
 /** Collects console and uncaught browser errors for one setup scenario. */
 function captureBrowserErrors(page: Page) {
@@ -32,18 +31,8 @@ async function expectStableRtl(page: Page) {
     .toBe(true);
 }
 
-/** Signs into a live Mizan environment when B06 end-to-end credentials are available. */
+/** Signs into a live Mizan environment using the dedicated reusable E2E account. */
 async function login(page: Page) {
-  if (liveInviteTokenHash) {
-    await page.goto(
-      `/auth/confirm?token_hash=${encodeURIComponent(liveInviteTokenHash)}&type=invite`,
-    );
-    await expect(page).toHaveURL(/\/set-password$/);
-    await page.goto("/");
-    await expect(page).toHaveURL(/\/$/);
-    return;
-  }
-
   await page.goto("/login");
   await page.getByLabel("البريد الإلكتروني").fill(liveEmail);
   await page.getByLabel("كلمة المرور").fill(livePassword);
@@ -243,7 +232,7 @@ test.describe("B06 Money-In setup", () => {
 });
 
 test.describe("B06 live Money-In handoff", () => {
-  test.skip(!hasLiveAuth, "Requires live Mizan Supabase credentials or a one-use invite token");
+  test.skip(!hasLiveAuth, "Requires the dedicated Mizan E2E email/password account");
 
   test("adds Revenue in setup, stays on Revenue, then advances explicitly to Expenses", async ({
     page,
