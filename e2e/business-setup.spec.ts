@@ -70,6 +70,10 @@ async function routeProductionSetupToFixture(page: Page, fixtureCase: string) {
   });
 }
 
+test.afterEach(async ({ page }) => {
+  await page.unrouteAll({ behavior: "ignoreErrors" });
+});
+
 test.describe("B04 business setup shell", () => {
   test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
 
