@@ -88,3 +88,32 @@ test("B06-C existing workspace and Monthly return behavior remains the default",
   assert.match(revenueActionsSource, /destination === "workspace" \? parseRevenueSetupReturnOrigin/);
   assert.match(revenueActionsSource, /redirectToRevenueStreams\(businessId, status, returnOrigin\)/);
 });
+
+
+import { resolveBusinessSetupReadiness } from "../../src/lib/business/setup-readiness.ts";
+
+test("B06-D Revenue readiness is active-count driven across known states", () => {
+  for (const count of [1, 3]) {
+    const ready = resolveBusinessSetupReadiness({
+      loadState: "loaded",
+      revenueSourceCount: count,
+      expenseSetupReviewedAt: null,
+      validMonthCount: 0,
+    });
+    assert.equal(ready.stepComplete.revenue, true);
+  }
+
+  const empty = resolveBusinessSetupReadiness({
+    loadState: "loaded",
+    revenueSourceCount: 0,
+    expenseSetupReviewedAt: null,
+    validMonthCount: 0,
+  });
+  assert.equal(empty.stepComplete.revenue, false);
+});
+
+test("B06-D setup changes do not add a new revenue model or schema mutation", () => {
+  assert.doesNotMatch(setupShellSource, /price|cash_collected|attributed_revenue|refund/i);
+  assert.doesNotMatch(revenueActionsSource, /from\("setup_revenue/);
+  assert.doesNotMatch(revenueActionsSource, /owner_user_id/);
+});
