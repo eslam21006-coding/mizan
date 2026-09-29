@@ -18,13 +18,11 @@ test.describe("Task 17 invalid transaction preview", () => {
 
     await page.goto("/businesses/new");
     await page.getByLabel("اسم البزنس").fill(businessName);
-    await page.getByLabel("اسم البزنس").press("Enter");
     await page.getByRole("button", { name: /EGP/ }).click();
-    await page.getByRole("button", { name: "التالي" }).click();
-    await page.getByLabel("المنطقة الزمنية").selectOption("Africa/Cairo");
-    await page.getByRole("button", { name: "التالي" }).click();
-    await page.getByRole("button", { name: "إنشاء البزنس" }).click();
-    await expect(page).toHaveURL(/\/businesses\?status=created$/);
+    await page.getByRole("button", { name: "إنشاء البزنس والمتابعة" }).click();
+    await expect(page).toHaveURL(/\/businesses\/[0-9a-f-]+\/setup\?step=revenue$/);
+    await page.goto("/businesses");
+    await expect(page).toHaveURL(/\/businesses$/);
 
     await page.goto("/customers");
     const businessCard = page.locator("article").filter({ hasText: businessName });
