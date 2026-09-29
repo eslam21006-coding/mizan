@@ -2,10 +2,18 @@ import "server-only";
 
 import { requireAuthContext } from "@/lib/auth/context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type { RevenueStreamType } from "./revenue-streams.ts";
 import {
   resolveBusinessSetupReadiness,
   type BusinessSetupReadiness,
 } from "./setup-readiness.ts";
+
+export type SetupRevenueSource = {
+  id: string;
+  name: string;
+  streamType: RevenueStreamType;
+  isActive: boolean;
+};
 
 export type LoadedBusinessSetup = {
   kind: "loaded";
@@ -16,6 +24,7 @@ export type LoadedBusinessSetup = {
     timezone: string;
   };
   canManage: boolean;
+  revenueSources: SetupRevenueSource[];
   revenueSourceCount: number;
   latestSavedMonthKey: string | null;
   readiness: BusinessSetupReadiness;
@@ -34,8 +43,9 @@ export type BusinessSetupLoadResult =
 /**
  * Loads only authoritative Core Setup facts through the existing authenticated Supabase/RLS path.
  *
- * Expense item rows are deliberately not loaded: canonical Step 3 is complete only when the B02
- * explicit review timestamp exists.
+ * Revenue rows are returned for the B06 Money-In step while canonical Revenue readiness continues to
+ * count active sources only. Expense item rows are deliberately not loaded: canonical Step 3 is
+ * complete only when the B02 explicit review timestamp exists.
  */
 export async function loadBusinessSetup(
   businessId: string,
@@ -66,9 +76,9 @@ export async function loadBusinessSetup(
   const [streamsResult, latestPeriodResult] = await Promise.all([
     supabase
       .from("revenue_streams")
-      .select("id")
+      .select("id,name,stream_type,is_active")
       .eq("business_id", businessId)
-      .eq("is_active", true),
+      .order("created_at", { ascending: true }),
     supabase
       .from("monthly_periods")
       .select("month_start")
@@ -95,12 +105,19 @@ export async function loadBusinessSetup(
   const latestSavedMonthKey = latestPeriodResult.data?.month_start
     ? String(latestPeriodResult.data.month_start).slice(0, 7)
     : null;
-  const revenueSourceCount = streamsResult.data?.length ?? 0;
+  const revenueSources: SetupRevenueSource[] = (streamsResult.data ?? []).map((stream) => ({
+    id: stream.id,
+    name: stream.name,
+    streamType: stream.stream_type,
+    isActive: stream.is_active,
+  }));
+  const revenueSourceCount = revenueSources.filter((stream) => stream.isActive).length;
 
   return {
     kind: "loaded",
     business: businessContext,
     canManage,
+    revenueSources,
     revenueSourceCount,
     latestSavedMonthKey,
     readiness: resolveBusinessSetupReadiness({
