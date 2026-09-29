@@ -66,3 +66,19 @@ test("B05-B timezone is detected without a silent Cairo fallback and remains edi
   assert.match(onboardingWizardSource, />تم</);
   assert.match(onboardingWizardSource, /اختر المنطقة الزمنية/);
 });
+
+
+const onboardingActionsSource = await readFile(
+  new URL("../../src/app/(app)/businesses/new/actions.ts", import.meta.url),
+  "utf8",
+);
+
+
+test("B05-C successful creation and idempotent retry both hand off to B04 setup", () => {
+  assert.match(onboardingActionsSource, /buildBusinessSetupHref/);
+  assert.match(onboardingActionsSource, /\.insert\([\s\S]*?\.select\("id"\)\.single\(\)/);
+  assert.match(onboardingActionsSource, /redirectToCreatedBusinessSetup\(createdBusiness\.id\)/);
+  assert.match(onboardingActionsSource, /redirectToCreatedBusinessSetup\(existingBusiness\.id\)/);
+  assert.doesNotMatch(onboardingActionsSource, /\/businesses\?status=created/);
+  assert.doesNotMatch(onboardingActionsSource, /step=revenue/);
+});
