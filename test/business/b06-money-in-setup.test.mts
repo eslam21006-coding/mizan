@@ -10,10 +10,9 @@ const setupLoaderSource = await readFile(
 test("B06-A setup loader returns revenue rows while readiness still counts active sources only", () => {
   assert.match(setupLoaderSource, /\.select\("id,name,stream_type,is_active"\)/);
   assert.doesNotMatch(setupLoaderSource, /\.eq\("is_active", true\)/);
-  assert.match(
-    setupLoaderSource,
-    /const revenueSourceCount = revenueSources\.filter\(\(stream\) => stream\.isActive\)\.length/,
-  );
+  assert.match(setupLoaderSource, /select\("id", \{ count: "exact", head: true \}\)/);
+  assert.match(setupLoaderSource, /\.eq\("is_active", true\)/);
+  assert.match(setupLoaderSource, /const revenueSourceCount = activeStreamsResult\.count \?\? 0/);
   assert.match(setupLoaderSource, /revenueSources,/);
   assert.match(setupLoaderSource, /revenueSourceCount,/);
 });
@@ -116,4 +115,19 @@ test("B06-D setup changes do not add a new revenue model or schema mutation", ()
   assert.doesNotMatch(setupShellSource, /price|cash_collected|attributed_revenue|refund/i);
   assert.doesNotMatch(revenueActionsSource, /from\("setup_revenue/);
   assert.doesNotMatch(revenueActionsSource, /owner_user_id/);
+});
+
+
+const setupShellCssSource = await readFile(
+  new URL(
+    "../../src/app/(app)/businesses/[businessId]/setup/business-setup-shell.module.css",
+    import.meta.url,
+  ),
+  "utf8",
+);
+
+test("B06 review fixes keep readiness authoritative and long source names mobile-safe", () => {
+  assert.match(setupLoaderSource, /activeStreamsResult\.error/);
+  assert.match(setupShellSource, /className=\{styles\.moneyInSourceName\}/);
+  assert.match(setupShellCssSource, /\.moneyInSourceName\s*\{[\s\S]*min-width:\s*0;[\s\S]*overflow-wrap:\s*anywhere;/);
 });

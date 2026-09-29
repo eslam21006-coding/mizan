@@ -518,6 +518,11 @@ a.stepLink:focus-visible,
   font-weight: 750;
 }
 
+.moneyInSourceName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .inactiveSourceBadge {
   flex: 0 0 auto;
   padding: 4px 7px;

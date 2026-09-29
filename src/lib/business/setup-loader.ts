@@ -73,12 +73,17 @@ export async function loadBusinessSetup(
   };
   const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
 
-  const [streamsResult, latestPeriodResult] = await Promise.all([
+  const [streamsResult, activeStreamsResult, latestPeriodResult] = await Promise.all([
     supabase
       .from("revenue_streams")
       .select("id,name,stream_type,is_active")
       .eq("business_id", businessId)
       .order("created_at", { ascending: true }),
+    supabase
+      .from("revenue_streams")
+      .select("id", { count: "exact", head: true })
+      .eq("business_id", businessId)
+      .eq("is_active", true),
     supabase
       .from("monthly_periods")
       .select("month_start")
@@ -88,7 +93,7 @@ export async function loadBusinessSetup(
       .maybeSingle(),
   ]);
 
-  if (streamsResult.error || latestPeriodResult.error) {
+  if (streamsResult.error || activeStreamsResult.error || latestPeriodResult.error) {
     return {
       kind: "load_error",
       business: businessContext,
@@ -111,7 +116,7 @@ export async function loadBusinessSetup(
     streamType: stream.stream_type,
     isActive: stream.is_active,
   }));
-  const revenueSourceCount = revenueSources.filter((stream) => stream.isActive).length;
+  const revenueSourceCount = activeStreamsResult.count ?? 0;
 
   return {
     kind: "loaded",

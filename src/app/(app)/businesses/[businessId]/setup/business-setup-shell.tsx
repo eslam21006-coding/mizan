@@ -410,7 +410,7 @@ function RevenueSetupContent({
           <ul className={styles.moneyInList}>
             {revenueSources.map((source) => (
               <li key={source.id} className={styles.moneyInItem}>
-                <span>{source.name}</span>
+                <span className={styles.moneyInSourceName}>{source.name}</span>
                 {!source.isActive && <span className={styles.inactiveSourceBadge}>غير نشط</span>}
               </li>
             ))}
