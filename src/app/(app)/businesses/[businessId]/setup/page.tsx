@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { notFound, redirect } from "next/navigation";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { loadBusinessSetup } from "@/lib/business/setup-loader";
@@ -12,7 +13,7 @@ import { BusinessSetupShell } from "./business-setup-shell";
 
 type BusinessSetupPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ step?: string | string[] }>;
+  searchParams: Promise<{ step?: string | string[]; status?: string | string[] }>;
 };
 
 /**
@@ -32,6 +33,7 @@ export default async function BusinessSetupPage({
   if (loadResult.kind === "not_found") notFound();
 
   const parsedStep = parseBusinessSetupStep(query.step);
+  const revenueStatus = typeof query.status === "string" ? query.status : null;
 
   if (loadResult.kind === "load_error") {
     return (
@@ -44,6 +46,9 @@ export default async function BusinessSetupPage({
         readiness={loadResult.readiness}
         canManage={loadResult.canManage}
         revenueSourceCount={null}
+        revenueSources={null}
+        revenueCreationRequestId={null}
+        revenueStatus={null}
         latestSavedMonthKey={null}
         backHref={null}
         nextHref={null}
@@ -74,6 +79,9 @@ export default async function BusinessSetupPage({
         readiness={loadResult.readiness}
         canManage={loadResult.canManage}
         revenueSourceCount={loadResult.revenueSourceCount}
+        revenueSources={loadResult.revenueSources}
+        revenueCreationRequestId={null}
+        revenueStatus={null}
         latestSavedMonthKey={loadResult.latestSavedMonthKey}
         backHref={null}
         nextHref={null}
@@ -104,6 +112,11 @@ export default async function BusinessSetupPage({
       readiness={loadResult.readiness}
       canManage={loadResult.canManage}
       revenueSourceCount={loadResult.revenueSourceCount}
+      revenueSources={loadResult.revenueSources}
+      revenueCreationRequestId={
+        currentStep === "revenue" && loadResult.canManage ? randomUUID() : null
+      }
+      revenueStatus={currentStep === "revenue" ? revenueStatus : null}
       latestSavedMonthKey={loadResult.latestSavedMonthKey}
       backHref={backHref}
       nextHref={nextHref}
