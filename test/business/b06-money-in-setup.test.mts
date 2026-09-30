@@ -95,7 +95,10 @@ test("B06-C existing workspace and Monthly return behavior remains the default",
 });
 
 
-import { resolveBusinessSetupReadiness } from "../../src/lib/business/setup-readiness.ts";
+import {
+  resolveBusinessSetupQueryState,
+  resolveBusinessSetupReadiness,
+} from "../../src/lib/business/setup-readiness.ts";
 
 test("B06-D Revenue readiness is active-count driven across known states", () => {
   for (const count of [1, 3]) {
@@ -131,6 +134,22 @@ const setupShellCssSource = await readFile(
   ),
   "utf8",
 );
+
+test("B06 active-source count query failure resolves to load_error", () => {
+  const result = resolveBusinessSetupQueryState({
+    revenueSourcesError: null,
+    activeRevenueSourceCountError: new Error("active count failed"),
+    latestPeriodError: null,
+  });
+
+  assert.equal(result.kind, "load_error");
+  assert.match(
+    setupLoaderSource,
+    /activeRevenueSourceCountError:\s*activeStreamsResult\.error/,
+  );
+  assert.match(setupLoaderSource, /if \(queryState\.kind === "load_error"\)/);
+});
+
 
 test("B06 review fixes keep readiness authoritative and long source names mobile-safe", () => {
   assert.match(setupLoaderSource, /activeStreamsResult\.error/);
