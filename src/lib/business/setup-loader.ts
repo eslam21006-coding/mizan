@@ -2,6 +2,10 @@ import "server-only";
 
 import { requireAuthContext } from "@/lib/auth/context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type {
+  ExpenseCategoryCounts,
+  SetupExpenseItem,
+} from "./expenses.ts";
 import type { RevenueStreamType } from "./revenue-streams.ts";
 import {
   resolveBusinessSetupQueryState,
@@ -27,6 +31,8 @@ export type LoadedBusinessSetup = {
   canManage: boolean;
   revenueSources: SetupRevenueSource[];
   revenueSourceCount: number;
+  expenseItems: SetupExpenseItem[];
+  activeExpenseCategoryCounts: ExpenseCategoryCounts;
   latestSavedMonthKey: string | null;
   readiness: BusinessSetupReadiness;
 };
@@ -42,11 +48,11 @@ export type BusinessSetupLoadResult =
     };
 
 /**
- * Loads only authoritative Core Setup facts through the existing authenticated Supabase/RLS path.
+ * Loads authoritative Core Setup facts and founder-facing setup rows through the authenticated RLS path.
  *
- * Revenue rows are returned for the B06 Money-In step while canonical Revenue readiness continues to
- * count active sources only. Expense item rows are deliberately not loaded: canonical Step 3 is
- * complete only when the B02 explicit review timestamp exists.
+ * Revenue readiness still counts active revenue sources only. Expense rows and independent active
+ * category counts support B07 presentation, while canonical Expense readiness continues to depend
+ * only on the B02 explicit review timestamp.
  */
 export async function loadBusinessSetup(
   businessId: string,
@@ -74,7 +80,16 @@ export async function loadBusinessSetup(
   };
   const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
 
-  const [streamsResult, activeStreamsResult, latestPeriodResult] = await Promise.all([
+  const [
+    streamsResult,
+    activeStreamsResult,
+    latestPeriodResult,
+    expensesResult,
+    acquisitionCountResult,
+    fulfillmentCountResult,
+    overheadCountResult,
+    financialCountResult,
+  ] = await Promise.all([
     supabase
       .from("revenue_streams")
       .select("id,name,stream_type,is_active")
@@ -92,12 +107,48 @@ export async function loadBusinessSetup(
       .order("month_start", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from("expense_items")
+      .select("id,name,category,cost_behavior,is_active")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("expense_items")
+      .select("id", { count: "exact", head: true })
+      .eq("business_id", businessId)
+      .eq("category", "acquisition")
+      .eq("is_active", true),
+    supabase
+      .from("expense_items")
+      .select("id", { count: "exact", head: true })
+      .eq("business_id", businessId)
+      .eq("category", "fulfillment")
+      .eq("is_active", true),
+    supabase
+      .from("expense_items")
+      .select("id", { count: "exact", head: true })
+      .eq("business_id", businessId)
+      .eq("category", "overhead")
+      .eq("is_active", true),
+    supabase
+      .from("expense_items")
+      .select("id", { count: "exact", head: true })
+      .eq("business_id", businessId)
+      .eq("category", "financial")
+      .eq("is_active", true),
   ]);
 
   const queryState = resolveBusinessSetupQueryState({
     revenueSourcesError: streamsResult.error,
     activeRevenueSourceCountError: activeStreamsResult.error,
     latestPeriodError: latestPeriodResult.error,
+    expenseItemsError: expensesResult.error,
+    activeExpenseCategoryErrors: [
+      acquisitionCountResult.error,
+      fulfillmentCountResult.error,
+      overheadCountResult.error,
+      financialCountResult.error,
+    ],
   });
   if (queryState.kind === "load_error") {
     return {
@@ -122,6 +173,19 @@ export async function loadBusinessSetup(
     streamType: stream.stream_type,
     isActive: stream.is_active,
   }));
+  const expenseItems: SetupExpenseItem[] = (expensesResult.data ?? []).map((expense) => ({
+    id: expense.id,
+    name: expense.name,
+    category: expense.category,
+    costBehavior: expense.cost_behavior,
+    isActive: expense.is_active,
+  }));
+  const activeExpenseCategoryCounts: ExpenseCategoryCounts = {
+    acquisition: acquisitionCountResult.count ?? 0,
+    fulfillment: fulfillmentCountResult.count ?? 0,
+    overhead: overheadCountResult.count ?? 0,
+    financial: financialCountResult.count ?? 0,
+  };
   const revenueSourceCount = activeStreamsResult.count ?? 0;
 
   return {
@@ -130,6 +194,8 @@ export async function loadBusinessSetup(
     canManage,
     revenueSources,
     revenueSourceCount,
+    expenseItems,
+    activeExpenseCategoryCounts,
     latestSavedMonthKey,
     readiness: resolveBusinessSetupReadiness({
       loadState: "loaded",
