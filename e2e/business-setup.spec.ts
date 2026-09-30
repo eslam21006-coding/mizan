@@ -253,7 +253,7 @@ test.describe("B07 Expense Category UX", () => {
 
     await expect(
       page
-        .locator('section[aria-labelledby="setup-expense-acquisition"] .expenseSetupName')
+        .locator('section[aria-labelledby="setup-expense-acquisition"] li > span')
         .filter({ hasText: /^Meta Ads$/ }),
     ).toBeVisible();
     await expect(page.getByText("Zoom", { exact: true })).toBeVisible();
@@ -325,7 +325,7 @@ test.describe("B07 Expense Category UX", () => {
     await expect(page.getByText("عرض فقط", { exact: true })).toBeVisible();
     await expect(
       page
-        .locator('section[aria-labelledby="setup-expense-acquisition"] .expenseSetupName')
+        .locator('section[aria-labelledby="setup-expense-acquisition"] li > span')
         .filter({ hasText: /^Meta Ads$/ }),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "إضافة مصروف" })).toHaveCount(0);
