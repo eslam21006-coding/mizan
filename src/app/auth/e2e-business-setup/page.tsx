@@ -291,9 +291,14 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
                 financial: 0,
               })
         }
-        expenseCreationRequestId={
+        expenseCreationRequestIds={
           currentStep === "expenses" && canManage
-            ? "55555555-5555-4555-8555-555555555555"
+            ? {
+                acquisition: "55555555-5555-4555-8555-555555555551",
+                fulfillment: "55555555-5555-4555-8555-555555555552",
+                overhead: "55555555-5555-4555-8555-555555555553",
+                financial: "55555555-5555-4555-8555-555555555554",
+              }
             : null
         }
         expenseStatus={null}
