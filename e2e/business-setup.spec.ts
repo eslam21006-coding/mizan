@@ -231,6 +231,121 @@ test.describe("B06 Money-In setup", () => {
   });
 });
 
+
+
+test.describe("B07 Expense Category UX", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
+  test("groups existing expenses under four guided categories and keeps explicit Next gated", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=expenses-mixed&step=expenses`);
+
+    for (const heading of [
+      "الإعلان وجلب العملاء",
+      "تقديم الخدمة للعملاء",
+      "تشغيل البزنس",
+      "تكاليف مالية",
+    ]) {
+      await expect(page.getByRole("heading", { name: heading })).toBeVisible();
+    }
+
+    await expect(page.getByText("Meta Ads", { exact: true })).toBeVisible();
+    await expect(page.getByText("Zoom", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("ليس لدي مصروف من هذا النوع", { exact: true }),
+    ).toHaveCount(2);
+    await expect(page.getByRole("button", { name: "تأكيد مراجعة المصروفات" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "التالي" })).toBeDisabled();
+
+    const noneChoices = page.getByRole("checkbox");
+    await expect(noneChoices).toHaveCount(2);
+    await noneChoices.nth(0).check();
+    await noneChoices.nth(1).check();
+    await expect(noneChoices.nth(0)).toBeChecked();
+    await expect(noneChoices.nth(1)).toBeChecked();
+
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("inactive-only expenses remain visible and still require explicit none at 390px", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${fixturePath}?case=expenses-inactive-only&step=expenses`);
+
+    await expect(
+      page.getByText(
+        "بوابة دفع قديمة جدًا باسم طويل لاختبار الالتفاف على شاشة الموبايل",
+        { exact: true },
+      ),
+    ).toBeVisible();
+    await expect(page.getByText("غير نشط", { exact: true })).toBeVisible();
+    await expect(page.getByRole("checkbox")).toHaveCount(4);
+    await expect(page.getByRole("button", { name: "التالي" })).toBeDisabled();
+
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("reviewed-none state is canonical and enables explicit advance to First Month", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=expenses-reviewed-none&step=expenses`);
+
+    await expect(
+      page.getByText("تمت المراجعة — لا يوجد مصروف من هذا النوع", { exact: true }),
+    ).toHaveCount(4);
+    await expect(page.getByRole("checkbox")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "تأكيد مراجعة المصروفات" })).toHaveCount(0);
+
+    const next = page.getByRole("link", { name: "التالي" });
+    await expect(next).toHaveAttribute(
+      "href",
+      `/businesses/${businessId}/setup?step=month`,
+    );
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("read-only users can inspect expense structure without any mutation controls", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=expenses-read-only&step=expenses`);
+
+    await expect(page.getByText("عرض فقط", { exact: true })).toBeVisible();
+    await expect(page.getByText("Meta Ads", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "إضافة مصروف" })).toHaveCount(0);
+    await expect(page.getByRole("checkbox")).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "تأكيد مراجعة المصروفات" })).toHaveCount(0);
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("setup reuses the existing expense drawer with the category locked", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=expenses-mixed&step=expenses`);
+
+    const acquisitionCard = page
+      .locator("section")
+      .filter({ has: page.getByRole("heading", { name: "الإعلان وجلب العملاء" }) });
+    await acquisitionCard.getByRole("button", { name: "إضافة مصروف" }).click();
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText("الإعلان وجلب العملاء", { exact: true })).toBeVisible();
+    await expect(dialog.getByLabel("طريقة التكلفة")).toBeVisible();
+    await expect(dialog.getByRole("combobox")).toHaveCount(1);
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+});
+
 test.describe("B06 live Money-In handoff", () => {
   test.skip(!hasLiveAuth, "Requires the dedicated Mizan E2E email/password account");
 
