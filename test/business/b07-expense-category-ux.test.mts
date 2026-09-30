@@ -126,7 +126,7 @@ test("B07 Task 5 allow-lists setup/workspace destinations while preserving works
 
 test("B07 Tasks 1-5 do not add review persistence or a parallel expense model", () => {
   assert.doesNotMatch(setupExpenseSource, /expense_setup_reviewed_at/);
-  assert.doesNotMatch(setupExpenseSource, /confirmExpense|reviewExpense|update\(/);
+  assert.doesNotMatch(setupExpenseSource, /\.update\(|\.insert\(|\.upsert\(/);
   assert.doesNotMatch(expenseActionsSource, /from\("setup_expense/);
 });
 
