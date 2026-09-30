@@ -9,6 +9,10 @@ import {
   resolveBusinessSetupResumeStep,
 } from "@/lib/business/setup-navigation";
 import { resolveBusinessSetupReadiness } from "@/lib/business/setup-readiness";
+import type {
+  ExpenseCategoryCounts,
+  SetupExpenseItem,
+} from "@/lib/business/expenses";
 import type { SetupRevenueSource } from "@/lib/business/setup-loader";
 
 export const dynamic = "force-dynamic";
@@ -27,6 +31,10 @@ type FixtureCase =
   | "out-of-order"
   | "inactive-only"
   | "multiple"
+  | "expenses-mixed"
+  | "expenses-inactive-only"
+  | "expenses-reviewed-none"
+  | "expenses-read-only"
   | "load-error";
 
 const CASES: Record<
@@ -37,6 +45,8 @@ const CASES: Record<
     validMonthCount: number;
     canManage?: boolean;
     revenueSources?: SetupRevenueSource[];
+    expenseItems?: SetupExpenseItem[];
+    activeExpenseCategoryCounts?: ExpenseCategoryCounts;
   }
 > = {
   empty: { revenueSourceCount: 0, reviewedAt: null, validMonthCount: 0, revenueSources: [] },
@@ -108,6 +118,86 @@ const CASES: Record<
       },
     ],
   },
+  "expenses-mixed": {
+    revenueSourceCount: 1,
+    reviewedAt: null,
+    validMonthCount: 0,
+    expenseItems: [
+      {
+        id: "66666666-6666-4666-8666-666666666661",
+        name: "Meta Ads",
+        category: "acquisition",
+        costBehavior: "fixed_monthly",
+        isActive: true,
+      },
+      {
+        id: "66666666-6666-4666-8666-666666666662",
+        name: "Zoom",
+        category: "overhead",
+        costBehavior: "fixed_monthly",
+        isActive: true,
+      },
+    ],
+    activeExpenseCategoryCounts: {
+      acquisition: 1,
+      fulfillment: 0,
+      overhead: 1,
+      financial: 0,
+    },
+  },
+  "expenses-inactive-only": {
+    revenueSourceCount: 1,
+    reviewedAt: null,
+    validMonthCount: 0,
+    expenseItems: [
+      {
+        id: "77777777-7777-4777-8777-777777777777",
+        name: "بوابة دفع قديمة جدًا باسم طويل لاختبار الالتفاف على شاشة الموبايل",
+        category: "financial",
+        costBehavior: "percentage_revenue",
+        isActive: false,
+      },
+    ],
+    activeExpenseCategoryCounts: {
+      acquisition: 0,
+      fulfillment: 0,
+      overhead: 0,
+      financial: 0,
+    },
+  },
+  "expenses-reviewed-none": {
+    revenueSourceCount: 1,
+    reviewedAt: "2026-09-30T12:00:00.000Z",
+    validMonthCount: 0,
+    expenseItems: [],
+    activeExpenseCategoryCounts: {
+      acquisition: 0,
+      fulfillment: 0,
+      overhead: 0,
+      financial: 0,
+    },
+  },
+  "expenses-read-only": {
+    revenueSourceCount: 1,
+    reviewedAt: null,
+    validMonthCount: 0,
+    canManage: false,
+    expenseItems: [
+      {
+        id: "88888888-8888-4888-8888-888888888888",
+        name: "Meta Ads",
+        category: "acquisition",
+        costBehavior: "fixed_monthly",
+        isActive: true,
+      },
+    ],
+    activeExpenseCategoryCounts: {
+      acquisition: 1,
+      fulfillment: 0,
+      overhead: 0,
+      financial: 0,
+    },
+  },
 };
 
 type SetupFixturePageProps = {
@@ -128,6 +218,10 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     query.case === "out-of-order" ||
     query.case === "inactive-only" ||
     query.case === "multiple" ||
+    query.case === "expenses-mixed" ||
+    query.case === "expenses-inactive-only" ||
+    query.case === "expenses-reviewed-none" ||
+    query.case === "expenses-read-only" ||
     query.case === "load-error"
       ? query.case
       : "empty";
@@ -184,13 +278,19 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
             : "44444444-4444-4444-8444-444444444444"
         }
         revenueStatus={null}
-        expenseItems={[]}
-        activeExpenseCategoryCounts={{
-          acquisition: 0,
-          fulfillment: 0,
-          overhead: 0,
-          financial: 0,
-        }}
+        expenseItems={
+          fixtureCase === "load-error" ? null : (CASES[fixtureCase].expenseItems ?? [])
+        }
+        activeExpenseCategoryCounts={
+          fixtureCase === "load-error"
+            ? null
+            : (CASES[fixtureCase].activeExpenseCategoryCounts ?? {
+                acquisition: 0,
+                fulfillment: 0,
+                overhead: 0,
+                financial: 0,
+              })
+        }
         expenseCreationRequestId={
           currentStep === "expenses" && canManage
             ? "55555555-5555-4555-8555-555555555555"
