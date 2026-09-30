@@ -34,6 +34,48 @@ export const EXPENSE_CATEGORY_OPTIONS: ReadonlyArray<{
   },
 ];
 
+export const EXPENSE_SETUP_CATEGORY_OPTIONS: ReadonlyArray<{
+  value: ExpenseCategory;
+  label: string;
+  description: string;
+  examples: readonly string[];
+}> = [
+  {
+    value: "acquisition",
+    label: "الإعلان وجلب العملاء",
+    description: "أي تكلفة هدفها الوصول إلى عميل جديد أو إتمام البيع.",
+    examples: ["Meta Ads", "Google Ads", "Agency", "فريق المبيعات", "Appointment Setters"],
+  },
+  {
+    value: "fulfillment",
+    label: "تقديم الخدمة للعملاء",
+    description: "التكاليف المرتبطة بتقديم المنتج أو الخدمة وخدمة العميل بعد البيع.",
+    examples: ["Coach", "Support", "Instructor", "Materials", "Shipping"],
+  },
+  {
+    value: "overhead",
+    label: "تشغيل البزنس",
+    description: "التكاليف العامة اللازمة لتشغيل البزنس وإدارته.",
+    examples: ["Employees", "Software", "Rent", "Accounting", "Management"],
+  },
+  {
+    value: "financial",
+    label: "تكاليف مالية",
+    description: "الرسوم والالتزامات المالية المرتبطة بتحصيل الأموال وتشغيل البزنس.",
+    examples: ["Payment processor fees", "Taxes"],
+  },
+];
+
+export type ExpenseCategoryCounts = Readonly<Record<ExpenseCategory, number>>;
+
+export type SetupExpenseItem = {
+  id: string;
+  name: string;
+  category: ExpenseCategory;
+  costBehavior: ExpenseCostBehavior;
+  isActive: boolean;
+};
+
 export const EXPENSE_COST_BEHAVIORS = [
   "fixed_monthly",
   "per_customer",
