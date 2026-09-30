@@ -184,6 +184,20 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
             : "44444444-4444-4444-8444-444444444444"
         }
         revenueStatus={null}
+        expenseItems={[]}
+        activeExpenseCategoryCounts={{
+          acquisition: 0,
+          fulfillment: 0,
+          overhead: 0,
+          financial: 0,
+        }}
+        expenseCreationRequestId={
+          fixtureCase === "load-error" || currentStep !== "expenses" ||
+          (fixtureCase !== "load-error" && CASES[fixtureCase].canManage === false)
+            ? null
+            : "55555555-5555-4555-8555-555555555555"
+        }
+        expenseStatus={null}
         latestSavedMonthKey={
           fixtureCase !== "load-error" && CASES[fixtureCase].validMonthCount > 0
             ? "2026-08"
