@@ -76,6 +76,28 @@ export type SetupExpenseItem = {
   isActive: boolean;
 };
 
+
+export type ExpenseSetupReviewResolution = {
+  resolved: boolean;
+  unresolvedCategories: ExpenseCategory[];
+};
+
+/** Resolves whether every expense category is backed by an active row or an explicit reviewed-none claim. */
+export function resolveExpenseSetupReview(
+  activeCounts: ExpenseCategoryCounts,
+  explicitNoneCategories: readonly ExpenseCategory[],
+): ExpenseSetupReviewResolution {
+  const explicitNone = new Set(explicitNoneCategories);
+  const unresolvedCategories = EXPENSE_CATEGORIES.filter(
+    (category) => activeCounts[category] <= 0 && !explicitNone.has(category),
+  );
+
+  return {
+    resolved: unresolvedCategories.length === 0,
+    unresolvedCategories,
+  };
+}
+
 export const EXPENSE_COST_BEHAVIORS = [
   "fixed_monthly",
   "per_customer",
