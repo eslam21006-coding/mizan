@@ -331,9 +331,9 @@ test.describe("B07 Expense Category UX", () => {
     const errors = captureBrowserErrors(page);
     await page.goto(`${fixturePath}?case=expenses-mixed&step=expenses`);
 
-    const acquisitionCard = page
-      .locator("section")
-      .filter({ has: page.getByRole("heading", { name: "الإعلان وجلب العملاء" }) });
+    const acquisitionCard = page.locator(
+      'section[aria-labelledby="setup-expense-acquisition"]',
+    );
     await acquisitionCard.getByRole("button", { name: "إضافة مصروف" }).click();
 
     const dialog = page.getByRole("dialog");
