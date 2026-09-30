@@ -221,10 +221,13 @@ const monthlySetupNavigationSource = await readFile(
   "utf8",
 );
 
-test("B04 production setup route is read-only and URL state is authoritative", () => {
+test("B04 production setup route remains read-only while later wizard steps may load setup rows", () => {
   assert.doesNotMatch(setupPageSource, /useState|useEffect|localStorage|sessionStorage/);
   assert.doesNotMatch(setupLoaderSource, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
-  assert.doesNotMatch(setupLoaderSource, /\.from\("expense_items"\)/);
+  assert.match(
+    setupLoaderSource,
+    /\.from\("expense_items"\)[\s\S]*\.select\("id,name,category,cost_behavior,is_active"\)/,
+  );
   assert.match(setupPageSource, /parseBusinessSetupStep\(query\.step\)/);
   assert.match(setupPageSource, /resolveBusinessSetupResumeStep/);
   assert.match(setupPageSource, /redirect\(buildBusinessSetupHref/);
