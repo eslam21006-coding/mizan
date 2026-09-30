@@ -8,7 +8,6 @@ import {
   parseExpenseCategory,
   resolveExpenseSetupReview,
   type ExpenseCategory,
-  type ExpenseCategoryCounts,
 } from "@/lib/business/expenses";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { buildBusinessSetupHref } from "@/lib/business/setup-navigation";
@@ -67,7 +66,7 @@ export async function confirmExpenseSetupReview(formData: FormData) {
     redirect(setupExpensesPath(businessId, "review-failed"));
   }
 
-  const activeCounts: ExpenseCategoryCounts = {
+  const activeCounts: Record<ExpenseCategory, number> = {
     acquisition: 0,
     fulfillment: 0,
     overhead: 0,
