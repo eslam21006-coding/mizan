@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { createRevenueStream } from "../revenue-streams/actions";
 import { BusinessContext } from "@/components/business-context";
 import {
   BUSINESS_SETUP_STEPS,
@@ -6,6 +7,7 @@ import {
   type BusinessSetupStep,
 } from "@/lib/business/setup-navigation";
 import type { BusinessSetupReadiness } from "@/lib/business/setup-readiness";
+import type { SetupRevenueSource } from "@/lib/business/setup-loader";
 import styles from "./business-setup-shell.module.css";
 
 const STEP_LABELS: Readonly<Record<BusinessSetupStep, string>> = {
@@ -24,6 +26,9 @@ type BusinessSetupShellProps = {
   readiness: BusinessSetupReadiness;
   canManage: boolean;
   revenueSourceCount: number | null;
+  revenueSources: SetupRevenueSource[] | null;
+  revenueCreationRequestId: string | null;
+  revenueStatus: string | null;
   latestSavedMonthKey: string | null;
   backHref: string | null;
   nextHref: string | null;
@@ -42,6 +47,9 @@ export function BusinessSetupShell({
   readiness,
   canManage,
   revenueSourceCount,
+  revenueSources,
+  revenueCreationRequestId,
+  revenueStatus,
   latestSavedMonthKey,
   backHref,
   nextHref,
@@ -182,6 +190,11 @@ export function BusinessSetupShell({
               timezone={timezone}
               stepComplete={readiness.stepComplete[currentStep]}
               revenueSourceCount={revenueSourceCount}
+              revenueSources={revenueSources}
+              revenueCreationRequestId={revenueCreationRequestId}
+              revenueStatus={revenueStatus}
+              businessId={businessId}
+              canManage={canManage}
               latestSavedMonthKey={latestSavedMonthKey}
             />
           </section>
@@ -220,6 +233,11 @@ type StepContentProps = {
   timezone: string;
   stepComplete: boolean;
   revenueSourceCount: number | null;
+  revenueSources: SetupRevenueSource[] | null;
+  revenueCreationRequestId: string | null;
+  revenueStatus: string | null;
+  businessId: string;
+  canManage: boolean;
   latestSavedMonthKey: string | null;
 };
 
@@ -231,6 +249,11 @@ function StepContent({
   timezone,
   stepComplete,
   revenueSourceCount,
+  revenueSources,
+  revenueCreationRequestId,
+  revenueStatus,
+  businessId,
+  canManage,
   latestSavedMonthKey,
 }: StepContentProps) {
   if (step === "business") {
@@ -257,14 +280,15 @@ function StepContent({
 
   if (step === "revenue") {
     return (
-      <>
-        <StepPanelHeading step={step} complete={stepComplete} />
-        <p className={styles.stepDescription}>
-          {stepComplete
-            ? `لديك ${revenueSourceCount ?? 0} مصدر إيراد نشط على الأقل، لذلك هذه الخطوة مكتملة.`
-            : "حدد ما تبيعه أو تحصل منه على إيراد حتى يعرف ميزان من أين يدخل المال إلى البزنس."}
-        </p>
-      </>
+      <RevenueSetupContent
+        businessId={businessId}
+        canManage={canManage}
+        stepComplete={stepComplete}
+        revenueSourceCount={revenueSourceCount}
+        revenueSources={revenueSources ?? []}
+        creationRequestId={revenueCreationRequestId}
+        status={revenueStatus}
+      />
     );
   }
 
@@ -289,6 +313,112 @@ function StepContent({
           ? `لديك شهر محفوظ بالفعل: ${latestSavedMonthKey}. هذه الخطوة مكتملة.`
           : "أضف أول شهر فعلي حتى يستطيع ميزان بناء الصورة المالية للبزنس على بيانات حقيقية."}
       </p>
+    </>
+  );
+}
+
+const REVENUE_STATUS_MESSAGES: Readonly<Record<string, { tone: "success" | "error"; text: string }>> = {
+  created: { tone: "success", text: "تمت إضافة مصدر الإيراد. يمكنك إضافة مصدر آخر أو المتابعة." },
+  invalid: { tone: "error", text: "اكتب اسمًا صحيحًا لمصدر الإيراد وحاول مرة أخرى." },
+  "create-failed": {
+    tone: "error",
+    text: "تعذر إضافة مصدر الإيراد. لم يتم تغيير أي بيانات.",
+  },
+};
+
+type RevenueSetupContentProps = {
+  businessId: string;
+  canManage: boolean;
+  stepComplete: boolean;
+  revenueSourceCount: number | null;
+  revenueSources: SetupRevenueSource[];
+  creationRequestId: string | null;
+  status: string | null;
+};
+
+/** Renders the simplified B06 Money-In question without exposing advanced revenue classification. */
+function RevenueSetupContent({
+  businessId,
+  canManage,
+  stepComplete,
+  revenueSourceCount,
+  revenueSources,
+  creationRequestId,
+  status,
+}: RevenueSetupContentProps) {
+  const statusMessage = status ? REVENUE_STATUS_MESSAGES[status] : undefined;
+
+  return (
+    <>
+      <StepPanelHeading step="revenue" complete={stepComplete} />
+
+      <div className={styles.moneyInIntro}>
+        <h3>ما الذي تبيعُه أو تحصل منه على إيراد؟</h3>
+        <p>
+          أضف المنتجات أو الخدمات أو مصادر الإيراد التي يدفع لك العملاء مقابلها. نحتاج الاسم فقط الآن.
+        </p>
+      </div>
+
+      {statusMessage && (
+        <div
+          className={
+            statusMessage.tone === "success" ? styles.setupSuccess : styles.setupError
+          }
+          role="status"
+        >
+          {statusMessage.text}
+        </div>
+      )}
+
+      {canManage && creationRequestId ? (
+        <form action={createRevenueStream} className={styles.moneyInForm}>
+          <input type="hidden" name="business_id" value={businessId} />
+          <input type="hidden" name="stream_type" value="other" />
+          <input type="hidden" name="creation_request_id" value={creationRequestId} />
+          <input type="hidden" name="destination" value="setup" />
+
+          <label className={styles.moneyInLabel} htmlFor="setup-revenue-name">
+            اسم المنتج أو الخدمة
+          </label>
+          <div className={styles.moneyInControls}>
+            <input
+              id="setup-revenue-name"
+              className={styles.moneyInInput}
+              name="name"
+              maxLength={120}
+              placeholder="مثال: الكورس الأساسي"
+              autoComplete="off"
+            />
+            <button className={styles.moneyInAddButton} type="submit">
+              إضافة مصدر الإيراد
+            </button>
+          </div>
+        </form>
+      ) : (
+        <p className={styles.readOnlySetupNote}>
+          يمكنك مراجعة مصادر الإيراد الحالية، لكن الإضافة متاحة لمالك البزنس أو الأدمن.
+        </p>
+      )}
+
+      <div className={styles.moneyInListBlock}>
+        <div className={styles.moneyInListHeader}>
+          <strong>مصادر الإيراد التي أضفتها</strong>
+          <span>{revenueSourceCount ?? 0} نشط</span>
+        </div>
+
+        {revenueSources.length > 0 ? (
+          <ul className={styles.moneyInList}>
+            {revenueSources.map((source) => (
+              <li key={source.id} className={styles.moneyInItem}>
+                <span className={styles.moneyInSourceName}>{source.name}</span>
+                {!source.isActive && <span className={styles.inactiveSourceBadge}>غير نشط</span>}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className={styles.moneyInEmpty}>لا توجد مصادر إيراد بعد.</p>
+        )}
+      </div>
     </>
   );
 }

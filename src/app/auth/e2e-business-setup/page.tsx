@@ -9,6 +9,7 @@ import {
   resolveBusinessSetupResumeStep,
 } from "@/lib/business/setup-navigation";
 import { resolveBusinessSetupReadiness } from "@/lib/business/setup-readiness";
+import type { SetupRevenueSource } from "@/lib/business/setup-loader";
 
 export const dynamic = "force-dynamic";
 
@@ -24,14 +25,35 @@ type FixtureCase =
   | "reviewed"
   | "complete"
   | "out-of-order"
+  | "inactive-only"
+  | "multiple"
   | "load-error";
 
 const CASES: Record<
   Exclude<FixtureCase, "load-error">,
-  { revenueSourceCount: number; reviewedAt: string | null; validMonthCount: number }
+  {
+    revenueSourceCount: number;
+    reviewedAt: string | null;
+    validMonthCount: number;
+    canManage?: boolean;
+    revenueSources?: SetupRevenueSource[];
+  }
 > = {
-  empty: { revenueSourceCount: 0, reviewedAt: null, validMonthCount: 0 },
-  revenue: { revenueSourceCount: 1, reviewedAt: null, validMonthCount: 0 },
+  empty: { revenueSourceCount: 0, reviewedAt: null, validMonthCount: 0, revenueSources: [] },
+  revenue: {
+    revenueSourceCount: 1,
+    reviewedAt: null,
+    validMonthCount: 0,
+    canManage: false,
+    revenueSources: [
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        name: "الكورس الأساسي",
+        streamType: "other",
+        isActive: true,
+      },
+    ],
+  },
   reviewed: {
     revenueSourceCount: 1,
     reviewedAt: "2026-09-28T10:00:00.000Z",
@@ -46,6 +68,45 @@ const CASES: Record<
     revenueSourceCount: 0,
     reviewedAt: "2026-09-28T10:00:00.000Z",
     validMonthCount: 1,
+    revenueSources: [],
+  },
+  "inactive-only": {
+    revenueSourceCount: 0,
+    reviewedAt: null,
+    validMonthCount: 0,
+    revenueSources: [
+      {
+        id: "22222222-2222-4222-8222-222222222222",
+        name: "عرض قديم",
+        streamType: "other",
+        isActive: false,
+      },
+    ],
+  },
+  multiple: {
+    revenueSourceCount: 3,
+    reviewedAt: null,
+    validMonthCount: 0,
+    revenueSources: [
+      {
+        id: "33333333-3333-4333-8333-333333333331",
+        name: "الكورس الأساسي",
+        streamType: "other",
+        isActive: true,
+      },
+      {
+        id: "33333333-3333-4333-8333-333333333332",
+        name: "VIP",
+        streamType: "other",
+        isActive: true,
+      },
+      {
+        id: "33333333-3333-4333-8333-333333333333",
+        name: "Mastermind",
+        streamType: "other",
+        isActive: true,
+      },
+    ],
   },
 };
 
@@ -65,6 +126,8 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     query.case === "reviewed" ||
     query.case === "complete" ||
     query.case === "out-of-order" ||
+    query.case === "inactive-only" ||
+    query.case === "multiple" ||
     query.case === "load-error"
       ? query.case
       : "empty";
@@ -106,10 +169,21 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
         timezone="Africa/Cairo"
         currentStep={currentStep}
         readiness={readiness}
-        canManage={fixtureCase !== "revenue"}
+        canManage={
+          fixtureCase === "load-error" ? true : (CASES[fixtureCase].canManage ?? true)
+        }
         revenueSourceCount={
           fixtureCase === "load-error" ? null : CASES[fixtureCase].revenueSourceCount
         }
+        revenueSources={
+          fixtureCase === "load-error" ? null : (CASES[fixtureCase].revenueSources ?? [])
+        }
+        revenueCreationRequestId={
+          fixtureCase === "load-error" || currentStep !== "revenue"
+            ? null
+            : "44444444-4444-4444-8444-444444444444"
+        }
+        revenueStatus={null}
         latestSavedMonthKey={
           fixtureCase !== "load-error" && CASES[fixtureCase].validMonthCount > 0
             ? "2026-08"

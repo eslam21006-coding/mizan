@@ -9,11 +9,27 @@ import {
   parseResourceId,
   parseRevenueStreamType,
 } from "@/lib/business/revenue-streams";
+import { buildBusinessSetupHref } from "@/lib/business/setup-navigation";
 import {
   parseSetupReturnOrigin,
   type SetupReturnOrigin,
 } from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+type RevenueMutationDestination = "workspace" | "setup";
+
+/** Accepts only the two internal destinations supported by revenue creation. */
+function parseRevenueMutationDestination(formData: FormData): RevenueMutationDestination | null {
+  const values = formData.getAll("destination");
+  if (values.length === 0) return "workspace";
+  if (values.length !== 1 || typeof values[0] !== "string") return null;
+  return values[0] === "workspace" || values[0] === "setup" ? values[0] : null;
+}
+
+/** Builds the canonical B06 Revenue setup URL with a founder-facing result status. */
+function setupRevenuePath(businessId: string, status: string) {
+  return `${buildBusinessSetupHref(businessId, "revenue")}&status=${encodeURIComponent(status)}`;
+}
 
 /** Parses and validates the structured Monthly/setup return origin carried by revenue mutations. */
 function parseRevenueSetupReturnOrigin(formData: FormData): SetupReturnOrigin | null {
@@ -127,10 +143,30 @@ function redirectToRevenueStreams(
   redirect(revenueStreamsPath(businessId, status, returnOrigin));
 }
 
+/** Revalidates revenue-dependent surfaces and returns creation to its allow-listed destination. */
+function redirectAfterRevenueCreation(
+  businessId: string,
+  status: string,
+  destination: RevenueMutationDestination,
+  returnOrigin?: SetupReturnOrigin | null,
+): never {
+  if (destination === "setup") {
+    revalidatePath("/businesses");
+    revalidatePath(`/businesses/${businessId}`);
+    revalidatePath(`/businesses/${businessId}/revenue-streams`);
+    revalidatePath(`/businesses/${businessId}/monthly`);
+    revalidatePath(buildBusinessSetupHref(businessId));
+    redirect(setupRevenuePath(businessId, status));
+  }
+
+  redirectToRevenueStreams(businessId, status, returnOrigin);
+}
+
 export async function createRevenueStream(formData: FormData) {
   await requireAuthContext();
 
-  const returnOrigin = parseRevenueSetupReturnOrigin(formData);
+  const destination = parseRevenueMutationDestination(formData);
+  const returnOrigin = destination === "workspace" ? parseRevenueSetupReturnOrigin(formData) : null;
 
   const businessId = parseResourceId(formData.get("business_id"));
   const name = normalizeRevenueStreamName(formData.get("name"));
@@ -141,8 +177,13 @@ export async function createRevenueStream(formData: FormData) {
     redirect("/businesses");
   }
 
-  if (!name || !streamType || !creationRequestId) {
-    redirect(revenueStreamsPath(businessId, "invalid", returnOrigin));
+  if (!destination || !name || !streamType || !creationRequestId) {
+    const invalidDestination = destination ?? "workspace";
+    redirect(
+      invalidDestination === "setup"
+        ? setupRevenuePath(businessId, "invalid")
+        : revenueStreamsPath(businessId, "invalid", returnOrigin),
+    );
   }
 
   const supabase = await createSupabaseServerClient();
@@ -154,10 +195,14 @@ export async function createRevenueStream(formData: FormData) {
   });
 
   if (!error || error.code === "23505") {
-    return redirectToRevenueStreams(businessId, "created", returnOrigin);
+    return redirectAfterRevenueCreation(businessId, "created", destination, returnOrigin);
   }
 
-  redirect(revenueStreamsPath(businessId, "create-failed", returnOrigin));
+  redirect(
+    destination === "setup"
+      ? setupRevenuePath(businessId, "create-failed")
+      : revenueStreamsPath(businessId, "create-failed", returnOrigin),
+  );
 }
 
 export async function updateRevenueStream(formData: FormData) {
