@@ -179,8 +179,7 @@ export function ExpenseSetupContent({
 
       {canManage && !stepComplete ? (
         <p className={styles.expenseSetupPendingNote}>
-          هذه الاختيارات مؤقتة في هذه المرحلة. تأكيد مراجعة الأنواع الأربعة سيتم توصيله في
-          المهمة التالية من B07.
+          اختيار «ليس لدي مصروف من هذا النوع» يظل غير محفوظ حتى يتم تأكيد مراجعة المصروفات.
         </p>
       ) : null}
     </>
