@@ -20,6 +20,29 @@ export type BusinessSetupReadiness = {
   stepComplete: Readonly<Record<BusinessSetupStep, boolean>>;
 };
 
+export type BusinessSetupQueryErrors = {
+  revenueSourcesError: unknown;
+  activeRevenueSourceCountError: unknown;
+  latestPeriodError: unknown;
+};
+
+export type BusinessSetupQueryState = { kind: "loaded" } | { kind: "load_error" };
+
+/** Resolves whether any authoritative setup query failed before readiness is derived. */
+export function resolveBusinessSetupQueryState(
+  input: BusinessSetupQueryErrors,
+): BusinessSetupQueryState {
+  if (
+    input.revenueSourcesError ||
+    input.activeRevenueSourceCountError ||
+    input.latestPeriodError
+  ) {
+    return { kind: "load_error" };
+  }
+
+  return { kind: "loaded" };
+}
+
 /** Resolves the four canonical setup facts without legacy compatibility inference. */
 export function resolveBusinessSetupReadiness(
   input: BusinessSetupReadinessInput,
