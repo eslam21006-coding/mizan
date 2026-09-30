@@ -7,7 +7,9 @@ import {
   type BusinessSetupStep,
 } from "@/lib/business/setup-navigation";
 import type { BusinessSetupReadiness } from "@/lib/business/setup-readiness";
+import type { ExpenseCategoryCounts, SetupExpenseItem } from "@/lib/business/expenses";
 import type { SetupRevenueSource } from "@/lib/business/setup-loader";
+import { ExpenseSetupContent } from "./expense-setup-content";
 import styles from "./business-setup-shell.module.css";
 
 const STEP_LABELS: Readonly<Record<BusinessSetupStep, string>> = {
@@ -29,6 +31,10 @@ type BusinessSetupShellProps = {
   revenueSources: SetupRevenueSource[] | null;
   revenueCreationRequestId: string | null;
   revenueStatus: string | null;
+  expenseItems: SetupExpenseItem[] | null;
+  activeExpenseCategoryCounts: ExpenseCategoryCounts | null;
+  expenseCreationRequestId: string | null;
+  expenseStatus: string | null;
   latestSavedMonthKey: string | null;
   backHref: string | null;
   nextHref: string | null;
@@ -50,6 +56,10 @@ export function BusinessSetupShell({
   revenueSources,
   revenueCreationRequestId,
   revenueStatus,
+  expenseItems,
+  activeExpenseCategoryCounts,
+  expenseCreationRequestId,
+  expenseStatus,
   latestSavedMonthKey,
   backHref,
   nextHref,
@@ -193,6 +203,10 @@ export function BusinessSetupShell({
               revenueSources={revenueSources}
               revenueCreationRequestId={revenueCreationRequestId}
               revenueStatus={revenueStatus}
+              expenseItems={expenseItems}
+              activeExpenseCategoryCounts={activeExpenseCategoryCounts}
+              expenseCreationRequestId={expenseCreationRequestId}
+              expenseStatus={expenseStatus}
               businessId={businessId}
               canManage={canManage}
               latestSavedMonthKey={latestSavedMonthKey}
@@ -236,6 +250,10 @@ type StepContentProps = {
   revenueSources: SetupRevenueSource[] | null;
   revenueCreationRequestId: string | null;
   revenueStatus: string | null;
+  expenseItems: SetupExpenseItem[] | null;
+  activeExpenseCategoryCounts: ExpenseCategoryCounts | null;
+  expenseCreationRequestId: string | null;
+  expenseStatus: string | null;
   businessId: string;
   canManage: boolean;
   latestSavedMonthKey: string | null;
@@ -252,6 +270,10 @@ function StepContent({
   revenueSources,
   revenueCreationRequestId,
   revenueStatus,
+  expenseItems,
+  activeExpenseCategoryCounts,
+  expenseCreationRequestId,
+  expenseStatus,
   businessId,
   canManage,
   latestSavedMonthKey,
@@ -296,11 +318,22 @@ function StepContent({
     return (
       <>
         <StepPanelHeading step={step} complete={stepComplete} />
-        <p className={styles.stepDescription}>
-          {stepComplete
-            ? "تمت مراجعة إعداد المصروفات بشكل صريح، بما في ذلك حالة عدم وجود مصروفات."
-            : "راجع أين يذهب المال في البزنس. لا تعتبر هذه الخطوة مكتملة حتى يتم تأكيد مراجعة المصروفات صراحة."}
-        </p>
+        <ExpenseSetupContent
+          businessId={businessId}
+          canManage={canManage}
+          stepComplete={stepComplete}
+          expenseItems={expenseItems ?? []}
+          activeExpenseCategoryCounts={
+            activeExpenseCategoryCounts ?? {
+              acquisition: 0,
+              fulfillment: 0,
+              overhead: 0,
+              financial: 0,
+            }
+          }
+          creationRequestId={expenseCreationRequestId}
+          status={expenseStatus}
+        />
       </>
     );
   }
