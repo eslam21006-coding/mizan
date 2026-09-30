@@ -24,6 +24,8 @@ export type BusinessSetupQueryErrors = {
   revenueSourcesError: unknown;
   activeRevenueSourceCountError: unknown;
   latestPeriodError: unknown;
+  expenseItemsError?: unknown;
+  activeExpenseCategoryErrors?: readonly unknown[];
 };
 
 export type BusinessSetupQueryState = { kind: "loaded" } | { kind: "load_error" };
@@ -35,7 +37,9 @@ export function resolveBusinessSetupQueryState(
   if (
     input.revenueSourcesError ||
     input.activeRevenueSourceCountError ||
-    input.latestPeriodError
+    input.latestPeriodError ||
+    input.expenseItemsError ||
+    input.activeExpenseCategoryErrors?.some(Boolean)
   ) {
     return { kind: "load_error" };
   }
