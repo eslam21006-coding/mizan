@@ -775,3 +775,66 @@ a.stepLink:focus-visible,
     width: 100%;
   }
 }
+
+
+.expenseReviewedNone {
+  margin: 0;
+  padding: 9px 10px;
+  color: #176b58;
+  background: #e8f6f1;
+  border: 1px solid #cbe8df;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.expenseReviewForm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.expenseReviewForm .expenseSetupPendingNote {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+.expenseReviewButton {
+  min-height: 44px;
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  color: #fff;
+  background: var(--brand);
+  border: 1px solid var(--brand);
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.expenseReviewButton:hover {
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+}
+
+.expenseReviewButton:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .expenseReviewForm {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .expenseReviewButton {
+    width: 100%;
+  }
+}
