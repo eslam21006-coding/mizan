@@ -68,6 +68,8 @@ export const EXPENSE_SETUP_CATEGORY_OPTIONS: ReadonlyArray<{
 
 export type ExpenseCategoryCounts = Readonly<Record<ExpenseCategory, number>>;
 
+export type ExpenseCreationRequestIds = Readonly<Record<ExpenseCategory, string>>;
+
 export type SetupExpenseItem = {
   id: string;
   name: string;
@@ -80,6 +82,7 @@ export type SetupExpenseItem = {
 export type ExpenseSetupReviewResolution = {
   resolved: boolean;
   unresolvedCategories: ExpenseCategory[];
+  invalidNoneCategories: ExpenseCategory[];
 };
 
 /** Resolves whether every expense category is backed by an active row or an explicit reviewed-none claim. */
@@ -88,13 +91,17 @@ export function resolveExpenseSetupReview(
   explicitNoneCategories: readonly ExpenseCategory[],
 ): ExpenseSetupReviewResolution {
   const explicitNone = new Set(explicitNoneCategories);
+  const invalidNoneCategories = EXPENSE_CATEGORIES.filter(
+    (category) => activeCounts[category] > 0 && explicitNone.has(category),
+  );
   const unresolvedCategories = EXPENSE_CATEGORIES.filter(
     (category) => activeCounts[category] <= 0 && !explicitNone.has(category),
   );
 
   return {
-    resolved: unresolvedCategories.length === 0,
+    resolved: invalidNoneCategories.length === 0 && unresolvedCategories.length === 0,
     unresolvedCategories,
+    invalidNoneCategories,
   };
 }
 
