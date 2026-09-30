@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { notFound, redirect } from "next/navigation";
+import type { ExpenseCreationRequestIds } from "@/lib/business/expenses";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { loadBusinessSetup } from "@/lib/business/setup-loader";
 import {
@@ -10,6 +11,15 @@ import {
   resolveBusinessSetupResumeStep,
 } from "@/lib/business/setup-navigation";
 import { BusinessSetupShell } from "./business-setup-shell";
+
+function createExpenseCreationRequestIds(): ExpenseCreationRequestIds {
+  return {
+    acquisition: randomUUID(),
+    fulfillment: randomUUID(),
+    overhead: randomUUID(),
+    financial: randomUUID(),
+  };
+}
 
 type BusinessSetupPageProps = {
   params: Promise<{ businessId: string }>;
@@ -51,7 +61,7 @@ export default async function BusinessSetupPage({
         revenueStatus={null}
         expenseItems={null}
         activeExpenseCategoryCounts={null}
-        expenseCreationRequestId={null}
+        expenseCreationRequestIds={null}
         expenseStatus={null}
         latestSavedMonthKey={null}
         backHref={null}
@@ -88,7 +98,7 @@ export default async function BusinessSetupPage({
         revenueStatus={null}
         expenseItems={loadResult.expenseItems}
         activeExpenseCategoryCounts={loadResult.activeExpenseCategoryCounts}
-        expenseCreationRequestId={null}
+        expenseCreationRequestIds={null}
         expenseStatus={null}
         latestSavedMonthKey={loadResult.latestSavedMonthKey}
         backHref={null}
@@ -127,8 +137,10 @@ export default async function BusinessSetupPage({
       revenueStatus={currentStep === "revenue" ? setupStatus : null}
       expenseItems={loadResult.expenseItems}
       activeExpenseCategoryCounts={loadResult.activeExpenseCategoryCounts}
-      expenseCreationRequestId={
-        currentStep === "expenses" && loadResult.canManage ? randomUUID() : null
+      expenseCreationRequestIds={
+        currentStep === "expenses" && loadResult.canManage
+          ? createExpenseCreationRequestIds()
+          : null
       }
       expenseStatus={currentStep === "expenses" ? setupStatus : null}
       latestSavedMonthKey={loadResult.latestSavedMonthKey}
