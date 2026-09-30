@@ -251,7 +251,11 @@ test.describe("B07 Expense Category UX", () => {
       await expect(page.getByRole("heading", { name: heading })).toBeVisible();
     }
 
-    await expect(page.getByText("Meta Ads", { exact: true })).toBeVisible();
+    await expect(
+      page
+        .locator('section[aria-labelledby="setup-expense-acquisition"] .expenseSetupName')
+        .filter({ hasText: /^Meta Ads$/ }),
+    ).toBeVisible();
     await expect(page.getByText("Zoom", { exact: true })).toBeVisible();
     await expect(
       page.getByText("ليس لدي مصروف من هذا النوع", { exact: true }),
@@ -319,7 +323,11 @@ test.describe("B07 Expense Category UX", () => {
     await page.goto(`${fixturePath}?case=expenses-read-only&step=expenses`);
 
     await expect(page.getByText("عرض فقط", { exact: true })).toBeVisible();
-    await expect(page.getByText("Meta Ads", { exact: true })).toBeVisible();
+    await expect(
+      page
+        .locator('section[aria-labelledby="setup-expense-acquisition"] .expenseSetupName')
+        .filter({ hasText: /^Meta Ads$/ }),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "إضافة مصروف" })).toHaveCount(0);
     await expect(page.getByRole("checkbox")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "تأكيد مراجعة المصروفات" })).toHaveCount(0);
