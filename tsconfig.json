@@ -39,6 +39,7 @@
     "test/business/b03-existing-business-compatibility.test.mts",
     "test/business/b04-business-setup-shell.test.mts",
     "test/business/b06-money-in-setup.test.mts",
+    "test/business/b07-expense-category-ux.test.mts",
     "test/business/business-readiness.test.mts",
     "test/business/monthly-comparison.test.mts",
     "test/business/historical-analytics.test.mts",
