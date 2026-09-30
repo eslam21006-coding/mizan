@@ -33,7 +33,7 @@ export default async function BusinessSetupPage({
   if (loadResult.kind === "not_found") notFound();
 
   const parsedStep = parseBusinessSetupStep(query.step);
-  const revenueStatus = typeof query.status === "string" ? query.status : null;
+  const setupStatus = typeof query.status === "string" ? query.status : null;
 
   if (loadResult.kind === "load_error") {
     return (
@@ -49,6 +49,10 @@ export default async function BusinessSetupPage({
         revenueSources={null}
         revenueCreationRequestId={null}
         revenueStatus={null}
+        expenseItems={null}
+        activeExpenseCategoryCounts={null}
+        expenseCreationRequestId={null}
+        expenseStatus={null}
         latestSavedMonthKey={null}
         backHref={null}
         nextHref={null}
@@ -82,6 +86,10 @@ export default async function BusinessSetupPage({
         revenueSources={loadResult.revenueSources}
         revenueCreationRequestId={null}
         revenueStatus={null}
+        expenseItems={loadResult.expenseItems}
+        activeExpenseCategoryCounts={loadResult.activeExpenseCategoryCounts}
+        expenseCreationRequestId={null}
+        expenseStatus={null}
         latestSavedMonthKey={loadResult.latestSavedMonthKey}
         backHref={null}
         nextHref={null}
@@ -116,7 +124,13 @@ export default async function BusinessSetupPage({
       revenueCreationRequestId={
         currentStep === "revenue" && loadResult.canManage ? randomUUID() : null
       }
-      revenueStatus={currentStep === "revenue" ? revenueStatus : null}
+      revenueStatus={currentStep === "revenue" ? setupStatus : null}
+      expenseItems={loadResult.expenseItems}
+      activeExpenseCategoryCounts={loadResult.activeExpenseCategoryCounts}
+      expenseCreationRequestId={
+        currentStep === "expenses" && loadResult.canManage ? randomUUID() : null
+      }
+      expenseStatus={currentStep === "expenses" ? setupStatus : null}
       latestSavedMonthKey={loadResult.latestSavedMonthKey}
       backHref={backHref}
       nextHref={nextHref}
