@@ -159,6 +159,8 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
   const nextStep = currentStep ? nextBusinessSetupStep(currentStep) : null;
   const nextEnabled =
     fixtureCase !== "load-error" && currentStep !== null && readiness.stepComplete[currentStep];
+  const canManage =
+    fixtureCase === "load-error" ? true : (CASES[fixtureCase].canManage ?? true);
 
   return (
     <AppShell {...fixtureShellProps}>
@@ -169,9 +171,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
         timezone="Africa/Cairo"
         currentStep={currentStep}
         readiness={readiness}
-        canManage={
-          fixtureCase === "load-error" ? true : (CASES[fixtureCase].canManage ?? true)
-        }
+        canManage={canManage}
         revenueSourceCount={
           fixtureCase === "load-error" ? null : CASES[fixtureCase].revenueSourceCount
         }
@@ -192,10 +192,9 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
           financial: 0,
         }}
         expenseCreationRequestId={
-          fixtureCase === "load-error" || currentStep !== "expenses" ||
-          (fixtureCase !== "load-error" && CASES[fixtureCase].canManage === false)
-            ? null
-            : "55555555-5555-4555-8555-555555555555"
+          currentStep === "expenses" && canManage
+            ? "55555555-5555-4555-8555-555555555555"
+            : null
         }
         expenseStatus={null}
         latestSavedMonthKey={
