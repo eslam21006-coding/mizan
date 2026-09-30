@@ -6,6 +6,7 @@ import {
   EXPENSE_SETUP_CATEGORY_OPTIONS,
   type ExpenseCategory,
   type ExpenseCategoryCounts,
+  type ExpenseCreationRequestIds,
   type SetupExpenseItem,
 } from "@/lib/business/expenses";
 import { ExpenseDrawerLauncher } from "../expenses/expense-drawer";
@@ -54,7 +55,7 @@ type ExpenseSetupContentProps = {
   stepComplete: boolean;
   expenseItems: SetupExpenseItem[];
   activeExpenseCategoryCounts: ExpenseCategoryCounts;
-  creationRequestId: string | null;
+  creationRequestIds: ExpenseCreationRequestIds | null;
   status: string | null;
 };
 
@@ -65,7 +66,7 @@ export function ExpenseSetupContent({
   stepComplete,
   expenseItems,
   activeExpenseCategoryCounts,
-  creationRequestId,
+  creationRequestIds,
   status,
 }: ExpenseSetupContentProps) {
   const [noneSelected, setNoneSelected] =
@@ -161,14 +162,14 @@ export function ExpenseSetupContent({
               ) : null}
 
               <div className={styles.expenseCategoryActions}>
-                {canManage && creationRequestId ? (
+                {canManage && creationRequestIds ? (
                   <ExpenseDrawerLauncher
                     businessId={businessId}
                     returnOrigin={null}
                     categoryOptions={EXPENSE_SETUP_CATEGORY_OPTIONS}
                     behaviorOptions={EXPENSE_COST_BEHAVIOR_OPTIONS}
                     mode="create"
-                    creationRequestId={creationRequestId}
+                    creationRequestId={creationRequestIds[category.value]}
                     destination="setup"
                     fixedCategory={category.value}
                   />
