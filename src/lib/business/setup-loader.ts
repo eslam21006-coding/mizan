@@ -4,6 +4,7 @@ import { requireAuthContext } from "@/lib/auth/context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { RevenueStreamType } from "./revenue-streams.ts";
 import {
+  resolveBusinessSetupQueryState,
   resolveBusinessSetupReadiness,
   type BusinessSetupReadiness,
 } from "./setup-readiness.ts";
@@ -93,7 +94,12 @@ export async function loadBusinessSetup(
       .maybeSingle(),
   ]);
 
-  if (streamsResult.error || activeStreamsResult.error || latestPeriodResult.error) {
+  const queryState = resolveBusinessSetupQueryState({
+    revenueSourcesError: streamsResult.error,
+    activeRevenueSourceCountError: activeStreamsResult.error,
+    latestPeriodError: latestPeriodResult.error,
+  });
+  if (queryState.kind === "load_error") {
     return {
       kind: "load_error",
       business: businessContext,
