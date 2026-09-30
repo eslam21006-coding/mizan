@@ -8,6 +8,10 @@ import {
 } from "../../src/lib/business/expenses.ts";
 import { executeExpenseSetupReviewConfirmation } from "../../src/lib/business/expense-setup-review.ts";
 
+const setupPageSource = await readFile(
+  new URL("../../src/app/(app)/businesses/[businessId]/setup/page.tsx", import.meta.url),
+  "utf8",
+);
 const setupLoaderSource = await readFile(
   new URL("../../src/lib/business/setup-loader.ts", import.meta.url),
   "utf8",
@@ -106,6 +110,14 @@ test("B07 Task 4 reuses the existing drawer with a fixed canonical category and 
   assert.match(setupExpenseSource, /ExpenseDrawerLauncher/);
   assert.match(setupExpenseSource, /destination="setup"/);
   assert.match(setupExpenseSource, /fixedCategory=\{category\.value\}/);
+  assert.match(
+    setupExpenseSource,
+    /creationRequestId=\{creationRequestIds\[category\.value\]\}/,
+  );
+  assert.match(setupPageSource, /acquisition: randomUUID\(\)/);
+  assert.match(setupPageSource, /fulfillment: randomUUID\(\)/);
+  assert.match(setupPageSource, /overhead: randomUUID\(\)/);
+  assert.match(setupPageSource, /financial: randomUUID\(\)/);
   assert.match(expenseDrawerSource, /name="category" value=\{fixedCategory\}/);
   assert.match(expenseDrawerSource, /name="cost_behavior"/);
   assert.match(expenseDrawerSource, /EXPENSE_COST_BEHAVIOR_OPTIONS|behaviorOptions/);
