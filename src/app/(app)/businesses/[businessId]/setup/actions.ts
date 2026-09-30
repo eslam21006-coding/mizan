@@ -6,9 +6,9 @@ import { requireAuthContext } from "@/lib/auth/context";
 import {
   EXPENSE_CATEGORIES,
   parseExpenseCategory,
-  resolveExpenseSetupReview,
   type ExpenseCategory,
 } from "@/lib/business/expenses";
+import { executeExpenseSetupReviewConfirmation } from "@/lib/business/expense-setup-review";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { buildBusinessSetupHref } from "@/lib/business/setup-navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -56,45 +56,29 @@ export async function confirmExpenseSetupReview(formData: FormData) {
   }
 
   const supabase = await createSupabaseServerClient();
-  const { data: activeExpenseRows, error: expenseError } = await supabase
-    .from("expense_items")
-    .select("category")
-    .eq("business_id", businessId)
-    .eq("is_active", true);
+  const result = await executeExpenseSetupReviewConfirmation(explicitNoneCategories, {
+    countActiveExpenses: async (category) => {
+      const { count, error } = await supabase
+        .from("expense_items")
+        .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId)
+        .eq("category", category)
+        .eq("is_active", true);
+      return { count, error };
+    },
+    persistReviewedAt: async (reviewedAt) => {
+      const { data, error } = await supabase
+        .from("businesses")
+        .update({ expense_setup_reviewed_at: reviewedAt })
+        .eq("id", businessId)
+        .select("id")
+        .maybeSingle();
+      return { updated: Boolean(data), error };
+    },
+  });
 
-  if (expenseError) {
-    redirect(setupExpensesPath(businessId, "review-failed"));
-  }
-
-  const activeCounts: Record<ExpenseCategory, number> = {
-    acquisition: 0,
-    fulfillment: 0,
-    overhead: 0,
-    financial: 0,
-  };
-
-  for (const row of activeExpenseRows ?? []) {
-    const category = parseExpenseCategory(row.category);
-    if (!category) {
-      redirect(setupExpensesPath(businessId, "review-failed"));
-    }
-    activeCounts[category] += 1;
-  }
-
-  const resolution = resolveExpenseSetupReview(activeCounts, explicitNoneCategories);
-  if (!resolution.resolved) {
-    redirect(setupExpensesPath(businessId, "review-incomplete"));
-  }
-
-  const { data: updatedBusiness, error: updateError } = await supabase
-    .from("businesses")
-    .update({ expense_setup_reviewed_at: new Date().toISOString() })
-    .eq("id", businessId)
-    .select("id")
-    .maybeSingle();
-
-  if (updateError || !updatedBusiness) {
-    redirect(setupExpensesPath(businessId, "review-failed"));
+  if (result.kind !== "reviewed") {
+    redirect(setupExpensesPath(businessId, result.kind));
   }
 
   revalidatePath("/businesses");
