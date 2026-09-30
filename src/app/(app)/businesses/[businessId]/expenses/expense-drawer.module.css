@@ -154,6 +154,19 @@
   font-weight: 750;
 }
 
+.fixedValue {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  padding: 9px 11px;
+  color: var(--text);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 .field input,
 .field select {
   width: 100%;
