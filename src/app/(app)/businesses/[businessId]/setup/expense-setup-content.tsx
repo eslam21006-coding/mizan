@@ -9,6 +9,7 @@ import {
   type SetupExpenseItem,
 } from "@/lib/business/expenses";
 import { ExpenseDrawerLauncher } from "../expenses/expense-drawer";
+import { confirmExpenseSetupReview } from "./actions";
 import styles from "./business-setup-shell.module.css";
 
 const EMPTY_NONE_SELECTION: Record<ExpenseCategory, boolean> = {
@@ -32,6 +33,18 @@ const EXPENSE_STATUS_MESSAGES: Readonly<
   "create-failed": {
     tone: "error",
     text: "تعذر إضافة المصروف. لم يتم تغيير أي بيانات.",
+  },
+  reviewed: {
+    tone: "success",
+    text: "تم تأكيد مراجعة المصروفات. يمكنك الانتقال إلى الخطوة التالية.",
+  },
+  "review-incomplete": {
+    tone: "error",
+    text: "راجع الأنواع الأربعة. أضف مصروفًا أو اختر «ليس لدي مصروف من هذا النوع» لكل نوع فارغ.",
+  },
+  "review-failed": {
+    tone: "error",
+    text: "تعذر تأكيد مراجعة المصروفات. لم يتم تغيير حالة الإعداد.",
   },
 };
 
@@ -100,8 +113,9 @@ export function ExpenseSetupContent({
             (expense) => expense.category === category.value,
           );
           const activeCount = activeExpenseCategoryCounts[category.value];
-          const canDeclareNone = activeCount === 0;
+          const canDeclareNone = activeCount === 0 && !stepComplete;
           const noneIsSelected = noneSelected[category.value];
+          const reviewedNone = stepComplete && activeCount === 0;
 
           return (
             <section
@@ -139,6 +153,12 @@ export function ExpenseSetupContent({
                   لا توجد مصروفات مضافة في هذا النوع.
                 </p>
               )}
+
+              {reviewedNone ? (
+                <p className={styles.expenseReviewedNone}>
+                  تمت المراجعة — لا يوجد مصروف من هذا النوع
+                </p>
+              ) : null}
 
               <div className={styles.expenseCategoryActions}>
                 {canManage && creationRequestId ? (
@@ -178,9 +198,25 @@ export function ExpenseSetupContent({
       </div>
 
       {canManage && !stepComplete ? (
-        <p className={styles.expenseSetupPendingNote}>
-          اختيار «ليس لدي مصروف من هذا النوع» يظل غير محفوظ حتى يتم تأكيد مراجعة المصروفات.
-        </p>
+        <form action={confirmExpenseSetupReview} className={styles.expenseReviewForm}>
+          <input type="hidden" name="business_id" value={businessId} />
+          {EXPENSE_SETUP_CATEGORY_OPTIONS.filter(
+            (category) => noneSelected[category.value],
+          ).map((category) => (
+            <input
+              type="hidden"
+              name="no_expense_category"
+              value={category.value}
+              key={category.value}
+            />
+          ))}
+          <p className={styles.expenseSetupPendingNote}>
+            اختيار «ليس لدي مصروف من هذا النوع» يظل غير محفوظ حتى تضغط تأكيد مراجعة المصروفات.
+          </p>
+          <button className={styles.expenseReviewButton} type="submit">
+            تأكيد مراجعة المصروفات
+          </button>
+        </form>
       ) : null}
     </>
   );
