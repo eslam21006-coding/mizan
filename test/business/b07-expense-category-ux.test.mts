@@ -4,6 +4,7 @@ import test from "node:test";
 import {
   EXPENSE_CATEGORIES,
   EXPENSE_SETUP_CATEGORY_OPTIONS,
+  resolveExpenseSetupReview,
 } from "../../src/lib/business/expenses.ts";
 
 const setupLoaderSource = await readFile(
@@ -27,6 +28,13 @@ const setupShellSource = await readFile(
 const expenseActionsSource = await readFile(
   new URL(
     "../../src/app/(app)/businesses/[businessId]/expenses/actions.ts",
+    import.meta.url,
+  ),
+  "utf8",
+);
+const setupActionsSource = await readFile(
+  new URL(
+    "../../src/app/(app)/businesses/[businessId]/setup/actions.ts",
     import.meta.url,
   ),
   "utf8",
@@ -120,4 +128,86 @@ test("B07 Tasks 1-5 do not add review persistence or a parallel expense model", 
   assert.doesNotMatch(setupExpenseSource, /expense_setup_reviewed_at/);
   assert.doesNotMatch(setupExpenseSource, /confirmExpense|reviewExpense|update\(/);
   assert.doesNotMatch(expenseActionsSource, /from\("setup_expense/);
+});
+
+
+test("B07 Tasks 6-7 resolve known active/none combinations deterministically", () => {
+  assert.deepEqual(
+    resolveExpenseSetupReview(
+      { acquisition: 0, fulfillment: 0, overhead: 0, financial: 0 },
+      [],
+    ),
+    {
+      resolved: false,
+      unresolvedCategories: ["acquisition", "fulfillment", "overhead", "financial"],
+    },
+  );
+
+  assert.deepEqual(
+    resolveExpenseSetupReview(
+      { acquisition: 0, fulfillment: 0, overhead: 0, financial: 0 },
+      ["acquisition", "fulfillment", "overhead", "financial"],
+    ),
+    { resolved: true, unresolvedCategories: [] },
+  );
+
+  assert.deepEqual(
+    resolveExpenseSetupReview(
+      { acquisition: 1, fulfillment: 0, overhead: 2, financial: 0 },
+      ["fulfillment", "financial"],
+    ),
+    { resolved: true, unresolvedCategories: [] },
+  );
+
+  assert.deepEqual(
+    resolveExpenseSetupReview(
+      { acquisition: 1, fulfillment: 0, overhead: 1, financial: 0 },
+      ["fulfillment"],
+    ),
+    { resolved: false, unresolvedCategories: ["financial"] },
+  );
+
+  assert.deepEqual(
+    resolveExpenseSetupReview(
+      { acquisition: 1, fulfillment: 0, overhead: 1, financial: 0 },
+      ["fulfillment", "financial"],
+    ),
+    { resolved: true, unresolvedCategories: [] },
+  );
+});
+
+test("B07 Task 6 confirmation re-queries active expenses and updates only review metadata", () => {
+  assert.match(setupActionsSource, /requireAuthContext\(\)/);
+  assert.match(
+    setupActionsSource,
+    /from\("expense_items"\)[\s\S]*select\("category"\)[\s\S]*eq\("is_active", true\)/,
+  );
+  assert.match(setupActionsSource, /resolveExpenseSetupReview\(activeCounts, explicitNoneCategories\)/);
+  assert.match(
+    setupActionsSource,
+    /from\("businesses"\)[\s\S]*update\(\{ expense_setup_reviewed_at: new Date\(\)\.toISOString\(\) \}\)/,
+  );
+  assert.doesNotMatch(setupActionsSource, /monthly_periods|monthly_expense_entries|historical/);
+  assert.match(setupActionsSource, /review-incomplete/);
+  assert.match(setupActionsSource, /review-failed/);
+  assert.match(setupActionsSource, /status\), "reviewed"|setupExpensesPath\(businessId, "reviewed"\)/);
+});
+
+test("B07 Task 8 shows reviewed-none only from canonical completed state", () => {
+  assert.match(setupExpenseSource, /const reviewedNone = stepComplete && activeCount === 0/);
+  assert.match(setupExpenseSource, /تمت المراجعة — لا يوجد مصروف من هذا النوع/);
+  assert.match(setupExpenseSource, /reviewed:[\s\S]*تم تأكيد مراجعة المصروفات/);
+});
+
+test("B07 Task 9 stays on Expenses after review and relies on canonical readiness for Next", () => {
+  assert.match(setupActionsSource, /buildBusinessSetupHref\(businessId, "expenses"\)/);
+  assert.doesNotMatch(setupActionsSource, /buildBusinessSetupHref\(businessId, "month"\)/);
+  assert.match(setupShellSource, /nextEnabled/);
+});
+
+test("B07 Task 10 hides expense mutations and review confirmation from read-only users", () => {
+  assert.match(setupExpenseSource, /!canManage[\s\S]*عرض/);
+  assert.match(setupExpenseSource, /canManage && creationRequestId/);
+  assert.match(setupExpenseSource, /canManage && canDeclareNone/);
+  assert.match(setupExpenseSource, /canManage && !stepComplete/);
 });
