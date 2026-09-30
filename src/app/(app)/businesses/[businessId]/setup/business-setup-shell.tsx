@@ -7,7 +7,11 @@ import {
   type BusinessSetupStep,
 } from "@/lib/business/setup-navigation";
 import type { BusinessSetupReadiness } from "@/lib/business/setup-readiness";
-import type { ExpenseCategoryCounts, SetupExpenseItem } from "@/lib/business/expenses";
+import type {
+  ExpenseCategoryCounts,
+  ExpenseCreationRequestIds,
+  SetupExpenseItem,
+} from "@/lib/business/expenses";
 import type { SetupRevenueSource } from "@/lib/business/setup-loader";
 import { ExpenseSetupContent } from "./expense-setup-content";
 import styles from "./business-setup-shell.module.css";
@@ -33,7 +37,7 @@ type BusinessSetupShellProps = {
   revenueStatus: string | null;
   expenseItems: SetupExpenseItem[] | null;
   activeExpenseCategoryCounts: ExpenseCategoryCounts | null;
-  expenseCreationRequestId: string | null;
+  expenseCreationRequestIds: ExpenseCreationRequestIds | null;
   expenseStatus: string | null;
   latestSavedMonthKey: string | null;
   backHref: string | null;
@@ -58,7 +62,7 @@ export function BusinessSetupShell({
   revenueStatus,
   expenseItems,
   activeExpenseCategoryCounts,
-  expenseCreationRequestId,
+  expenseCreationRequestIds,
   expenseStatus,
   latestSavedMonthKey,
   backHref,
@@ -205,7 +209,7 @@ export function BusinessSetupShell({
               revenueStatus={revenueStatus}
               expenseItems={expenseItems}
               activeExpenseCategoryCounts={activeExpenseCategoryCounts}
-              expenseCreationRequestId={expenseCreationRequestId}
+              expenseCreationRequestIds={expenseCreationRequestIds}
               expenseStatus={expenseStatus}
               businessId={businessId}
               canManage={canManage}
@@ -252,7 +256,7 @@ type StepContentProps = {
   revenueStatus: string | null;
   expenseItems: SetupExpenseItem[] | null;
   activeExpenseCategoryCounts: ExpenseCategoryCounts | null;
-  expenseCreationRequestId: string | null;
+  expenseCreationRequestIds: ExpenseCreationRequestIds | null;
   expenseStatus: string | null;
   businessId: string;
   canManage: boolean;
@@ -272,7 +276,7 @@ function StepContent({
   revenueStatus,
   expenseItems,
   activeExpenseCategoryCounts,
-  expenseCreationRequestId,
+  expenseCreationRequestIds,
   expenseStatus,
   businessId,
   canManage,
@@ -331,7 +335,7 @@ function StepContent({
               financial: 0,
             }
           }
-          creationRequestId={expenseCreationRequestId}
+          creationRequestIds={expenseCreationRequestIds}
           status={expenseStatus}
         />
       </>
