@@ -263,6 +263,13 @@ test("B07 review boundary persists expense_setup_reviewed_at only after all cate
   assert.equal(persistedReviewedAt, "2026-09-30T20:00:00.000Z");
 });
 
+test("B07 submission excludes stale none selections once a category gains active expenses", () => {
+  assert.match(
+    setupExpenseSource,
+    /noneSelected\[category\.value\][\s\S]*activeExpenseCategoryCounts\[category\.value\] === 0/,
+  );
+});
+
 test("B07 Task 8 shows reviewed-none only from canonical completed state", () => {
   assert.match(setupExpenseSource, /const reviewedNone = stepComplete && activeCount === 0/);
   assert.match(setupExpenseSource, /تمت المراجعة — لا يوجد مصروف من هذا النوع/);
