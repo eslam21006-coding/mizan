@@ -202,7 +202,9 @@ export function ExpenseSetupContent({
         <form action={confirmExpenseSetupReview} className={styles.expenseReviewForm}>
           <input type="hidden" name="business_id" value={businessId} />
           {EXPENSE_SETUP_CATEGORY_OPTIONS.filter(
-            (category) => noneSelected[category.value],
+            (category) =>
+              noneSelected[category.value] &&
+              activeExpenseCategoryCounts[category.value] === 0,
           ).map((category) => (
             <input
               type="hidden"
