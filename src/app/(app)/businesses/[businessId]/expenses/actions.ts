@@ -9,11 +9,27 @@ import {
   parseExpenseCostBehavior,
 } from "@/lib/business/expenses";
 import { parseActiveState, parseResourceId } from "@/lib/business/revenue-streams";
+import { buildBusinessSetupHref } from "@/lib/business/setup-navigation";
 import {
   parseSetupReturnOrigin,
   type SetupReturnOrigin,
 } from "@/lib/setup-return-origin";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+type ExpenseMutationDestination = "workspace" | "setup";
+
+/** Accepts only the two internal destinations supported by expense creation. */
+function parseExpenseMutationDestination(formData: FormData): ExpenseMutationDestination | null {
+  const values = formData.getAll("destination");
+  if (values.length === 0) return "workspace";
+  if (values.length !== 1 || typeof values[0] !== "string") return null;
+  return values[0] === "workspace" || values[0] === "setup" ? values[0] : null;
+}
+
+/** Builds the canonical B07 Expenses setup URL with a founder-facing result status. */
+function setupExpensesPath(businessId: string, status: string) {
+  return `${buildBusinessSetupHref(businessId, "expenses")}&status=${encodeURIComponent(status)}`;
+}
 
 /** Parses and validates the structured Monthly/setup return origin carried by expense mutations. */
 function parseExpenseSetupReturnOrigin(formData: FormData): SetupReturnOrigin | null {
@@ -127,10 +143,30 @@ function redirectToExpenses(
   redirect(expensesPath(businessId, status, returnOrigin));
 }
 
+/** Revalidates expense-dependent surfaces and returns creation to its allow-listed destination. */
+function redirectAfterExpenseCreation(
+  businessId: string,
+  status: string,
+  destination: ExpenseMutationDestination,
+  returnOrigin?: SetupReturnOrigin | null,
+): never {
+  if (destination === "setup") {
+    revalidatePath("/businesses");
+    revalidatePath(`/businesses/${businessId}`);
+    revalidatePath(`/businesses/${businessId}/expenses`);
+    revalidatePath(`/businesses/${businessId}/monthly`);
+    revalidatePath(buildBusinessSetupHref(businessId));
+    redirect(setupExpensesPath(businessId, status));
+  }
+
+  redirectToExpenses(businessId, status, returnOrigin);
+}
+
 export async function createExpenseItem(formData: FormData) {
   await requireAuthContext();
 
-  const returnOrigin = parseExpenseSetupReturnOrigin(formData);
+  const destination = parseExpenseMutationDestination(formData);
+  const returnOrigin = destination === "workspace" ? parseExpenseSetupReturnOrigin(formData) : null;
 
   const businessId = parseResourceId(formData.get("business_id"));
   const name = normalizeExpenseName(formData.get("name"));
@@ -142,8 +178,13 @@ export async function createExpenseItem(formData: FormData) {
     redirect("/businesses");
   }
 
-  if (!name || !category || !costBehavior || !creationRequestId) {
-    redirect(expensesPath(businessId, "invalid", returnOrigin));
+  if (!destination || !name || !category || !costBehavior || !creationRequestId) {
+    const invalidDestination = destination ?? "workspace";
+    redirect(
+      invalidDestination === "setup"
+        ? setupExpensesPath(businessId, "invalid")
+        : expensesPath(businessId, "invalid", returnOrigin),
+    );
   }
 
   const supabase = await createSupabaseServerClient();
@@ -156,10 +197,14 @@ export async function createExpenseItem(formData: FormData) {
   });
 
   if (!error || error.code === "23505") {
-    return redirectToExpenses(businessId, "created", returnOrigin);
+    return redirectAfterExpenseCreation(businessId, "created", destination, returnOrigin);
   }
 
-  redirect(expensesPath(businessId, "create-failed", returnOrigin));
+  redirect(
+    destination === "setup"
+      ? setupExpensesPath(businessId, "create-failed")
+      : expensesPath(businessId, "create-failed", returnOrigin),
+  );
 }
 
 export async function updateExpenseItem(formData: FormData) {

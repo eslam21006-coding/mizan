@@ -570,3 +570,271 @@ a.stepLink:focus-visible,
     flex-direction: column;
   }
 }
+
+
+.expenseSetupIntro {
+  margin-top: 18px;
+}
+
+.expenseSetupIntro h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.expenseSetupIntro p,
+.expenseCategoryHeader p,
+.expenseCategoryEmpty,
+.expenseSetupPendingNote {
+  margin: 7px 0 0;
+  color: var(--text-soft);
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.expenseCategoryGrid {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.expenseCategoryCard {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 13px;
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+}
+
+.expenseCategoryHeader {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.expenseCategoryHeader > div {
+  min-width: 0;
+}
+
+.expenseCategoryHeader h3 {
+  margin: 0;
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.expenseActiveCount {
+  flex: 0 0 auto;
+  padding: 4px 7px;
+  color: var(--text-faint);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.expenseExamples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.expenseExamples li {
+  max-width: 100%;
+  padding: 4px 7px;
+  color: var(--text-soft);
+  background: var(--surface-soft);
+  border-radius: 999px;
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+.expenseSetupList {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.expenseSetupItem {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 10px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.expenseSetupName {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.expenseCategoryEmpty {
+  margin: 0;
+}
+
+.expenseCategoryActions {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 2px;
+}
+
+.expenseNoneChoice {
+  min-width: 0;
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  color: var(--text-soft);
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.expenseNoneChoice:hover {
+  border-color: var(--border-strong);
+}
+
+.expenseNoneChoiceSelected {
+  color: var(--brand-strong);
+  background: var(--brand-soft);
+  border-color: var(--brand);
+}
+
+.expenseNoneChoice input {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  accent-color: var(--brand);
+}
+
+.expenseNoneChoice span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.expenseSetupPendingNote {
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+}
+
+@media (max-width: 760px) {
+  .expenseCategoryGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .expenseCategoryCard {
+    padding: 14px;
+  }
+
+  .expenseCategoryHeader,
+  .expenseSetupItem {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .expenseCategoryActions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .expenseCategoryActions > *,
+  .expenseNoneChoice {
+    width: 100%;
+  }
+}
+
+
+.expenseReviewedNone {
+  margin: 0;
+  padding: 9px 10px;
+  color: #176b58;
+  background: #e8f6f1;
+  border: 1px solid #cbe8df;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.expenseReviewForm {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+
+.expenseReviewForm .expenseSetupPendingNote {
+  flex: 1 1 auto;
+  margin: 0;
+}
+
+.expenseReviewButton {
+  min-height: 44px;
+  flex: 0 0 auto;
+  padding: 10px 16px;
+  color: #fff;
+  background: var(--brand);
+  border: 1px solid var(--brand);
+  border-radius: 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.expenseReviewButton:hover {
+  background: var(--brand-strong);
+  border-color: var(--brand-strong);
+}
+
+.expenseReviewButton:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 520px) {
+  .expenseReviewForm {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .expenseReviewButton {
+    width: 100%;
+  }
+}

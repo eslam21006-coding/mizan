@@ -22,6 +22,8 @@ type ExpenseDrawerLauncherProps = {
   mode: "create" | "edit";
   creationRequestId?: string;
   expense?: ExpenseDrawerItem;
+  destination?: "workspace" | "setup";
+  fixedCategory?: string;
 };
 
 /** Preserves the validated N26/N27 setup-return metadata through drawer form submissions. */
@@ -90,6 +92,8 @@ export function ExpenseDrawerLauncher({
   mode,
   creationRequestId,
   expense,
+  destination = "workspace",
+  fixedCategory,
 }: ExpenseDrawerLauncherProps) {
   const dialogRef = useRef<HTMLDialogElement>(null);
   const openerRef = useRef<HTMLButtonElement>(null);
@@ -113,6 +117,9 @@ export function ExpenseDrawerLauncher({
   const title = isCreate ? "إضافة مصروف جديد" : `تعديل ${expense?.name ?? "المصروف"}`;
   const triggerLabel = isCreate ? "إضافة مصروف" : `تعديل المصروف ${expense?.name ?? ""}`;
   const submitLabel = isCreate ? "إضافة المصروف" : "حفظ التعديلات";
+  const fixedCategoryOption = fixedCategory
+    ? categoryOptions.find((option) => option.value === fixedCategory)
+    : undefined;
 
   return (
     <>
@@ -162,11 +169,14 @@ export function ExpenseDrawerLauncher({
             >
               <input type="hidden" name="business_id" value={businessId} />
               {isCreate ? (
-                <input
-                  type="hidden"
-                  name="creation_request_id"
-                  value={creationRequestId ?? ""}
-                />
+                <>
+                  <input
+                    type="hidden"
+                    name="creation_request_id"
+                    value={creationRequestId ?? ""}
+                  />
+                  <input type="hidden" name="destination" value={destination} />
+                </>
               ) : (
                 <input type="hidden" name="expense_id" value={expense?.id ?? ""} />
               )}
@@ -185,16 +195,26 @@ export function ExpenseDrawerLauncher({
                 />
               </label>
 
-              <label className={styles.field}>
-                <span>التصنيف</span>
-                <select name="category" defaultValue={expense?.category ?? "acquisition"}>
-                  {categoryOptions.map((option) => (
-                    <option value={option.value} key={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
+              {isCreate && fixedCategory ? (
+                <div className={styles.field}>
+                  <span>التصنيف</span>
+                  <input type="hidden" name="category" value={fixedCategory} />
+                  <strong className={styles.fixedValue}>
+                    {fixedCategoryOption?.label ?? fixedCategory}
+                  </strong>
+                </div>
+              ) : (
+                <label className={styles.field}>
+                  <span>التصنيف</span>
+                  <select name="category" defaultValue={expense?.category ?? "acquisition"}>
+                    {categoryOptions.map((option) => (
+                      <option value={option.value} key={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
 
               <label className={styles.field}>
                 <span>طريقة التكلفة</span>

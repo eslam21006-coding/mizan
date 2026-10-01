@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { notFound, redirect } from "next/navigation";
+import type { ExpenseCreationRequestIds } from "@/lib/business/expenses";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { loadBusinessSetup } from "@/lib/business/setup-loader";
 import {
@@ -10,6 +11,15 @@ import {
   resolveBusinessSetupResumeStep,
 } from "@/lib/business/setup-navigation";
 import { BusinessSetupShell } from "./business-setup-shell";
+
+function createExpenseCreationRequestIds(): ExpenseCreationRequestIds {
+  return {
+    acquisition: randomUUID(),
+    fulfillment: randomUUID(),
+    overhead: randomUUID(),
+    financial: randomUUID(),
+  };
+}
 
 type BusinessSetupPageProps = {
   params: Promise<{ businessId: string }>;
@@ -33,7 +43,7 @@ export default async function BusinessSetupPage({
   if (loadResult.kind === "not_found") notFound();
 
   const parsedStep = parseBusinessSetupStep(query.step);
-  const revenueStatus = typeof query.status === "string" ? query.status : null;
+  const setupStatus = typeof query.status === "string" ? query.status : null;
 
   if (loadResult.kind === "load_error") {
     return (
@@ -49,6 +59,10 @@ export default async function BusinessSetupPage({
         revenueSources={null}
         revenueCreationRequestId={null}
         revenueStatus={null}
+        expenseItems={null}
+        activeExpenseCategoryCounts={null}
+        expenseCreationRequestIds={null}
+        expenseStatus={null}
         latestSavedMonthKey={null}
         backHref={null}
         nextHref={null}
@@ -82,6 +96,10 @@ export default async function BusinessSetupPage({
         revenueSources={loadResult.revenueSources}
         revenueCreationRequestId={null}
         revenueStatus={null}
+        expenseItems={loadResult.expenseItems}
+        activeExpenseCategoryCounts={loadResult.activeExpenseCategoryCounts}
+        expenseCreationRequestIds={null}
+        expenseStatus={null}
         latestSavedMonthKey={loadResult.latestSavedMonthKey}
         backHref={null}
         nextHref={null}
@@ -116,7 +134,15 @@ export default async function BusinessSetupPage({
       revenueCreationRequestId={
         currentStep === "revenue" && loadResult.canManage ? randomUUID() : null
       }
-      revenueStatus={currentStep === "revenue" ? revenueStatus : null}
+      revenueStatus={currentStep === "revenue" ? setupStatus : null}
+      expenseItems={loadResult.expenseItems}
+      activeExpenseCategoryCounts={loadResult.activeExpenseCategoryCounts}
+      expenseCreationRequestIds={
+        currentStep === "expenses" && loadResult.canManage
+          ? createExpenseCreationRequestIds()
+          : null
+      }
+      expenseStatus={currentStep === "expenses" ? setupStatus : null}
       latestSavedMonthKey={loadResult.latestSavedMonthKey}
       backHref={backHref}
       nextHref={nextHref}
