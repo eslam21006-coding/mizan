@@ -8,6 +8,7 @@ import { buildBusinessSetupHref } from "@/lib/business/setup-navigation";
 import type { FirstMonthSetupResult } from "@/lib/business/first-month-setup";
 import { FirstMonthPicker } from "./first-month-picker";
 import { FirstMonthSaveForm } from "./first-month-save-form";
+import type { FirstMonthSaveState } from "./first-month-actions";
 import styles from "./first-month-setup.module.css";
 
 type FirstMonthSetupContentProps = {
@@ -18,6 +19,7 @@ type FirstMonthSetupContentProps = {
   firstMonth: FirstMonthSetupResult;
   invalidMonth: boolean;
   monthSaved?: boolean;
+  firstMonthSaveSeed?: FirstMonthSaveState;
 };
 
 /** Displays a deliberately unsaved first-month preview over the canonical Monthly entry form. */
@@ -29,6 +31,7 @@ export function FirstMonthSetupContent({
   firstMonth,
   invalidMonth,
   monthSaved = false,
+  firstMonthSaveSeed,
 }: FirstMonthSetupContentProps) {
   const monthKey = firstMonth.selectedMonthKey;
   const previous = shiftMonthKey(monthKey, -1);
@@ -132,6 +135,7 @@ export function FirstMonthSetupContent({
               monthKey={monthKey}
               currency={baseCurrency}
               firstMonth={firstMonth}
+              firstMonthSaveSeed={firstMonthSaveSeed}
             />
           ) : (
             <section className={styles.formPreview} aria-label="معاينة إدخال أول شهر">
