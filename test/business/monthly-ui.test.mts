@@ -34,7 +34,7 @@ test("Task 8 server actions validate input before calling the transactional mont
   assert.match(actions, /persistMonthlyActuals/);
   assert.match(saveService, /parseOptionalCountInput/);
   assert.match(saveService, /parseOptionalDecimalInput/);
-  assert.match(actions, /newCustomers\.value > payingCustomers\.value/);
+  assert.match(saveService, /newCustomers\.value > payingCustomers\.value/);
   assert.match(actions, /\.rpc\("save_monthly_actuals"/);
   assert.match(actions, /\.rpc\("copy_previous_month_expenses"/);
   assert.doesNotMatch(actions, /\.from\("monthly_periods"\)\.(insert|update|upsert)/);
