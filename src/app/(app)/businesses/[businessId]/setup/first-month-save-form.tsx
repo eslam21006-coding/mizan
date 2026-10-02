@@ -23,6 +23,7 @@ type Props = {
   monthKey: string;
   currency: string;
   firstMonth: FirstMonthSetupData;
+  seedState?: FirstMonthSaveState;
 };
 
 const ERROR_MESSAGES: Readonly<Record<string, string>> = {
@@ -34,8 +35,8 @@ const ERROR_MESSAGES: Readonly<Record<string, string>> = {
   "historical-required": "هذا الشهر محفوظ كتاريخ سابق؛ استخدم مسار التصحيح التاريخي بدلًا من الحفظ العادي.",
 };
 
-export function FirstMonthSaveForm({ businessId, monthKey, currency, firstMonth }: Props) {
-  const [state, formAction] = useActionState(saveFirstMonthSetup, initialState);
+export function FirstMonthSaveForm({ businessId, monthKey, currency, firstMonth, seedState }: Props) {
+  const [state, formAction] = useActionState(saveFirstMonthSetup, seedState ?? initialState);
   const draft = state.draft;
   const value = (key: string, fallback: string) =>
     Object.hasOwn(draft, key) ? draft[key] : fallback;
