@@ -43,6 +43,7 @@ type BusinessSetupShellProps = {
   expenseStatus: string | null;
   latestSavedMonthKey: string | null;
   firstMonth: FirstMonthSetupResult | null;
+  monthSaved?: boolean;
   invalidMonth?: boolean;
   backHref: string | null;
   nextHref: string | null;
@@ -70,6 +71,7 @@ export function BusinessSetupShell({
   expenseStatus,
   latestSavedMonthKey,
   firstMonth,
+  monthSaved = false,
   invalidMonth = false,
   backHref,
   nextHref,
@@ -221,6 +223,7 @@ export function BusinessSetupShell({
               canManage={canManage}
               latestSavedMonthKey={latestSavedMonthKey}
               firstMonth={firstMonth}
+              monthSaved={monthSaved}
               invalidMonth={invalidMonth}
             />
           </section>
@@ -270,6 +273,7 @@ type StepContentProps = {
   canManage: boolean;
   latestSavedMonthKey: string | null;
   firstMonth: FirstMonthSetupResult | null;
+  monthSaved?: boolean;
   invalidMonth?: boolean;
 };
 
@@ -292,6 +296,7 @@ function StepContent({
   canManage,
   latestSavedMonthKey,
   firstMonth,
+  monthSaved = false,
   invalidMonth = false,
 }: StepContentProps) {
   if (step === "business") {
@@ -364,6 +369,7 @@ function StepContent({
           canManage={canManage}
           latestSavedMonthKey={latestSavedMonthKey}
           firstMonth={firstMonth}
+          monthSaved={monthSaved}
           invalidMonth={invalidMonth}
         />
       ) : (
