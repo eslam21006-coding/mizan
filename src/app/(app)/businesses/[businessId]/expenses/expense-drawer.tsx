@@ -217,7 +217,7 @@ export function ExpenseDrawerLauncher({
               )}
 
               <label className={styles.field}>
-                <span>طريقة التكلفة</span>
+                <span>كيف تُحسب هذه التكلفة؟</span>
                 <select
                   name="cost_behavior"
                   defaultValue={expense?.cost_behavior ?? "fixed_monthly"}

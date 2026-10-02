@@ -347,7 +347,13 @@ test.describe("B07 Expense Category UX", () => {
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
     await expect(dialog.getByText("الإعلان وجلب العملاء", { exact: true })).toBeVisible();
-    await expect(dialog.getByLabel("طريقة التكلفة")).toBeVisible();
+    const behavior = dialog.getByLabel("كيف تُحسب هذه التكلفة؟");
+    await expect(behavior.locator("option")).toHaveText([
+      "مبلغ ثابت تقريبًا",
+      "تزيد مع عدد العملاء",
+      "نسبة من الإيراد",
+    ]);
+    await expect(behavior).toHaveValue("fixed_monthly");
     await expect(dialog.getByRole("combobox")).toHaveCount(1);
     await expectStableRtl(page);
     expect(errors).toEqual([]);
