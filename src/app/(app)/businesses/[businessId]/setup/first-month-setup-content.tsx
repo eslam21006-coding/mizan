@@ -135,7 +135,7 @@ export function FirstMonthSetupContent({
               monthKey={monthKey}
               currency={baseCurrency}
               firstMonth={firstMonth}
-              firstMonthSaveSeed={firstMonthSaveSeed}
+              seedState={firstMonthSaveSeed}
             />
           ) : (
             <section className={styles.formPreview} aria-label="معاينة إدخال أول شهر">
