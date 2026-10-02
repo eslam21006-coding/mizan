@@ -5,6 +5,7 @@ import { evaluateFirstMonthCompleteness } from "../../src/lib/business/first-mon
 import { assessSavedSetupMonths } from "../../src/lib/business/setup-month-readiness.ts";
 import { storedExpenseValueForDisplay } from "../../src/lib/business/monthly.ts";
 import { calculateCoreFinancials } from "../../src/lib/business/calculations.ts";
+import { parseMonthlyExpenseInput } from "../../src/lib/business/monthly-expense-input.ts";
 
 const createdAt = "2026-09-15T10:00:00Z";
 const period = (overrides = {}) => ({
@@ -108,6 +109,76 @@ test("B10 preserves the existing financial engine rather than creating a Setup-o
   assert.deepEqual(result.netCashCollected, { available: true, value: "13500" });
   assert.deepEqual(result.realNetProfit, { available: true, value: "9727.5" });
   assert.deepEqual(result.ultimateCac, { available: true, value: { numerator: "1509", denominator: "4" } });
+});
+
+test("B10 allows genuinely blank new per-customer costs, but requires a basis for a positive or zero cost", () => {
+  const base = {
+    id: "e1111111-1111-4111-8111-111111111111",
+    valueFields: [""],
+    basisFields: [""],
+    behavior: "per_customer",
+    setupDraft: true,
+    existingSavedRow: false,
+  };
+  assert.deepEqual(parseMonthlyExpenseInput(base), { kind: "skip" });
+  assert.deepEqual(parseMonthlyExpenseInput({ ...base, valueFields: ["0"] }).kind, "error");
+  assert.deepEqual(parseMonthlyExpenseInput({ ...base, valueFields: ["20"] }).kind, "error");
+  assert.deepEqual(parseMonthlyExpenseInput({ ...base, existingSavedRow: true }).kind, "error");
+  const zeroWithBasis = parseMonthlyExpenseInput({
+    ...base, valueFields: ["0"], basisFields: ["total_paying_customers"],
+  });
+  assert.deepEqual(zeroWithBasis, {
+    kind: "entry",
+    entry: {
+      expense_item_id: base.id,
+      display_value: "0",
+      customer_count_basis: "total_paying_customers",
+    },
+  });
+  assert.equal(parseMonthlyExpenseInput({ ...base, setupDraft: false }).kind, "entry");
+});
+
+test("B10 rejects malformed, negative, duplicated and inconsistent submitted expense fields", () => {
+  const base = {
+    id: "e1111111-1111-4111-8111-111111111111",
+    valueFields: ["3.5"],
+    basisFields: [],
+    behavior: "percentage_revenue",
+    setupDraft: true,
+    existingSavedRow: false,
+  };
+  for (const valueFields of [["-1"], ["3.5", "3.7"], ["1,2"], ["1.123456789"]]) {
+    const result = parseMonthlyExpenseInput({ ...base, valueFields });
+    assert.equal(result.kind, "error");
+    if (result.kind === "error") assert.equal(result.field, `expense_value_${base.id}`);
+  }
+  for (const basisFields of [["new_customers"], ["not_a_basis"], ["", ""]]) {
+    const result = parseMonthlyExpenseInput({ ...base, basisFields });
+    assert.equal(result.kind, "error");
+    if (result.kind === "error") assert.equal(result.field, `expense_basis_${base.id}`);
+  }
+  assert.deepEqual(parseMonthlyExpenseInput(base), {
+    kind: "entry",
+    entry: { expense_item_id: base.id, display_value: "3.5", customer_count_basis: null },
+  });
+});
+
+test("B10 keeps saved historical expense behavior when live definitions change", () => {
+  const original = {
+    id: "e1111111-1111-4111-8111-111111111111",
+    valueFields: ["20"],
+    basisFields: [],
+    behavior: "per_customer",
+    setupDraft: true,
+    existingSavedRow: true,
+  };
+  const missingBasis = parseMonthlyExpenseInput(original);
+  assert.equal(missingBasis.kind, "error");
+  const valid = parseMonthlyExpenseInput({
+    ...original, basisFields: ["new_customers"],
+  });
+  assert.equal(valid.kind, "entry");
+  if (valid.kind === "entry") assert.equal(valid.entry.customer_count_basis, "new_customers");
 });
 
 const actions = await readFile(new URL("../../src/app/(app)/businesses/[businessId]/monthly/actions.ts", import.meta.url), "utf8");
