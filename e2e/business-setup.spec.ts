@@ -375,7 +375,7 @@ test.describe("B09 first-month wizard shell", () => {
 
     await expect(preview.getByRole("heading", { name: "الإيرادات والمرتجعات" })).toBeVisible();
     await expect(preview.getByRole("heading", { name: "العملاء", exact: true })).toBeVisible();
-    await expect(preview.getByRole("heading", { name: "المصاريف" })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "المصاريف", exact: true })).toBeVisible();
     await expect(preview.getByLabel("الإيراد المحصل — الكورس الأساسي")).toHaveValue("");
     await expect(preview.getByLabel("المرتجعات — الكورس الأساسي")).toHaveValue("");
     await expect(preview.getByLabel("Meta Ads — القيمة الشهرية")).toHaveValue("");
