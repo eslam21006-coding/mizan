@@ -123,7 +123,7 @@ export function FirstMonthSetupContent({
 
           {firstMonth.payingCustomersDerived && !firstMonth.newCustomersDerived && (
             <p className={styles.trustNotice} role="note">
-              إجمالي العملاء الدافعين محسوب من التحصيلات المستوردة. العملاء الجدد ما زالوا إدخالًا يدويًا لأن اكتمال تاريخ المعاملات لم يُؤكد.
+              إجمالي العملاء الذين دفعوا خلال الشهر محسوب من التحصيلات المستوردة. العملاء الجدد ما زالوا إدخالًا يدويًا لأن اكتمال تاريخ المعاملات لم يُؤكد.
             </p>
           )}
 
