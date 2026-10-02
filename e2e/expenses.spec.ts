@@ -63,19 +63,19 @@ test.describe("Task 7 expense structure", () => {
 
     await page.getByLabel("اسم المصروف").fill(expenseName);
     await page.getByLabel("التصنيف").first().selectOption("acquisition");
-    await page.getByLabel("طريقة التكلفة").first().selectOption("fixed_monthly");
+    await page.getByLabel("كيف تُحسب هذه التكلفة؟").first().selectOption("fixed_monthly");
     await page.getByRole("button", { name: "إضافة المصروف" }).click();
 
     await expect(page.getByRole("status")).toContainText("تمت إضافة بند المصروف");
     const createdCard = expenseCard(page, expenseName);
     await expect(createdCard).toHaveCount(1);
     await expect(createdCard).toContainText("اكتساب العملاء");
-    await expect(createdCard).toContainText("ثابت شهريًا");
+    await expect(createdCard).toContainText("مبلغ ثابت تقريبًا");
     await expect(createdCard).toContainText("تكلفة ثابتة");
 
     await createdCard.getByLabel("الاسم").fill(updatedName);
     await createdCard.getByLabel("التصنيف").selectOption("financial");
-    await createdCard.getByLabel("طريقة التكلفة").selectOption("percentage_revenue");
+    await createdCard.getByLabel("كيف تُحسب هذه التكلفة؟").selectOption("percentage_revenue");
     await createdCard.getByRole("checkbox").uncheck();
     await createdCard.getByRole("button", { name: "حفظ التعديلات" }).click();
 
