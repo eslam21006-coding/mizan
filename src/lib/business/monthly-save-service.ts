@@ -3,12 +3,12 @@ import "server-only";
 import { requireAuthContext } from "@/lib/auth/context";
 import {
   normalizeAdjustmentNote,
-  parseCustomerCountBasis,
   parseMonthKey,
   parseOptionalCountInput,
   parseOptionalDecimalInput,
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import { parseMonthlyExpenseInput } from "@/lib/business/monthly-expense-input";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type MonthlySaveErrorCode =
@@ -165,38 +165,21 @@ export async function persistMonthlyActuals(
     customer_count_basis: "new_customers" | "total_paying_customers" | null;
   }> = [];
   for (const id of expenseIds) {
-    const amount = parseOptionalDecimalInput(formData.get(`expense_value_${id}`));
-    const basisValues = formData.getAll(`expense_basis_${id}`);
-    const rawBasis = basisValues.length <= 1 && typeof basisValues[0] !== "object"
-      ? String(basisValues[0] ?? "").trim()
-      : null;
-    const basis = rawBasis ? parseCustomerCountBasis(rawBasis) : null;
-    if (!amount.ok) fields[`expense_value_${id}`] = "أدخل تكلفة غير سالبة.";
-    if (rawBasis === null || (rawBasis && !basis)) {
-      fields[`expense_basis_${id}`] = "اختر أساسًا صحيحًا لعدد العملاء.";
-    }
-    if (!amount.ok || rawBasis === null || (rawBasis && !basis)) continue;
-    const behavior = existingExpenseBehavior.get(id) ?? configuredExpenseBehavior.get(id);
-    if (options.setupDraft && behavior === "per_customer" && amount.value !== null && !basis) {
-      fields[`expense_basis_${id}`] = "اختر أساس عدد العملاء لهذا المصروف.";
-      continue;
-    }
-    if (options.setupDraft && behavior !== "per_customer" && basis) {
-      fields[`expense_basis_${id}`] = "أساس العملاء صالح فقط للمصروفات التي تزيد مع العملاء.";
-      continue;
-    }
-    if (amount.value !== null) meaningful = true;
-    if (options.setupDraft && behavior === "per_customer" && amount.value === null && !basis) {
-      if (existingExpenseIds.has(id)) {
-        fields[`expense_basis_${id}`] = "هذا المصروف محفوظ بالفعل؛ اختر أساسه لحفظ التعديل.";
-      }
-      continue;
-    }
-    expenseEntries.push({
-      expense_item_id: id,
-      display_value: amount.value,
-      customer_count_basis: basis,
+    const parsed = parseMonthlyExpenseInput({
+      id,
+      valueFields: formData.getAll(`expense_value_${id}`),
+      basisFields: formData.getAll(`expense_basis_${id}`),
+      behavior: existingExpenseBehavior.get(id) ?? configuredExpenseBehavior.get(id) ?? null,
+      setupDraft: options.setupDraft === true,
+      existingSavedRow: existingExpenseIds.has(id),
     });
+    if (parsed.kind === "error") {
+      fields[parsed.field] = parsed.message;
+      continue;
+    }
+    if (parsed.kind === "skip") continue;
+    if (parsed.entry.display_value !== null) meaningful = true;
+    expenseEntries.push(parsed.entry);
   }
   if (Object.keys(fields).length) return fail("invalid-input", fields);
   if (options.setupDraft && !meaningful) return fail("blank-month", {
