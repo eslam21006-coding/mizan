@@ -3,13 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAuthContext } from "@/lib/auth/context";
-import {
-  normalizeAdjustmentNote,
-  parseCustomerCountBasis,
-  parseMonthKey,
-  parseOptionalCountInput,
-  parseOptionalDecimalInput,
-} from "@/lib/business/monthly";
+import { parseMonthKey } from "@/lib/business/monthly";
+import { persistMonthlyActuals } from "@/lib/business/monthly-save-service";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import {
   parseMonthlyExternalReturnOrigin,
@@ -157,118 +152,21 @@ function redirectMonthly(
   redirect(monthlyPath(businessId, monthKey, status, undefined, returnOrigin));
 }
 
-/** Parses a submitted resource-id list and rejects duplicates or malformed identifiers. */
-function uniqueResourceIds(values: FormDataEntryValue[]) {
-  const ids: string[] = [];
-  const seen = new Set<string>();
-
-  for (const value of values) {
-    const id = parseResourceId(value);
-    if (!id || seen.has(id)) return null;
-    seen.add(id);
-    ids.push(id);
-  }
-
-  return ids;
-}
-
-/** Validates and atomically persists one month's actual revenue, expenses, and customer inputs. */
+/** Preserves the established Monthly destination while using the same validated save as Setup. */
 export async function saveMonthlyActuals(formData: FormData) {
-  await requireAuthContext();
-
-  const businessId = parseResourceId(formData.get("business_id"));
-  const month = parseMonthKey(formData.get("month"));
-
-  if (!businessId) redirect("/businesses");
-  if (!month) redirect(`/businesses/${businessId}/monthly?status=invalid-month`);
-
   const returnOrigin = parseMonthlyReturnOrigin(formData);
-  const newCustomers = parseOptionalCountInput(formData.get("new_customers"));
-  const payingCustomers = parseOptionalCountInput(formData.get("total_paying_customers"));
-  const unallocatedGross = parseOptionalDecimalInput(formData.get("unallocated_gross"));
-  const unallocatedRefunds = parseOptionalDecimalInput(formData.get("unallocated_refunds"));
-  const adjustmentNote = normalizeAdjustmentNote(formData.get("adjustment_note"));
-
-  if (
-    !newCustomers.ok ||
-    !payingCustomers.ok ||
-    !unallocatedGross.ok ||
-    !unallocatedRefunds.ok ||
-    adjustmentNote === null
-  ) {
-    redirectMonthly(businessId, month.monthKey, "invalid-input", returnOrigin);
+  const result = await persistMonthlyActuals(formData);
+  if (!result.businessId) redirect("/businesses");
+  if (!result.monthKey) {
+    redirect(`/businesses/${result.businessId}/monthly?status=invalid-month`);
   }
-
-  if (
-    newCustomers.value !== null &&
-    payingCustomers.value !== null &&
-    newCustomers.value > payingCustomers.value
-  ) {
-    redirectMonthly(businessId, month.monthKey, "invalid-customers", returnOrigin);
-  }
-
-  const revenueStreamIds = uniqueResourceIds(formData.getAll("revenue_stream_id"));
-  const expenseItemIds = uniqueResourceIds(formData.getAll("expense_item_id"));
-  if (!revenueStreamIds || !expenseItemIds) {
-    redirectMonthly(businessId, month.monthKey, "invalid-input", returnOrigin);
-  }
-
-  const revenueEntries = [];
-  for (const streamId of revenueStreamIds) {
-    const gross = parseOptionalDecimalInput(formData.get(`gross_${streamId}`));
-    const refunds = parseOptionalDecimalInput(formData.get(`refund_${streamId}`));
-    if (!gross.ok || !refunds.ok) {
-      redirectMonthly(businessId, month.monthKey, "invalid-input", returnOrigin);
+  if (!result.ok) {
+    if (result.code === "historical-required") {
+      redirectHistoricalCorrection(result.businessId, result.monthKey, returnOrigin);
     }
-
-    revenueEntries.push({
-      revenue_stream_id: streamId,
-      gross_cash_collected: gross.value,
-      refunds: refunds.value,
-    });
+    redirectMonthly(result.businessId, result.monthKey, result.code, returnOrigin);
   }
-
-  const expenseEntries = [];
-  for (const expenseId of expenseItemIds) {
-    const displayValue = parseOptionalDecimalInput(formData.get(`expense_value_${expenseId}`));
-    if (!displayValue.ok) {
-      redirectMonthly(businessId, month.monthKey, "invalid-input", returnOrigin);
-    }
-
-    const rawBasis = String(formData.get(`expense_basis_${expenseId}`) ?? "").trim();
-    const basis = rawBasis ? parseCustomerCountBasis(rawBasis) : null;
-    if (rawBasis && !basis) {
-      redirectMonthly(businessId, month.monthKey, "invalid-input", returnOrigin);
-    }
-
-    expenseEntries.push({
-      expense_item_id: expenseId,
-      display_value: displayValue.value,
-      customer_count_basis: basis,
-    });
-  }
-
-  const supabase = await createSupabaseServerClient();
-  const { error } = await supabase.rpc("save_monthly_actuals", {
-    target_business_id: businessId,
-    target_month_start: month.monthStart,
-    target_new_customers: newCustomers.value,
-    target_total_paying_customers: payingCustomers.value,
-    target_unallocated_gross: unallocatedGross.value,
-    target_unallocated_refunds: unallocatedRefunds.value,
-    target_adjustment_note: adjustmentNote,
-    target_revenue_entries: revenueEntries,
-    target_expense_entries: expenseEntries,
-  });
-
-  if (error) {
-    if (error.message.includes("explicit historical correction workflow")) {
-      redirectHistoricalCorrection(businessId, month.monthKey, returnOrigin);
-    }
-    redirectMonthly(businessId, month.monthKey, "save-failed", returnOrigin);
-  }
-
-  redirectMonthly(businessId, month.monthKey, "saved", returnOrigin);
+  redirectMonthly(result.businessId, result.monthKey, "saved", returnOrigin);
 }
 
 /** Copies the previous month's expense inputs into the selected month without changing other actuals. */
