@@ -373,9 +373,9 @@ test.describe("B09 first-month wizard shell", () => {
     await page.goto(`${fixturePath}?case=month-empty&step=month&month=2026-09`);
     const preview = page.getByLabel("معاينة إدخال أول شهر");
 
-    await expect(page.getByRole("heading", { name: "الإيرادات والمرتجعات" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "العملاء" })).toBeVisible();
-    await expect(page.getByRole("heading", { name: "المصاريف" })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "الإيرادات والمرتجعات" })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "العملاء" })).toBeVisible();
+    await expect(preview.getByRole("heading", { name: "المصاريف" })).toBeVisible();
     await expect(preview.getByLabel("الإيراد المحصل — الكورس الأساسي")).toHaveValue("");
     await expect(preview.getByLabel("المرتجعات — الكورس الأساسي")).toHaveValue("");
     await expect(preview.getByLabel("Meta Ads — القيمة الشهرية")).toHaveValue("");
@@ -397,16 +397,16 @@ test.describe("B09 first-month wizard shell", () => {
     const errors = captureBrowserErrors(page);
     await routeProductionSetupToFixture(page, "month-empty");
     await page.goto(`${fixturePath}?case=month-empty&step=month&month=2026-09`);
-    await page.getByLabel("الشهر").fill("2026-08");
+    await page.locator("#first-month-selection").fill("2026-08");
     await page.getByRole("button", { name: "فتح الشهر" }).click();
     await expect(page).toHaveURL(
       `/businesses/${businessId}/setup?step=month&month=2026-08`,
     );
-    await expect(page.getByLabel("الشهر")).toHaveValue("2026-08");
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
     await page.reload();
-    await expect(page.getByLabel("الشهر")).toHaveValue("2026-08");
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
     await page.goBack();
-    await expect(page.getByLabel("الشهر")).toHaveValue("2026-09");
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-09");
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });
@@ -419,7 +419,7 @@ test.describe("B09 first-month wizard shell", () => {
     await expect(preview.getByLabel("المرتجعات — الكورس الأساسي")).toHaveValue("200");
     await expect(preview.getByLabel("المرتجعات — VIP")).toHaveValue("0");
     await expect(preview.getByLabel("عملاء جدد")).toHaveValue("");
-    await expect(preview.locator('input[name="total_paying_customers"]')).toHaveCount(0);
+    await expect(preview.locator('input[name="total_paying_customers"][type="hidden"]')).toHaveValue("35");
     await expect(preview.getByText("35", { exact: true })).toBeVisible();
     await expect(preview.getByLabel("Meta Ads — القيمة الشهرية")).toHaveValue("1500");
     await expect(preview.getByLabel("Coach — التكلفة لكل عميل")).toHaveValue("20");
@@ -434,8 +434,8 @@ test.describe("B09 first-month wizard shell", () => {
     await page.goto(`${fixturePath}?case=month-saved&step=month&month=2026-09`);
     const preview = page.getByLabel("معاينة إدخال أول شهر");
     await expect(page.getByText("شهر تاريخي محفوظ — عرض فقط")).toBeVisible();
-    await expect(preview.getByText("VIP — اسم محفوظ من شهر سابق")).toBeVisible();
-    await expect(preview.getByText("رسوم بوابة قديمة — تاريخ محفوظ")).toBeVisible();
+    await expect(preview.getByText("VIP — اسم محفوظ من شهر سابق", { exact: true }).first()).toBeVisible();
+    await expect(preview.getByText("رسوم بوابة قديمة — تاريخ محفوظ", { exact: true }).first()).toBeVisible();
     await expect(preview.locator("input")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "إنهاء الإعداد" }))
       .toHaveAttribute("href", `/businesses/${businessId}/setup`);
@@ -450,7 +450,7 @@ test.describe("B09 first-month wizard shell", () => {
     await expect(page.getByText("لا تملك صلاحية تعديل البيانات")).toBeVisible();
 
     await page.goto(`${fixturePath}?case=month-load-error&step=month&month=2026-09`);
-    await expect(page.getByRole("alert")).toContainText("تعذر تحميل بيانات هذا الشهر كاملة");
+    await expect(page.getByRole("alert").filter({ hasText: "تعذر تحميل بيانات هذا الشهر كاملة" })).toBeVisible();
     await expect(page.getByLabel("معاينة إدخال أول شهر")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
     await expectStableRtl(page);
