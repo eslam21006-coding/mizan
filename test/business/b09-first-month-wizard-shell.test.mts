@@ -113,11 +113,11 @@ test("B09 is a read-only data loader that reuses Monthly row mapping and custome
 });
 
 test("B09 month shell retains trusted loading while B10 enables the shared save action", () => {
-  assert.match(setupPage, /firstMonth\\?\\.kind === "loaded"/);
-  assert.match(setupPage, /resolveFirstMonthSelection\\(query\\.month/);
+  assert.match(setupPage, /firstMonth\?\.kind === "loaded"/);
+  assert.match(setupPage, /resolveFirstMonthSelection\(query\.month/);
   assert.match(firstMonthUi, /<FirstMonthSaveForm/);
   assert.match(firstMonthUi, /فتح الإدخال الشهري/);
   assert.match(firstMonthUi, /<MonthlyEntryForm/);
-  assert.match(firstMonthUi, /editable=\\{false\\}/);
-  assert.doesNotMatch(firstMonthUi, /\\.rpc\\(/);
+  assert.match(firstMonthUi, /editable=\{false\}/);
+  assert.doesNotMatch(firstMonthUi, /\.rpc\(/);
 });
