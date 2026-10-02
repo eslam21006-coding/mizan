@@ -14,6 +14,8 @@ import type {
   SetupExpenseItem,
 } from "@/lib/business/expenses";
 import type { SetupRevenueSource } from "@/lib/business/setup-loader";
+import type { FirstMonthSetupResult } from "@/lib/business/first-month-setup";
+import { parseMonthKey } from "@/lib/business/monthly";
 
 export const dynamic = "force-dynamic";
 
@@ -35,6 +37,11 @@ type FixtureCase =
   | "expenses-inactive-only"
   | "expenses-reviewed-none"
   | "expenses-read-only"
+  | "month-empty"
+  | "month-partial"
+  | "month-saved"
+  | "month-read-only"
+  | "month-load-error"
   | "load-error";
 
 const CASES: Record<
@@ -198,10 +205,113 @@ const CASES: Record<
       financial: 0,
     },
   },
+  "month-empty": {
+    revenueSourceCount: 2,
+    reviewedAt: "2026-09-30T12:00:00.000Z",
+    validMonthCount: 0,
+  },
+  "month-partial": {
+    revenueSourceCount: 2,
+    reviewedAt: "2026-09-30T12:00:00.000Z",
+    validMonthCount: 1,
+  },
+  "month-saved": {
+    revenueSourceCount: 2,
+    reviewedAt: "2026-09-30T12:00:00.000Z",
+    validMonthCount: 1,
+  },
+  "month-read-only": {
+    revenueSourceCount: 2,
+    reviewedAt: "2026-09-30T12:00:00.000Z",
+    validMonthCount: 0,
+    canManage: false,
+  },
+  "month-load-error": {
+    revenueSourceCount: 2,
+    reviewedAt: "2026-09-30T12:00:00.000Z",
+    validMonthCount: 0,
+  },
 };
 
+function fixtureFirstMonth(
+  fixtureCase: FixtureCase,
+  monthKey: string,
+): FirstMonthSetupResult {
+  if (fixtureCase === "month-load-error") {
+    return { kind: "load_error", selectedMonthKey: monthKey, currentMonthKey: "2026-10" };
+  }
+
+  const populated = fixtureCase === "month-partial" || fixtureCase === "month-saved";
+  const historical = fixtureCase === "month-saved";
+  return {
+    kind: "loaded",
+    selectedMonthKey: monthKey,
+    currentMonthKey: "2026-10",
+    hasSavedPeriod: populated,
+    isSavedHistorical: historical,
+    period: populated
+      ? {
+          new_customers: historical ? 20 : null,
+          total_paying_customers: 35,
+          unallocated_gross_cash_collected: "0",
+          unallocated_refunds: null,
+          adjustment_note: null,
+        }
+      : null,
+    revenueRows: [
+      {
+        id: "a1111111-1111-4111-8111-111111111111",
+        name: "الكورس الأساسي",
+        streamType: "other",
+        active: true,
+        gross: populated ? "5000" : "",
+        refunds: populated ? "200" : "",
+      },
+      {
+        id: "a2222222-2222-4222-8222-222222222222",
+        name: historical ? "VIP — اسم محفوظ من شهر سابق" : "VIP",
+        streamType: "other",
+        active: !historical,
+        gross: populated ? "2000" : "",
+        refunds: populated ? "0" : "",
+      },
+    ],
+    expenseRows: [
+      {
+        id: "b1111111-1111-4111-8111-111111111111",
+        name: "Meta Ads",
+        category: "acquisition",
+        behavior: "fixed_monthly",
+        active: true,
+        value: populated ? "1500" : "",
+        basis: "",
+      },
+      {
+        id: "b2222222-2222-4222-8222-222222222222",
+        name: "Coach",
+        category: "fulfillment",
+        behavior: "per_customer",
+        active: true,
+        value: populated ? "20" : "",
+        basis: populated ? "total_paying_customers" : "",
+      },
+      {
+        id: "b3333333-3333-4333-8333-333333333333",
+        name: historical ? "رسوم بوابة قديمة — تاريخ محفوظ" : "بوابة الدفع",
+        category: "financial",
+        behavior: "percentage_revenue",
+        active: !historical,
+        value: populated ? "3" : "",
+        basis: "",
+      },
+    ],
+    payingCustomersDerived: populated,
+    newCustomersDerived: historical,
+  };
+}
+
 type SetupFixturePageProps = {
-  searchParams: Promise<{ case?: string; step?: string }>;
+  searchParams: Promise<{ case?: string; step?: string; month?: string; status?: string }>;
 };
 
 /** CI-only fixture that renders the production B04 setup shell from deterministic readiness facts. */
@@ -222,6 +332,11 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     query.case === "expenses-inactive-only" ||
     query.case === "expenses-reviewed-none" ||
     query.case === "expenses-read-only" ||
+    query.case === "month-empty" ||
+    query.case === "month-partial" ||
+    query.case === "month-saved" ||
+    query.case === "month-read-only" ||
+    query.case === "month-load-error" ||
     query.case === "load-error"
       ? query.case
       : "empty";
@@ -252,7 +367,13 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
   const previousStep = currentStep ? previousBusinessSetupStep(currentStep) : null;
   const nextStep = currentStep ? nextBusinessSetupStep(currentStep) : null;
   const nextEnabled =
-    fixtureCase !== "load-error" && currentStep !== null && readiness.stepComplete[currentStep];
+    fixtureCase !== "load-error" &&
+    fixtureCase !== "month-load-error" &&
+    currentStep !== null &&
+    readiness.stepComplete[currentStep];
+  const selectedMonthKey = parseMonthKey(query.month)?.monthKey ?? "2026-09";
+  const firstMonth =
+    currentStep === "month" ? fixtureFirstMonth(fixtureCase, selectedMonthKey) : null;
   const canManage =
     fixtureCase === "load-error" ? true : (CASES[fixtureCase].canManage ?? true);
 
@@ -304,9 +425,13 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
         expenseStatus={null}
         latestSavedMonthKey={
           fixtureCase !== "load-error" && CASES[fixtureCase].validMonthCount > 0
-            ? "2026-08"
+            ? fixtureCase === "month-saved" || fixtureCase === "month-partial"
+              ? "2026-09"
+              : "2026-08"
             : null
         }
+        firstMonth={firstMonth}
+        invalidMonth={query.status === "invalid-month"}
         backHref={
           previousStep ? buildBusinessSetupHref(businessId, previousStep) : null
         }
