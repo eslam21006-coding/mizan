@@ -471,6 +471,84 @@ test.describe("B09 first-month wizard shell", () => {
   });
 });
 
+
+test.describe("B10 first-month save UX", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
+  test("new Setup draft permits an untouched per-customer basis without losing server validation", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/auth/e2e-business-setup?case=month-empty&step=month&month=2026-10");
+
+    const editor = page.getByLabel("إدخال أول شهر");
+    const basis = editor.getByLabel("أساس عدد العملاء — Coach");
+    await expect(basis).toHaveValue("");
+    await expect(basis).not.toHaveAttribute("required");
+    await editor.getByLabel("الإيراد المحصل — الكورس الأساسي").fill("5000");
+    await editor.getByLabel("Coach — التكلفة لكل عميل").fill("20");
+    await expect(page.getByRole("button", { name: "حفظ الشهر" })).toBeEnabled();
+    await expect
+      .poll(() => page.locator("form").filter({ has: editor }).evaluate((form: HTMLFormElement) => form.checkValidity()))
+      .toBe(true);
+    await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("saving a partial month reports persisted draft without falsely completing Setup", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto("/auth/e2e-business-setup?case=month-partial&step=month&month=2026-10&status=saved");
+
+    await expect(page.getByText(
+      "تم حفظ بيانات الشهر. ما زالت بعض الأرقام مطلوبة قبل اكتمال هذه الخطوة.",
+      { exact: true },
+    )).toBeVisible();
+    await expect(page.getByText("الشهر محفوظ لكنه غير مكتمل ماليًا.", { exact: false })).toBeVisible();
+    await expect(page.getByText("3 من 4 خطوات مكتملة", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
+    const editor = page.getByLabel("إدخال أول شهر");
+    await expect(editor.getByLabel("الإيراد المحصل — الكورس الأساسي")).toHaveValue("5000");
+    await expect(editor.getByLabel("المرتجعات — VIP")).toHaveValue("0");
+    await expect(editor.getByLabel("عملاء جدد")).toHaveValue("");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("saved complete month enables Finish only after canonical readiness", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto("/auth/e2e-business-setup?case=month-complete&step=month&month=2026-10&status=saved");
+
+    await expect(page.getByText(
+      "تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة.",
+      { exact: true },
+    )).toBeVisible();
+    await expect(page.getByText("4 من 4 خطوات مكتملة", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "إنهاء الإعداد" }))
+      .toHaveAttribute("href", ["/businesses", businessId, "setup"].join("/"));
+    await expect(page.getByLabel("إدخال أول شهر").getByLabel("بوابة الدفع — النسبة %")).toHaveValue("3");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("field errors keep submitted monetary values and identify the missing basis", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/auth/e2e-business-setup?case=month-error&step=month&month=2026-10");
+    const editor = page.getByLabel("إدخال أول شهر");
+
+    await expect(page.getByRole("alert").filter({ hasText: "راجع الحقول المحددة" })).toBeVisible();
+    await expect(editor.getByLabel("الإيراد المحصل — الكورس الأساسي")).toHaveValue("5000");
+    await expect(editor.getByLabel("Coach — التكلفة لكل عميل")).toHaveValue("20");
+    const basis = editor.getByLabel("أساس عدد العملاء — Coach");
+    await expect(basis).toHaveAttribute("aria-invalid", "true");
+    await expect(editor.getByRole("alert").filter({ hasText: "اختر أساس عدد العملاء" })).toBeVisible();
+    await basis.selectOption("total_paying_customers");
+    await expect(basis).toHaveValue("total_paying_customers");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+});
+
 test.describe("B06 live Money-In handoff", () => {
   test.skip(!hasLiveAuth, "Requires the dedicated Mizan E2E email/password account");
 
