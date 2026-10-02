@@ -120,12 +120,12 @@ export const EXPENSE_COST_BEHAVIOR_OPTIONS: ReadonlyArray<{
 }> = [
   {
     value: "fixed_monthly",
-    label: "ثابت شهريًا",
+    label: "مبلغ ثابت تقريبًا",
     description: "تكلفة موجودة للشهر سواء زاد عدد العملاء أو قل.",
   },
   {
     value: "per_customer",
-    label: "لكل عميل",
+    label: "تزيد مع عدد العملاء",
     description: "تكلفة متغيرة ترتبط بعدد العملاء الذين تخدمهم.",
   },
   {
