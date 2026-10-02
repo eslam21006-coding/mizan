@@ -1,5 +1,7 @@
 import "server-only";
 
+import { evaluateFirstMonthCompleteness, type MonthCompleteness } from "./first-month-completeness.ts";
+
 import { loadTransactionDerivedMonthlyCustomerCounts } from "@/lib/business/monthly-customer-counts";
 import {
   buildMonthlyEntryRows,
@@ -18,6 +20,7 @@ export type FirstMonthSetupData = {
   selectedMonthKey: string;
   currentMonthKey: string;
   hasSavedPeriod: boolean;
+  completeness?: MonthCompleteness;
   isSavedHistorical: boolean;
   period: MonthlyPeriodValues;
   revenueRows: RevenueInputRow[];
@@ -50,7 +53,7 @@ export async function loadFirstMonthSetup(
     supabase
       .from("monthly_periods")
       .select(
-        "id,new_customers,total_paying_customers,unallocated_gross_cash_collected,unallocated_refunds,adjustment_note",
+        "id,created_at,new_customers,total_paying_customers,unallocated_gross_cash_collected,unallocated_refunds,adjustment_note",
       )
       .eq("business_id", businessId)
       .eq("month_start", month.monthStart)
@@ -114,19 +117,39 @@ export async function loadFirstMonthSetup(
       }
     : period;
 
+  const streams = streamsResult.data ?? [];
+  const expenses = expensesResult.data ?? [];
+  const rows = buildMonthlyEntryRows({ streams, expenses, revenueEntries, expenseEntries });
+  const applicableRows = period
+    ? buildMonthlyEntryRows({
+        streams: streams.filter((stream) =>
+          stream.created_at <= period.created_at ||
+          revenueEntries.some((entry) => entry.revenue_stream_id === stream.id),
+        ),
+        expenses: expenses.filter((expense) =>
+          expense.created_at <= period.created_at ||
+          expenseEntries.some((entry) => entry.expense_item_id === expense.id),
+        ),
+        revenueEntries,
+        expenseEntries,
+      })
+    : rows;
+  const completeness = evaluateFirstMonthCompleteness({
+    hasSavedPeriod: Boolean(period),
+    period: effectivePeriod,
+    revenueRows: applicableRows.revenueRows,
+    expenseRows: applicableRows.expenseRows,
+  });
+
   return {
     kind: "loaded",
     selectedMonthKey: month.monthKey,
+    completeness,
     currentMonthKey,
     hasSavedPeriod: Boolean(period),
     isSavedHistorical: month.monthKey < currentMonthKey && Boolean(period),
     period: effectivePeriod,
-    ...buildMonthlyEntryRows({
-      streams: streamsResult.data ?? [],
-      expenses: expensesResult.data ?? [],
-      revenueEntries,
-      expenseEntries,
-    }),
+    ...rows,
     payingCustomersDerived,
     newCustomersDerived,
   };
