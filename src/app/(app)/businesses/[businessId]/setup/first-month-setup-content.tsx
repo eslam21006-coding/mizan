@@ -6,6 +6,7 @@ import {
 } from "@/lib/business/monthly";
 import { buildBusinessSetupHref } from "@/lib/business/setup-navigation";
 import type { FirstMonthSetupResult } from "@/lib/business/first-month-setup";
+import { FirstMonthPicker } from "./first-month-picker";
 import styles from "./first-month-setup.module.css";
 
 type FirstMonthSetupContentProps = {
@@ -61,24 +62,7 @@ export function FirstMonthSetupContent({
             <Link href={monthHref(nextMonth)} className={styles.monthLink}>الشهر التالي</Link>
           ) : <span />}
         </div>
-        <form method="get" action={buildBusinessSetupHref(businessId)} className={styles.monthPicker}>
-          <input type="hidden" name="step" value="month" />
-          <label htmlFor="first-month-selection">انتقل مباشرة إلى شهر</label>
-          <div className={styles.monthPickerControls}>
-            <input
-              id="first-month-selection"
-              name="month"
-              type="month"
-              min="2000-01"
-              max="2200-12"
-              required
-              defaultValue={monthKey}
-              key={monthKey}
-              aria-label="الشهر"
-            />
-            <button type="submit">فتح الشهر</button>
-          </div>
-        </form>
+        <FirstMonthPicker businessId={businessId} monthKey={monthKey} />
       </section>
 
       {firstMonth.kind === "load_error" ? (
