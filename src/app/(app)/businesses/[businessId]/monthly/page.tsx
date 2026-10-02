@@ -482,7 +482,8 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
               revenueRows={revenueRows}
               expenseRows={expenseRows}
               period={effectivePeriod}
-              customerCountsDerived={newCustomersDerived}
+              customerCountsDerived={payingCustomersDerived}
+              newCustomersDerived={newCustomersDerived}
             />
             <div className={`${styles.saveBar} ${mobileActionStyles.actionBar}`} data-editor-action-bar="monthly">
               <div>
@@ -501,7 +502,8 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
               revenueRows={revenueRows}
               expenseRows={expenseRows}
               period={effectivePeriod}
-              customerCountsDerived={newCustomersDerived}
+              customerCountsDerived={payingCustomersDerived}
+              newCustomersDerived={newCustomersDerived}
             />
             <div
               className={`${styles.saveBar} ${mobileActionStyles.actionBar} ${mobileActionStyles.readOnlyAction}`}
