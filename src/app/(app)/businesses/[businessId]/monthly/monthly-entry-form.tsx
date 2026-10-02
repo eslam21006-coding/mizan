@@ -4,32 +4,13 @@ import { useMemo, useState } from "react";
 import { parseOptionalDecimalInput } from "@/lib/business/monthly";
 import styles from "./monthly.module.css";
 
-export type RevenueInputRow = {
-  id: string;
-  name: string;
-  streamType: string;
-  active: boolean;
-  gross: string;
-  refunds: string;
-};
+import type {
+  RevenueInputRow,
+  ExpenseInputRow,
+  MonthlyPeriodValues,
+} from "@/lib/business/monthly-entry-rows";
 
-export type ExpenseInputRow = {
-  id: string;
-  name: string;
-  category: string;
-  behavior: string;
-  active: boolean;
-  value: string;
-  basis: string;
-};
-
-export type MonthlyPeriodValues = {
-  new_customers?: unknown;
-  total_paying_customers?: unknown;
-  unallocated_gross_cash_collected?: unknown;
-  unallocated_refunds?: unknown;
-  adjustment_note?: unknown;
-} | null;
+export type { RevenueInputRow, ExpenseInputRow, MonthlyPeriodValues } from "@/lib/business/monthly-entry-rows";
 
 const EXPENSE_SECTIONS = [
   {
@@ -317,12 +298,15 @@ function CustomersSection({
   editable,
   period,
   customerCountsDerived,
+  newCustomersDerived,
 }: {
   editable: boolean;
   period: MonthlyPeriodValues;
   customerCountsDerived: boolean;
+  newCustomersDerived: boolean;
 }) {
-  const countsEditable = editable && !customerCountsDerived;
+  const newCountsEditable = editable && !newCustomersDerived;
+  const payingCountsEditable = editable && !customerCountsDerived;
   const newCustomers = asInputValue(period?.new_customers);
   const totalPayingCustomers = asInputValue(period?.total_paying_customers);
 
@@ -332,27 +316,29 @@ function CustomersSection({
         step="2 / 3"
         title="العملاء"
         description={
-          customerCountsDerived
+          newCustomersDerived && customerCountsDerived
             ? "ميزان يحسب أعداد العملاء تلقائيًا من التحصيلات الناجحة المستوردة لهذا الشهر."
+            : customerCountsDerived
+              ? "إجمالي العملاء الدافعين محسوب من المعاملات. أدخل العملاء الجدد يدويًا حتى يكتمل سجل المعاملات."
             : "اترك الحقل فارغًا إذا لم تكن تعرف الرقم. الصفر يعني أنك متأكد أن العدد صفر."
         }
       />
+      {editable && newCustomersDerived && (
+        <input type="hidden" name="new_customers" value={newCustomers} />
+      )}
       {editable && customerCountsDerived && (
-        <>
-          <input type="hidden" name="new_customers" value={newCustomers} />
-          <input type="hidden" name="total_paying_customers" value={totalPayingCustomers} />
-        </>
+        <input type="hidden" name="total_paying_customers" value={totalPayingCustomers} />
       )}
       <div className={styles.customerGrid}>
         <InputField
-          editable={countsEditable}
+          editable={newCountsEditable}
           integer
           name="new_customers"
           label="عملاء جدد"
           value={newCustomers}
         />
         <InputField
-          editable={countsEditable}
+          editable={payingCountsEditable}
           integer
           name="total_paying_customers"
           label="إجمالي العملاء الذين دفعوا خلال الشهر"
@@ -364,7 +350,9 @@ function CustomersSection({
           <span className={styles.autoBadge}>محسوب تلقائيًا من سجل المعاملات</span>
           <strong>كل عميل يُحسب مرة واحدة مهما تعددت مدفوعاته خلال الشهر.</strong>
           <small className={styles.autoHint}>
-            العميل الجديد هو من كانت أول عملية تحصيل ناجحة وموجبة له داخل هذا الشهر. الـUpsells والتجديدات لا تجعله عميلًا جديدًا مرة أخرى.
+            {newCustomersDerived
+              ? "العميل الجديد هو من كانت أول عملية تحصيل ناجحة وموجبة له داخل هذا الشهر. الـUpsells والتجديدات لا تجعله عميلًا جديدًا مرة أخرى."
+              : "العملاء الجدد يظلون إدخالًا يدويًا إلى أن يتم تأكيد اكتمال سجل المعاملات."}
           </small>
         </div>
       ) : (
@@ -522,6 +510,7 @@ export function MonthlyEntryForm({
   expenseRows,
   period,
   customerCountsDerived = false,
+  newCustomersDerived = customerCountsDerived,
 }: {
   editable: boolean;
   currency: string;
@@ -529,6 +518,7 @@ export function MonthlyEntryForm({
   expenseRows: ExpenseInputRow[];
   period: MonthlyPeriodValues;
   customerCountsDerived?: boolean;
+  newCustomersDerived?: boolean;
 }) {
   return (
     <>
@@ -542,6 +532,7 @@ export function MonthlyEntryForm({
         editable={editable}
         period={period}
         customerCountsDerived={customerCountsDerived}
+        newCustomersDerived={newCustomersDerived}
       />
       <ExpensesSection editable={editable} currency={currency} expenseRows={expenseRows} />
     </>
