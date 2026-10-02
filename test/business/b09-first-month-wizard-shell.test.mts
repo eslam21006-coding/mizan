@@ -112,12 +112,12 @@ test("B09 is a read-only data loader that reuses Monthly row mapping and custome
   assert.doesNotMatch(firstMonthUi, /saveMonthlyActuals|save_monthly_actuals|<form action=\{/);
 });
 
-test("B09 Step 4 does not complete on draft input and has no independent save", () => {
-  assert.match(setupPage, /firstMonth\?\.kind === "loaded"/);
-  assert.match(setupPage, /resolveFirstMonthSelection\(query\.month/);
-  assert.match(firstMonthUi, /معاينة غير محفوظة/);
-  assert.match(firstMonthUi, /فتح الإدخال الشهري لحفظ الأرقام/);
+test("B09 month shell retains trusted loading while B10 enables the shared save action", () => {
+  assert.match(setupPage, /firstMonth\\?\\.kind === "loaded"/);
+  assert.match(setupPage, /resolveFirstMonthSelection\\(query\\.month/);
+  assert.match(firstMonthUi, /<FirstMonthSaveForm/);
+  assert.match(firstMonthUi, /فتح الإدخال الشهري/);
   assert.match(firstMonthUi, /<MonthlyEntryForm/);
-  assert.match(firstMonthUi, /editable=\{canManage && !firstMonth\.isSavedHistorical\}/);
-  assert.doesNotMatch(firstMonthUi, /type="submit">حفظ|\.rpc\(/);
+  assert.match(firstMonthUi, /editable=\\{false\\}/);
+  assert.doesNotMatch(firstMonthUi, /\\.rpc\\(/);
 });
