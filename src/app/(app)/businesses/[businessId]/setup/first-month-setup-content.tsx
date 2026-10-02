@@ -127,7 +127,7 @@ export function FirstMonthSetupContent({
             </p>
           )}
 
-          <div className={styles.formPreview} aria-label="معاينة إدخال أول شهر">
+          <section className={styles.formPreview} aria-label="معاينة إدخال أول شهر">
             <MonthlyEntryForm
               key={monthKey}
               editable={canManage && !firstMonth.isSavedHistorical}
@@ -138,7 +138,7 @@ export function FirstMonthSetupContent({
               customerCountsDerived={firstMonth.payingCustomersDerived}
               newCustomersDerived={firstMonth.newCustomersDerived}
             />
-          </div>
+          </section>
         </>
       )}
     </div>
