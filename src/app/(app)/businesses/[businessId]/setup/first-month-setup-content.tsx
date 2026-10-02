@@ -146,7 +146,7 @@ export function FirstMonthSetupContent({
                 newCustomersDerived={firstMonth.newCustomersDerived}
               />
             </section>
-          )>
+          )}
         </>
       )}
     </div>
