@@ -65,6 +65,40 @@ test.describe("N28 + N29 Expense drawer", () => {
     expect(errors).toEqual([]);
   });
 
+  test("B08 uses clear Arabic behavior labels with the same submitted enum values in create and edit", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 1280, height: 900 });
+    await page.goto(fixturePath);
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+
+    await page.getByRole("button", { name: "إضافة مصروف" }).click();
+    const createDialog = page.getByRole("dialog", { name: "إضافة مصروف جديد" });
+    const behavior = createDialog.getByLabel("كيف تُحسب هذه التكلفة؟");
+    await expect(behavior.locator("option")).toHaveText([
+      "مبلغ ثابت تقريبًا",
+      "تزيد مع عدد العملاء",
+      "نسبة من الإيراد",
+    ]);
+    await expect(behavior).toHaveValue("fixed_monthly");
+    await behavior.selectOption({ label: "تزيد مع عدد العملاء" });
+    await expect(behavior).toHaveValue("per_customer");
+    await behavior.selectOption({ label: "نسبة من الإيراد" });
+    await expect(behavior).toHaveValue("percentage_revenue");
+    await expect(createDialog.getByText("طريقة التكلفة", { exact: true })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+
+    await page.getByRole("button", { name: "تعديل" }).click();
+    const editDialog = page.getByRole("dialog", { name: "تعديل إعلانات Meta" });
+    const editBehavior = editDialog.getByLabel("كيف تُحسب هذه التكلفة؟");
+    await expect(editBehavior).toHaveValue("fixed_monthly");
+    await expect(editBehavior.locator('option:checked')).toHaveText("مبلغ ثابت تقريبًا");
+    await editBehavior.selectOption("per_customer");
+    await expect(editBehavior).toHaveValue("per_customer");
+    await editBehavior.selectOption("fixed_monthly");
+    await expect(editBehavior).toHaveValue("fixed_monthly");
+    expect(errors).toEqual([]);
+  });
+
   test("uses a full-width mobile sheet without horizontal overflow", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 390, height: 844 });
@@ -75,6 +109,13 @@ test.describe("N28 + N29 Expense drawer", () => {
     await expect(dialog).toBeVisible();
 
     await expectFullScreenMobileSheet(page, dialog);
+    const behavior = dialog.getByLabel("كيف تُحسب هذه التكلفة؟");
+    await expect(behavior).toBeVisible();
+    await expect(behavior.locator("option")).toHaveText([
+      "مبلغ ثابت تقريبًا",
+      "تزيد مع عدد العملاء",
+      "نسبة من الإيراد",
+    ]);
 
     await dialog.getByLabel("اسم المصروف").focus();
     await expect(dialog.getByLabel("اسم المصروف")).toBeFocused();
