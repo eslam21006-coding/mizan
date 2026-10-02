@@ -85,11 +85,11 @@ test("Monthly actions preserve safe Return context across save and copy outcomes
   assert.match(monthlyActionsSource, /query\.set\("insight_rule", returnOrigin\.ruleId\)/);
   assert.match(
     monthlyActionsSource,
-    /redirectMonthly\(businessId, month\.monthKey, "saved", returnOrigin\)/,
+    /redirectMonthly\(result\.businessId, result\.monthKey, "saved", returnOrigin\)/,
   );
   assert.match(
     monthlyActionsSource,
-    /redirectMonthly\(businessId, month\.monthKey, "save-failed", returnOrigin\)/,
+    /redirectMonthly\(result\.businessId, result\.monthKey, result\.code, returnOrigin\)/,
   );
   assert.match(
     monthlyActionsSource,
