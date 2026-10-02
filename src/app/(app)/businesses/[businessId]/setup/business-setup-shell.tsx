@@ -16,6 +16,7 @@ import type { SetupRevenueSource } from "@/lib/business/setup-loader";
 import { ExpenseSetupContent } from "./expense-setup-content";
 import type { FirstMonthSetupResult } from "@/lib/business/first-month-setup";
 import { FirstMonthSetupContent } from "./first-month-setup-content";
+import type { FirstMonthSaveState } from "./first-month-actions";
 import styles from "./business-setup-shell.module.css";
 
 const STEP_LABELS: Readonly<Record<BusinessSetupStep, string>> = {
@@ -44,6 +45,7 @@ type BusinessSetupShellProps = {
   latestSavedMonthKey: string | null;
   firstMonth: FirstMonthSetupResult | null;
   monthSaved?: boolean;
+  firstMonthSaveSeed?: FirstMonthSaveState;
   invalidMonth?: boolean;
   backHref: string | null;
   nextHref: string | null;
@@ -72,6 +74,7 @@ export function BusinessSetupShell({
   latestSavedMonthKey,
   firstMonth,
   monthSaved = false,
+  firstMonthSaveSeed,
   invalidMonth = false,
   backHref,
   nextHref,
@@ -224,6 +227,7 @@ export function BusinessSetupShell({
               latestSavedMonthKey={latestSavedMonthKey}
               firstMonth={firstMonth}
               monthSaved={monthSaved}
+              firstMonthSaveSeed={firstMonthSaveSeed}
               invalidMonth={invalidMonth}
             />
           </section>
@@ -274,6 +278,7 @@ type StepContentProps = {
   latestSavedMonthKey: string | null;
   firstMonth: FirstMonthSetupResult | null;
   monthSaved?: boolean;
+  firstMonthSaveSeed?: FirstMonthSaveState;
   invalidMonth?: boolean;
 };
 
@@ -297,6 +302,7 @@ function StepContent({
   latestSavedMonthKey,
   firstMonth,
   monthSaved = false,
+  firstMonthSaveSeed,
   invalidMonth = false,
 }: StepContentProps) {
   if (step === "business") {
@@ -370,6 +376,7 @@ function StepContent({
           latestSavedMonthKey={latestSavedMonthKey}
           firstMonth={firstMonth}
           monthSaved={monthSaved}
+          firstMonthSaveSeed={firstMonthSaveSeed}
           invalidMonth={invalidMonth}
         />
       ) : (
