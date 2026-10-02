@@ -1,0 +1,240 @@
+.firstMonth {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+}
+
+.intro h3 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--text);
+}
+
+.intro p {
+  margin: 8px 0 0;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.8;
+}
+
+.monthChooser {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.monthNavigation {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  text-align: center;
+}
+
+.monthNavigation strong {
+  overflow-wrap: anywhere;
+  font-size: 16px;
+}
+
+.monthLink {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 9px 12px;
+  color: var(--brand-strong);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.monthLink:hover {
+  border-color: var(--brand);
+}
+
+.monthPicker {
+  min-width: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.monthPicker label {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--text-soft);
+}
+
+.monthPickerControls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.monthPickerControls input {
+  min-width: 0;
+  flex: 1 1 190px;
+  min-height: 44px;
+  padding: 9px 12px;
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  font: inherit;
+}
+
+.monthPickerControls button,
+.openMonthly {
+  min-height: 44px;
+  padding: 10px 16px;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  background: var(--brand);
+  color: #fff;
+  border: 1px solid var(--brand);
+  border-radius: 10px;
+  cursor: pointer;
+  text-decoration: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.monthPickerControls button:hover,
+.openMonthly:hover {
+  background: var(--brand-strong);
+}
+
+.monthLink:focus-visible,
+.monthPickerControls button:focus-visible,
+.monthPickerControls input:focus-visible,
+.openMonthly:focus-visible,
+.readOnlyNotice a:focus-visible,
+.existingMonth a:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.monthStatus {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.saved,
+.unsaved,
+.historical {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.saved {
+  color: #176b58;
+  background: #e8f6f1;
+}
+
+.unsaved,
+.historical {
+  color: #795408;
+  background: #fff7df;
+}
+
+.unsavedNotice,
+.readOnlyNotice,
+.existingMonth,
+.warning,
+.error,
+.trustNotice {
+  min-width: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.85;
+}
+
+.unsavedNotice {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+}
+
+.unsavedNotice strong { font-size: 14px; }
+
+.unsavedNotice p { margin: 0; color: var(--text-soft); }
+
+.readOnlyNotice a,
+.existingMonth a {
+  color: var(--brand-strong);
+  font-weight: 800;
+  margin-inline: 5px;
+}
+
+.warning,
+.trustNotice { background: #fff7df; border-color: #efdca9; }
+
+.error {
+  color: var(--danger);
+  background: #fff8f8;
+  border-color: #efc6c6;
+}
+
+.formPreview {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.formPreview > section {
+  min-width: 0;
+}
+
+@media (max-width: 760px) {
+  .monthNavigation {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+  }
+
+  .monthLink { padding: 9px 6px; }
+}
+
+@media (max-width: 520px) {
+  .monthChooser { padding: 12px; }
+
+  .monthNavigation {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .monthNavigation strong {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .monthPickerControls {
+    flex-direction: column;
+  }
+
+  .monthPickerControls input,
+  .monthPickerControls button,
+  .openMonthly {
+    flex: initial;
+    width: 100%;
+  }
+
+  .unsavedNotice,
+  .readOnlyNotice,
+  .existingMonth { padding: 12px; }
+}
