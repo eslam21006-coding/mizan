@@ -30,21 +30,6 @@ export type FirstMonthSetupResult =
   | FirstMonthSetupData
   | { kind: "load_error"; selectedMonthKey: string; currentMonthKey: string };
 
-/** Strict URL handling: absent month uses the business timezone; duplicate or invalid months are rejected. */
-export function resolveFirstMonthSelection(
-  rawMonth: string | string[] | undefined,
-  timeZone: string,
-  now = new Date(),
-) {
-  const defaultMonthKey = currentMonthKeyForTimeZone(timeZone, now);
-  if (rawMonth === undefined) return { kind: "default" as const, monthKey: defaultMonthKey };
-  if (Array.isArray(rawMonth)) return { kind: "invalid" as const, monthKey: defaultMonthKey };
-  const parsed = parseMonthKey(rawMonth);
-  return parsed
-    ? { kind: "valid" as const, monthKey: parsed.monthKey }
-    : { kind: "invalid" as const, monthKey: defaultMonthKey };
-}
-
 /**
  * Loads a selected month through the same authenticated tables, derived counts, and pure row mapper
  * as the existing Monthly editor. No mutations or setup-specific calculations occur here.
