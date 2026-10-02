@@ -129,12 +129,41 @@ export async function persistMonthlyActuals(
     });
   }
 
+  const supabase = await createSupabaseServerClient();
+  const existingExpenseBehavior = new Map<string, string>();
+  const configuredExpenseBehavior = new Map<string, string>();
+  const existingExpenseIds = new Set<string>();
+  if (options.setupDraft && expenseIds.length) {
+    const [configured, period] = await Promise.all([
+      supabase.from("expense_items").select("id,cost_behavior")
+        .eq("business_id", businessId).in("id", expenseIds),
+      supabase.from("monthly_periods").select("id")
+        .eq("business_id", businessId).eq("month_start", month.monthStart).maybeSingle(),
+    ]);
+    if (configured.error || period.error) return fail("save-failed");
+    for (const item of configured.data ?? []) configuredExpenseBehavior.set(item.id, item.cost_behavior);
+    if (configuredExpenseBehavior.size !== expenseIds.length) {
+      return fail("invalid-input", { items: "بعض المصروفات لا تتبع هذا البزنس." });
+    }
+    if (period.data?.id) {
+      const existing = await supabase.from("monthly_expense_entries")
+        .select("expense_item_id,cost_behavior_snapshot")
+        .eq("business_id", businessId)
+        .eq("monthly_period_id", period.data.id)
+        .in("expense_item_id", expenseIds);
+      if (existing.error) return fail("save-failed");
+      for (const entry of existing.data ?? []) {
+        existingExpenseIds.add(entry.expense_item_id);
+        existingExpenseBehavior.set(entry.expense_item_id, entry.cost_behavior_snapshot);
+      }
+    }
+  }
+
   const expenseEntries: Array<{
     expense_item_id: string;
     display_value: string | null;
     customer_count_basis: "new_customers" | "total_paying_customers" | null;
   }> = [];
-  const entirelyBlankExpenses: string[] = [];
   for (const id of expenseIds) {
     const amount = parseOptionalDecimalInput(formData.get(`expense_value_${id}`));
     const basisValues = formData.getAll(`expense_basis_${id}`);
@@ -147,9 +176,20 @@ export async function persistMonthlyActuals(
       fields[`expense_basis_${id}`] = "اختر أساسًا صحيحًا لعدد العملاء.";
     }
     if (!amount.ok || rawBasis === null || (rawBasis && !basis)) continue;
+    const behavior = existingExpenseBehavior.get(id) ?? configuredExpenseBehavior.get(id);
+    if (options.setupDraft && behavior === "per_customer" && amount.value !== null && !basis) {
+      fields[`expense_basis_${id}`] = "اختر أساس عدد العملاء لهذا المصروف.";
+      continue;
+    }
+    if (options.setupDraft && behavior !== "per_customer" && basis) {
+      fields[`expense_basis_${id}`] = "أساس العملاء صالح فقط للمصروفات التي تزيد مع العملاء.";
+      continue;
+    }
     if (amount.value !== null) meaningful = true;
-    if (options.setupDraft && amount.value === null && !basis) {
-      entirelyBlankExpenses.push(id);
+    if (options.setupDraft && behavior === "per_customer" && amount.value === null && !basis) {
+      if (existingExpenseIds.has(id)) {
+        fields[`expense_basis_${id}`] = "هذا المصروف محفوظ بالفعل؛ اختر أساسه لحفظ التعديل.";
+      }
       continue;
     }
     expenseEntries.push({
@@ -162,26 +202,6 @@ export async function persistMonthlyActuals(
   if (options.setupDraft && !meaningful) return fail("blank-month", {
     month: "أدخل قيمة مالية أو عدد عملاء مؤكدًا قبل حفظ المسودة.",
   });
-
-  const supabase = await createSupabaseServerClient();
-  // Do not silently skip an existing expense when a partially edited form clears both fields.
-  if (entirelyBlankExpenses.length) {
-    const existing = await supabase
-      .from("monthly_expense_entries")
-      .select("expense_item_id,monthly_periods!inner(month_start)")
-      .eq("business_id", businessId)
-      .eq("monthly_periods.month_start", month.monthStart)
-      .in("expense_item_id", entirelyBlankExpenses);
-    if (existing.error) return fail("save-failed");
-    if (existing.data?.length) {
-      return fail("invalid-input", Object.fromEntries(
-        existing.data.map((entry) => [
-          `expense_basis_${entry.expense_item_id}`,
-          "هذا المصروف محفوظ بالفعل. اختر أساسه بدلًا من إغفال صفّه.",
-        ]),
-      ));
-    }
-  }
 
   const { error } = await supabase.rpc("save_monthly_actuals", {
     target_business_id: businessId,
