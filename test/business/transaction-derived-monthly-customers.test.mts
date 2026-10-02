@@ -317,7 +317,10 @@ test("UI, dashboard, database guard, and test matrices preserve the history-comp
 
   assert.match(pageSource, /payingCustomersDerived/);
   assert.match(pageSource, /newCustomersDerived/);
-  assert.match(pageSource, /customerCountsDerived=\{newCustomersDerived\}/);
+  assert.match(pageSource, /customerCountsDerived=\{payingCustomersDerived\}/);
+  assert.match(pageSource, /newCustomersDerived=\{newCustomersDerived\}/);
+  assert.match(formSource, /newCountsEditable = editable && !newCustomersDerived/);
+  assert.match(formSource, /payingCountsEditable = editable && !customerCountsDerived/);
   assert.match(pageSource, /period\?\.new_customers/);
   assert.match(formSource, /محسوب تلقائيًا من سجل المعاملات/);
   assert.doesNotMatch(actionSource, /loadTransactionDerivedMonthlyCustomerCounts/);
