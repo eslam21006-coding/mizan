@@ -11,9 +11,9 @@ import {
   currentMonthKeyForTimeZone,
   parseMonthKey,
   shiftMonthKey,
-  storedExpenseValueForDisplay,
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
+import { buildMonthlyEntryRows } from "@/lib/business/monthly-entry-rows";
 import {
   parseMonthlyExternalReturnOrigin,
   type MonthlyExternalReturnOrigin,
@@ -28,9 +28,7 @@ import { HistoricalMonthState } from "./historical-month-state";
 import trustStyles from "./customer-history-trust.module.css";
 import {
   MonthlyEntryForm,
-  type ExpenseInputRow,
   type MonthlyPeriodValues,
-  type RevenueInputRow,
 } from "./monthly-entry-form";
 import { MonthlyNavigationShell } from "./monthly-navigation-shell";
 import styles from "./monthly.module.css";
@@ -61,11 +59,6 @@ const STATUS_MESSAGES: Record<string, string> = {
   "copy-failed": "تعذر نسخ مصروفات الشهر السابق.",
   "no-previous": "لا توجد بيانات للشهر السابق لنسخها.",
 };
-
-/** Converts nullable persisted values into monthly-form text values. */
-function asInputValue(value: unknown) {
-  return value === null || value === undefined ? "" : String(value);
-}
 
 /** Appends validated external Return context while keeping the selected Monthly month independent. */
 function appendMonthlyReturnQuery(
@@ -233,45 +226,12 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
       }
     : (period as MonthlyPeriodValues);
 
-  const revenueEntryById = new Map(
-    revenueEntries.map((entry) => [String(entry.revenue_stream_id), entry]),
-  );
-  const expenseEntryById = new Map(
-    expenseEntries.map((entry) => [String(entry.expense_item_id), entry]),
-  );
-
-  const revenueRows: RevenueInputRow[] = streams
-    .filter((stream) => stream.is_active || revenueEntryById.has(stream.id))
-    .map((stream) => {
-      const entry = revenueEntryById.get(stream.id);
-      return {
-        id: stream.id,
-        name: String(entry?.stream_name_snapshot ?? stream.name),
-        streamType: String(entry?.stream_type_snapshot ?? stream.stream_type),
-        active: stream.is_active,
-        gross: asInputValue(entry?.gross_cash_collected),
-        refunds: asInputValue(entry?.refunds),
-      };
-    });
-
-  const expenseRows: ExpenseInputRow[] = expenses
-    .filter((expense) => expense.is_active || expenseEntryById.has(expense.id))
-    .map((expense) => {
-      const entry = expenseEntryById.get(expense.id);
-      const behavior = String(entry?.cost_behavior_snapshot ?? expense.cost_behavior);
-      return {
-        id: expense.id,
-        name: String(entry?.expense_name_snapshot ?? expense.name),
-        category: String(entry?.category_snapshot ?? expense.category),
-        behavior,
-        active: expense.is_active,
-        value: storedExpenseValueForDisplay(
-          entry?.input_value as string | number | null | undefined,
-          behavior,
-        ),
-        basis: String(entry?.customer_count_basis ?? ""),
-      };
-    });
+  const { revenueRows, expenseRows } = buildMonthlyEntryRows({
+    streams,
+    expenses,
+    revenueEntries,
+    expenseEntries,
+  });
 
   const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
   const isHistorical = selectedMonth.monthKey < currentMonthKey;
@@ -520,7 +480,8 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
               revenueRows={revenueRows}
               expenseRows={expenseRows}
               period={effectivePeriod}
-              customerCountsDerived={newCustomersDerived}
+              customerCountsDerived={payingCustomersDerived}
+              newCustomersDerived={newCustomersDerived}
             />
             <div className={`${styles.saveBar} ${mobileActionStyles.actionBar}`} data-editor-action-bar="monthly">
               <div>
@@ -539,7 +500,8 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
               revenueRows={revenueRows}
               expenseRows={expenseRows}
               period={effectivePeriod}
-              customerCountsDerived={newCustomersDerived}
+              customerCountsDerived={payingCustomersDerived}
+              newCustomersDerived={newCustomersDerived}
             />
             <div
               className={`${styles.saveBar} ${mobileActionStyles.actionBar} ${mobileActionStyles.readOnlyAction}`}

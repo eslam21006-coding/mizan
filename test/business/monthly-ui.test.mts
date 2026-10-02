@@ -19,6 +19,11 @@ const entryForm = await readFile(
   "utf8",
 );
 
+const rowMapper = await readFile(
+  new URL("../../src/lib/business/monthly-entry-rows.ts", import.meta.url),
+  "utf8",
+);
+
 test("Task 8 server actions validate input before calling the transactional monthly RPCs", () => {
   assert.match(actions, /await requireAuthContext\(\)/);
   assert.match(actions, /parseOptionalCountInput/);
@@ -88,14 +93,14 @@ test("Task 8 requires an explicit Per Customer count basis instead of inferring 
   assert.match(entryForm, /<option value="" disabled>/);
   assert.match(entryForm, /اختر أساس عدد العملاء/);
   assert.match(entryForm, /aria-label=\{`أساس عدد العملاء — \$\{row\.name\}`\}[\s\S]*required/);
-  assert.match(page, /basis: String\(entry\?\.customer_count_basis \?\? ""\)/);
+  assert.match(rowMapper, /basis: String\(entry\?\.customer_count_basis \?\? ""\)/);
 });
 
 test("Task 8 page preserves historical snapshot semantics when setup metadata changes", () => {
-  assert.match(page, /entry\?\.stream_name_snapshot \?\? stream\.name/);
-  assert.match(page, /entry\?\.stream_type_snapshot \?\? stream\.stream_type/);
-  assert.match(page, /entry\?\.category_snapshot \?\? expense\.category/);
-  assert.match(page, /entry\?\.cost_behavior_snapshot \?\? expense\.cost_behavior/);
+  assert.match(rowMapper, /entry\?\.stream_name_snapshot \?\? stream\.name/);
+  assert.match(rowMapper, /entry\?\.stream_type_snapshot \?\? stream\.stream_type/);
+  assert.match(rowMapper, /entry\?\.category_snapshot \?\? expense\.category/);
+  assert.match(rowMapper, /entry\?\.cost_behavior_snapshot \?\? expense\.cost_behavior/);
 });
 
 test("Task 8 month navigation remounts uncontrolled forms so values cannot leak across months", () => {

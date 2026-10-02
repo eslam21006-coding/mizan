@@ -41,6 +41,7 @@
     "test/business/b06-money-in-setup.test.mts",
     "test/business/b07-expense-category-ux.test.mts",
     "test/business/b08-expense-behavior-ux.test.mts",
+    "test/business/b09-first-month-wizard-shell.test.mts",
     "test/business/business-readiness.test.mts",
     "test/business/monthly-comparison.test.mts",
     "test/business/historical-analytics.test.mts",

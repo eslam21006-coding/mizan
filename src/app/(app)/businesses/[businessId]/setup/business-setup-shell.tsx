@@ -14,6 +14,8 @@ import type {
 } from "@/lib/business/expenses";
 import type { SetupRevenueSource } from "@/lib/business/setup-loader";
 import { ExpenseSetupContent } from "./expense-setup-content";
+import type { FirstMonthSetupResult } from "@/lib/business/first-month-setup";
+import { FirstMonthSetupContent } from "./first-month-setup-content";
 import styles from "./business-setup-shell.module.css";
 
 const STEP_LABELS: Readonly<Record<BusinessSetupStep, string>> = {
@@ -40,6 +42,8 @@ type BusinessSetupShellProps = {
   expenseCreationRequestIds: ExpenseCreationRequestIds | null;
   expenseStatus: string | null;
   latestSavedMonthKey: string | null;
+  firstMonth: FirstMonthSetupResult | null;
+  invalidMonth?: boolean;
   backHref: string | null;
   nextHref: string | null;
   nextLabel: string;
@@ -65,6 +69,8 @@ export function BusinessSetupShell({
   expenseCreationRequestIds,
   expenseStatus,
   latestSavedMonthKey,
+  firstMonth,
+  invalidMonth = false,
   backHref,
   nextHref,
   nextLabel,
@@ -214,6 +220,8 @@ export function BusinessSetupShell({
               businessId={businessId}
               canManage={canManage}
               latestSavedMonthKey={latestSavedMonthKey}
+              firstMonth={firstMonth}
+              invalidMonth={invalidMonth}
             />
           </section>
         ) : null}
@@ -261,6 +269,8 @@ type StepContentProps = {
   businessId: string;
   canManage: boolean;
   latestSavedMonthKey: string | null;
+  firstMonth: FirstMonthSetupResult | null;
+  invalidMonth?: boolean;
 };
 
 /** Shows founder-facing status content for one B04 shell step without introducing later-step forms. */
@@ -281,6 +291,8 @@ function StepContent({
   businessId,
   canManage,
   latestSavedMonthKey,
+  firstMonth,
+  invalidMonth = false,
 }: StepContentProps) {
   if (step === "business") {
     return (
@@ -345,11 +357,20 @@ function StepContent({
   return (
     <>
       <StepPanelHeading step={step} complete={stepComplete} />
-      <p className={styles.stepDescription}>
-        {stepComplete && latestSavedMonthKey
-          ? `لديك شهر محفوظ بالفعل: ${latestSavedMonthKey}. هذه الخطوة مكتملة.`
-          : "أضف أول شهر فعلي حتى يستطيع ميزان بناء الصورة المالية للبزنس على بيانات حقيقية."}
-      </p>
+      {firstMonth ? (
+        <FirstMonthSetupContent
+          businessId={businessId}
+          baseCurrency={baseCurrency}
+          canManage={canManage}
+          latestSavedMonthKey={latestSavedMonthKey}
+          firstMonth={firstMonth}
+          invalidMonth={invalidMonth}
+        />
+      ) : (
+        <p className={styles.stepDescription} role="alert">
+          تعذر تحميل بيانات الشهر. أعد تحميل الصفحة.
+        </p>
+      )}
     </>
   );
 }

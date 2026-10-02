@@ -3,6 +3,8 @@ import { notFound, redirect } from "next/navigation";
 import type { ExpenseCreationRequestIds } from "@/lib/business/expenses";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { loadBusinessSetup } from "@/lib/business/setup-loader";
+import { resolveFirstMonthSelection } from "@/lib/business/first-month-selection";
+import { loadFirstMonthSetup } from "@/lib/business/first-month-setup";
 import {
   buildBusinessSetupHref,
   nextBusinessSetupStep,
@@ -23,7 +25,7 @@ function createExpenseCreationRequestIds(): ExpenseCreationRequestIds {
 
 type BusinessSetupPageProps = {
   params: Promise<{ businessId: string }>;
-  searchParams: Promise<{ step?: string | string[]; status?: string | string[] }>;
+  searchParams: Promise<{ step?: string | string[]; status?: string | string[]; month?: string | string[] }>;
 };
 
 /**
@@ -64,6 +66,7 @@ export default async function BusinessSetupPage({
         expenseCreationRequestIds={null}
         expenseStatus={null}
         latestSavedMonthKey={null}
+        firstMonth={null}
         backHref={null}
         nextHref={null}
         nextLabel="التالي"
@@ -101,6 +104,7 @@ export default async function BusinessSetupPage({
         expenseCreationRequestIds={null}
         expenseStatus={null}
         latestSavedMonthKey={loadResult.latestSavedMonthKey}
+        firstMonth={null}
         backHref={null}
         nextHref={null}
         nextLabel="التالي"
@@ -110,9 +114,23 @@ export default async function BusinessSetupPage({
   }
 
   const currentStep = parsedStep.step;
+  const monthSelection =
+    currentStep === "month"
+      ? resolveFirstMonthSelection(query.month, loadResult.business.timezone)
+      : null;
+  if (monthSelection && monthSelection.kind !== "valid") {
+    const monthHref = `${buildBusinessSetupHref(businessId, "month")}&month=${monthSelection.monthKey}`;
+    redirect(monthSelection.kind === "invalid" ? `${monthHref}&status=invalid-month` : monthHref);
+  }
+  const firstMonth =
+    currentStep === "month" && monthSelection
+      ? await loadFirstMonthSetup(businessId, monthSelection.monthKey, loadResult.business.timezone)
+      : null;
   const previousStep = previousBusinessSetupStep(currentStep);
   const nextStep = nextBusinessSetupStep(currentStep);
-  const nextEnabled = loadResult.readiness.stepComplete[currentStep];
+  const nextEnabled =
+    loadResult.readiness.stepComplete[currentStep] &&
+    (currentStep !== "month" || firstMonth?.kind === "loaded");
   const backHref = previousStep ? buildBusinessSetupHref(businessId, previousStep) : null;
   const nextHref = nextEnabled
     ? nextStep
@@ -144,6 +162,8 @@ export default async function BusinessSetupPage({
       }
       expenseStatus={currentStep === "expenses" ? setupStatus : null}
       latestSavedMonthKey={loadResult.latestSavedMonthKey}
+      firstMonth={firstMonth}
+      invalidMonth={currentStep === "month" && setupStatus === "invalid-month"}
       backHref={backHref}
       nextHref={nextHref}
       nextLabel={currentStep === "month" ? "إنهاء الإعداد" : "التالي"}
