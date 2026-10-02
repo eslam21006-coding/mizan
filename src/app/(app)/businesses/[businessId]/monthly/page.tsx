@@ -28,9 +28,7 @@ import { HistoricalMonthState } from "./historical-month-state";
 import trustStyles from "./customer-history-trust.module.css";
 import {
   MonthlyEntryForm,
-  type ExpenseInputRow,
   type MonthlyPeriodValues,
-  type RevenueInputRow,
 } from "./monthly-entry-form";
 import { MonthlyNavigationShell } from "./monthly-navigation-shell";
 import styles from "./monthly.module.css";
