@@ -105,6 +105,7 @@ function InputField({
   suffix,
   integer = false,
   onValueChange,
+  error,
 }: {
   editable: boolean;
   name: string;
@@ -113,6 +114,7 @@ function InputField({
   suffix?: string;
   integer?: boolean;
   onValueChange?: (value: string) => void;
+  error?: string;
 }) {
   if (!editable) {
     return (
@@ -138,10 +140,12 @@ function InputField({
           defaultValue={onValueChange ? undefined : value}
           onChange={onValueChange ? (event) => onValueChange(event.currentTarget.value) : undefined}
           aria-label={label}
+          aria-invalid={Boolean(error) || undefined}
           dir="ltr"
         />
         {suffix && <small>{suffix}</small>}
       </div>
+      {error && <small role="alert">{error}</small>}
     </label>
   );
 }
@@ -163,11 +167,13 @@ function RevenueSection({
   currency,
   revenueRows,
   period,
+  fieldErrors,
 }: {
   editable: boolean;
   currency: string;
   revenueRows: RevenueInputRow[];
   period: MonthlyPeriodValues;
+  fieldErrors?: Record<string, string>;
 }) {
   const [revenueValues, setRevenueValues] = useState(() =>
     Object.fromEntries(
@@ -220,6 +226,7 @@ function RevenueSection({
                     <InputField
                       editable={editable}
                       name={`gross_${row.id}`}
+                      error={fieldErrors?.[`gross_${row.id}`]}
                       label={`الإيراد المحصل — ${row.name}`}
                       value={editable ? current.gross : row.gross}
                       suffix={currency}
@@ -230,6 +237,7 @@ function RevenueSection({
                     <InputField
                       editable={editable}
                       name={`refund_${row.id}`}
+                      error={fieldErrors?.[`refund_${row.id}`]}
                       label={`المرتجعات — ${row.name}`}
                       value={editable ? current.refunds : row.refunds}
                       suffix={currency}
@@ -261,6 +269,7 @@ function RevenueSection({
           <InputField
             editable={editable}
             name="unallocated_gross"
+            error={fieldErrors?.unallocated_gross}
             label="إيراد محصل غير موزع على مصدر"
             value={asInputValue(period?.unallocated_gross_cash_collected)}
             suffix={currency}
@@ -268,6 +277,7 @@ function RevenueSection({
           <InputField
             editable={editable}
             name="unallocated_refunds"
+            error={fieldErrors?.unallocated_refunds}
             label="مرتجعات غير موزعة على مصدر"
             value={asInputValue(period?.unallocated_refunds)}
             suffix={currency}
@@ -299,11 +309,13 @@ function CustomersSection({
   period,
   customerCountsDerived,
   newCustomersDerived,
+  fieldErrors,
 }: {
   editable: boolean;
   period: MonthlyPeriodValues;
   customerCountsDerived: boolean;
   newCustomersDerived: boolean;
+  fieldErrors?: Record<string, string>;
 }) {
   const newCountsEditable = editable && !newCustomersDerived;
   const payingCountsEditable = editable && !customerCountsDerived;
@@ -334,6 +346,7 @@ function CustomersSection({
           editable={newCountsEditable}
           integer
           name="new_customers"
+          error={fieldErrors?.new_customers}
           label="عملاء جدد"
           value={newCustomers}
         />
@@ -341,6 +354,7 @@ function CustomersSection({
           editable={payingCountsEditable}
           integer
           name="total_paying_customers"
+          error={fieldErrors?.total_paying_customers}
           label="إجمالي العملاء الذين دفعوا خلال الشهر"
           value={totalPayingCustomers}
         />
@@ -368,10 +382,12 @@ function ExpenseValueField({
   editable,
   row,
   currency,
+  fieldErrors,
 }: {
   editable: boolean;
   row: ExpenseInputRow;
   currency: string;
+  fieldErrors?: Record<string, string>;
 }) {
   const valueLabel =
     row.behavior === "fixed_monthly"
@@ -385,6 +401,7 @@ function ExpenseValueField({
     <InputField
       editable={editable}
       name={`expense_value_${row.id}`}
+      error={fieldErrors?.[`expense_value_${row.id}`]}
       label={valueLabel}
       value={row.value}
       suffix={suffix}
@@ -392,7 +409,12 @@ function ExpenseValueField({
   );
 }
 
-function ExpenseCalculation({ editable, row }: { editable: boolean; row: ExpenseInputRow }) {
+function ExpenseCalculation({ editable, row, allowPartialExpenseBasis = false, fieldErrors }: {
+  editable: boolean;
+  row: ExpenseInputRow;
+  allowPartialExpenseBasis?: boolean;
+  fieldErrors?: Record<string, string>;
+}) {
   if (row.behavior === "fixed_monthly") {
     return (
       <div className={styles.calculationBox}>
@@ -427,7 +449,8 @@ function ExpenseCalculation({ editable, row }: { editable: boolean; row: Expense
         name={`expense_basis_${row.id}`}
         defaultValue={row.basis}
         aria-label={`أساس عدد العملاء — ${row.name}`}
-        required
+        aria-invalid={Boolean(fieldErrors?.[`expense_basis_${row.id}`]) || undefined}
+        required={!allowPartialExpenseBasis}
       >
         <option value="" disabled>
           اختر أساس عدد العملاء
@@ -436,6 +459,7 @@ function ExpenseCalculation({ editable, row }: { editable: boolean; row: Expense
         <option value="total_paying_customers">إجمالي العملاء الذين دفعوا خلال الشهر</option>
       </select>
       <small className={styles.autoHint}>الإجمالي = التكلفة لكل عميل × العدد المختار.</small>
+      {fieldErrors?.[`expense_basis_${row.id}`] && <small role="alert">{fieldErrors[`expense_basis_${row.id}`]}</small>}
     </label>
   );
 }
@@ -444,10 +468,14 @@ function ExpensesSection({
   editable,
   currency,
   expenseRows,
+  allowPartialExpenseBasis = false,
+  fieldErrors,
 }: {
   editable: boolean;
   currency: string;
   expenseRows: ExpenseInputRow[];
+  allowPartialExpenseBasis?: boolean;
+  fieldErrors?: Record<string, string>;
 }) {
   const configuredSections = EXPENSE_SECTIONS.map((section) => ({
     ...section,
@@ -485,8 +513,8 @@ function ExpensesSection({
                         {!row.active && <span className={styles.inactiveBadge}>غير نشط حاليًا</span>}
                       </div>
                     </div>
-                    <ExpenseValueField editable={editable} row={row} currency={currency} />
-                    <ExpenseCalculation editable={editable} row={row} />
+                    <ExpenseValueField editable={editable} row={row} currency={currency} fieldErrors={fieldErrors} />
+                    <ExpenseCalculation editable={editable} row={row} allowPartialExpenseBasis={allowPartialExpenseBasis} fieldErrors={fieldErrors} />
                   </div>
                 ))}
               </div>
@@ -511,6 +539,8 @@ export function MonthlyEntryForm({
   period,
   customerCountsDerived = false,
   newCustomersDerived = customerCountsDerived,
+  allowPartialExpenseBasis = false,
+  fieldErrors,
 }: {
   editable: boolean;
   currency: string;
@@ -519,6 +549,8 @@ export function MonthlyEntryForm({
   period: MonthlyPeriodValues;
   customerCountsDerived?: boolean;
   newCustomersDerived?: boolean;
+  allowPartialExpenseBasis?: boolean;
+  fieldErrors?: Record<string, string>;
 }) {
   return (
     <>
@@ -527,14 +559,16 @@ export function MonthlyEntryForm({
         currency={currency}
         revenueRows={revenueRows}
         period={period}
+        fieldErrors={fieldErrors}
       />
       <CustomersSection
         editable={editable}
         period={period}
         customerCountsDerived={customerCountsDerived}
         newCustomersDerived={newCustomersDerived}
+        fieldErrors={fieldErrors}
       />
-      <ExpensesSection editable={editable} currency={currency} expenseRows={expenseRows} />
+      <ExpensesSection editable={editable} currency={currency} expenseRows={expenseRows} allowPartialExpenseBasis={allowPartialExpenseBasis} fieldErrors={fieldErrors} />
     </>
   );
 }
