@@ -53,7 +53,8 @@ test("B06-B setup form uses conservative hidden classification and preserves exp
   assert.match(setupShellSource, /name="stream_type" value="other"/);
   assert.match(setupShellSource, /name="destination" value="setup"/);
   assert.doesNotMatch(setupShellSource, /redirect\([^)]*expenses/);
-  assert.match(setupPageSource, /nextEnabled = loadResult\.readiness\.stepComplete\[currentStep\]/);
+  assert.match(setupPageSource, /nextEnabled =\s*loadResult\.readiness\.stepComplete\[currentStep\]/);
+  assert.match(setupPageSource, /currentStep !== "month" \|\| firstMonth\?\.kind === "loaded"/);
 });
 
 test("B06-B read-only setup hides revenue mutation form while still listing sources", () => {
