@@ -13,14 +13,6 @@ export type FirstMonthSaveState = {
   draft: Record<string, string>;
 };
 
-export const INITIAL_FIRST_MONTH_SAVE_STATE: FirstMonthSaveState = {
-  attempt: 0,
-  status: "idle",
-  code: null,
-  fieldErrors: {},
-  draft: {},
-};
-
 /** Only retain primitive, business-form fields; never put unsaved financial data in a URL. */
 function preserveDraft(formData: FormData): Record<string, string> {
   const result: Record<string, string> = {};
