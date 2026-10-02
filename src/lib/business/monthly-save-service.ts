@@ -1,0 +1,204 @@
+import "server-only";
+
+import { requireAuthContext } from "@/lib/auth/context";
+import {
+  normalizeAdjustmentNote,
+  parseCustomerCountBasis,
+  parseMonthKey,
+  parseOptionalCountInput,
+  parseOptionalDecimalInput,
+} from "@/lib/business/monthly";
+import { parseResourceId } from "@/lib/business/revenue-streams";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+
+export type MonthlySaveErrorCode =
+  | "invalid-input"
+  | "invalid-month"
+  | "invalid-customers"
+  | "blank-month"
+  | "historical-required"
+  | "save-failed";
+
+export type MonthlySaveResult =
+  | { ok: true; businessId: string; monthKey: string }
+  | {
+      ok: false;
+      businessId: string | null;
+      monthKey: string | null;
+      code: MonthlySaveErrorCode;
+      fieldErrors: Record<string, string>;
+    };
+
+type MonthlySaveOptions = {
+  /** Only the new Setup flow supports omitting an entirely blank new per-customer row. */
+  setupDraft?: boolean;
+};
+
+function uniqueResourceIds(values: FormDataEntryValue[]) {
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  for (const value of values) {
+    const id = parseResourceId(value);
+    if (!id || seen.has(id)) return null;
+    seen.add(id);
+    ids.push(id);
+  }
+  return ids;
+}
+
+/** Shared validation and atomic persistence for Monthly and Setup; never trusts client row labels. */
+export async function persistMonthlyActuals(
+  formData: FormData,
+  options: MonthlySaveOptions = {},
+): Promise<MonthlySaveResult> {
+  await requireAuthContext();
+  const businessIds = formData.getAll("business_id");
+  const months = formData.getAll("month");
+  const businessId =
+    businessIds.length === 1 ? parseResourceId(businessIds[0]) : null;
+  const month = months.length === 1 ? parseMonthKey(months[0]) : null;
+
+  const fail = (
+    code: MonthlySaveErrorCode,
+    fieldErrors: Record<string, string> = {},
+  ): MonthlySaveResult => ({
+    ok: false,
+    businessId,
+    monthKey: month?.monthKey ?? null,
+    code,
+    fieldErrors,
+  });
+  if (!businessId) return fail("invalid-input", { business_id: "معرّف البزنس غير صالح." });
+  if (!month) return fail("invalid-month", { month: "الشهر غير صالح." });
+
+  const fields: Record<string, string> = {};
+  const newCustomers = parseOptionalCountInput(formData.get("new_customers"));
+  const payingCustomers = parseOptionalCountInput(formData.get("total_paying_customers"));
+  const unallocatedGross = parseOptionalDecimalInput(formData.get("unallocated_gross"));
+  const unallocatedRefunds = parseOptionalDecimalInput(formData.get("unallocated_refunds"));
+  const adjustmentNote = normalizeAdjustmentNote(formData.get("adjustment_note"));
+
+  if (!newCustomers.ok) fields.new_customers = "أدخل عددًا صحيحًا غير سالب.";
+  if (!payingCustomers.ok) fields.total_paying_customers = "أدخل عددًا صحيحًا غير سالب.";
+  if (!unallocatedGross.ok) fields.unallocated_gross = "أدخل مبلغًا غير سالب.";
+  if (!unallocatedRefunds.ok) fields.unallocated_refunds = "أدخل مبلغًا غير سالب.";
+  if (adjustmentNote === null) fields.adjustment_note = "الحد الأقصى ٥٠٠ حرف.";
+  if (Object.keys(fields).length) return fail("invalid-input", fields);
+
+  // All parsed results have been checked above; retain nullable values without inventing zeroes.
+  if (!newCustomers.ok || !payingCustomers.ok || !unallocatedGross.ok || !unallocatedRefunds.ok) {
+    return fail("invalid-input");
+  }
+  if (
+    newCustomers.value !== null &&
+    payingCustomers.value !== null &&
+    newCustomers.value > payingCustomers.value
+  ) {
+    return fail("invalid-customers", {
+      new_customers: "العملاء الجدد لا يمكن أن يزيدوا عن إجمالي العملاء الدافعين.",
+    });
+  }
+
+  const revenueIds = uniqueResourceIds(formData.getAll("revenue_stream_id"));
+  const expenseIds = uniqueResourceIds(formData.getAll("expense_item_id"));
+  if (!revenueIds || !expenseIds) return fail("invalid-input", {
+    items: "تكرار أو معرّف غير صالح في مصادر الإيراد أو المصروفات.",
+  });
+
+  let meaningful =
+    newCustomers.value !== null ||
+    payingCustomers.value !== null ||
+    unallocatedGross.value !== null ||
+    unallocatedRefunds.value !== null;
+  const revenueEntries: Array<{
+    revenue_stream_id: string;
+    gross_cash_collected: string | null;
+    refunds: string | null;
+  }> = [];
+  for (const id of revenueIds) {
+    const gross = parseOptionalDecimalInput(formData.get(`gross_${id}`));
+    const refunds = parseOptionalDecimalInput(formData.get(`refund_${id}`));
+    if (!gross.ok) fields[`gross_${id}`] = "أدخل مبلغًا صحيحًا غير سالب.";
+    if (!refunds.ok) fields[`refund_${id}`] = "أدخل مبلغًا صحيحًا غير سالب.";
+    if (!gross.ok || !refunds.ok) continue;
+    if (gross.value !== null || refunds.value !== null) meaningful = true;
+    revenueEntries.push({
+      revenue_stream_id: id,
+      gross_cash_collected: gross.value,
+      refunds: refunds.value,
+    });
+  }
+
+  const expenseEntries: Array<{
+    expense_item_id: string;
+    display_value: string | null;
+    customer_count_basis: "new_customers" | "total_paying_customers" | null;
+  }> = [];
+  const entirelyBlankExpenses: string[] = [];
+  for (const id of expenseIds) {
+    const amount = parseOptionalDecimalInput(formData.get(`expense_value_${id}`));
+    const basisValues = formData.getAll(`expense_basis_${id}`);
+    const rawBasis = basisValues.length <= 1 && typeof basisValues[0] !== "object"
+      ? String(basisValues[0] ?? "").trim()
+      : null;
+    const basis = rawBasis ? parseCustomerCountBasis(rawBasis) : null;
+    if (!amount.ok) fields[`expense_value_${id}`] = "أدخل تكلفة غير سالبة.";
+    if (rawBasis === null || (rawBasis && !basis)) {
+      fields[`expense_basis_${id}`] = "اختر أساسًا صحيحًا لعدد العملاء.";
+    }
+    if (!amount.ok || rawBasis === null || (rawBasis && !basis)) continue;
+    if (amount.value !== null) meaningful = true;
+    if (options.setupDraft && amount.value === null && !basis) {
+      entirelyBlankExpenses.push(id);
+      continue;
+    }
+    expenseEntries.push({
+      expense_item_id: id,
+      display_value: amount.value,
+      customer_count_basis: basis,
+    });
+  }
+  if (Object.keys(fields).length) return fail("invalid-input", fields);
+  if (options.setupDraft && !meaningful) return fail("blank-month", {
+    month: "أدخل قيمة مالية أو عدد عملاء مؤكدًا قبل حفظ المسودة.",
+  });
+
+  const supabase = await createSupabaseServerClient();
+  // Do not silently skip an existing expense when a partially edited form clears both fields.
+  if (entirelyBlankExpenses.length) {
+    const existing = await supabase
+      .from("monthly_expense_entries")
+      .select("expense_item_id,monthly_periods!inner(month_start)")
+      .eq("business_id", businessId)
+      .eq("monthly_periods.month_start", month.monthStart)
+      .in("expense_item_id", entirelyBlankExpenses);
+    if (existing.error) return fail("save-failed");
+    if (existing.data?.length) {
+      return fail("invalid-input", Object.fromEntries(
+        existing.data.map((entry) => [
+          `expense_basis_${entry.expense_item_id}`,
+          "هذا المصروف محفوظ بالفعل. اختر أساسه بدلًا من إغفال صفّه.",
+        ]),
+      ));
+    }
+  }
+
+  const { error } = await supabase.rpc("save_monthly_actuals", {
+    target_business_id: businessId,
+    target_month_start: month.monthStart,
+    target_new_customers: newCustomers.value,
+    target_total_paying_customers: payingCustomers.value,
+    target_unallocated_gross: unallocatedGross.value,
+    target_unallocated_refunds: unallocatedRefunds.value,
+    target_adjustment_note: adjustmentNote,
+    target_revenue_entries: revenueEntries,
+    target_expense_entries: expenseEntries,
+  });
+  if (error) {
+    if (error.message.includes("explicit historical correction workflow")) {
+      return fail("historical-required");
+    }
+    return fail("save-failed");
+  }
+  return { ok: true, businessId, monthKey: month.monthKey };
+}
