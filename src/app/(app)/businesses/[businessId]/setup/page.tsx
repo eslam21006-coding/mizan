@@ -163,6 +163,7 @@ export default async function BusinessSetupPage({
       expenseStatus={currentStep === "expenses" ? setupStatus : null}
       latestSavedMonthKey={loadResult.latestSavedMonthKey}
       firstMonth={firstMonth}
+      monthSaved={currentStep === "month" && setupStatus === "saved"}
       invalidMonth={currentStep === "month" && setupStatus === "invalid-month"}
       backHref={backHref}
       nextHref={nextHref}
