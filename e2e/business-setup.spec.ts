@@ -371,7 +371,7 @@ test.describe("B09 first-month wizard shell", () => {
   test("new month shows unsaved Monthly inputs and never marks the wizard complete", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.goto(`${fixturePath}?case=month-empty&step=month&month=2026-09`);
-    const preview = page.getByLabel("معاينة إدخال أول شهر");
+    const preview = page.getByLabel("إدخال أول شهر");
 
     await expect(preview.getByRole("heading", { name: "الإيرادات والمرتجعات" })).toBeVisible();
     await expect(preview.getByRole("heading", { name: "العملاء", exact: true })).toBeVisible();
@@ -381,8 +381,9 @@ test.describe("B09 first-month wizard shell", () => {
     await expect(preview.getByLabel("Meta Ads — القيمة الشهرية")).toHaveValue("");
     await expect(preview.getByLabel("Coach — التكلفة لكل عميل")).toHaveValue("");
     await expect(preview.getByLabel("بوابة الدفع — النسبة %")).toHaveValue("");
-    await expect(page.getByText("معاينة غير محفوظة", { exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "فتح الإدخال الشهري لحفظ الأرقام" }))
+    await expect(page.getByText("احفظ أرقامك مباشرة من هذه الخطوة", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "حفظ الشهر" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "فتح الإدخال الشهري" }))
       .toHaveAttribute("href", `/businesses/${businessId}/monthly?month=2026-09`);
     await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
 
@@ -414,7 +415,7 @@ test.describe("B09 first-month wizard shell", () => {
   test("partial month retains zero and supports derived paying/manual new customers", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.goto(`${fixturePath}?case=month-partial&step=month&month=2026-10`);
-    const preview = page.getByLabel("معاينة إدخال أول شهر");
+    const preview = page.getByLabel("إدخال أول شهر");
     await expect(preview.getByLabel("الإيراد المحصل — الكورس الأساسي")).toHaveValue("5000");
     await expect(preview.getByLabel("المرتجعات — الكورس الأساسي")).toHaveValue("200");
     await expect(preview.getByLabel("المرتجعات — VIP")).toHaveValue("0");
@@ -461,7 +462,7 @@ test.describe("B09 first-month wizard shell", () => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${fixturePath}?case=month-empty&step=month&month=2026-09`);
-    const preview = page.getByLabel("معاينة إدخال أول شهر");
+    const preview = page.getByLabel("إدخال أول شهر");
     await expect(preview.getByLabel("Meta Ads — القيمة الشهرية")).toBeVisible();
     await expect(preview.getByLabel("Coach — التكلفة لكل عميل")).toBeVisible();
     await expect(preview.getByLabel("بوابة الدفع — النسبة %")).toBeVisible();
