@@ -17,6 +17,7 @@ type FirstMonthSetupContentProps = {
   latestSavedMonthKey: string | null;
   firstMonth: FirstMonthSetupResult;
   invalidMonth: boolean;
+  monthSaved?: boolean;
 };
 
 /** Displays a deliberately unsaved first-month preview over the canonical Monthly entry form. */
@@ -27,6 +28,7 @@ export function FirstMonthSetupContent({
   latestSavedMonthKey,
   firstMonth,
   invalidMonth,
+  monthSaved = false,
 }: FirstMonthSetupContentProps) {
   const monthKey = firstMonth.selectedMonthKey;
   const previous = shiftMonthKey(monthKey, -1);
@@ -65,6 +67,19 @@ export function FirstMonthSetupContent({
         </div>
         <FirstMonthPicker businessId={businessId} monthKey={monthKey} />
       </section>
+
+      {monthSaved && firstMonth.kind === "loaded" ? (
+        <div role="status" className={firstMonth.completeness?.complete ? styles.savedNotice : styles.unsavedNotice}>
+          {firstMonth.completeness?.complete
+            ? "تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة."
+            : "تم حفظ بيانات الشهر. ما زالت بعض الأرقام مطلوبة قبل اكتمال هذه الخطوة."}
+        </div>
+      ) : null}
+      {firstMonth.kind === "loaded" && firstMonth.hasSavedPeriod && !firstMonth.completeness?.complete ? (
+        <p className={styles.trustNotice} role="note">
+          الشهر محفوظ لكنه غير مكتمل ماليًا. أضف القيم الناقصة، واكتب صفرًا إذا كانت القيمة الفعلية صفرًا.
+        </p>
+      ) : null}
 
       {firstMonth.kind === "load_error" ? (
         <div role="alert" className={styles.error}>
