@@ -94,6 +94,8 @@ export function FirstMonthSaveForm({ businessId, monthKey, currency, firstMonth 
           period={period}
           customerCountsDerived={firstMonth.payingCustomersDerived}
           newCustomersDerived={firstMonth.newCustomersDerived}
+          allowPartialExpenseBasis
+          fieldErrors={state.fieldErrors}
         />
       </section>
       <div className={styles.saveBar}>
