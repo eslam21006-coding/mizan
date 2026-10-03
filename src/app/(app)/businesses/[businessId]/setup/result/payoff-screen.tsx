@@ -49,7 +49,6 @@ export function PayoffScreen({ businessId, businessName, monthKey, currency, fin
                 card.unavailable ? styles.unavailable : "",
               ].filter(Boolean).join(" ")}
               dir="ltr"
-              aria-label={card.unavailable ? `${card.label}: غير متاح` : undefined}
             >
               {card.value}
             </strong>
