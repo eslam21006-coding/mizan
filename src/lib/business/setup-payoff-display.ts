@@ -1,4 +1,4 @@
-import type { CalculatedMetric, CoreCalculationResult, ExactRatio } from "./calculations.ts";
+import type { CalculatedMetric, CoreCalculationResult } from "./calculations.ts";
 import {
   formatArabicExactDecimal,
   formatArabicExactPercent,
@@ -68,7 +68,9 @@ export function buildSetupPayoffCards(
       explanation: reason(
         margin,
         !margin.available && margin.reason === "NON_POSITIVE_NET_CASH"
-          ? "لا يمكن حساب هامش الربح لأن صافي التحصيل صفر."
+          ? financials.netCashCollected.available && financials.netCashCollected.value.startsWith("-")
+            ? "لا يمكن حساب هامش الربح لأن صافي التحصيل صفر أو أقل."
+            : "لا يمكن حساب هامش الربح لأن صافي التحصيل صفر."
           : undefined,
       ),
       description: null,
