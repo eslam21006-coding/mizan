@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ConfirmSubmitButton } from "@/components/confirm-submit-button";
 import {
   EXPENSE_COST_BEHAVIOR_OPTIONS,
   EXPENSE_SETUP_CATEGORY_OPTIONS,
@@ -10,6 +11,7 @@ import {
   type SetupExpenseItem,
 } from "@/lib/business/expenses";
 import { ExpenseDrawerLauncher } from "../expenses/expense-drawer";
+import { deleteExpenseItem } from "../expenses/actions";
 import { confirmExpenseSetupReview } from "./actions";
 import styles from "./business-setup-shell.module.css";
 
@@ -26,6 +28,26 @@ const EXPENSE_STATUS_MESSAGES: Readonly<
   created: {
     tone: "success",
     text: "تمت إضافة المصروف. راجع بقية الأنواع قبل تأكيد إعداد المصروفات.",
+  },
+  updated: {
+    tone: "success",
+    text: "تم تحديث المصروف. راجع الأنواع الأربعة قبل تأكيد الإعداد.",
+  },
+  deleted: {
+    tone: "success",
+    text: "تم حذف المصروف غير المستخدم. راجع بقية الأنواع قبل تأكيد الإعداد.",
+  },
+  "in-use": {
+    tone: "error",
+    text: "لا يمكن حذف هذا المصروف لأنه مرتبط ببيانات محفوظة. اضغط «تعديل» وعطّله بدل الحذف للحفاظ على التاريخ.",
+  },
+  "update-failed": {
+    tone: "error",
+    text: "تعذر تحديث المصروف. لم يتم تغيير أي بيانات.",
+  },
+  "delete-failed": {
+    tone: "error",
+    text: "تعذر حذف المصروف. لم يتم تغيير أي بيانات.",
   },
   invalid: {
     tone: "error",
@@ -145,6 +167,37 @@ export function ExpenseSetupContent({
                       <span className={styles.expenseSetupName}>{expense.name}</span>
                       {!expense.isActive ? (
                         <span className={styles.inactiveSourceBadge}>غير نشط</span>
+                      ) : null}
+                      {canManage ? (
+                        <div className={styles.expenseItemActions}>
+                          <ExpenseDrawerLauncher
+                            businessId={businessId}
+                            returnOrigin={null}
+                            categoryOptions={EXPENSE_SETUP_CATEGORY_OPTIONS}
+                            behaviorOptions={EXPENSE_COST_BEHAVIOR_OPTIONS}
+                            mode="edit"
+                            destination="setup"
+                            expense={{
+                              id: expense.id,
+                              name: expense.name,
+                              category: expense.category,
+                              cost_behavior: expense.costBehavior,
+                              is_active: expense.isActive,
+                            }}
+                          />
+                          <form action={deleteExpenseItem}>
+                            <input type="hidden" name="business_id" value={businessId} />
+                            <input type="hidden" name="expense_id" value={expense.id} />
+                            <input type="hidden" name="destination" value="setup" />
+                            <ConfirmSubmitButton
+                              className={styles.expenseDeleteButton}
+                              ariaLabel={`حذف المصروف ${expense.name}`}
+                              confirmMessage={`هل تريد حذف المصروف «${expense.name}»؟ إذا كان مرتبطًا ببيانات سابقة، سيمنع ميزان الحذف ويمكنك تعطيله بدلًا من ذلك.`}
+                            >
+                              حذف
+                            </ConfirmSubmitButton>
+                          </form>
+                        </div>
                       ) : null}
                     </li>
                   ))}
