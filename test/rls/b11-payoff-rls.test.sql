@@ -114,11 +114,15 @@ set local request.jwt.claims =
  '{"sub":"b1120000-0000-4112-8112-000000000004","role":"authenticated","app_metadata":{"role":"admin"}}';
 do $$
 begin
- if (select count(*) from public.businesses) <> 2 or
-    (select count(*) from public.monthly_periods) <> 2 or
-    (select count(*) from public.monthly_revenue_entries) <> 2 or
-    (select count(*) from public.monthly_expense_entries) <> 2 then
-   raise exception 'B11 payoff admin cannot read both owned financial periods';
+ if (select count(*) from public.businesses
+      where id in ('b1120000-0000-4112-8112-000000000010', 'b1120000-0000-4112-8112-000000000020')) <> 2 or
+    (select count(*) from public.monthly_periods
+      where business_id in ('b1120000-0000-4112-8112-000000000010', 'b1120000-0000-4112-8112-000000000020')) <> 2 or
+    (select count(*) from public.monthly_revenue_entries
+      where business_id in ('b1120000-0000-4112-8112-000000000010', 'b1120000-0000-4112-8112-000000000020')) <> 2 or
+    (select count(*) from public.monthly_expense_entries
+      where business_id in ('b1120000-0000-4112-8112-000000000010', 'b1120000-0000-4112-8112-000000000020')) <> 2 then
+   raise exception 'B11 payoff admin cannot read both fixture businesses and their saved financial records';
  end if;
 end $$;
 
