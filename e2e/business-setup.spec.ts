@@ -348,7 +348,7 @@ test.describe("B07 Expense Category UX", () => {
     await page.goto(`${fixturePath}?case=expenses-mixed&step=expenses`);
 
     const acquisition = page.locator('section[aria-labelledby="setup-expense-acquisition"]');
-    const item = acquisition.locator("li").filter({ hasText: "Meta Ads" });
+    const item = acquisition.locator('li[class*="expenseSetupItem"]').filter({ hasText: "Meta Ads" });
     const deleteButton = item.getByRole("button", { name: "حذف المصروف Meta Ads" });
     await expect(deleteButton).toBeVisible();
     await expect(item.getByRole("button", { name: "تعديل" })).toBeVisible();
