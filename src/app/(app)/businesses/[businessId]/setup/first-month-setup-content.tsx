@@ -22,7 +22,7 @@ type FirstMonthSetupContentProps = {
   firstMonthSaveSeed?: FirstMonthSaveState;
 };
 
-/** Displays a deliberately unsaved first-month preview over the canonical Monthly entry form. */
+/** Presents the selected month with authorized editing and protected historical snapshots. */
 export function FirstMonthSetupContent({
   businessId,
   baseCurrency,
