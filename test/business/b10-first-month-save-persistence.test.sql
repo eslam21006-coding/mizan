@@ -152,7 +152,7 @@ begin
  if exists(select 1 from public.monthly_periods
    where business_id='b1000000-0000-4100-8100-000000000010' and month_start='2099-04-01')
  then raise exception 'B10 foreign expense request left behind a partial period'; end if;
-end $;
+end $$;
 
 -- Member/outsider may not mutate the owner's saved month by calling the RPC directly.
 set local request.jwt.claims =
