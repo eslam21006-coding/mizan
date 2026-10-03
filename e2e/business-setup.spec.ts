@@ -333,6 +333,8 @@ test.describe("B07 Expense Category UX", () => {
         .filter({ hasText: /^Meta Ads$/ }),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "إضافة مصروف" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^حذف المصروف/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "تعديل", exact: true })).toHaveCount(0);
     await expect(page.getByRole("checkbox")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "تأكيد مراجعة المصروفات" })).toHaveCount(0);
     await expectStableRtl(page);
@@ -350,7 +352,7 @@ test.describe("B07 Expense Category UX", () => {
     const deleteButton = item.getByRole("button", { name: "حذف المصروف Meta Ads" });
     await expect(deleteButton).toBeVisible();
     await expect(item.getByRole("button", { name: "تعديل" })).toBeVisible();
-    await expect(item.locator('input[name="destination"][value="setup"]')).toHaveCount(1);
+    await expect(item.locator('input[name="destination"][value="setup"]')).toHaveCount(2);
 
     let promptShown = false;
     page.once("dialog", async (dialog) => {
