@@ -22,6 +22,7 @@ test.describe("B11.3 first result screen", () => {
     await page.goto(fixture);
     await expect(page.locator("html")).toHaveAttribute("lang", "ar");
     await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect(page.getByRole("main")).toHaveCount(1);
     await expect(page.getByRole("heading", { name: "جاهز — ميزان فهم البزنس", level: 1 })).toBeVisible();
     await expect(page.getByText("أكاديمية ميزان للتجربة")).toBeVisible();
     await expect(page.getByText(/سبتمبر/)).toBeVisible();
