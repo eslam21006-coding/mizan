@@ -226,7 +226,7 @@ test("B04 production setup route remains read-only while later wizard steps may 
   assert.doesNotMatch(setupLoaderSource, /\.insert\(|\.update\(|\.upsert\(|\.delete\(/);
   assert.match(
     setupLoaderSource,
-    /\.from\("expense_items"\)[\s\S]*\.select\("id,name,category,cost_behavior,is_active,created_at"\)/,
+    /\.from\("expense_items"\)[\s\S]*\.select\("id,name,category,cost_behavior,is_active,created_at", \{ count: "exact" \}\)/,
   );
   assert.match(setupPageSource, /parseBusinessSetupStep\(query\.step\)/);
   assert.match(setupPageSource, /resolveBusinessSetupResumeStep/);
