@@ -22,7 +22,8 @@ import { resolveHistoricalMonthlyUiState } from "@/lib/historical-month-state";
 import { buildMonthlySetupHref } from "@/lib/monthly-setup-navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { buildTransactionImportHref } from "@/lib/transaction-import-navigation";
-import { copyPreviousMonthExpenses, saveMonthlyActuals } from "./actions";
+import { copyPreviousMonthExpenses } from "./actions";
+import { MonthlySaveForm } from "./monthly-save-form";
 import { HistoricalCorrectionSuccess } from "./historical-correction-success";
 import { HistoricalMonthState } from "./historical-month-state";
 import trustStyles from "./customer-history-trust.module.css";
@@ -465,32 +466,20 @@ export default async function MonthlyPage({ params, searchParams }: MonthlyPageP
 
       {!dataLoadError &&
         (canManage && !isSavedHistorical ? (
-          <form
+          <MonthlySaveForm
             key={`monthly-form-${selectedMonth.monthKey}`}
-            action={saveMonthlyActuals}
-            className={`${styles.monthForm} ${mobileActionStyles.editorSurface} ${payingCustomersDerived && !newCustomersDerived ? trustStyles.payingDerivedOnly : ""}`}
-          >
-            <input type="hidden" name="business_id" value={businessId} />
-            <input type="hidden" name="month" value={selectedMonth.monthKey} />
-            <MonthlyReturnOriginFields returnOrigin={returnOrigin} />
-            {historyTrustNotice}
-            <MonthlyEntryForm
-              editable
-              currency={business.base_currency}
-              revenueRows={revenueRows}
-              expenseRows={expenseRows}
-              period={effectivePeriod}
-              customerCountsDerived={payingCustomersDerived}
-              newCustomersDerived={newCustomersDerived}
-            />
-            <div className={`${styles.saveBar} ${mobileActionStyles.actionBar}`} data-editor-action-bar="monthly">
-              <div>
-                <strong>حفظ أرقام {monthLabel}</strong>
-                <p>يتم حفظ الشهر كعملية واحدة. أي خطأ يمنع الحفظ الجزئي.</p>
-              </div>
-              <StableSubmitButton pendingLabel="جارٍ حفظ الشهر…">حفظ الشهر</StableSubmitButton>
-            </div>
-          </form>
+            businessId={businessId}
+            monthKey={selectedMonth.monthKey}
+            monthLabel={monthLabel}
+            currency={business.base_currency}
+            revenueRows={revenueRows}
+            expenseRows={expenseRows}
+            period={effectivePeriod}
+            customerCountsDerived={payingCustomersDerived}
+            newCustomersDerived={newCustomersDerived}
+            returnFields={<MonthlyReturnOriginFields returnOrigin={returnOrigin} />}
+            historyTrustNotice={historyTrustNotice}
+          />
         ) : (
           <div key={`monthly-read-${selectedMonth.monthKey}`} className={`${styles.monthForm} ${mobileActionStyles.editorSurface}`}>
             {historyTrustNotice}
