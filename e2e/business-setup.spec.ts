@@ -514,6 +514,18 @@ test.describe("B10 first-month save UX", () => {
     expect(errors).toEqual([]);
   });
 
+  test("a copied saved-status URL never claims an unsaved month was persisted", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto("/auth/e2e-business-setup?case=month-empty&step=month&month=2026-10&status=saved");
+
+    await expect(page.getByText("هذا الشهر غير محفوظ بعد", { exact: true })).toBeVisible();
+    await expect(page.getByText("تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة.", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("تم حفظ بيانات الشهر. ما زالت بعض الأرقام مطلوبة قبل اكتمال هذه الخطوة.", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
   test("saved complete month enables Finish only after canonical readiness", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.goto("/auth/e2e-business-setup?case=month-complete&step=month&month=2026-10&status=saved");
