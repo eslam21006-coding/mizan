@@ -4,6 +4,7 @@ import { calculateCoreFinancials } from "@/lib/business/calculations";
 import { PayoffScreen } from "@/app/(app)/businesses/[businessId]/setup/result/payoff-screen";
 
 const businessId = "00000000-0000-4000-8000-000000000146";
+const fixtureShellProps = { role: "admin" as const, email: "payoff.fixture@example.test" };
 
 type Props = { searchParams: Promise<{ case?: string }> };
 
@@ -34,7 +35,7 @@ export default async function SetupPayoffFixture({ searchParams }: Props) {
   });
 
   return (
-    <AppShell role="admin" email="payoff.fixture@example.test">
+    <AppShell {...fixtureShellProps}>
       <PayoffScreen
         businessId={businessId}
         businessName="أكاديمية ميزان للتجربة"
