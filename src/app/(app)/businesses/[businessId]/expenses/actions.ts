@@ -210,7 +210,8 @@ export async function createExpenseItem(formData: FormData) {
 export async function updateExpenseItem(formData: FormData) {
   await requireAuthContext();
 
-  const returnOrigin = parseExpenseSetupReturnOrigin(formData);
+  const destination = parseExpenseMutationDestination(formData);
+  const returnOrigin = destination === "workspace" ? parseExpenseSetupReturnOrigin(formData) : null;
 
   const businessId = parseResourceId(formData.get("business_id"));
   const expenseId = parseResourceId(formData.get("expense_id"));
@@ -223,8 +224,13 @@ export async function updateExpenseItem(formData: FormData) {
     redirect("/businesses");
   }
 
-  if (!expenseId || !name || !category || !costBehavior) {
-    redirect(expensesPath(businessId, "invalid", returnOrigin));
+  const resultPath = (status: string) =>
+    destination === "setup"
+      ? setupExpensesPath(businessId, status)
+      : expensesPath(businessId, status, returnOrigin);
+
+  if (!destination || !expenseId || !name || !category || !costBehavior) {
+    redirect(resultPath("invalid"));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -242,16 +248,20 @@ export async function updateExpenseItem(formData: FormData) {
     .maybeSingle();
 
   if (error || !updatedExpense) {
-    redirect(expensesPath(businessId, "update-failed", returnOrigin));
+    redirect(resultPath("update-failed"));
   }
 
+  if (destination === "setup") {
+    redirectAfterExpenseCreation(businessId, "updated", destination);
+  }
   redirectToExpenses(businessId, "updated", returnOrigin);
 }
 
 export async function deleteExpenseItem(formData: FormData) {
   await requireAuthContext();
 
-  const returnOrigin = parseExpenseSetupReturnOrigin(formData);
+  const destination = parseExpenseMutationDestination(formData);
+  const returnOrigin = destination === "workspace" ? parseExpenseSetupReturnOrigin(formData) : null;
 
   const businessId = parseResourceId(formData.get("business_id"));
   const expenseId = parseResourceId(formData.get("expense_id"));
@@ -260,8 +270,13 @@ export async function deleteExpenseItem(formData: FormData) {
     redirect("/businesses");
   }
 
-  if (!expenseId) {
-    redirect(expensesPath(businessId, "invalid", returnOrigin));
+  const resultPath = (status: string) =>
+    destination === "setup"
+      ? setupExpensesPath(businessId, status)
+      : expensesPath(businessId, status, returnOrigin);
+
+  if (!destination || !expenseId) {
+    redirect(resultPath("invalid"));
   }
 
   const supabase = await createSupabaseServerClient();
@@ -274,12 +289,15 @@ export async function deleteExpenseItem(formData: FormData) {
     .maybeSingle();
 
   if (error?.code === "23503") {
-    redirect(expensesPath(businessId, "in-use", returnOrigin));
+    redirect(resultPath("in-use"));
   }
 
   if (error || !deletedExpense) {
-    redirect(expensesPath(businessId, "delete-failed", returnOrigin));
+    redirect(resultPath("delete-failed"));
   }
 
+  if (destination === "setup") {
+    redirectAfterExpenseCreation(businessId, "deleted", destination);
+  }
   redirectToExpenses(businessId, "deleted", returnOrigin);
 }
