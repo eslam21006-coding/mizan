@@ -134,9 +134,10 @@ export async function loadFirstMonthSetup(
         expenseEntries,
       })
     : rows;
+  // Setup completion must reflect saved values, not transaction-derived display counts.
   const completeness = evaluateFirstMonthCompleteness({
     hasSavedPeriod: Boolean(period),
-    period: effectivePeriod,
+    period,
     revenueRows: applicableRows.revenueRows,
     expenseRows: applicableRows.expenseRows,
   });
