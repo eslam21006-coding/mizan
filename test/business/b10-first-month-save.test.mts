@@ -102,7 +102,7 @@ test("B10 Setup cannot mark a saved month complete from unsaved transaction-deri
   });
   assert.equal(canonical.validMonthCount, 0);
   assert.match(firstMonthSetupLoader,
-    /const completeness = evaluateFirstMonthCompleteness\\(\\{\\s*hasSavedPeriod: Boolean\\(period\\),\\s*period,\\s*revenueRows:/);
+    /hasSavedPeriod: Boolean\(period\),\s*period,\s*revenueRows: applicableRows\.revenueRows/);
   assert.match(firstMonthSetupLoader, /period: effectivePeriod,/);
 });
 
