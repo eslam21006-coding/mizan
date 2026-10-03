@@ -26,7 +26,7 @@ export function PayoffScreen({ businessId, businessName, monthKey, currency, fin
   const reviewHref = `${businessHref}/monthly?month=${encodeURIComponent(monthKey)}`;
 
   return (
-    <main className={styles.page} aria-labelledby="result-ready-title">
+    <div className={styles.page}>
       <header className={styles.hero}>
         <p className={styles.eyebrow}>نتيجة إعداد البزنس</p>
         <h1 className={styles.title} id="result-ready-title">جاهز — ميزان فهم البزنس</h1>
@@ -62,6 +62,6 @@ export function PayoffScreen({ businessId, businessName, monthKey, currency, fin
         <Link className={styles.primary} href={businessHref}>افتح لوحة البزنس</Link>
         <Link className={styles.secondary} href={reviewHref}>مراجعة أرقام الشهر</Link>
       </nav>
-    </main>
+    </div>
   );
 }
