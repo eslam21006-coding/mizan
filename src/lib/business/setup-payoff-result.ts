@@ -39,10 +39,11 @@ export function resolvePayoffMonthGate(
   requestedMonth: string | readonly string[] | undefined,
   now = new Date(),
 ): { kind: "ready"; monthKey: string } | {
-  kind: Exclude<PayoffBlockReason, "data_load_error" | "calculation_error">;
+  kind: Exclude<PayoffBlockReason, "calculation_error">;
   monthKey: string | null;
 } {
   const eligible = resolveSavedSetupMonthEligibility(setup.persistedMonths, requestedMonth);
+  if (eligible.kind === "load_error") return { kind: "data_load_error", monthKey: null };
   if (eligible.kind !== "ready" && eligible.kind !== "not_saved" && eligible.kind !== "month_incomplete") {
     return { kind: eligible.kind, monthKey: null };
   }
