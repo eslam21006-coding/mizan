@@ -4,6 +4,7 @@ import { currentMonthKeyForTimeZone } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { loadAuthenticatedSetupPayoff } from "@/lib/business/setup-payoff-server";
 import type { PayoffBlockReason } from "@/lib/business/setup-payoff-result";
+import { PayoffScreen } from "./payoff-screen";
 
 export const dynamic = "force-dynamic";
 
@@ -43,7 +44,7 @@ const messages: Record<PayoffBlockReason, { title: string; detail: string }> = {
   },
   calculation_error: {
     title: "تعذر حساب النتيجة",
-    detail: "تم العثور على الشهر، لكن الحسابات المالية لم تكتمل بشكل موثوق. راجع بياناته.",
+    detail: "تم العثور على الشهر، لكن بعض القيم اللازمة للحساب غير مؤكدة. راجع التحصيل والمرتجعات، ومنها المبالغ غير المنسوبة، وأكّد الصفر عندما يكون الرقم الفعلي صفرًا.",
   },
 };
 
@@ -108,16 +109,12 @@ export default async function SetupPayoffPage({ params, searchParams }: Props) {
   }
 
   return (
-    <main className="page-stack">
-      <section aria-labelledby="result-ready-title">
-        <h1 id="result-ready-title">نتيجة الشهر جاهزة</h1>
-        <p>{result.business.name} · {arabicMonth(result.monthKey)} · {result.business.baseCurrency}</p>
-        <p>تم التحقق من اكتمال البيانات وقراءة النتائج المالية لهذا الشهر من السجل المحفوظ.</p>
-        <nav aria-label="الانتقال من نتيجة الإعداد">
-          <Link href={businessHref}>فتح لوحة البزنس</Link>
-          <Link href={monthlyHref}>مراجعة أرقام الشهر</Link>
-        </nav>
-      </section>
-    </main>
+    <PayoffScreen
+      businessId={businessId}
+      businessName={result.business.name}
+      monthKey={result.monthKey}
+      currency={result.business.baseCurrency}
+      financials={result.financials}
+    />
   );
 }
