@@ -43,14 +43,19 @@ function normalizeSignedDecimalText(raw: string, maximumFractionDigits: number) 
 
 function normalizedMoneyInput(value: unknown) {
   const localized = normalizeLocalizedDigits(String(value ?? "")).trim();
-  if (
-    localized.includes("٬") &&
-    !/^-?\d{1,3}(?:٬\d{3})+(?:[٫.]\d+)?$/.test(localized)
-  ) {
+  const arabicGrouping = localized.includes("٬");
+  const englishGrouping = localized.includes(",");
+
+  // Strict grouping accepts 9,336.28 and ٩٬٣٣٦٫٢٨ without accepting malformed money.
+  if (arabicGrouping && englishGrouping) return null;
+  if (arabicGrouping && !/^-?\d{1,3}(?:٬\d{3})+(?:[٫.]\d+)?$/.test(localized)) {
+    return null;
+  }
+  if (englishGrouping && !/^-?\d{1,3}(?:,\d{3})+(?:[٫.]\d+)?$/.test(localized)) {
     return null;
   }
 
-  return localized.replaceAll("٬", "").replaceAll("٫", ".");
+  return localized.replaceAll("٬", "").replaceAll(",", "").replaceAll("٫", ".");
 }
 
 export function parseOptionalDecimalInput(value: unknown): ParsedInput<string | null> {
