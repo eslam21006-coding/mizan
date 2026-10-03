@@ -43,6 +43,7 @@ type Props = {
   newCustomersDerived: boolean;
   returnFields: ReactNode;
   historyTrustNotice: ReactNode;
+  seedState?: MonthlySaveFormState;
 };
 
 /** Preserves submitted values and points to invalid fields without creating a partial saved month. */
@@ -58,8 +59,9 @@ export function MonthlySaveForm({
   newCustomersDerived,
   returnFields,
   historyTrustNotice,
+  seedState,
 }: Props) {
-  const [state, formAction] = useActionState(saveMonthlyActualsWithState, initialState);
+  const [state, formAction] = useActionState(saveMonthlyActualsWithState, seedState ?? initialState);
   const value = (key: string, fallback: string) =>
     Object.hasOwn(state.draft, key) ? state.draft[key] : fallback;
   const period: MonthlyPeriodValues = {
