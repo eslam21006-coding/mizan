@@ -105,5 +105,6 @@ test("B11.3 route keeps GET-only exact-month eligibility and renders four-metric
   assert.match(screen, /aria-labelledby/);
   assert.match(screen, /افتح لوحة البزنس/);
   assert.match(screen, /مراجعة أرقام الشهر/);
+  assert.equal((page + screen).includes("<main"), false, "AppShell owns the only main landmark");
   assert.doesNotMatch(page + screen, /\.rpc\(|\.insert\(|\.upsert\(|\.update\(|\.delete\(/);
 });
