@@ -17,6 +17,7 @@ import { ExpenseSetupContent } from "./expense-setup-content";
 import type { FirstMonthSetupResult } from "@/lib/business/first-month-setup";
 import { FirstMonthSetupContent } from "./first-month-setup-content";
 import type { FirstMonthSaveState } from "./first-month-actions";
+import type { FirstMonthPostSaveStatus } from "@/lib/business/first-month-post-save";
 import styles from "./business-setup-shell.module.css";
 
 const STEP_LABELS: Readonly<Record<BusinessSetupStep, string>> = {
@@ -45,6 +46,7 @@ type BusinessSetupShellProps = {
   latestSavedMonthKey: string | null;
   firstMonth: FirstMonthSetupResult | null;
   monthSaved?: boolean;
+  postSaveStatus?: FirstMonthPostSaveStatus | null;
   firstMonthSaveSeed?: FirstMonthSaveState;
   invalidMonth?: boolean;
   backHref: string | null;
@@ -74,6 +76,7 @@ export function BusinessSetupShell({
   latestSavedMonthKey,
   firstMonth,
   monthSaved = false,
+  postSaveStatus = null,
   firstMonthSaveSeed,
   invalidMonth = false,
   backHref,
@@ -227,6 +230,7 @@ export function BusinessSetupShell({
               latestSavedMonthKey={latestSavedMonthKey}
               firstMonth={firstMonth}
               monthSaved={monthSaved}
+              postSaveStatus={postSaveStatus}
               firstMonthSaveSeed={firstMonthSaveSeed}
               invalidMonth={invalidMonth}
             />
@@ -278,6 +282,7 @@ type StepContentProps = {
   latestSavedMonthKey: string | null;
   firstMonth: FirstMonthSetupResult | null;
   monthSaved?: boolean;
+  postSaveStatus?: FirstMonthPostSaveStatus | null;
   firstMonthSaveSeed?: FirstMonthSaveState;
   invalidMonth?: boolean;
 };
@@ -302,6 +307,7 @@ function StepContent({
   latestSavedMonthKey,
   firstMonth,
   monthSaved = false,
+  postSaveStatus = null,
   firstMonthSaveSeed,
   invalidMonth = false,
 }: StepContentProps) {
@@ -376,6 +382,7 @@ function StepContent({
           latestSavedMonthKey={latestSavedMonthKey}
           firstMonth={firstMonth}
           monthSaved={monthSaved}
+          postSaveStatus={postSaveStatus}
           firstMonthSaveSeed={firstMonthSaveSeed}
           invalidMonth={invalidMonth}
         />
