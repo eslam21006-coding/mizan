@@ -7,7 +7,7 @@ import type {
   SetupExpenseItem,
 } from "./expenses.ts";
 import type { RevenueStreamType } from "./revenue-streams.ts";
-import { assessSavedSetupMonths } from "./setup-month-readiness.ts";
+import { assessSavedSetupMonths, type SavedSetupMonthAssessment } from "./setup-month-readiness.ts";
 import { readAllSetupPages } from "./setup-paged-rows.ts";
 import {
   resolveBusinessSetupQueryState,
@@ -36,6 +36,8 @@ export type LoadedBusinessSetup = {
   expenseItems: SetupExpenseItem[];
   activeExpenseCategoryCounts: ExpenseCategoryCounts;
   latestSavedMonthKey: string | null;
+  /** Persisted, calendar-ordered months; result access still requires independent setup readiness. */
+  persistedMonths: SavedSetupMonthAssessment;
   readiness: BusinessSetupReadiness;
 };
 
@@ -235,6 +237,7 @@ export async function loadBusinessSetup(
     expenseItems,
     activeExpenseCategoryCounts,
     latestSavedMonthKey,
+    persistedMonths,
     readiness: resolveBusinessSetupReadiness({
       loadState: "loaded",
       revenueSourceCount,
