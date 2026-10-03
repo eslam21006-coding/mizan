@@ -169,6 +169,62 @@ export async function saveMonthlyActuals(formData: FormData) {
   redirectMonthly(result.businessId, result.monthKey, "saved", returnOrigin);
 }
 
+export type MonthlySaveFormState = {
+  attempt: number;
+  status: "idle" | "error";
+  code: string | null;
+  fieldErrors: Record<string, string>;
+  draft: Record<string, string>;
+};
+
+/** Keeps rejected financial inputs in React action state, never in URLs or database drafts. */
+function preserveMonthlyDraft(formData: FormData): Record<string, string> {
+  const draft: Record<string, string> = {};
+  const known = new Set([
+    "new_customers",
+    "total_paying_customers",
+    "unallocated_gross",
+    "unallocated_refunds",
+    "adjustment_note",
+  ]);
+  for (const [key, value] of formData.entries()) {
+    if (
+      typeof value !== "string" ||
+      !(known.has(key) || /^(gross_|refund_|expense_value_|expense_basis_)[a-f\d-]{36}$/.test(key))
+    ) {
+      continue;
+    }
+    draft[key] = value.slice(0, key === "adjustment_note" ? 501 : 100);
+  }
+  return draft;
+}
+
+/** Stateful Monthly adapter reuses the existing validation and atomic save without losing failed inputs. */
+export async function saveMonthlyActualsWithState(
+  previous: MonthlySaveFormState,
+  formData: FormData,
+): Promise<MonthlySaveFormState> {
+  const returnOrigin = parseMonthlyReturnOrigin(formData);
+  const result = await persistMonthlyActuals(formData);
+  if (!result.businessId) redirect("/businesses");
+  if (!result.monthKey) {
+    redirect(`/businesses/${result.businessId}/monthly?status=invalid-month`);
+  }
+  if (!result.ok) {
+    if (result.code === "historical-required") {
+      redirectHistoricalCorrection(result.businessId, result.monthKey, returnOrigin);
+    }
+    return {
+      attempt: previous.attempt + 1,
+      status: "error",
+      code: result.code,
+      fieldErrors: result.fieldErrors,
+      draft: preserveMonthlyDraft(formData),
+    };
+  }
+  redirectMonthly(result.businessId, result.monthKey, "saved", returnOrigin);
+}
+
 /** Copies the previous month's expense inputs into the selected month without changing other actuals. */
 export async function copyPreviousMonthExpenses(formData: FormData) {
   await requireAuthContext();
