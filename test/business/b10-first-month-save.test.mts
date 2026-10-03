@@ -7,6 +7,8 @@ import { storedExpenseValueForDisplay } from "../../src/lib/business/monthly.ts"
 import { calculateCoreFinancials } from "../../src/lib/business/calculations.ts";
 import { parseMonthlyExpenseInput } from "../../src/lib/business/monthly-expense-input.ts";
 
+const firstMonthSetupLoader = await readFile(new URL("../../src/lib/business/first-month-setup.ts", import.meta.url), "utf8");
+
 const createdAt = "2026-09-15T10:00:00Z";
 const period = (overrides = {}) => ({
   id: "period-1", month_start: "2026-09-01", created_at: createdAt,
@@ -217,7 +219,6 @@ const actions = await readFile(new URL("../../src/app/(app)/businesses/[business
 const service = await readFile(new URL("../../src/lib/business/monthly-save-service.ts", import.meta.url), "utf8");
 const setupAction = await readFile(new URL("../../src/app/(app)/businesses/[businessId]/setup/first-month-actions.ts", import.meta.url), "utf8");
 const loader = await readFile(new URL("../../src/lib/business/setup-loader.ts", import.meta.url), "utf8");
-const firstMonthSetupLoader = await readFile(new URL("../../src/lib/business/first-month-setup.ts", import.meta.url), "utf8");
 
 test("B10 keeps exactly one save RPC path and derives canonical readiness from data", () => {
   assert.match(actions, /persistMonthlyActuals\(formData\)/);
