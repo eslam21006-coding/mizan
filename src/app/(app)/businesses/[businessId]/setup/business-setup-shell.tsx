@@ -230,7 +230,7 @@ export function BusinessSetupShell({
               latestSavedMonthKey={latestSavedMonthKey}
               firstMonth={firstMonth}
               monthSaved={monthSaved}
-              postSaveStatus={postSaveStatus}
+              postSaveStatus={setupComplete && postSaveStatus === "setup-incomplete" ? null : postSaveStatus}
               firstMonthSaveSeed={firstMonthSaveSeed}
               invalidMonth={invalidMonth}
             />
