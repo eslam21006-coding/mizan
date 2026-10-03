@@ -549,6 +549,55 @@ test.describe("B10 first-month save UX", () => {
   });
 });
 
+test.describe("B10 authenticated save validation", () => {
+  test.skip(!hasLiveAuth, "Requires the dedicated Mizan E2E email/password account");
+
+  test("submitting a cost without its per-customer basis preserves entered amounts", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    const suffix = Date.now();
+    const sourceName = `B10 course ${suffix}`;
+    const coachName = `B10 coach ${suffix}`;
+
+    await login(page);
+    await page.goto("/businesses/new");
+    await page.getByLabel("اسم البزنس").fill(`B10 validation ${suffix}`);
+    await page.getByRole("button", { name: /EGP/ }).click();
+    await page.getByRole("button", { name: "إنشاء البزنس والمتابعة" }).click();
+    await expect(page).toHaveURL(/\\/businesses\\/[0-9a-f-]+\\/setup\\?step=revenue$/);
+    const businessId = page.url().match(/\\/businesses\\/([0-9a-f-]+)\\/setup/)?.[1];
+    expect(businessId).toBeTruthy();
+
+    await page.getByLabel("اسم المنتج أو الخدمة").fill(sourceName);
+    await page.getByRole("button", { name: "إضافة مصدر الإيراد" }).click();
+    await page.goto(`/businesses/${businessId}/setup?step=expenses`);
+    const fulfillment = page.locator('section[aria-labelledby="setup-expense-fulfillment"]');
+    await fulfillment.getByRole("button", { name: "إضافة مصروف" }).click();
+    const drawer = page.getByRole("dialog");
+    await drawer.getByLabel("اسم المصروف").fill(coachName);
+    await drawer.getByLabel("كيف تُحسب هذه التكلفة؟").selectOption("per_customer");
+    await drawer.getByRole("button", { name: "إضافة المصروف" }).click();
+    await expect(page.getByText(coachName, { exact: true })).toBeVisible();
+
+    await page.goto(`/businesses/${businessId}/setup?step=month`);
+    const editor = page.getByLabel("إدخال أول شهر");
+    await editor.getByLabel(`الإيراد المحصل — ${sourceName}`).fill("5000");
+    await editor.getByLabel(`المرتجعات — ${sourceName}`).fill("0");
+    await editor.getByLabel("عملاء جدد").fill("10");
+    await editor.getByLabel("إجمالي العملاء الذين دفعوا").fill("10");
+    await editor.getByLabel(`${coachName} — التكلفة لكل عميل`).fill("20");
+    await expect(editor.getByLabel(`أساس عدد العملاء — ${coachName}`)).toHaveValue("");
+
+    await page.getByRole("button", { name: "حفظ الشهر" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "راجع الحقول المحددة" })).toBeVisible();
+    await expect(editor.getByRole("alert").filter({ hasText: "اختر أساس عدد العملاء" })).toBeVisible();
+    await expect(editor.getByLabel(`الإيراد المحصل — ${sourceName}`)).toHaveValue("5000");
+    await expect(editor.getByLabel(`${coachName} — التكلفة لكل عميل`)).toHaveValue("20");
+    await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+});
+
 test.describe("B06 live Money-In handoff", () => {
   test.skip(!hasLiveAuth, "Requires the dedicated Mizan E2E email/password account");
 
