@@ -7,6 +7,7 @@ import {
   type RevenueInputRow,
 } from "@/app/(app)/businesses/[businessId]/monthly/monthly-entry-form";
 import styles from "@/app/(app)/businesses/[businessId]/monthly/monthly.module.css";
+import { MonthlySaveForm } from "@/app/(app)/businesses/[businessId]/monthly/monthly-save-form";
 import { AppShell } from "@/components/app-shell";
 import mobileActionStyles from "@/components/mobile-editor-actions.module.css";
 import { ReturnContextBanner } from "@/components/workflow-recovery";
@@ -26,6 +27,7 @@ type MonthlyEntryE2eFixturePageProps = {
     month?: string | string[];
     origin?: string | string[];
     return_month?: string | string[];
+    case?: string;
   }>;
 };
 
@@ -175,6 +177,41 @@ export default async function MonthlyEntryE2eFixturePage({
           </Link>
         </section>
 
+        {query.case === "invalid" ? (
+          <MonthlySaveForm
+            businessId={BUSINESS_ID}
+            monthKey={selectedMonth.monthKey}
+            monthLabel={monthLabel}
+            currency="USD"
+            revenueRows={revenueRows}
+            expenseRows={expenseRows}
+            period={{
+              new_customers: 20,
+              total_paying_customers: 25,
+              unallocated_gross_cash_collected: null,
+              unallocated_refunds: null,
+              adjustment_note: null,
+            }}
+            customerCountsDerived={false}
+            newCustomersDerived={false}
+            returnFields={null}
+            historyTrustNotice={null}
+            seedState={{
+              attempt: 1,
+              status: "error",
+              code: "invalid-input",
+              fieldErrors: {
+                [`gross_${revenueRows[0].id}`]: "أدخل مبلغًا صحيحًا غير سالب.",
+              },
+              draft: {
+                [`gross_${revenueRows[0].id}`]: "9,33.28",
+                [`refund_${revenueRows[0].id}`]: "0",
+                new_customers: "20",
+                total_paying_customers: "25",
+              },
+            }}
+          />
+        ) : (
         <form className={`${styles.monthForm} ${mobileActionStyles.editorSurface}`}>
           <MonthlyEntryForm
             editable
@@ -200,6 +237,7 @@ export default async function MonthlyEntryE2eFixturePage({
             <button type="button">حفظ الشهر</button>
           </div>
         </form>
+        )}
       </div>
     </AppShell>
   );
