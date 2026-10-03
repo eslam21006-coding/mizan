@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import type { ExpenseCreationRequestIds } from "@/lib/business/expenses";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { loadBusinessSetup } from "@/lib/business/setup-loader";
+import { parseFirstMonthPostSaveStatus } from "@/lib/business/first-month-post-save";
 import { resolveFirstMonthSelection } from "@/lib/business/first-month-selection";
 import { loadFirstMonthSetup } from "@/lib/business/first-month-setup";
 import {
@@ -46,6 +47,7 @@ export default async function BusinessSetupPage({
 
   const parsedStep = parseBusinessSetupStep(query.step);
   const setupStatus = typeof query.status === "string" ? query.status : null;
+  const monthSaveStatus = parseFirstMonthPostSaveStatus(query.status);
 
   if (loadResult.kind === "load_error") {
     return (
@@ -163,7 +165,8 @@ export default async function BusinessSetupPage({
       expenseStatus={currentStep === "expenses" ? setupStatus : null}
       latestSavedMonthKey={loadResult.latestSavedMonthKey}
       firstMonth={firstMonth}
-      monthSaved={currentStep === "month" && setupStatus === "saved"}
+      monthSaved={currentStep === "month" && monthSaveStatus !== null}
+      postSaveStatus={currentStep === "month" ? monthSaveStatus : null}
       invalidMonth={currentStep === "month" && setupStatus === "invalid-month"}
       backHref={backHref}
       nextHref={nextHref}
