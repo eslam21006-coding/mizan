@@ -95,6 +95,7 @@ export const sqlFiles = Object.freeze([
   "test/rls/b02-setup-completion-state.test.sql",
   "test/business/b02-setup-completion-invariance.test.sql",
   "test/business/b10-first-month-save-persistence.test.sql",
+  "test/rls/b11-payoff-rls.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
