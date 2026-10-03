@@ -339,6 +339,41 @@ test.describe("B07 Expense Category UX", () => {
     expect(errors).toEqual([]);
   });
 
+
+  test("inline expense delete confirms, edit can disable, and controls fit mobile RTL", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${fixturePath}?case=expenses-mixed&step=expenses`);
+
+    const acquisition = page.locator('section[aria-labelledby="setup-expense-acquisition"]');
+    const item = acquisition.locator("li").filter({ hasText: "Meta Ads" });
+    const deleteButton = item.getByRole("button", { name: "حذف المصروف Meta Ads" });
+    await expect(deleteButton).toBeVisible();
+    await expect(item.getByRole("button", { name: "تعديل" })).toBeVisible();
+    await expect(item.locator('input[name="destination"][value="setup"]')).toHaveCount(1);
+
+    let promptShown = false;
+    page.once("dialog", async (dialog) => {
+      promptShown = true;
+      expect(dialog.message()).toContain("Meta Ads");
+      await dialog.dismiss();
+    });
+    await deleteButton.click();
+    expect(promptShown).toBe(true);
+    await expect(item).toBeVisible();
+
+    await item.getByRole("button", { name: "تعديل" }).click();
+    const editor = page.getByRole("dialog");
+    await expect(editor).toBeVisible();
+    await expect(editor.locator('input[name="destination"]')).toHaveValue("setup");
+    const active = editor.getByRole("checkbox", { name: /المصروف نشط/ });
+    await expect(active).toBeChecked();
+    await active.uncheck();
+    await expect(active).not.toBeChecked();
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
   test("setup reuses the existing expense drawer with the category locked", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.goto(`${fixturePath}?case=expenses-mixed&step=expenses`);
