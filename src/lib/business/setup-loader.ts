@@ -8,6 +8,7 @@ import type {
 } from "./expenses.ts";
 import type { RevenueStreamType } from "./revenue-streams.ts";
 import { assessSavedSetupMonths } from "./setup-month-readiness.ts";
+import { readAllSetupPages } from "./setup-paged-rows.ts";
 import {
   resolveBusinessSetupQueryState,
   resolveBusinessSetupReadiness,
@@ -93,27 +94,38 @@ export async function loadBusinessSetup(
     savedRevenueResult,
     savedExpenseResult,
   ] = await Promise.all([
-    supabase
-      .from("revenue_streams")
-      .select("id,name,stream_type,is_active,created_at")
-      .eq("business_id", businessId)
-      .order("created_at", { ascending: true }),
+    readAllSetupPages((from, to) =>
+      supabase
+        .from("revenue_streams")
+        .select("id,name,stream_type,is_active,created_at", { count: "exact" })
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
     supabase
       .from("revenue_streams")
       .select("id", { count: "exact", head: true })
       .eq("business_id", businessId)
       .eq("is_active", true),
-    supabase
-      .from("monthly_periods")
-      .select("id,month_start,created_at,new_customers,total_paying_customers,unallocated_gross_cash_collected,unallocated_refunds")
-      .eq("business_id", businessId)
-      .order("month_start", { ascending: false })
-      .range(0, 999),
-    supabase
-      .from("expense_items")
-      .select("id,name,category,cost_behavior,is_active,created_at")
-      .eq("business_id", businessId)
-      .order("created_at", { ascending: true }),
+    readAllSetupPages((from, to) =>
+      supabase
+        .from("monthly_periods")
+        .select("id,month_start,created_at,new_customers,total_paying_customers,unallocated_gross_cash_collected,unallocated_refunds", { count: "exact" })
+        .eq("business_id", businessId)
+        .order("month_start", { ascending: false })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+    readAllSetupPages((from, to) =>
+      supabase
+        .from("expense_items")
+        .select("id,name,category,cost_behavior,is_active,created_at", { count: "exact" })
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
     supabase
       .from("expense_items")
       .select("id", { count: "exact", head: true })
@@ -138,16 +150,22 @@ export async function loadBusinessSetup(
       .eq("business_id", businessId)
       .eq("category", "financial")
       .eq("is_active", true),
-    supabase
-      .from("monthly_revenue_entries")
-      .select("monthly_period_id,revenue_stream_id,stream_name_snapshot,stream_type_snapshot,gross_cash_collected,refunds")
-      .eq("business_id", businessId)
-      .range(0, 999),
-    supabase
-      .from("monthly_expense_entries")
-      .select("monthly_period_id,expense_item_id,expense_name_snapshot,category_snapshot,cost_behavior_snapshot,input_value,customer_count_basis")
-      .eq("business_id", businessId)
-      .range(0, 999),
+    readAllSetupPages((from, to) =>
+      supabase
+        .from("monthly_revenue_entries")
+        .select("id,monthly_period_id,revenue_stream_id,stream_name_snapshot,stream_type_snapshot,gross_cash_collected,refunds", { count: "exact" })
+        .eq("business_id", businessId)
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+    readAllSetupPages((from, to) =>
+      supabase
+        .from("monthly_expense_entries")
+        .select("id,monthly_period_id,expense_item_id,expense_name_snapshot,category_snapshot,cost_behavior_snapshot,input_value,customer_count_basis", { count: "exact" })
+        .eq("business_id", businessId)
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
   ]);
 
   const queryState = resolveBusinessSetupQueryState({
@@ -156,12 +174,7 @@ export async function loadBusinessSetup(
     latestPeriodError:
       latestPeriodResult.error ||
       savedRevenueResult.error ||
-      savedExpenseResult.error ||
-      (latestPeriodResult.data?.length === 1000 ||
-        savedRevenueResult.data?.length === 1000 ||
-        savedExpenseResult.data?.length === 1000
-        ? new Error("Setup readiness exceeds the bounded read; must paginate")
-        : null),
+      savedExpenseResult.error,
     expenseItemsError: expensesResult.error,
     activeExpenseCategoryErrors: [
       acquisitionCountResult.error,
