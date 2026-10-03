@@ -125,21 +125,28 @@ test("B10 first-month editor can load more than 1000 sources, expenses and saved
   const expenseEntries = expenses.map((expense) => ({
     expense_item_id: expense.id, input_value: "0", customer_count_basis: null,
   }));
-  const paged = await Promise.all(
-    [streams, expenses, revenueEntries, expenseEntries].map(async (records) => {
-      const source = pageSource(records, 400);
-      const result = await readAllSetupPages(source.fetch);
-      assert.equal(result.error, null);
-      assert.equal(result.data?.length, 1001);
-      assert.deepEqual(source.requests, [[0, 999], [400, 1399], [800, 1799]]);
-      return result.data ?? [];
-    }),
-  );
+  const streamPages = pageSource(streams, 400);
+  const expensePages = pageSource(expenses, 400);
+  const revenuePages = pageSource(revenueEntries, 400);
+  const savedExpensePages = pageSource(expenseEntries, 400);
+  const [loadedStreams, loadedExpenses, loadedRevenue, loadedSavedExpenses] = await Promise.all([
+    readAllSetupPages(streamPages.fetch),
+    readAllSetupPages(expensePages.fetch),
+    readAllSetupPages(revenuePages.fetch),
+    readAllSetupPages(savedExpensePages.fetch),
+  ]);
+  for (const result of [loadedStreams, loadedExpenses, loadedRevenue, loadedSavedExpenses]) {
+    assert.equal(result.error, null);
+    assert.equal(result.data?.length, 1001);
+  }
+  for (const source of [streamPages, expensePages, revenuePages, savedExpensePages]) {
+    assert.deepEqual(source.requests, [[0, 999], [400, 1399], [800, 1799]]);
+  }
   const mapped = buildMonthlyEntryRows({
-    streams: paged[0] as typeof streams,
-    expenses: paged[1] as typeof expenses,
-    revenueEntries: paged[2] as typeof revenueEntries,
-    expenseEntries: paged[3] as typeof expenseEntries,
+    streams: loadedStreams.data ?? [],
+    expenses: loadedExpenses.data ?? [],
+    revenueEntries: loadedRevenue.data ?? [],
+    expenseEntries: loadedSavedExpenses.data ?? [],
   });
   assert.equal(mapped.revenueRows.length, 1001);
   assert.equal(mapped.expenseRows.length, 1001);
