@@ -2,6 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { readAllSetupPages, SETUP_READ_PAGE_SIZE } from "../../src/lib/business/setup-paged-rows.ts";
 import { assessSavedSetupMonths } from "../../src/lib/business/setup-month-readiness.ts";
+import { readFile } from "node:fs/promises";
+import { buildMonthlyEntryRows } from "../../src/lib/business/monthly-entry-rows.ts";
+import { evaluateFirstMonthCompleteness } from "../../src/lib/business/first-month-completeness.ts";
 
 function pageSource<T>(rows: T[], serverCap = SETUP_READ_PAGE_SIZE, withCount = true) {
   const requests: Array<[number, number]> = [];
@@ -104,4 +107,49 @@ test("B10 assesses readiness across more than 1000 saved expense entries", async
   });
   assert.equal(assessed.validMonthCount, 41);
   assert.equal(assessed.completedMonthKeys.length, 41);
+});
+
+test("B10 first-month editor can load more than 1000 sources, expenses and saved entries", async () => {
+  const streams = Array.from({ length: 1001 }, (_, i) => ({
+    id: `source-${i}`, name: `Course ${i}`, stream_type: "front_end",
+    is_active: true, created_at: "2026-01-01T00:00:00Z",
+  }));
+  const expenses = Array.from({ length: 1001 }, (_, i) => ({
+    id: `expense-${i}`, name: `Cost ${i}`, category: "overhead",
+    cost_behavior: "fixed_monthly", is_active: true,
+    created_at: "2026-01-01T00:00:00Z",
+  }));
+  const revenueEntries = streams.map((source) => ({
+    revenue_stream_id: source.id, gross_cash_collected: "0", refunds: "0",
+  }));
+  const expenseEntries = expenses.map((expense) => ({
+    expense_item_id: expense.id, input_value: "0", customer_count_basis: null,
+  }));
+  const paged = await Promise.all(
+    [streams, expenses, revenueEntries, expenseEntries].map(async (records) => {
+      const source = pageSource(records, 400);
+      const result = await readAllSetupPages(source.fetch);
+      assert.equal(result.error, null);
+      assert.equal(result.data?.length, 1001);
+      assert.deepEqual(source.requests, [[0, 999], [400, 1399], [800, 1799]]);
+      return result.data ?? [];
+    }),
+  );
+  const mapped = buildMonthlyEntryRows({
+    streams: paged[0] as typeof streams,
+    expenses: paged[1] as typeof expenses,
+    revenueEntries: paged[2] as typeof revenueEntries,
+    expenseEntries: paged[3] as typeof expenseEntries,
+  });
+  assert.equal(mapped.revenueRows.length, 1001);
+  assert.equal(mapped.expenseRows.length, 1001);
+  assert.equal(evaluateFirstMonthCompleteness({
+    hasSavedPeriod: true,
+    period: { new_customers: 0, total_paying_customers: 0 },
+    revenueRows: mapped.revenueRows, expenseRows: mapped.expenseRows,
+  }).complete, true);
+  const loader = await readFile(
+    new URL("../../src/lib/business/first-month-setup.ts", import.meta.url), "utf8",
+  );
+  assert.equal((loader.match(/readAllSetupPages\\(\\(from, to\\)/g) ?? []).length, 4);
 });
