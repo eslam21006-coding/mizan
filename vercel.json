@@ -1,10 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
-    "deploymentEnabled": {
-      "*": false,
-      "main": false,
-      "verify/b10-inline-expense-delete": true
-    }
+    "deploymentEnabled": false
   }
 }
