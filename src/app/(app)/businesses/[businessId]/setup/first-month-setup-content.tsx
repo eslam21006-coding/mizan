@@ -37,6 +37,8 @@ export function FirstMonthSetupContent({
   firstMonthSaveSeed,
 }: FirstMonthSetupContentProps) {
   const monthKey = firstMonth.selectedMonthKey;
+  const persistedMonth = firstMonth.kind === "loaded" && firstMonth.hasSavedPeriod;
+  const completeSavedMonth = persistedMonth && firstMonth.completeness?.complete === true;
   const previous = shiftMonthKey(monthKey, -1);
   const next = shiftMonthKey(monthKey, 1);
   const previousMonth = previous && parseMonthKey(previous) ? previous : null;
@@ -76,9 +78,11 @@ export function FirstMonthSetupContent({
 
       {postSaveStatus === "verification-unavailable" ? (
         <div role="status" className={styles.unsavedNotice}>
-          تم الحفظ، لكن تعذر التحقق من حالة هذا الشهر بعد الحفظ. أعد تحميل الصفحة لمراجعة الأرقام المحفوظة، ولن نعرض نتائج غير مؤكدة.
+          {persistedMonth
+            ? "الشهر محفوظ، لكن تعذر التحقق من جاهزية النتيجة. أعد تحميل الصفحة لمراجعة الأرقام، ولن نعرض نتائج غير مؤكدة."
+            : "تعذر تأكيد حالة الحفظ. أعد تحميل الصفحة للتحقق من البيانات، ولن نعرض نتائج غير مؤكدة."}
         </div>
-      ) : postSaveStatus === "result-unavailable" ? (
+      ) : postSaveStatus === "result-unavailable" && completeSavedMonth ? (
         <div role="status" className={styles.unsavedNotice}>
           <strong>تم الحفظ، لكن نتيجة الشهر غير جاهزة بعد.</strong>
           <p>راجع التحصيل والمرتجعات، بما فيها المبالغ غير المنسوبة، وأكّد الصفر إذا كانت القيمة الفعلية صفرًا.</p>
@@ -90,7 +94,7 @@ export function FirstMonthSetupContent({
             مراجعة بيانات الشهر
           </Link>
         </div>
-      ) : postSaveStatus === "setup-incomplete" ? (
+      ) : postSaveStatus === "setup-incomplete" && completeSavedMonth ? (
         <div role="status" className={styles.unsavedNotice}>
           <strong>تم حفظ الشهر والتحقق من اكتماله.</strong>
           <p>لا تزال هناك خطوة أخرى في إعداد البزنس تحتاج إلى إكمال قبل عرض النتائج.</p>
