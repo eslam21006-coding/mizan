@@ -74,6 +74,38 @@ test("B10 derives readiness from confirmed persisted rows, retaining historical 
   assert.equal(storedExpenseValueForDisplay("0.035", "percentage_revenue"), "3.5");
 });
 
+test("B10 Setup cannot mark a saved month complete from unsaved transaction-derived customer counts", () => {
+  const saved = period({ new_customers: null, total_paying_customers: null });
+  const displayOnly = { ...saved, new_customers: 4, total_paying_customers: 5 };
+  const revenueRows = [
+    { id: "main", name: "Course", streamType: "front_end", active: true, gross: "1000", refunds: "0" },
+  ];
+  assert.equal(evaluateFirstMonthCompleteness({
+    hasSavedPeriod: true, period: displayOnly, revenueRows, expenseRows: [],
+  }).complete, true);
+
+  const stored = evaluateFirstMonthCompleteness({
+    hasSavedPeriod: true, period: saved, revenueRows, expenseRows: [],
+  });
+  assert.equal(stored.complete, false);
+  assert.ok(stored.missing.includes("new_customers"));
+  assert.ok(stored.missing.includes("total_paying_customers"));
+
+  const canonical = assessSavedSetupMonths({
+    periods: [saved],
+    streams: [source("main")],
+    expenses: [],
+    revenueEntries: [
+      { monthly_period_id: saved.id, revenue_stream_id: "main", gross_cash_collected: "1000", refunds: "0" },
+    ],
+    expenseEntries: [],
+  });
+  assert.equal(canonical.validMonthCount, 0);
+  assert.match(firstMonthSetupLoader,
+    /const completeness = evaluateFirstMonthCompleteness\\(\\{\\s*hasSavedPeriod: Boolean\\(period\\),\\s*period,\\s*revenueRows:/);
+  assert.match(firstMonthSetupLoader, /period: effectivePeriod,/);
+});
+
 test("B10 cannot complete with forged omission of an active source or expense", () => {
   const result = assessSavedSetupMonths({
     periods: [period()],
@@ -185,6 +217,7 @@ const actions = await readFile(new URL("../../src/app/(app)/businesses/[business
 const service = await readFile(new URL("../../src/lib/business/monthly-save-service.ts", import.meta.url), "utf8");
 const setupAction = await readFile(new URL("../../src/app/(app)/businesses/[businessId]/setup/first-month-actions.ts", import.meta.url), "utf8");
 const loader = await readFile(new URL("../../src/lib/business/setup-loader.ts", import.meta.url), "utf8");
+const firstMonthSetupLoader = await readFile(new URL("../../src/lib/business/first-month-setup.ts", import.meta.url), "utf8");
 
 test("B10 keeps exactly one save RPC path and derives canonical readiness from data", () => {
   assert.match(actions, /persistMonthlyActuals\(formData\)/);
