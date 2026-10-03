@@ -35,6 +35,7 @@ const ERROR_MESSAGES: Readonly<Record<string, string>> = {
   "historical-required": "هذا الشهر محفوظ كتاريخ سابق؛ استخدم مسار التصحيح التاريخي بدلًا من الحفظ العادي.",
 };
 
+/** Retains rejected Setup values while using the shared validated Monthly save pipeline. */
 export function FirstMonthSaveForm({ businessId, monthKey, currency, firstMonth, seedState }: Props) {
   const [state, formAction] = useActionState(saveFirstMonthSetup, seedState ?? initialState);
   const draft = state.draft;
