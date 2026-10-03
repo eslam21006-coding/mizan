@@ -71,7 +71,7 @@ export function FirstMonthSetupContent({
         <FirstMonthPicker businessId={businessId} monthKey={monthKey} />
       </section>
 
-      {monthSaved && firstMonth.kind === "loaded" ? (
+      {monthSaved && firstMonth.kind === "loaded" && firstMonth.hasSavedPeriod ? (
         <div role="status" className={firstMonth.completeness?.complete ? styles.savedNotice : styles.unsavedNotice}>
           {firstMonth.completeness?.complete
             ? "تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة."
