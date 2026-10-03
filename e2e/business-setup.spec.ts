@@ -563,8 +563,8 @@ test.describe("B10 authenticated save validation", () => {
     await page.getByLabel("اسم البزنس").fill(`B10 validation ${suffix}`);
     await page.getByRole("button", { name: /EGP/ }).click();
     await page.getByRole("button", { name: "إنشاء البزنس والمتابعة" }).click();
-    await expect(page).toHaveURL(/\\/businesses\\/[0-9a-f-]+\\/setup\\?step=revenue$/);
-    const businessId = page.url().match(/\\/businesses\\/([0-9a-f-]+)\\/setup/)?.[1];
+    await expect(page).toHaveURL(/\/businesses\/[0-9a-f-]+\/setup\?step=revenue$/);
+    const businessId = page.url().match(/\/businesses\/([0-9a-f-]+)\/setup/)?.[1];
     expect(businessId).toBeTruthy();
 
     await page.getByLabel("اسم المنتج أو الخدمة").fill(sourceName);
@@ -583,7 +583,7 @@ test.describe("B10 authenticated save validation", () => {
     await editor.getByLabel(`الإيراد المحصل — ${sourceName}`).fill("5000");
     await editor.getByLabel(`المرتجعات — ${sourceName}`).fill("0");
     await editor.getByLabel("عملاء جدد").fill("10");
-    await editor.getByLabel("إجمالي العملاء الذين دفعوا").fill("10");
+    await editor.getByLabel("إجمالي العملاء الذين دفعوا خلال الشهر").fill("10");
     await editor.getByLabel(`${coachName} — التكلفة لكل عميل`).fill("20");
     await expect(editor.getByLabel(`أساس عدد العملاء — ${coachName}`)).toHaveValue("");
 
