@@ -136,7 +136,23 @@ begin
  if exists(select 1 from public.monthly_periods
    where business_id='b1000000-0000-4100-8100-000000000010' and month_start='2099-02-01')
  then raise exception 'B10 failed request left behind a partial period'; end if;
-end $$;
+
+ -- A valid revenue row followed by a foreign expense must also be rejected atomically.
+ blocked := false;
+ begin
+  perform public.save_monthly_actuals(
+   'b1000000-0000-4100-8100-000000000010','2099-04-01',
+   3,4,null,null,null,
+   '[{"revenue_stream_id":"b1000000-0000-4100-8100-000000000101","gross_cash_collected":"100","refunds":"0"}]'::jsonb,
+   '[{"expense_item_id":"b1000000-0000-4100-8100-000000000401","display_value":"100","customer_count_basis":null}]'::jsonb
+  );
+ exception when sqlstate '42501' then blocked := true;
+ end;
+ if not blocked then raise exception 'B10 accepted a foreign expense item'; end if;
+ if exists(select 1 from public.monthly_periods
+   where business_id='b1000000-0000-4100-8100-000000000010' and month_start='2099-04-01')
+ then raise exception 'B10 foreign expense request left behind a partial period'; end if;
+end $;
 
 -- Member/outsider may not mutate the owner's saved month by calling the RPC directly.
 set local request.jwt.claims =
