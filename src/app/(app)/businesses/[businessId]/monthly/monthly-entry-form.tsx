@@ -80,6 +80,7 @@ function formatMoney(value: number, currency: string) {
   }).format(value)} ${currency}`;
 }
 
+/** Displays a non-authoritative preview; saved financial totals use the shared calculation engine. */
 function NetValue({ gross, refunds, currency }: { gross: string; refunds: string; currency: string }) {
   const net = useMemo(() => {
     const grossValue = parseNumber(gross);
@@ -97,6 +98,7 @@ function NetValue({ gross, refunds, currency }: { gross: string; refunds: string
   );
 }
 
+/** Displays a founder-facing input or read-only value while distinguishing blank from zero. */
 function InputField({
   editable,
   name,
@@ -162,6 +164,7 @@ function SectionHeading({ step, title, description }: { step: string; title: str
   );
 }
 
+/** Collects actual cash and refunds per revenue source without double-counting refunds. */
 function RevenueSection({
   editable,
   currency,
@@ -304,6 +307,7 @@ function RevenueSection({
   );
 }
 
+/** Shows authoritative transaction-derived counts or their established manual fallback. */
 function CustomersSection({
   editable,
   period,
@@ -378,6 +382,7 @@ function CustomersSection({
   );
 }
 
+/** Labels each expense input according to its saved cost behavior. */
 function ExpenseValueField({
   editable,
   row,
@@ -409,6 +414,7 @@ function ExpenseValueField({
   );
 }
 
+/** Applies Setup-only partial-basis UI rules without relaxing the existing Monthly form. */
 function ExpenseCalculation({ editable, row, allowPartialExpenseBasis = false, fieldErrors }: {
   editable: boolean;
   row: ExpenseInputRow;
@@ -464,6 +470,7 @@ function ExpenseCalculation({ editable, row, allowPartialExpenseBasis = false, f
   );
 }
 
+/** Groups expenses by the four canonical financial categories. */
 function ExpensesSection({
   editable,
   currency,
@@ -531,6 +538,7 @@ function ExpensesSection({
   );
 }
 
+/** Shares canonical Monthly financial inputs with the Setup wizard. */
 export function MonthlyEntryForm({
   editable,
   currency,
