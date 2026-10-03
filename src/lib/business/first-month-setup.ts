@@ -14,6 +14,7 @@ import {
   parseMonthKey,
 } from "@/lib/business/monthly";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { readAllSetupPages } from "./setup-paged-rows.ts";
 
 export type FirstMonthSetupData = {
   kind: "loaded";
@@ -58,16 +59,24 @@ export async function loadFirstMonthSetup(
       .eq("business_id", businessId)
       .eq("month_start", month.monthStart)
       .maybeSingle(),
-    supabase
-      .from("revenue_streams")
-      .select("id,name,stream_type,is_active,created_at")
-      .eq("business_id", businessId)
-      .order("created_at", { ascending: true }),
-    supabase
-      .from("expense_items")
-      .select("id,name,category,cost_behavior,is_active,created_at")
-      .eq("business_id", businessId)
-      .order("created_at", { ascending: true }),
+    readAllSetupPages((from, to) =>
+      supabase
+        .from("revenue_streams")
+        .select("id,name,stream_type,is_active,created_at", { count: "exact" })
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+    readAllSetupPages((from, to) =>
+      supabase
+        .from("expense_items")
+        .select("id,name,category,cost_behavior,is_active,created_at", { count: "exact" })
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
     loadTransactionDerivedMonthlyCustomerCounts(supabase, businessId, month.monthStart),
   ]);
 
@@ -86,16 +95,24 @@ export async function loadFirstMonthSetup(
 
   if (period?.id) {
     const [revenueResult, expenseResult] = await Promise.all([
-      supabase
-        .from("monthly_revenue_entries")
-        .select("revenue_stream_id,stream_name_snapshot,stream_type_snapshot,gross_cash_collected,refunds")
-        .eq("business_id", businessId)
-        .eq("monthly_period_id", period.id),
-      supabase
-        .from("monthly_expense_entries")
-        .select("expense_item_id,expense_name_snapshot,category_snapshot,cost_behavior_snapshot,input_value,customer_count_basis")
-        .eq("business_id", businessId)
-        .eq("monthly_period_id", period.id),
+      readAllSetupPages((from, to) =>
+        supabase
+          .from("monthly_revenue_entries")
+          .select("revenue_stream_id,stream_name_snapshot,stream_type_snapshot,gross_cash_collected,refunds", { count: "exact" })
+          .eq("business_id", businessId)
+          .eq("monthly_period_id", period.id)
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
+      readAllSetupPages((from, to) =>
+        supabase
+          .from("monthly_expense_entries")
+          .select("expense_item_id,expense_name_snapshot,category_snapshot,cost_behavior_snapshot,input_value,customer_count_basis", { count: "exact" })
+          .eq("business_id", businessId)
+          .eq("monthly_period_id", period.id)
+          .order("id", { ascending: true })
+          .range(from, to),
+      ),
     ]);
     if (revenueResult.error || expenseResult.error) {
       return { kind: "load_error", selectedMonthKey: month.monthKey, currentMonthKey };
