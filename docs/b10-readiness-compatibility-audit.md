@@ -7,13 +7,24 @@
 - The existing `save_monthly_actuals` function already provides a unique business/month period, unique period/item rows, atomic writes and database-level business-management checks.
 - The new readiness evaluator checks all required, actually saved financial values. Historical inactive rows remain applicable when they have saved snapshots; current items created after the original month was saved must not retroactively invalidate it.
 
-## Live-data audit status — BLOCKED
+## Live-data audit status — PASSED (2026-10-03)
 
-The connected Mizan Supabase project reports `ACTIVE_HEALTHY`, but two separate read-only SQL attempts on 2026-10-02 failed with PostgreSQL `28P01` (password authentication failed for `postgres`). Consequently, the existing-business population and potential changes to Step 4 completion **have not been measured**. Do not infer that there are no affected businesses.
+The connected Mizan Supabase project `zpfacvowigsscrnyceqh` reports `ACTIVE_HEALTHY`. PostgreSQL SQL access initially failed with `28P01` on 2026-10-02 but recovered without a password reset. On 2026-10-03, a read-only `SELECT current_database(), current_user` succeeded as `postgres`, followed by the exact aggregate impact query below.
 
-Do **not** modify production data, deploy a readiness change, or claim production compatibility before a successful read-only audit. No migration has been applied.
+| Measured population | Read-only production result |
+|---|---:|
+| Businesses | 1 |
+| Saved monthly periods | 1 |
+| Periods satisfying the new completeness rules | 1 |
+| Businesses with saved periods | 1 |
+| Businesses with at least one complete month | 1 |
+| Previously saved but incomplete businesses | 0 |
 
-### Safe aggregate impact query (execute after SQL access is repaired)
+**Compatibility decision:** In the measured production population, B10's stricter month-completeness rule does not remove Setup completion from any existing business. The Overview, Monthly, and history routes continue to load independently of Setup readiness. No production records, schema, authentication credentials, or financial definitions were changed during the audit.
+
+This is a point-in-time result, not a guarantee against changes to production data before deployment. Repeat the aggregate query immediately before deployment if the live data or migrations change. Preserve the existing founder approval, fresh CI, CodeRabbit, and production browser-verification gates.
+
+### Safe aggregate impact query (executed successfully 2026-10-03)
 
 ```sql
 WITH assessed AS (
@@ -72,4 +83,4 @@ FROM per_business;
 4. If historical item-activation state cannot be inferred from saved snapshots and timestamps with acceptable confidence, stop and propose a separate minimal verification migration before B10 merge.
 5. Repeat a read-only audit against any production migration changes immediately before deployment.
 
-The B10 branch is safe to develop and test without a production migration, but its production compatibility check remains a release blocker until this query succeeds.
+The B10 production compatibility audit passed on 2026-10-03; it is no longer a release blocker at the measured population. No database migration was necessary. Merge still requires fresh checks, final CodeRabbit review, and explicit founder approval. Deployment requires Vercel access or a manual release with verifiable production confirmation.
