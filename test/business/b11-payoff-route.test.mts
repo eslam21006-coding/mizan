@@ -36,7 +36,7 @@ function setup(expenseReviewed = true, saved = persistedMonths) {
     }),
   };
 }
-function financials(newCustomers = 11, gross = "12000", refunds = "2000") {
+function financials(newCustomers = 11, gross = "12000", refunds = "2000", unallocated: string | null = "0") {
   return calculateCoreFinancials({
     revenueStreams: [
       { id: "a", name: "Agency", streamType: "front_end",
@@ -48,7 +48,7 @@ function financials(newCustomers = 11, gross = "12000", refunds = "2000") {
       { id: "rent", name: "Rent", category: "overhead", behavior: "fixed_monthly", inputValue: "1500" },
       { id: "fees", name: "Fees", category: "financial", behavior: "fixed_monthly", inputValue: "500" },
     ],
-    unallocatedGrossCashCollected: null, unallocatedRefunds: null,
+    unallocatedGrossCashCollected: unallocated, unallocatedRefunds: unallocated,
     newCustomers, totalPayingCustomers: newCustomers,
     canonicalAdSpend: null,
   });
@@ -164,6 +164,7 @@ test("B11.2 canonical data and calculation failures never show a success result"
     [month({ dataLoadError: true }), "data_load_error"],
     [month({ calculationError: true }), "calculation_error"],
     [month({ result: null }), "calculation_error"],
+    [month({ result: financials(11, "12000", "2000", null) }), "calculation_error"],
     [month({ result: { ...canonical, realNetProfit: { available: false, reason: "INPUT_UNAVAILABLE" } } }), "calculation_error"],
     [month({ result: { ...canonical, ultimateCac: { available: false, reason: "INPUT_UNAVAILABLE" } } }), "calculation_error"],
   ] as const) {
