@@ -623,9 +623,27 @@ test.describe("B10 first-month save UX", () => {
   test("B11.4 verification failure after saving does not claim financial completeness", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.goto(`${fixturePath}?case=month-complete&step=month&month=2026-10&status=verification-unavailable`);
-    await expect(page.getByText(/تعذر التحقق من حالة هذا الشهر بعد الحفظ/)).toBeVisible();
+    await expect(page.getByText(/الشهر محفوظ، لكن تعذر التحقق من جاهزية النتيجة/)).toBeVisible();
     await expect(page.getByText("تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة.")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "جاهز — ميزان فهم البزنس" })).toHaveCount(0);
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("B11.4 manually changing a status URL never turns an unsaved or partial month into verified success", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-empty&step=month&month=2026-10&status=setup-incomplete`);
+    await expect(page.getByText("هذا الشهر غير محفوظ بعد")).toBeVisible();
+    await expect(page.getByText("تم حفظ الشهر والتحقق من اكتماله.")).toHaveCount(0);
+
+    await page.goto(`${fixturePath}?case=month-partial&step=month&month=2026-10&status=result-unavailable`);
+    await expect(page.getByText("3 من 4 خطوات مكتملة")).toBeVisible();
+    await expect(page.getByText("تم الحفظ، لكن نتيجة الشهر غير جاهزة بعد.")).toHaveCount(0);
+    await expect(page.getByText(/تم حفظ بيانات الشهر. ما زالت بعض الأرقام مطلوبة/)).toBeVisible();
+
+    await page.goto(`${fixturePath}?case=month-empty&step=month&month=2026-10&status=verification-unavailable`);
+    await expect(page.getByText("تعذر تأكيد حالة الحفظ. أعد تحميل الصفحة للتحقق من البيانات، ولن نعرض نتائج غير مؤكدة.")).toBeVisible();
+    await expect(page.getByText("تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة.")).toHaveCount(0);
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });
