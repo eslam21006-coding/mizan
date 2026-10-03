@@ -1,6 +1,25 @@
 import type { SetupPayoffResult } from "./setup-payoff-result.ts";
 import { buildBusinessSetupHref } from "./setup-navigation.ts";
 
+export type FirstMonthPostSaveStatus =
+  | "saved"
+  | "setup-incomplete"
+  | "result-unavailable"
+  | "verification-unavailable";
+
+/** Only the documented success statuses are displayed as saved-month feedback. */
+export function parseFirstMonthPostSaveStatus(value: unknown): FirstMonthPostSaveStatus | null {
+  switch (value) {
+    case "saved":
+    case "setup-incomplete":
+    case "result-unavailable":
+    case "verification-unavailable":
+      return value;
+    default:
+      return null;
+  }
+}
+
 /** No success handoff is inferred from the write response or from another completed month. */
 export function resolveFirstMonthPostSaveDestination(
   businessId: string,
