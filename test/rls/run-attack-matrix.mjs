@@ -94,6 +94,7 @@ export const sqlFiles = Object.freeze([
   "supabase/migrations/20260928074500_b02_setup_completion_state.sql",
   "test/rls/b02-setup-completion-state.test.sql",
   "test/business/b02-setup-completion-invariance.test.sql",
+  "test/business/b10-first-month-save-persistence.test.sql",
 ]);
 
 const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));

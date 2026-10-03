@@ -7,6 +7,11 @@ const actions = await readFile(
   new URL("../../src/app/(app)/businesses/[businessId]/monthly/actions.ts", import.meta.url),
   "utf8",
 );
+const saveService = await readFile(
+  new URL("../../src/lib/business/monthly-save-service.ts", import.meta.url),
+  "utf8",
+);
+
 const entryForm = await readFile(
   new URL(
     "../../src/app/(app)/businesses/[businessId]/monthly/monthly-entry-form.tsx",
@@ -26,10 +31,10 @@ const packageJson = JSON.parse(
 ) as { engines?: { node?: string } };
 
 test("blank unallocated monthly inputs remain null from form to rendering", () => {
-  assert.match(actions, /target_unallocated_gross:\s*unallocatedGross\.value/);
-  assert.match(actions, /target_unallocated_refunds:\s*unallocatedRefunds\.value/);
-  assert.doesNotMatch(actions, /target_unallocated_gross:[^\n]*\?\?\s*["']0["']/);
-  assert.doesNotMatch(actions, /target_unallocated_refunds:[^\n]*\?\?\s*["']0["']/);
+  assert.match(saveService, /target_unallocated_gross:\s*unallocatedGross\.value/);
+  assert.match(saveService, /target_unallocated_refunds:\s*unallocatedRefunds\.value/);
+  assert.doesNotMatch(saveService, /target_unallocated_gross:[^\n]*\?\?\s*["']0["']/);
+  assert.doesNotMatch(saveService, /target_unallocated_refunds:[^\n]*\?\?\s*["']0["']/);
   assert.match(entryForm, /asInputValue\(period\?\.unallocated_gross_cash_collected\)/);
   assert.match(entryForm, /asInputValue\(period\?\.unallocated_refunds\)/);
   assert.doesNotMatch(entryForm, /unallocated_gross_cash_collected\s*\?\?\s*["']0["']/);

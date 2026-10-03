@@ -7,6 +7,8 @@ import {
 import { buildBusinessSetupHref } from "@/lib/business/setup-navigation";
 import type { FirstMonthSetupResult } from "@/lib/business/first-month-setup";
 import { FirstMonthPicker } from "./first-month-picker";
+import { FirstMonthSaveForm } from "./first-month-save-form";
+import type { FirstMonthSaveState } from "./first-month-actions";
 import styles from "./first-month-setup.module.css";
 
 type FirstMonthSetupContentProps = {
@@ -16,9 +18,11 @@ type FirstMonthSetupContentProps = {
   latestSavedMonthKey: string | null;
   firstMonth: FirstMonthSetupResult;
   invalidMonth: boolean;
+  monthSaved?: boolean;
+  firstMonthSaveSeed?: FirstMonthSaveState;
 };
 
-/** Displays a deliberately unsaved first-month preview over the canonical Monthly entry form. */
+/** Presents the selected month with authorized editing and protected historical snapshots. */
 export function FirstMonthSetupContent({
   businessId,
   baseCurrency,
@@ -26,6 +30,8 @@ export function FirstMonthSetupContent({
   latestSavedMonthKey,
   firstMonth,
   invalidMonth,
+  monthSaved = false,
+  firstMonthSaveSeed,
 }: FirstMonthSetupContentProps) {
   const monthKey = firstMonth.selectedMonthKey;
   const previous = shiftMonthKey(monthKey, -1);
@@ -65,6 +71,19 @@ export function FirstMonthSetupContent({
         <FirstMonthPicker businessId={businessId} monthKey={monthKey} />
       </section>
 
+      {monthSaved && firstMonth.kind === "loaded" && firstMonth.hasSavedPeriod ? (
+        <div role="status" className={firstMonth.completeness?.complete ? styles.savedNotice : styles.unsavedNotice}>
+          {firstMonth.completeness?.complete
+            ? "تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة."
+            : "تم حفظ بيانات الشهر. ما زالت بعض الأرقام مطلوبة قبل اكتمال هذه الخطوة."}
+        </div>
+      ) : null}
+      {firstMonth.kind === "loaded" && firstMonth.hasSavedPeriod && !firstMonth.completeness?.complete ? (
+        <p className={styles.trustNotice} role="note">
+          الشهر محفوظ لكنه غير مكتمل ماليًا. أضف القيم الناقصة، واكتب صفرًا إذا كانت القيمة الفعلية صفرًا.
+        </p>
+      ) : null}
+
       {firstMonth.kind === "load_error" ? (
         <div role="alert" className={styles.error}>
           تعذر تحميل بيانات هذا الشهر كاملة. لن يعرض ميزان أرقامًا مفترضة أو يسمح بالإدخال حتى تنجح القراءة.
@@ -90,11 +109,9 @@ export function FirstMonthSetupContent({
 
           {canManage && !firstMonth.isSavedHistorical ? (
             <div className={styles.unsavedNotice} role="note">
-              <strong>معاينة غير محفوظة</strong>
-              <p>الخانات أدناه لتجهيز واجهة أول شهر فقط. لن تُحفظ القيم التي تدخلها هنا عند تغيير الشهر أو مغادرة الصفحة. الحفظ من داخل ميزان متاح الآن عبر صفحة الإدخال الشهري؛ سيتم ربط هذه الخطوة بالحفظ مباشرةً في B10.</p>
-              <Link href={monthlyEditorHref} className={styles.openMonthly}>
-                فتح الإدخال الشهري لحفظ الأرقام
-              </Link>
+              <strong>احفظ أرقامك مباشرة من هذه الخطوة</strong>
+              <p>يمكنك حفظ شهر غير مكتمل والعودة إليه. لا تكتمل الخطوة إلا بعد تأكيد جميع القيم المطلوبة؛ الصفر المؤكد يختلف عن الخانة الفارغة.</p>
+              <Link href={monthlyEditorHref} className={styles.openMonthly}>فتح الإدخال الشهري</Link>
             </div>
           ) : (
             <div className={styles.readOnlyNotice}>
@@ -111,18 +128,29 @@ export function FirstMonthSetupContent({
             </p>
           )}
 
-          <section className={styles.formPreview} aria-label="معاينة إدخال أول شهر">
-            <MonthlyEntryForm
+          {canManage && !firstMonth.isSavedHistorical ? (
+            <FirstMonthSaveForm
               key={monthKey}
-              editable={canManage && !firstMonth.isSavedHistorical}
+              businessId={businessId}
+              monthKey={monthKey}
               currency={baseCurrency}
-              revenueRows={firstMonth.revenueRows}
-              expenseRows={firstMonth.expenseRows}
-              period={firstMonth.period}
-              customerCountsDerived={firstMonth.payingCustomersDerived}
-              newCustomersDerived={firstMonth.newCustomersDerived}
+              firstMonth={firstMonth}
+              seedState={firstMonthSaveSeed}
             />
-          </section>
+          ) : (
+            <section className={styles.formPreview} aria-label="معاينة إدخال أول شهر">
+              <MonthlyEntryForm
+                key={monthKey}
+                editable={false}
+                currency={baseCurrency}
+                revenueRows={firstMonth.revenueRows}
+                expenseRows={firstMonth.expenseRows}
+                period={firstMonth.period}
+                customerCountsDerived={firstMonth.payingCustomersDerived}
+                newCustomersDerived={firstMonth.newCustomersDerived}
+              />
+            </section>
+          )}
         </>
       )}
     </div>

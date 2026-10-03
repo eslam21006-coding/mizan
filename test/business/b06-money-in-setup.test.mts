@@ -8,10 +8,10 @@ const setupLoaderSource = await readFile(
 );
 
 test("B06-A setup loader returns revenue rows while readiness still counts active sources only", () => {
-  assert.match(setupLoaderSource, /\.select\("id,name,stream_type,is_active"\)/);
+  assert.match(setupLoaderSource, /\.select\("id,name,stream_type,is_active,created_at", \{ count: "exact" \}\)/);
   assert.match(
     setupLoaderSource,
-    /\.select\("id,name,stream_type,is_active"\)[\s\S]*?\.order\("created_at", \{ ascending: true \}\)/,
+    /\.select\("id,name,stream_type,is_active,created_at", \{ count: "exact" \}\)[\s\S]*?\.order\("created_at", \{ ascending: true \}\)/,
   );
   assert.match(setupLoaderSource, /select\("id", \{ count: "exact", head: true \}\)/);
   assert.match(

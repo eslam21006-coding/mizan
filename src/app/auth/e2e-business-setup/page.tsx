@@ -40,6 +40,8 @@ type FixtureCase =
   | "month-empty"
   | "month-partial"
   | "month-saved"
+  | "month-complete"
+  | "month-error"
   | "month-read-only"
   | "month-load-error"
   | "load-error";
@@ -213,12 +215,22 @@ const CASES: Record<
   "month-partial": {
     revenueSourceCount: 2,
     reviewedAt: "2026-09-30T12:00:00.000Z",
-    validMonthCount: 1,
+    validMonthCount: 0,
   },
   "month-saved": {
     revenueSourceCount: 2,
     reviewedAt: "2026-09-30T12:00:00.000Z",
     validMonthCount: 1,
+  },
+  "month-complete": {
+    revenueSourceCount: 2,
+    reviewedAt: "2026-09-30T12:00:00.000Z",
+    validMonthCount: 1,
+  },
+  "month-error": {
+    revenueSourceCount: 2,
+    reviewedAt: "2026-09-30T12:00:00.000Z",
+    validMonthCount: 0,
   },
   "month-read-only": {
     revenueSourceCount: 2,
@@ -241,17 +253,23 @@ function fixtureFirstMonth(
     return { kind: "load_error", selectedMonthKey: monthKey, currentMonthKey: "2026-10" };
   }
 
-  const populated = fixtureCase === "month-partial" || fixtureCase === "month-saved";
+  const populated = fixtureCase === "month-partial" || fixtureCase === "month-saved" || fixtureCase === "month-complete";
   const historical = fixtureCase === "month-saved";
+  const complete = historical || fixtureCase === "month-complete";
   return {
     kind: "loaded",
     selectedMonthKey: monthKey,
     currentMonthKey: "2026-10",
     hasSavedPeriod: populated,
     isSavedHistorical: historical,
+    completeness: {
+      complete: populated && complete,
+      meaningful: populated,
+      missing: populated && complete ? [] : ["new_customers"],
+    },
     period: populated
       ? {
-          new_customers: historical ? 20 : null,
+          new_customers: complete ? 20 : null,
           total_paying_customers: 35,
           unallocated_gross_cash_collected: "0",
           unallocated_refunds: null,
@@ -306,7 +324,7 @@ function fixtureFirstMonth(
       },
     ],
     payingCustomersDerived: populated,
-    newCustomersDerived: historical,
+    newCustomersDerived: complete,
   };
 }
 
@@ -335,6 +353,8 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     query.case === "month-empty" ||
     query.case === "month-partial" ||
     query.case === "month-saved" ||
+    query.case === "month-complete" ||
+    query.case === "month-error" ||
     query.case === "month-read-only" ||
     query.case === "month-load-error" ||
     query.case === "load-error"
@@ -425,12 +445,26 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
         expenseStatus={null}
         latestSavedMonthKey={
           fixtureCase !== "load-error" && CASES[fixtureCase].validMonthCount > 0
-            ? fixtureCase === "month-saved" || fixtureCase === "month-partial"
+            ? fixtureCase === "month-saved" || fixtureCase === "month-partial" || fixtureCase === "month-complete"
               ? "2026-09"
               : "2026-08"
             : null
         }
         firstMonth={firstMonth}
+        monthSaved={query.status === "saved"}
+        firstMonthSaveSeed={fixtureCase === "month-error" ? {
+          attempt: 1,
+          status: "error",
+          code: "invalid-input",
+          fieldErrors: {
+            "expense_basis_b2222222-2222-4222-8222-222222222222": "اختر أساس عدد العملاء لهذا المصروف.",
+          },
+          draft: {
+            "gross_a1111111-1111-4111-8111-111111111111": "5000",
+            "expense_value_b2222222-2222-4222-8222-222222222222": "20",
+            "expense_basis_b2222222-2222-4222-8222-222222222222": "",
+          },
+        } : undefined}
         invalidMonth={query.status === "invalid-month"}
         backHref={
           previousStep ? buildBusinessSetupHref(businessId, previousStep) : null

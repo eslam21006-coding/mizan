@@ -293,6 +293,7 @@ test("UI, dashboard, database guard, and test matrices preserve the history-comp
     pageSource,
     formSource,
     actionSource,
+    saveServiceSource,
     dashboardSource,
     originalMigrationSource,
     guardMigrationSource,
@@ -305,6 +306,7 @@ test("UI, dashboard, database guard, and test matrices preserve the history-comp
     readFile("src/app/(app)/businesses/[businessId]/monthly/page.tsx", "utf8"),
     readFile("src/app/(app)/businesses/[businessId]/monthly/monthly-entry-form.tsx", "utf8"),
     readFile("src/app/(app)/businesses/[businessId]/monthly/actions.ts", "utf8"),
+    readFile("src/lib/business/monthly-save-service.ts", "utf8"),
     readFile("src/lib/business/dashboard-month.ts", "utf8"),
     readFile("supabase/migrations/20260906064500_transaction_derived_monthly_customer_counts.sql", "utf8"),
     readFile("supabase/migrations/20260906123000_transaction_history_completeness_guard.sql", "utf8"),
@@ -324,8 +326,8 @@ test("UI, dashboard, database guard, and test matrices preserve the history-comp
   assert.match(pageSource, /period\?\.new_customers/);
   assert.match(formSource, /محسوب تلقائيًا من سجل المعاملات/);
   assert.doesNotMatch(actionSource, /loadTransactionDerivedMonthlyCustomerCounts/);
-  assert.match(actionSource, /target_new_customers: newCustomers\.value/);
-  assert.match(actionSource, /target_total_paying_customers: payingCustomers\.value/);
+  assert.match(saveServiceSource, /target_new_customers: newCustomers\.value/);
+  assert.match(saveServiceSource, /target_total_paying_customers: payingCustomers\.value/);
   assert.match(dashboardSource, /derivedCustomerCounts\.counts\.newCustomers === null/);
   assert.match(dashboardSource, /total_paying_customers: derivedCustomerCounts\.counts\.totalPayingCustomers/);
   assert.match(originalMigrationSource, /monthly-customer-counts:/);

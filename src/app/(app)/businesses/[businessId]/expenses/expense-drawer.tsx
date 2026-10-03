@@ -168,15 +168,13 @@ export function ExpenseDrawerLauncher({
               className={styles.form}
             >
               <input type="hidden" name="business_id" value={businessId} />
+              <input type="hidden" name="destination" value={destination} />
               {isCreate ? (
-                <>
-                  <input
-                    type="hidden"
-                    name="creation_request_id"
-                    value={creationRequestId ?? ""}
-                  />
-                  <input type="hidden" name="destination" value={destination} />
-                </>
+                <input
+                  type="hidden"
+                  name="creation_request_id"
+                  value={creationRequestId ?? ""}
+                />
               ) : (
                 <input type="hidden" name="expense_id" value={expense?.id ?? ""} />
               )}

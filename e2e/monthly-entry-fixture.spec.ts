@@ -87,6 +87,34 @@ test.describe("Monthly entry UX fixture", () => {
     expect(errors).toEqual([]);
   });
 
+  test("computes Agency-style grouped cents immediately and keeps rejected inputs visible", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(fixturePath);
+    const gross = page.getByLabel("الإيراد المحصل — Front-End Offer");
+    const refunds = page.getByLabel("المرتجعات — Front-End Offer");
+    await gross.fill("9,336.28");
+    await refunds.fill("0");
+    await expect(page.getByText("9,336.28 USD", { exact: true })).toBeVisible();
+
+    await gross.fill("9,33.28");
+    await expect(page.getByText("أدخل المحصل والمرتجعات لإظهار الصافي.").first()).toBeVisible();
+
+    await page.goto(`${fixturePath}?case=invalid`);
+    await expect(page.getByRole("alert").filter({ hasText: "راجع الحقول المحددة" })).toBeVisible();
+    await expect(page.getByLabel("الإيراد المحصل — Front-End Offer")).toHaveValue("9,33.28");
+    await expect(page.getByLabel("المرتجعات — Front-End Offer")).toHaveValue("0");
+    await expect(page.getByLabel("الإيراد المحصل — Front-End Offer")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator("html")).toHaveAttribute("dir", "rtl");
+    await expect
+      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth + 1))
+      .toBe(true);
+    expect(errors).toEqual([]);
+  });
+
   test("preserves only safe external Return origins with exact month context", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 1440, height: 1000 });

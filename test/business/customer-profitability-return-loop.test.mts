@@ -103,11 +103,11 @@ test("Monthly preserves profitability origin through normal save redirects and r
   );
   assert.match(
     monthlyActionsSource,
-    /redirectMonthly\(businessId, month\.monthKey, "saved", returnOrigin\)/,
+    /redirectMonthly\(result\.businessId, result\.monthKey, "saved", returnOrigin\)/,
   );
   assert.match(
     monthlyActionsSource,
-    /redirectMonthly\(businessId, month\.monthKey, "save-failed", returnOrigin\)/,
+    /redirectMonthly\(result\.businessId, result\.monthKey, result\.code, returnOrigin\)/,
   );
   assert.doesNotMatch(monthlyPageSource, /returnTo/);
   assert.doesNotMatch(monthlyActionsSource, /returnTo/);

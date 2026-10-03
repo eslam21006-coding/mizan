@@ -689,6 +689,40 @@ a.stepLink:focus-visible,
   overflow-wrap: anywhere;
 }
 
+.expenseItemActions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-inline-start: auto;
+}
+
+.expenseItemActions form {
+  margin: 0;
+}
+
+.expenseDeleteButton {
+  min-height: 34px;
+  padding: 6px 10px;
+  color: var(--danger);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.expenseDeleteButton:hover {
+  border-color: var(--danger);
+}
+
+.expenseDeleteButton:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
 .expenseCategoryEmpty {
   margin: 0;
 }
@@ -763,6 +797,11 @@ a.stepLink:focus-visible,
   .expenseSetupItem {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .expenseItemActions {
+    width: 100%;
+    margin-inline-start: 0;
   }
 
   .expenseCategoryActions {

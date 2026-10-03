@@ -7,6 +7,8 @@ import type {
   SetupExpenseItem,
 } from "./expenses.ts";
 import type { RevenueStreamType } from "./revenue-streams.ts";
+import { assessSavedSetupMonths } from "./setup-month-readiness.ts";
+import { readAllSetupPages } from "./setup-paged-rows.ts";
 import {
   resolveBusinessSetupQueryState,
   resolveBusinessSetupReadiness,
@@ -89,29 +91,41 @@ export async function loadBusinessSetup(
     fulfillmentCountResult,
     overheadCountResult,
     financialCountResult,
+    savedRevenueResult,
+    savedExpenseResult,
   ] = await Promise.all([
-    supabase
-      .from("revenue_streams")
-      .select("id,name,stream_type,is_active")
-      .eq("business_id", businessId)
-      .order("created_at", { ascending: true }),
+    readAllSetupPages((from, to) =>
+      supabase
+        .from("revenue_streams")
+        .select("id,name,stream_type,is_active,created_at", { count: "exact" })
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
     supabase
       .from("revenue_streams")
       .select("id", { count: "exact", head: true })
       .eq("business_id", businessId)
       .eq("is_active", true),
-    supabase
-      .from("monthly_periods")
-      .select("month_start")
-      .eq("business_id", businessId)
-      .order("month_start", { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-    supabase
-      .from("expense_items")
-      .select("id,name,category,cost_behavior,is_active")
-      .eq("business_id", businessId)
-      .order("created_at", { ascending: true }),
+    readAllSetupPages((from, to) =>
+      supabase
+        .from("monthly_periods")
+        .select("id,month_start,created_at,new_customers,total_paying_customers,unallocated_gross_cash_collected,unallocated_refunds", { count: "exact" })
+        .eq("business_id", businessId)
+        .order("month_start", { ascending: false })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+    readAllSetupPages((from, to) =>
+      supabase
+        .from("expense_items")
+        .select("id,name,category,cost_behavior,is_active,created_at", { count: "exact" })
+        .eq("business_id", businessId)
+        .order("created_at", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
     supabase
       .from("expense_items")
       .select("id", { count: "exact", head: true })
@@ -136,12 +150,31 @@ export async function loadBusinessSetup(
       .eq("business_id", businessId)
       .eq("category", "financial")
       .eq("is_active", true),
+    readAllSetupPages((from, to) =>
+      supabase
+        .from("monthly_revenue_entries")
+        .select("id,monthly_period_id,revenue_stream_id,stream_name_snapshot,stream_type_snapshot,gross_cash_collected,refunds", { count: "exact" })
+        .eq("business_id", businessId)
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
+    readAllSetupPages((from, to) =>
+      supabase
+        .from("monthly_expense_entries")
+        .select("id,monthly_period_id,expense_item_id,expense_name_snapshot,category_snapshot,cost_behavior_snapshot,input_value,customer_count_basis", { count: "exact" })
+        .eq("business_id", businessId)
+        .order("id", { ascending: true })
+        .range(from, to),
+    ),
   ]);
 
   const queryState = resolveBusinessSetupQueryState({
     revenueSourcesError: streamsResult.error,
     activeRevenueSourceCountError: activeStreamsResult.error,
-    latestPeriodError: latestPeriodResult.error,
+    latestPeriodError:
+      latestPeriodResult.error ||
+      savedRevenueResult.error ||
+      savedExpenseResult.error,
     expenseItemsError: expensesResult.error,
     activeExpenseCategoryErrors: [
       acquisitionCountResult.error,
@@ -164,9 +197,14 @@ export async function loadBusinessSetup(
     };
   }
 
-  const latestSavedMonthKey = latestPeriodResult.data?.month_start
-    ? String(latestPeriodResult.data.month_start).slice(0, 7)
-    : null;
+  const persistedMonths = assessSavedSetupMonths({
+    periods: latestPeriodResult.data ?? [],
+    streams: streamsResult.data ?? [],
+    expenses: expensesResult.data ?? [],
+    revenueEntries: savedRevenueResult.data ?? [],
+    expenseEntries: savedExpenseResult.data ?? [],
+  });
+  const latestSavedMonthKey = persistedMonths.latestSavedMonthKey;
   const revenueSources: SetupRevenueSource[] = (streamsResult.data ?? []).map((stream) => ({
     id: stream.id,
     name: stream.name,
@@ -201,7 +239,7 @@ export async function loadBusinessSetup(
       loadState: "loaded",
       revenueSourceCount,
       expenseSetupReviewedAt: business.expense_setup_reviewed_at,
-      validMonthCount: latestSavedMonthKey === null ? 0 : 1,
+      validMonthCount: persistedMonths.validMonthCount,
     }),
   };
 }

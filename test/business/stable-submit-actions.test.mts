@@ -37,7 +37,12 @@ test("N61 applies stable pending submits to the audited destructive and save act
 
   const monthlySource = auditedSources.at(-1) ?? "";
   assert.match(monthlySource, /جارٍ نسخ المصروفات/);
-  assert.match(monthlySource, /جارٍ حفظ الشهر/);
+  const monthlySaveSource = readFileSync(
+    "src/app/(app)/businesses/[businessId]/monthly/monthly-save-form.tsx",
+    "utf8",
+  );
+  assert.match(monthlySaveSource, /StableSubmitButton/);
+  assert.match(monthlySaveSource, /جارٍ حفظ الشهر/);
 
   const deleteSource = auditedSources.at(-2) ?? "";
   assert.match(deleteSource, /disabled={!isConfirmed}/);

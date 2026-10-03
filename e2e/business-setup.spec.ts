@@ -333,8 +333,45 @@ test.describe("B07 Expense Category UX", () => {
         .filter({ hasText: /^Meta Ads$/ }),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "إضافة مصروف" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /^حذف المصروف/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "تعديل", exact: true })).toHaveCount(0);
     await expect(page.getByRole("checkbox")).toHaveCount(0);
     await expect(page.getByRole("button", { name: "تأكيد مراجعة المصروفات" })).toHaveCount(0);
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+
+  test("inline expense delete confirms, edit can disable, and controls fit mobile RTL", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${fixturePath}?case=expenses-mixed&step=expenses`);
+
+    const acquisition = page.locator('section[aria-labelledby="setup-expense-acquisition"]');
+    const item = acquisition.locator('li[class*="expenseSetupItem"]').filter({ hasText: "Meta Ads" });
+    const deleteButton = item.getByRole("button", { name: "حذف المصروف Meta Ads" });
+    await expect(deleteButton).toBeVisible();
+    await expect(item.getByRole("button", { name: "تعديل" })).toBeVisible();
+    await expect(item.locator('input[name="destination"][value="setup"]')).toHaveCount(2);
+
+    let promptShown = false;
+    page.once("dialog", async (dialog) => {
+      promptShown = true;
+      expect(dialog.message()).toContain("Meta Ads");
+      await dialog.dismiss();
+    });
+    await deleteButton.click();
+    expect(promptShown).toBe(true);
+    await expect(item).toBeVisible();
+
+    await item.getByRole("button", { name: "تعديل" }).click();
+    const editor = page.getByRole("dialog");
+    await expect(editor).toBeVisible();
+    await expect(editor.locator('input[name="destination"]')).toHaveValue("setup");
+    const active = editor.getByRole("checkbox", { name: /المصروف نشط/ });
+    await expect(active).toBeChecked();
+    await active.uncheck();
+    await expect(active).not.toBeChecked();
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });
@@ -371,7 +408,7 @@ test.describe("B09 first-month wizard shell", () => {
   test("new month shows unsaved Monthly inputs and never marks the wizard complete", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.goto(`${fixturePath}?case=month-empty&step=month&month=2026-09`);
-    const preview = page.getByLabel("معاينة إدخال أول شهر");
+    const preview = page.getByLabel("إدخال أول شهر");
 
     await expect(preview.getByRole("heading", { name: "الإيرادات والمرتجعات" })).toBeVisible();
     await expect(preview.getByRole("heading", { name: "العملاء", exact: true })).toBeVisible();
@@ -381,8 +418,9 @@ test.describe("B09 first-month wizard shell", () => {
     await expect(preview.getByLabel("Meta Ads — القيمة الشهرية")).toHaveValue("");
     await expect(preview.getByLabel("Coach — التكلفة لكل عميل")).toHaveValue("");
     await expect(preview.getByLabel("بوابة الدفع — النسبة %")).toHaveValue("");
-    await expect(page.getByText("معاينة غير محفوظة", { exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "فتح الإدخال الشهري لحفظ الأرقام" }))
+    await expect(page.getByText("احفظ أرقامك مباشرة من هذه الخطوة", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "حفظ الشهر" })).toBeVisible();
+    await expect(page.getByRole("link", { name: "فتح الإدخال الشهري" }))
       .toHaveAttribute("href", `/businesses/${businessId}/monthly?month=2026-09`);
     await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
 
@@ -414,7 +452,7 @@ test.describe("B09 first-month wizard shell", () => {
   test("partial month retains zero and supports derived paying/manual new customers", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.goto(`${fixturePath}?case=month-partial&step=month&month=2026-10`);
-    const preview = page.getByLabel("معاينة إدخال أول شهر");
+    const preview = page.getByLabel("إدخال أول شهر");
     await expect(preview.getByLabel("الإيراد المحصل — الكورس الأساسي")).toHaveValue("5000");
     await expect(preview.getByLabel("المرتجعات — الكورس الأساسي")).toHaveValue("200");
     await expect(preview.getByLabel("المرتجعات — VIP")).toHaveValue("0");
@@ -461,10 +499,149 @@ test.describe("B09 first-month wizard shell", () => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`${fixturePath}?case=month-empty&step=month&month=2026-09`);
-    const preview = page.getByLabel("معاينة إدخال أول شهر");
+    const preview = page.getByLabel("إدخال أول شهر");
     await expect(preview.getByLabel("Meta Ads — القيمة الشهرية")).toBeVisible();
     await expect(preview.getByLabel("Coach — التكلفة لكل عميل")).toBeVisible();
     await expect(preview.getByLabel("بوابة الدفع — النسبة %")).toBeVisible();
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+});
+
+
+test.describe("B10 first-month save UX", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
+  test("new Setup draft permits an untouched per-customer basis without losing server validation", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/auth/e2e-business-setup?case=month-empty&step=month&month=2026-10");
+
+    const editor = page.getByLabel("إدخال أول شهر");
+    const basis = editor.getByLabel("أساس عدد العملاء — Coach");
+    await expect(basis).toHaveValue("");
+    await expect(basis).not.toHaveAttribute("required");
+    await editor.getByLabel("الإيراد المحصل — الكورس الأساسي").fill("5000");
+    await editor.getByLabel("Coach — التكلفة لكل عميل").fill("20");
+    await expect(page.getByRole("button", { name: "حفظ الشهر" })).toBeEnabled();
+    await expect
+      .poll(() => page.locator("form").filter({ has: editor }).evaluate((form: HTMLFormElement) => form.checkValidity()))
+      .toBe(true);
+    await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("saving a partial month reports persisted draft without falsely completing Setup", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto("/auth/e2e-business-setup?case=month-partial&step=month&month=2026-10&status=saved");
+
+    await expect(page.getByText(
+      "تم حفظ بيانات الشهر. ما زالت بعض الأرقام مطلوبة قبل اكتمال هذه الخطوة.",
+      { exact: true },
+    )).toBeVisible();
+    await expect(page.getByText("الشهر محفوظ لكنه غير مكتمل ماليًا.", { exact: false })).toBeVisible();
+    await expect(page.getByText("3 من 4 خطوات مكتملة", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
+    const editor = page.getByLabel("إدخال أول شهر");
+    await expect(editor.getByLabel("الإيراد المحصل — الكورس الأساسي")).toHaveValue("5000");
+    await expect(editor.getByLabel("المرتجعات — VIP")).toHaveValue("0");
+    await expect(editor.getByLabel("عملاء جدد")).toHaveValue("");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("a copied saved-status URL never claims an unsaved month was persisted", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto("/auth/e2e-business-setup?case=month-empty&step=month&month=2026-10&status=saved");
+
+    await expect(page.getByText("هذا الشهر غير محفوظ بعد", { exact: true })).toBeVisible();
+    await expect(page.getByText("تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة.", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("تم حفظ بيانات الشهر. ما زالت بعض الأرقام مطلوبة قبل اكتمال هذه الخطوة.", { exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("saved complete month enables Finish only after canonical readiness", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto("/auth/e2e-business-setup?case=month-complete&step=month&month=2026-10&status=saved");
+
+    await expect(page.getByText(
+      "تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة.",
+      { exact: true },
+    )).toBeVisible();
+    await expect(page.getByText("4 من 4 خطوات مكتملة", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: "إنهاء الإعداد" }))
+      .toHaveAttribute("href", ["/businesses", businessId, "setup"].join("/"));
+    await expect(page.getByLabel("إدخال أول شهر").getByLabel("بوابة الدفع — النسبة %")).toHaveValue("3");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("field errors keep submitted monetary values and identify the missing basis", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("/auth/e2e-business-setup?case=month-error&step=month&month=2026-10");
+    const editor = page.getByLabel("إدخال أول شهر");
+
+    await expect(page.getByRole("alert").filter({ hasText: "راجع الحقول المحددة" })).toBeVisible();
+    await expect(editor.getByLabel("الإيراد المحصل — الكورس الأساسي")).toHaveValue("5000");
+    await expect(editor.getByLabel("Coach — التكلفة لكل عميل")).toHaveValue("20");
+    const basis = editor.getByLabel("أساس عدد العملاء — Coach");
+    await expect(basis).toHaveAttribute("aria-invalid", "true");
+    await expect(editor.getByRole("alert").filter({ hasText: "اختر أساس عدد العملاء" })).toBeVisible();
+    await basis.selectOption("total_paying_customers");
+    await expect(basis).toHaveValue("total_paying_customers");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+});
+
+test.describe("B10 authenticated save validation", () => {
+  test.skip(!hasLiveAuth, "Requires the dedicated Mizan E2E email/password account");
+
+  test("submitting a cost without its per-customer basis preserves entered amounts", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    const suffix = Date.now();
+    const sourceName = `B10 course ${suffix}`;
+    const coachName = `B10 coach ${suffix}`;
+
+    await login(page);
+    await page.goto("/businesses/new");
+    await page.getByLabel("اسم البزنس").fill(`B10 validation ${suffix}`);
+    await page.getByRole("button", { name: /EGP/ }).click();
+    await page.getByRole("button", { name: "إنشاء البزنس والمتابعة" }).click();
+    await expect(page).toHaveURL(/\/businesses\/[0-9a-f-]+\/setup\?step=revenue$/);
+    const businessId = page.url().match(/\/businesses\/([0-9a-f-]+)\/setup/)?.[1];
+    expect(businessId).toBeTruthy();
+
+    await page.getByLabel("اسم المنتج أو الخدمة").fill(sourceName);
+    await page.getByRole("button", { name: "إضافة مصدر الإيراد" }).click();
+    await page.goto(`/businesses/${businessId}/setup?step=expenses`);
+    const fulfillment = page.locator('section[aria-labelledby="setup-expense-fulfillment"]');
+    await fulfillment.getByRole("button", { name: "إضافة مصروف" }).click();
+    const drawer = page.getByRole("dialog");
+    await drawer.getByLabel("اسم المصروف").fill(coachName);
+    await drawer.getByLabel("كيف تُحسب هذه التكلفة؟").selectOption("per_customer");
+    await drawer.getByRole("button", { name: "إضافة المصروف" }).click();
+    await expect(page.getByText(coachName, { exact: true })).toBeVisible();
+
+    await page.goto(`/businesses/${businessId}/setup?step=month`);
+    const editor = page.getByLabel("إدخال أول شهر");
+    await editor.getByLabel(`الإيراد المحصل — ${sourceName}`).fill("5000");
+    await editor.getByLabel(`المرتجعات — ${sourceName}`).fill("0");
+    await editor.getByLabel("عملاء جدد").fill("10");
+    await editor.getByLabel("إجمالي العملاء الذين دفعوا خلال الشهر").fill("10");
+    await editor.getByLabel(`${coachName} — التكلفة لكل عميل`).fill("20");
+    await expect(editor.getByLabel(`أساس عدد العملاء — ${coachName}`)).toHaveValue("");
+
+    await page.getByRole("button", { name: "حفظ الشهر" }).click();
+    await expect(page.getByRole("alert").filter({ hasText: "راجع الحقول المحددة" })).toBeVisible();
+    await expect(editor.getByRole("alert").filter({ hasText: "اختر أساس عدد العملاء" })).toBeVisible();
+    await expect(editor.getByLabel(`الإيراد المحصل — ${sourceName}`)).toHaveValue("5000");
+    await expect(editor.getByLabel(`${coachName} — التكلفة لكل عميل`)).toHaveValue("20");
+    await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });

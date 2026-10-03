@@ -78,7 +78,7 @@ test("B07 Tasks 1-2 keep exactly the four authoritative expense categories with 
 test("B07 Task 1 loads display rows plus independent authoritative active counts", () => {
   assert.match(
     setupLoaderSource,
-    /from\("expense_items"\)[\s\S]*select\("id,name,category,cost_behavior,is_active"\)/,
+    /from\("expense_items"\)[\s\S]*select\("id,name,category,cost_behavior,is_active,created_at", \{ count: "exact" \}\)/,
   );
   for (const category of EXPENSE_CATEGORIES) {
     assert.match(

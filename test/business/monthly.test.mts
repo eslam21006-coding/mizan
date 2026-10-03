@@ -19,7 +19,7 @@ const migration = await readFile(
   "utf8",
 );
 
-test("localized numeric input validates Arabic thousands grouping without interpreting ASCII commas", () => {
+test("localized numeric input validates strict Arabic and English thousands grouping", () => {
   assert.equal(normalizeLocalizedDigits("١٢٣.٤٥"), "123.45");
   assert.deepEqual(parseOptionalDecimalInput("١٢٣٫٤٥"), { ok: true, value: "123.45" });
   assert.deepEqual(parseOptionalDecimalInput("۱۲۳٫۴۵"), { ok: true, value: "123.45" });
@@ -29,7 +29,8 @@ test("localized numeric input validates Arabic thousands grouping without interp
   assert.deepEqual(parseOptionalDecimalInput("12٬34"), { ok: false, value: null });
   assert.deepEqual(parseOptionalDecimalInput("1٬234٬56"), { ok: false, value: null });
   assert.deepEqual(parseOptionalDecimalInput("1234٬567"), { ok: false, value: null });
-  assert.deepEqual(parseOptionalDecimalInput("1,000"), { ok: false, value: null });
+  assert.deepEqual(parseOptionalDecimalInput("1,000"), { ok: true, value: "1000" });
+  assert.deepEqual(parseOptionalDecimalInput("1,00"), { ok: false, value: null });
   assert.deepEqual(parseOptionalDecimalInput(""), { ok: true, value: null });
   assert.deepEqual(parseOptionalDecimalInput("-1"), { ok: false, value: null });
 });
