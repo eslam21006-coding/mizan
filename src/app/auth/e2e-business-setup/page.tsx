@@ -16,6 +16,7 @@ import type {
 import type { SetupRevenueSource } from "@/lib/business/setup-loader";
 import type { FirstMonthSetupResult } from "@/lib/business/first-month-setup";
 import { parseMonthKey } from "@/lib/business/monthly";
+import { parseFirstMonthPostSaveStatus } from "@/lib/business/first-month-post-save";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,7 @@ type FixtureCase =
   | "month-partial"
   | "month-saved"
   | "month-complete"
+  | "month-setup-pending"
   | "month-error"
   | "month-read-only"
   | "month-load-error"
@@ -227,6 +229,11 @@ const CASES: Record<
     reviewedAt: "2026-09-30T12:00:00.000Z",
     validMonthCount: 1,
   },
+  "month-setup-pending": {
+    revenueSourceCount: 2,
+    reviewedAt: null,
+    validMonthCount: 1,
+  },
   "month-error": {
     revenueSourceCount: 2,
     reviewedAt: "2026-09-30T12:00:00.000Z",
@@ -253,9 +260,9 @@ function fixtureFirstMonth(
     return { kind: "load_error", selectedMonthKey: monthKey, currentMonthKey: "2026-10" };
   }
 
-  const populated = fixtureCase === "month-partial" || fixtureCase === "month-saved" || fixtureCase === "month-complete";
+  const populated = fixtureCase === "month-partial" || fixtureCase === "month-saved" || fixtureCase === "month-complete" || fixtureCase === "month-setup-pending";
   const historical = fixtureCase === "month-saved";
-  const complete = historical || fixtureCase === "month-complete";
+  const complete = historical || fixtureCase === "month-complete" || fixtureCase === "month-setup-pending";
   return {
     kind: "loaded",
     selectedMonthKey: monthKey,
@@ -354,6 +361,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     query.case === "month-partial" ||
     query.case === "month-saved" ||
     query.case === "month-complete" ||
+    query.case === "month-setup-pending" ||
     query.case === "month-error" ||
     query.case === "month-read-only" ||
     query.case === "month-load-error" ||
@@ -451,7 +459,8 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
             : null
         }
         firstMonth={firstMonth}
-        monthSaved={query.status === "saved"}
+        monthSaved={parseFirstMonthPostSaveStatus(query.status) !== null}
+        postSaveStatus={parseFirstMonthPostSaveStatus(query.status)}
         firstMonthSaveSeed={fixtureCase === "month-error" ? {
           attempt: 1,
           status: "error",
