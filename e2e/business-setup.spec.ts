@@ -636,6 +636,11 @@ test.describe("B10 first-month save UX", () => {
     await expect(page.getByText("هذا الشهر غير محفوظ بعد")).toBeVisible();
     await expect(page.getByText("تم حفظ الشهر والتحقق من اكتماله.")).toHaveCount(0);
 
+    await page.goto(`${fixturePath}?case=month-complete&step=month&month=2026-10&status=setup-incomplete`);
+    await expect(page.getByText("4 من 4 خطوات مكتملة")).toBeVisible();
+    await expect(page.getByText("تم حفظ الشهر والتحقق من اكتماله.")).toHaveCount(0);
+    await expect(page.getByText("تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة.")).toBeVisible();
+
     await page.goto(`${fixturePath}?case=month-partial&step=month&month=2026-10&status=result-unavailable`);
     await expect(page.getByText("3 من 4 خطوات مكتملة")).toBeVisible();
     await expect(page.getByText("تم الحفظ، لكن نتيجة الشهر غير جاهزة بعد.")).toHaveCount(0);
