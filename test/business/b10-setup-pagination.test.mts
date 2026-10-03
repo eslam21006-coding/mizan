@@ -151,5 +151,5 @@ test("B10 first-month editor can load more than 1000 sources, expenses and saved
   const loader = await readFile(
     new URL("../../src/lib/business/first-month-setup.ts", import.meta.url), "utf8",
   );
-  assert.equal((loader.match(/readAllSetupPages\\(\\(from, to\\)/g) ?? []).length, 4);
+  assert.equal(loader.split("readAllSetupPages((from, to)").length - 1, 4);
 });
