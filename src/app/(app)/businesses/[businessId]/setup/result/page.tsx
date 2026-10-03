@@ -94,7 +94,7 @@ export default async function SetupPayoffPage({ params, searchParams }: Props) {
             ? reviewHref
             : stepMonthHref;
     return (
-      <main className="page-stack">
+      <div className="page-stack">
         <section role="alert" aria-labelledby="result-state-title">
           <h1 id="result-state-title">{message.title}</h1>
           <p>{message.detail}</p>
@@ -104,7 +104,7 @@ export default async function SetupPayoffPage({ params, searchParams }: Props) {
           <Link href={actionHref}>مراجعة الإعداد أو البيانات</Link>
         </section>
         <Link href={businessHref}>العودة للبزنسات أو لوحة البزنس</Link>
-      </main>
+      </div>
     );
   }
 
