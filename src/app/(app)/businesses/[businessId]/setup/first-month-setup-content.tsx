@@ -9,6 +9,7 @@ import type { FirstMonthSetupResult } from "@/lib/business/first-month-setup";
 import { FirstMonthPicker } from "./first-month-picker";
 import { FirstMonthSaveForm } from "./first-month-save-form";
 import type { FirstMonthSaveState } from "./first-month-actions";
+import type { FirstMonthPostSaveStatus } from "@/lib/business/first-month-post-save";
 import styles from "./first-month-setup.module.css";
 
 type FirstMonthSetupContentProps = {
@@ -19,6 +20,7 @@ type FirstMonthSetupContentProps = {
   firstMonth: FirstMonthSetupResult;
   invalidMonth: boolean;
   monthSaved?: boolean;
+  postSaveStatus?: FirstMonthPostSaveStatus | null;
   firstMonthSaveSeed?: FirstMonthSaveState;
 };
 
@@ -31,9 +33,12 @@ export function FirstMonthSetupContent({
   firstMonth,
   invalidMonth,
   monthSaved = false,
+  postSaveStatus = null,
   firstMonthSaveSeed,
 }: FirstMonthSetupContentProps) {
   const monthKey = firstMonth.selectedMonthKey;
+  const persistedMonth = firstMonth.kind === "loaded" && firstMonth.hasSavedPeriod;
+  const completeSavedMonth = persistedMonth && firstMonth.completeness?.complete === true;
   const previous = shiftMonthKey(monthKey, -1);
   const next = shiftMonthKey(monthKey, 1);
   const previousMonth = previous && parseMonthKey(previous) ? previous : null;
@@ -71,7 +76,31 @@ export function FirstMonthSetupContent({
         <FirstMonthPicker businessId={businessId} monthKey={monthKey} />
       </section>
 
-      {monthSaved && firstMonth.kind === "loaded" && firstMonth.hasSavedPeriod ? (
+      {postSaveStatus === "verification-unavailable" ? (
+        <div role="status" className={styles.unsavedNotice}>
+          {persistedMonth
+            ? "الشهر محفوظ، لكن تعذر التحقق من جاهزية النتيجة. أعد تحميل الصفحة لمراجعة الأرقام، ولن نعرض نتائج غير مؤكدة."
+            : "تعذر تأكيد حالة الحفظ. أعد تحميل الصفحة للتحقق من البيانات، ولن نعرض نتائج غير مؤكدة."}
+        </div>
+      ) : postSaveStatus === "result-unavailable" && completeSavedMonth ? (
+        <div role="status" className={styles.unsavedNotice}>
+          <strong>تم الحفظ، لكن نتيجة الشهر غير جاهزة بعد.</strong>
+          <p>راجع التحصيل والمرتجعات، بما فيها المبالغ غير المنسوبة، وأكّد الصفر إذا كانت القيمة الفعلية صفرًا.</p>
+          <Link
+            href={firstMonth.kind === "loaded" && firstMonth.isSavedHistorical
+              ? `/businesses/${encodeURIComponent(businessId)}/monthly/correction?month=${encodeURIComponent(monthKey)}`
+              : monthlyEditorHref}
+          >
+            مراجعة بيانات الشهر
+          </Link>
+        </div>
+      ) : postSaveStatus === "setup-incomplete" && completeSavedMonth ? (
+        <div role="status" className={styles.unsavedNotice}>
+          <strong>تم حفظ الشهر والتحقق من اكتماله.</strong>
+          <p>لا تزال هناك خطوة أخرى في إعداد البزنس تحتاج إلى إكمال قبل عرض النتائج.</p>
+          <Link href={buildBusinessSetupHref(businessId)}>أكمل خطوات الإعداد</Link>
+        </div>
+      ) : monthSaved && firstMonth.kind === "loaded" && firstMonth.hasSavedPeriod ? (
         <div role="status" className={firstMonth.completeness?.complete ? styles.savedNotice : styles.unsavedNotice}>
           {firstMonth.completeness?.complete
             ? "تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة."

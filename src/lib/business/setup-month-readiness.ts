@@ -1,4 +1,5 @@
 import { evaluateFirstMonthCompleteness } from "./first-month-completeness.ts";
+import { parseMonthKey } from "./monthly.ts";
 import { buildMonthlyEntryRows, type MonthlyPeriodValues } from "./monthly-entry-rows.ts";
 
 type MonthPeriod = {
@@ -60,9 +61,47 @@ export function assessSavedSetupMonths(input: {
     });
     if (state.complete) completedMonthKeys.push(period.month_start.slice(0, 7));
   }
+  // Month identity is calendar-based, not insertion order or the most recent write.
+  const savedMonthKeys = [...new Set(input.periods.map((period) => period.month_start.slice(0, 7)))]
+    .sort()
+    .reverse();
+  const orderedCompleteMonths = [...new Set(completedMonthKeys)].sort().reverse();
   return {
-    completedMonthKeys,
-    validMonthCount: completedMonthKeys.length,
-    latestSavedMonthKey: input.periods[0]?.month_start.slice(0, 7) ?? null,
+    savedMonthKeys,
+    completedMonthKeys: orderedCompleteMonths,
+    validMonthCount: orderedCompleteMonths.length,
+    latestSavedMonthKey: savedMonthKeys[0] ?? null,
+    latestCompleteMonthKey: orderedCompleteMonths[0] ?? null,
   };
+}
+
+/** This assessment must come exclusively from fully loaded, persisted business-scoped rows. */
+export type SavedSetupMonthAssessment = ReturnType<typeof assessSavedSetupMonths>;
+
+export type SavedSetupMonthEligibility =
+  | { kind: "ready"; monthKey: string }
+  | { kind: "not_saved" | "month_incomplete"; monthKey: string }
+  | { kind: "missing_month" | "invalid_month" | "load_error"; monthKey: null };
+
+/**
+ * Resolve an explicitly requested month without substituting another completed month.
+ * A null assessment means an upstream read failed; absence of data is never readiness.
+ * Global four-step setup readiness must be checked separately by the result route.
+ */
+export function resolveSavedSetupMonthEligibility(
+  assessment: SavedSetupMonthAssessment | null,
+  requestedMonth: string | readonly string[] | undefined,
+): SavedSetupMonthEligibility {
+  if (assessment === null) return { kind: "load_error", monthKey: null };
+  if (requestedMonth === undefined) return { kind: "missing_month", monthKey: null };
+  if (typeof requestedMonth !== "string") return { kind: "invalid_month", monthKey: null };
+  const month = parseMonthKey(requestedMonth);
+  if (!month) return { kind: "invalid_month", monthKey: null };
+  if (!assessment.savedMonthKeys.includes(month.monthKey)) {
+    return { kind: "not_saved", monthKey: month.monthKey };
+  }
+  if (!assessment.completedMonthKeys.includes(month.monthKey)) {
+    return { kind: "month_incomplete", monthKey: month.monthKey };
+  }
+  return { kind: "ready", monthKey: month.monthKey };
 }

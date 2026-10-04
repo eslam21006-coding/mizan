@@ -579,6 +579,80 @@ test.describe("B10 first-month save UX", () => {
     expect(errors).toEqual([]);
   });
 
+  test("B11.4 partial save stays on the exact month without a result handoff", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${fixturePath}?case=month-partial&step=month&month=2026-10&status=saved`);
+    await expect(page.getByText("3 من 4 خطوات مكتملة")).toBeVisible();
+    await expect(page.getByRole("link", { name: "إنهاء الإعداد" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "جاهز — ميزان فهم البزنس" })).toHaveCount(0);
+    await expect(page.getByLabel("إدخال أول شهر").getByLabel("الإيراد المحصل — الكورس الأساسي")).toHaveValue("5000");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("B11.4 saved month with missing other setup gives an accurate next step", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-setup-pending&step=month&month=2026-10&status=setup-incomplete`);
+    await expect(page.getByText("3 من 4 خطوات مكتملة")).toBeVisible();
+    await expect(page.getByText("تم حفظ الشهر والتحقق من اكتماله.")).toBeVisible();
+    await expect(page.getByText("لا تزال هناك خطوة أخرى في إعداد البزنس تحتاج إلى إكمال قبل عرض النتائج.")).toBeVisible();
+    await expect(page.getByRole("link", { name: "أكمل خطوات الإعداد" }))
+      .toHaveAttribute("href", `/businesses/${businessId}/setup`);
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("B11.4 verified write with incomplete calculations directs current vs historical correction", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${fixturePath}?case=month-complete&step=month&month=2026-10&status=result-unavailable`);
+    await expect(page.getByText("تم الحفظ، لكن نتيجة الشهر غير جاهزة بعد.")).toBeVisible();
+    await expect(page.getByText(/المبالغ غير المنسوبة/)).toBeVisible();
+    await expect(page.getByRole("link", { name: "مراجعة بيانات الشهر" }))
+      .toHaveAttribute("href", `/businesses/${businessId}/monthly?month=2026-10`);
+    await expectStableRtl(page);
+
+    await page.goto(`${fixturePath}?case=month-saved&step=month&month=2026-09&status=result-unavailable`);
+    await expect(page.getByRole("link", { name: "مراجعة بيانات الشهر" }))
+      .toHaveAttribute("href", `/businesses/${businessId}/monthly/correction?month=2026-09`);
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("B11.4 verification failure after saving does not claim financial completeness", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-complete&step=month&month=2026-10&status=verification-unavailable`);
+    await expect(page.getByText(/الشهر محفوظ، لكن تعذر التحقق من جاهزية النتيجة/)).toBeVisible();
+    await expect(page.getByText("تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة.")).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "جاهز — ميزان فهم البزنس" })).toHaveCount(0);
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("B11.4 manually changing a status URL never turns an unsaved or partial month into verified success", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-empty&step=month&month=2026-10&status=setup-incomplete`);
+    await expect(page.getByText("هذا الشهر غير محفوظ بعد")).toBeVisible();
+    await expect(page.getByText("تم حفظ الشهر والتحقق من اكتماله.")).toHaveCount(0);
+
+    await page.goto(`${fixturePath}?case=month-complete&step=month&month=2026-10&status=setup-incomplete`);
+    await expect(page.getByText("4 من 4 خطوات مكتملة")).toBeVisible();
+    await expect(page.getByText("تم حفظ الشهر والتحقق من اكتماله.")).toHaveCount(0);
+    await expect(page.getByText("تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة.")).toBeVisible();
+
+    await page.goto(`${fixturePath}?case=month-partial&step=month&month=2026-10&status=result-unavailable`);
+    await expect(page.getByText("3 من 4 خطوات مكتملة")).toBeVisible();
+    await expect(page.getByText("تم الحفظ، لكن نتيجة الشهر غير جاهزة بعد.")).toHaveCount(0);
+    await expect(page.getByText(/تم حفظ بيانات الشهر. ما زالت بعض الأرقام مطلوبة/)).toBeVisible();
+
+    await page.goto(`${fixturePath}?case=month-empty&step=month&month=2026-10&status=verification-unavailable`);
+    await expect(page.getByText("تعذر تأكيد حالة الحفظ. أعد تحميل الصفحة للتحقق من البيانات، ولن نعرض نتائج غير مؤكدة.")).toBeVisible();
+    await expect(page.getByText("تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة.")).toHaveCount(0);
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
   test("field errors keep submitted monetary values and identify the missing basis", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     await page.setViewportSize({ width: 390, height: 844 });
