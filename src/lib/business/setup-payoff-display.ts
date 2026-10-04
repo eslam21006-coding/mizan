@@ -43,7 +43,7 @@ function moneyCard(
     unavailable: !metric.available,
     explanation: reason(metric),
     description: null,
-    negative: metric.available && metric.value.startsWith("-") && !/^-(?:0+(?:\\.0+)?)$/.test(metric.value),
+    negative: metric.available && metric.value.startsWith("-") && !/^-0+(?:\.0+)?$/.test(metric.value),
   };
 }
 

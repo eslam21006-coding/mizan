@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import { persistMonthlyActuals } from "@/lib/business/monthly-save-service";
 import { loadAuthenticatedSetupPayoff } from "@/lib/business/setup-payoff-server";
 import { resolveFirstMonthPostSaveDestination } from "@/lib/business/first-month-post-save";
@@ -61,6 +61,18 @@ export async function saveFirstMonthSetup(
 
   // Only a successful atomic write reaches this read. Reload exact persisted numbers and
   // four-step readiness under the same authenticated RLS rules as the result route.
-  const verified = await loadAuthenticatedSetupPayoff(businessId, result.monthKey);
+  let verified: Awaited<ReturnType<typeof loadAuthenticatedSetupPayoff>>;
+  try {
+    verified = await loadAuthenticatedSetupPayoff(businessId, result.monthKey);
+  } catch (error) {
+    // The write has already succeeded. Preserve its exact month if verification fails,
+    // but never swallow Next.js redirects or other framework navigation signals.
+    unstable_rethrow(error);
+    redirect(resolveFirstMonthPostSaveDestination(businessId, result.monthKey, {
+      kind: "data_load_error",
+      business: null,
+      monthKey: null,
+    }));
+  }
   redirect(resolveFirstMonthPostSaveDestination(businessId, result.monthKey, verified));
 }

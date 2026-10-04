@@ -60,6 +60,24 @@ test("B11.3 keeps actual losses negative without warning-colored positive values
   assert.equal(cards[2].negative, true);
 });
 
+test("B11.4 zero with a negative sign must not receive loss styling", () => {
+  const original = knownNumbers();
+  for (const value of ["-0", "-0.0", "-0.00", "-000.000"]) {
+    const cards = buildSetupPayoffCards({
+      ...original,
+      realNetProfit: { available: true, value },
+    }, "USD");
+    assert.equal(cards[1].negative, false, value);
+  }
+  for (const value of ["-0.01", "-1.00", "-100"]) {
+    const cards = buildSetupPayoffCards({
+      ...original,
+      realNetProfit: { available: true, value },
+    }, "USD");
+    assert.equal(cards[1].negative, true, value);
+  }
+});
+
 test("B11.3 confirmed zero new customers leaves only Ultimate CAC unavailable", () => {
   const cards = buildSetupPayoffCards(knownNumbers({ newCustomers: 0 }), "USD");
   assert.equal(cards[3].value, "—");
