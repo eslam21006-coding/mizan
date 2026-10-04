@@ -175,10 +175,11 @@ test("B11.4 only successful Setup writes perform authorized re-read; normal Mont
   const reject = setupAction.indexOf("if (!result.ok)");
   const read = setupAction.indexOf("await loadAuthenticatedSetupPayoff(businessId, result.monthKey)");
   const rethrow = setupAction.indexOf("unstable_rethrow(error)", read);
-  const fallback = setupAction.indexOf('kind: "data_load_error"', rethrow);
-  const handoff = setupAction.indexOf("redirect(resolveFirstMonthPostSaveDestination(");
+  const fallbackRedirect = setupAction.indexOf("redirect(resolveFirstMonthPostSaveDestination(", rethrow);
+  const fallback = setupAction.indexOf('kind: "data_load_error"', fallbackRedirect);
+  const verifiedRedirect = setupAction.indexOf("redirect(resolveFirstMonthPostSaveDestination(", fallback);
   assert.ok(save >= 0 && reject > save && read > reject && rethrow > read &&
-    fallback > rethrow && handoff > fallback,
+    fallbackRedirect > rethrow && fallback > fallbackRedirect && verifiedRedirect > fallback,
   "A successful write must catch verification failures, rethrow navigation, and redirect to the exact saved month");
   assert.match(setupAction, /preserveDraft\(formData\)/);
   assert.match(setupAction, /revalidatePath\(\`\/businesses\/\$\{businessId\}\/setup\/result\`\)/);
