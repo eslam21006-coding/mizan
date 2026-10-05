@@ -441,6 +441,7 @@ test.describe("B09 first-month wizard shell", () => {
       `/businesses/${businessId}/setup?step=month&month=2026-08`,
     );
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
+    await expect(page.getByText("هذا الشهر غير محفوظ بعد", { exact: true })).toBeVisible();
     await page.reload();
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
     await page.goBack();
@@ -503,6 +504,59 @@ test.describe("B09 first-month wizard shell", () => {
     await expect(preview.getByLabel("Meta Ads — القيمة الشهرية")).toBeVisible();
     await expect(preview.getByLabel("Coach — التكلفة لكل عميل")).toBeVisible();
     await expect(preview.getByLabel("بوابة الدفع — النسبة %")).toBeVisible();
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+});
+
+
+test.describe("B12A.1 deterministic resume month", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
+  test("resumes the latest saved incomplete month and keeps it after refresh", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-resume-partial&step=month`);
+
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-09");
+    await expect(page.getByText("الشهر محفوظ لكنه غير مكتمل ماليًا.", { exact: false })).toBeVisible();
+    await expect(page.getByText("شهر تاريخي محفوظ — عرض فقط", { exact: true })).toBeVisible();
+
+    await page.reload();
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-09");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("uses the business current month when no incomplete saved month exists", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-empty&step=month`);
+
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-10");
+    await expect(
+      page.getByText("التغييرات التي لم تحفظها لا تُستعاد تلقائيًا.", { exact: false }),
+    ).toBeVisible();
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("complete saved history falls back to current month without fabricating a saved current month", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-saved&step=month`);
+
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-10");
+    await expect(page.getByText("هذا الشهر غير محفوظ بعد", { exact: true })).toBeVisible();
+    await expect(page.getByText("شهر تاريخي محفوظ — عرض فقط", { exact: true })).toHaveCount(0);
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("keeps an explicit valid month instead of replacing it with the resume month", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-resume-partial&step=month&month=2026-08`);
+
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
+    await page.reload();
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });

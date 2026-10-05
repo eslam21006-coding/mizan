@@ -15,8 +15,11 @@ import type {
 } from "@/lib/business/expenses";
 import type { SetupRevenueSource } from "@/lib/business/setup-loader";
 import type { FirstMonthSetupResult } from "@/lib/business/first-month-setup";
-import { parseMonthKey } from "@/lib/business/monthly";
 import { parseFirstMonthPostSaveStatus } from "@/lib/business/first-month-post-save";
+import {
+  resolveResumableFirstMonthSelection,
+  type FirstMonthResumeMonths,
+} from "@/lib/business/first-month-selection";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +43,7 @@ type FixtureCase =
   | "expenses-read-only"
   | "month-empty"
   | "month-partial"
+  | "month-resume-partial"
   | "month-saved"
   | "month-complete"
   | "month-setup-pending"
@@ -219,6 +223,11 @@ const CASES: Record<
     reviewedAt: "2026-09-30T12:00:00.000Z",
     validMonthCount: 0,
   },
+  "month-resume-partial": {
+    revenueSourceCount: 2,
+    reviewedAt: "2026-09-30T12:00:00.000Z",
+    validMonthCount: 0,
+  },
   "month-saved": {
     revenueSourceCount: 2,
     reviewedAt: "2026-09-30T12:00:00.000Z",
@@ -255,14 +264,15 @@ const CASES: Record<
 function fixtureFirstMonth(
   fixtureCase: FixtureCase,
   monthKey: string,
+  persistedMonths: FirstMonthResumeMonths,
 ): FirstMonthSetupResult {
   if (fixtureCase === "month-load-error") {
     return { kind: "load_error", selectedMonthKey: monthKey, currentMonthKey: "2026-10" };
   }
 
-  const populated = fixtureCase === "month-partial" || fixtureCase === "month-saved" || fixtureCase === "month-complete" || fixtureCase === "month-setup-pending";
-  const historical = fixtureCase === "month-saved";
-  const complete = historical || fixtureCase === "month-complete" || fixtureCase === "month-setup-pending";
+  const populated = persistedMonths.savedMonthKeys.includes(monthKey);
+  const complete = persistedMonths.completedMonthKeys.includes(monthKey);
+  const historical = populated && monthKey < "2026-10";
   return {
     kind: "loaded",
     selectedMonthKey: monthKey,
@@ -335,6 +345,27 @@ function fixtureFirstMonth(
   };
 }
 
+function fixturePersistedMonths(
+  fixtureCase: FixtureCase,
+  requestedMonth: string | undefined,
+): FirstMonthResumeMonths {
+  switch (fixtureCase) {
+    case "month-partial":
+      return requestedMonth
+        ? { savedMonthKeys: [requestedMonth], completedMonthKeys: [] }
+        : { savedMonthKeys: [], completedMonthKeys: [] };
+    case "month-resume-partial":
+      return { savedMonthKeys: ["2026-09"], completedMonthKeys: [] };
+    case "month-saved":
+      return { savedMonthKeys: ["2026-09"], completedMonthKeys: ["2026-09"] };
+    case "month-complete":
+    case "month-setup-pending":
+      return { savedMonthKeys: ["2026-10"], completedMonthKeys: ["2026-10"] };
+    default:
+      return { savedMonthKeys: [], completedMonthKeys: [] };
+  }
+}
+
 type SetupFixturePageProps = {
   searchParams: Promise<{ case?: string; step?: string; month?: string; status?: string }>;
 };
@@ -359,6 +390,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     query.case === "expenses-read-only" ||
     query.case === "month-empty" ||
     query.case === "month-partial" ||
+    query.case === "month-resume-partial" ||
     query.case === "month-saved" ||
     query.case === "month-complete" ||
     query.case === "month-setup-pending" ||
@@ -399,9 +431,21 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     fixtureCase !== "month-load-error" &&
     currentStep !== null &&
     readiness.stepComplete[currentStep];
-  const selectedMonthKey = parseMonthKey(query.month)?.monthKey ?? "2026-09";
+  const persistedMonths = fixturePersistedMonths(
+    fixtureCase,
+    typeof query.month === "string" ? query.month : undefined,
+  );
+  const monthSelection = resolveResumableFirstMonthSelection(
+    query.month,
+    "Africa/Cairo",
+    persistedMonths,
+    new Date("2026-10-05T08:00:00.000Z"),
+  );
+  const selectedMonthKey = monthSelection.monthKey;
   const firstMonth =
-    currentStep === "month" ? fixtureFirstMonth(fixtureCase, selectedMonthKey) : null;
+    currentStep === "month"
+      ? fixtureFirstMonth(fixtureCase, selectedMonthKey, persistedMonths)
+      : null;
   const canManage =
     fixtureCase === "load-error" ? true : (CASES[fixtureCase].canManage ?? true);
 
@@ -451,13 +495,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
             : null
         }
         expenseStatus={null}
-        latestSavedMonthKey={
-          fixtureCase !== "load-error" && CASES[fixtureCase].validMonthCount > 0
-            ? fixtureCase === "month-saved" || fixtureCase === "month-partial" || fixtureCase === "month-complete"
-              ? "2026-09"
-              : "2026-08"
-            : null
-        }
+        latestSavedMonthKey={persistedMonths.savedMonthKeys[0] ?? null}
         firstMonth={firstMonth}
         monthSaved={parseFirstMonthPostSaveStatus(query.status) !== null}
         postSaveStatus={parseFirstMonthPostSaveStatus(query.status)}

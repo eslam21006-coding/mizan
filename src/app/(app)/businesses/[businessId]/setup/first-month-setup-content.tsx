@@ -139,7 +139,7 @@ export function FirstMonthSetupContent({
           {canManage && !firstMonth.isSavedHistorical ? (
             <div className={styles.unsavedNotice} role="note">
               <strong>احفظ أرقامك مباشرة من هذه الخطوة</strong>
-              <p>يمكنك حفظ شهر غير مكتمل والعودة إليه. لا تكتمل الخطوة إلا بعد تأكيد جميع القيم المطلوبة؛ الصفر المؤكد يختلف عن الخانة الفارغة.</p>
+              <p>بعد حفظ شهر غير مكتمل يمكنك مغادرة الإعداد والعودة إليه لاحقًا. التغييرات التي لم تحفظها لا تُستعاد تلقائيًا. لا تكتمل الخطوة إلا بعد تأكيد جميع القيم المطلوبة؛ الصفر المؤكد يختلف عن الخانة الفارغة.</p>
               <Link href={monthlyEditorHref} className={styles.openMonthly}>فتح الإدخال الشهري</Link>
             </div>
           ) : (

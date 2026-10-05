@@ -4,7 +4,7 @@ import type { ExpenseCreationRequestIds } from "@/lib/business/expenses";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { loadBusinessSetup } from "@/lib/business/setup-loader";
 import { parseFirstMonthPostSaveStatus } from "@/lib/business/first-month-post-save";
-import { resolveFirstMonthSelection } from "@/lib/business/first-month-selection";
+import { resolveResumableFirstMonthSelection } from "@/lib/business/first-month-selection";
 import { loadFirstMonthSetup } from "@/lib/business/first-month-setup";
 import {
   buildBusinessSetupHref,
@@ -118,7 +118,11 @@ export default async function BusinessSetupPage({
   const currentStep = parsedStep.step;
   const monthSelection =
     currentStep === "month"
-      ? resolveFirstMonthSelection(query.month, loadResult.business.timezone)
+      ? resolveResumableFirstMonthSelection(
+          query.month,
+          loadResult.business.timezone,
+          loadResult.persistedMonths,
+        )
       : null;
   if (monthSelection && monthSelection.kind !== "valid") {
     const monthHref = `${buildBusinessSetupHref(businessId, "month")}&month=${monthSelection.monthKey}`;
