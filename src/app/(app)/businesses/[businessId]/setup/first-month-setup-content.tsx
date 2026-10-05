@@ -98,7 +98,7 @@ export function FirstMonthSetupContent({
         <div role="status" className={styles.unsavedNotice}>
           <strong>تم حفظ الشهر والتحقق من اكتماله.</strong>
           <p>لا تزال هناك خطوة أخرى في إعداد البزنس تحتاج إلى إكمال قبل عرض النتائج.</p>
-          <Link href={buildBusinessSetupHref(businessId)}>أكمل خطوات الإعداد</Link>
+          <Link href={buildBusinessSetupHref(businessId, undefined, { monthKey })}>أكمل خطوات الإعداد</Link>
         </div>
       ) : monthSaved && firstMonth.kind === "loaded" && firstMonth.hasSavedPeriod ? (
         <div role="status" className={firstMonth.completeness?.complete ? styles.savedNotice : styles.unsavedNotice}>
