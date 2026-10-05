@@ -518,9 +518,8 @@ test.describe("B12A.1 deterministic resume month", () => {
     await page.goto(`${fixturePath}?case=month-resume-partial&step=month`);
 
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-09");
-    await expect(
-      page.getByText("التغييرات التي لم تحفظها لا تُستعاد تلقائيًا.", { exact: false }),
-    ).toBeVisible();
+    await expect(page.getByText("الشهر محفوظ لكنه غير مكتمل ماليًا.", { exact: false })).toBeVisible();
+    await expect(page.getByText("شهر تاريخي محفوظ — عرض فقط", { exact: true })).toBeVisible();
 
     await page.reload();
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-09");
@@ -533,6 +532,9 @@ test.describe("B12A.1 deterministic resume month", () => {
     await page.goto(`${fixturePath}?case=month-empty&step=month`);
 
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-10");
+    await expect(
+      page.getByText("التغييرات التي لم تحفظها لا تُستعاد تلقائيًا.", { exact: false }),
+    ).toBeVisible();
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });
