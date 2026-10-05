@@ -10,13 +10,13 @@ type FirstMonthPickerProps = {
   monthKey: string;
 };
 
-/** Keeps the native month selector synchronized with URL history, including browser-restored form state. */
+/** Keeps the native month selector synchronized with URL history without overwriting an active user edit. */
 export function FirstMonthPicker({ businessId, monthKey }: FirstMonthPickerProps) {
   const [selectedMonth, setSelectedMonth] = useState(monthKey);
   const inputRef = useRef<HTMLInputElement>(null);
+  const pendingFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
-    let pendingFrame: number | null = null;
     const synchronizeFromUrl = () => {
       const values = new URLSearchParams(window.location.search).getAll("month");
       const parsed = values.length === 1 ? parseMonthKey(values[0]) : null;
@@ -28,9 +28,11 @@ export function FirstMonthPicker({ businessId, monthKey }: FirstMonthPickerProps
       setSelectedMonth(canonicalMonth);
     };
     const afterHistoryRestoration = () => {
-      if (pendingFrame !== null) cancelAnimationFrame(pendingFrame);
-      pendingFrame = requestAnimationFrame(() => {
-        pendingFrame = null;
+      if (pendingFrameRef.current !== null) {
+        cancelAnimationFrame(pendingFrameRef.current);
+      }
+      pendingFrameRef.current = requestAnimationFrame(() => {
+        pendingFrameRef.current = null;
         synchronizeFromUrl();
       });
     };
@@ -42,7 +44,10 @@ export function FirstMonthPicker({ businessId, monthKey }: FirstMonthPickerProps
     return () => {
       window.removeEventListener("pageshow", afterHistoryRestoration);
       window.removeEventListener("popstate", afterHistoryRestoration);
-      if (pendingFrame !== null) cancelAnimationFrame(pendingFrame);
+      if (pendingFrameRef.current !== null) {
+        cancelAnimationFrame(pendingFrameRef.current);
+        pendingFrameRef.current = null;
+      }
     };
   }, [monthKey]);
 
@@ -61,7 +66,13 @@ export function FirstMonthPicker({ businessId, monthKey }: FirstMonthPickerProps
           max="2200-12"
           required
           value={selectedMonth}
-          onChange={(event) => setSelectedMonth(event.currentTarget.value)}
+          onChange={(event) => {
+            if (pendingFrameRef.current !== null) {
+              cancelAnimationFrame(pendingFrameRef.current);
+              pendingFrameRef.current = null;
+            }
+            setSelectedMonth(event.currentTarget.value);
+          }}
           aria-label="الشهر"
         />
         <button type="submit">فتح الشهر</button>
