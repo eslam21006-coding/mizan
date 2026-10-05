@@ -9,6 +9,7 @@ import { loadFirstMonthSetup } from "@/lib/business/first-month-setup";
 import {
   buildBusinessSetupHref,
   nextBusinessSetupStep,
+  parseBusinessSetupMonthContext,
   parseBusinessSetupStep,
   previousBusinessSetupStep,
   resolveBusinessSetupResumeStep,
@@ -46,6 +47,7 @@ export default async function BusinessSetupPage({
   if (loadResult.kind === "not_found") notFound();
 
   const parsedStep = parseBusinessSetupStep(query.step);
+  const navigationMonthKey = parseBusinessSetupMonthContext(query.month);
   const setupStatus = typeof query.status === "string" ? query.status : null;
   const monthSaveStatus = parseFirstMonthPostSaveStatus(query.status);
 
@@ -69,6 +71,7 @@ export default async function BusinessSetupPage({
         expenseStatus={null}
         latestSavedMonthKey={null}
         firstMonth={null}
+        navigationMonthKey={null}
         backHref={null}
         nextHref={null}
         nextLabel="التالي"
@@ -82,7 +85,9 @@ export default async function BusinessSetupPage({
 
   if (parsedStep.kind !== "valid") {
     if (resumeStep) {
-      redirect(buildBusinessSetupHref(businessId, resumeStep));
+      redirect(
+        buildBusinessSetupHref(businessId, resumeStep, { monthKey: navigationMonthKey }),
+      );
     }
     if (parsedStep.kind === "invalid") {
       redirect(buildBusinessSetupHref(businessId));
@@ -107,6 +112,7 @@ export default async function BusinessSetupPage({
         expenseStatus={null}
         latestSavedMonthKey={loadResult.latestSavedMonthKey}
         firstMonth={null}
+        navigationMonthKey={navigationMonthKey}
         backHref={null}
         nextHref={null}
         nextLabel="التالي"
@@ -137,10 +143,12 @@ export default async function BusinessSetupPage({
   const nextEnabled =
     loadResult.readiness.stepComplete[currentStep] &&
     (currentStep !== "month" || firstMonth?.kind === "loaded");
-  const backHref = previousStep ? buildBusinessSetupHref(businessId, previousStep) : null;
+  const backHref = previousStep
+    ? buildBusinessSetupHref(businessId, previousStep, { monthKey: navigationMonthKey })
+    : null;
   const nextHref = nextEnabled
     ? nextStep
-      ? buildBusinessSetupHref(businessId, nextStep)
+      ? buildBusinessSetupHref(businessId, nextStep, { monthKey: navigationMonthKey })
       : buildBusinessSetupHref(businessId)
     : null;
 
@@ -169,6 +177,7 @@ export default async function BusinessSetupPage({
       expenseStatus={currentStep === "expenses" ? setupStatus : null}
       latestSavedMonthKey={loadResult.latestSavedMonthKey}
       firstMonth={firstMonth}
+      navigationMonthKey={navigationMonthKey}
       monthSaved={currentStep === "month" && monthSaveStatus !== null}
       postSaveStatus={currentStep === "month" ? monthSaveStatus : null}
       invalidMonth={currentStep === "month" && setupStatus === "invalid-month"}
