@@ -43,6 +43,7 @@ type FixtureCase =
   | "expenses-read-only"
   | "month-empty"
   | "month-partial"
+  | "month-resume-partial"
   | "month-saved"
   | "month-complete"
   | "month-setup-pending"
@@ -222,6 +223,11 @@ const CASES: Record<
     reviewedAt: "2026-09-30T12:00:00.000Z",
     validMonthCount: 0,
   },
+  "month-resume-partial": {
+    revenueSourceCount: 2,
+    reviewedAt: "2026-09-30T12:00:00.000Z",
+    validMonthCount: 0,
+  },
   "month-saved": {
     revenueSourceCount: 2,
     reviewedAt: "2026-09-30T12:00:00.000Z",
@@ -263,7 +269,12 @@ function fixtureFirstMonth(
     return { kind: "load_error", selectedMonthKey: monthKey, currentMonthKey: "2026-10" };
   }
 
-  const populated = fixtureCase === "month-partial" || fixtureCase === "month-saved" || fixtureCase === "month-complete" || fixtureCase === "month-setup-pending";
+  const populated =
+    fixtureCase === "month-partial" ||
+    fixtureCase === "month-resume-partial" ||
+    fixtureCase === "month-saved" ||
+    fixtureCase === "month-complete" ||
+    fixtureCase === "month-setup-pending";
   const historical = fixtureCase === "month-saved";
   const complete = historical || fixtureCase === "month-complete" || fixtureCase === "month-setup-pending";
   return {
@@ -340,7 +351,7 @@ function fixtureFirstMonth(
 
 function fixturePersistedMonths(fixtureCase: FixtureCase): FirstMonthResumeMonths {
   switch (fixtureCase) {
-    case "month-partial":
+    case "month-resume-partial":
       return { savedMonthKeys: ["2026-09"], completedMonthKeys: [] };
     case "month-saved":
       return { savedMonthKeys: ["2026-09"], completedMonthKeys: ["2026-09"] };
@@ -376,6 +387,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     query.case === "expenses-read-only" ||
     query.case === "month-empty" ||
     query.case === "month-partial" ||
+    query.case === "month-resume-partial" ||
     query.case === "month-saved" ||
     query.case === "month-complete" ||
     query.case === "month-setup-pending" ||
