@@ -478,7 +478,7 @@ test.describe("B09 first-month wizard shell", () => {
     await expect(preview.getByText("رسوم بوابة قديمة — تاريخ محفوظ", { exact: true }).first()).toBeVisible();
     await expect(preview.locator("input")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "إنهاء الإعداد" }))
-      .toHaveAttribute("href", `/businesses/${businessId}/setup`);
+      .toHaveAttribute("href", `/businesses/${businessId}/setup?month=2026-09`);
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });
@@ -727,7 +727,7 @@ test.describe("B10 first-month save UX", () => {
     )).toBeVisible();
     await expect(page.getByText("4 من 4 خطوات مكتملة", { exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "إنهاء الإعداد" }))
-      .toHaveAttribute("href", ["/businesses", businessId, "setup"].join("/"));
+      .toHaveAttribute("href", `/businesses/${businessId}/setup?month=2026-10`);
     await expect(page.getByLabel("إدخال أول شهر").getByLabel("بوابة الدفع — النسبة %")).toHaveValue("3");
     await expectStableRtl(page);
     expect(errors).toEqual([]);
@@ -752,7 +752,7 @@ test.describe("B10 first-month save UX", () => {
     await expect(page.getByText("تم حفظ الشهر والتحقق من اكتماله.")).toBeVisible();
     await expect(page.getByText("لا تزال هناك خطوة أخرى في إعداد البزنس تحتاج إلى إكمال قبل عرض النتائج.")).toBeVisible();
     await expect(page.getByRole("link", { name: "أكمل خطوات الإعداد" }))
-      .toHaveAttribute("href", `/businesses/${businessId}/setup`);
+      .toHaveAttribute("href", `/businesses/${businessId}/setup?month=2026-10`);
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });
