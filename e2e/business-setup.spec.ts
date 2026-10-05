@@ -538,7 +538,7 @@ test.describe("B12A.1 deterministic resume month", () => {
 
   test("keeps an explicit valid month instead of replacing it with the resume month", async ({ page }) => {
     const errors = captureBrowserErrors(page);
-    await page.goto(`${fixturePath}?case=month-partial&step=month&month=2026-08`);
+    await page.goto(`${fixturePath}?case=month-resume-partial&step=month&month=2026-08`);
 
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
     await page.reload();
