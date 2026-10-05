@@ -53,8 +53,9 @@ async function routeProductionSetupToFixture(page: Page, fixtureCase: string) {
     fixture.searchParams.set("case", fixtureCase);
     const step = requested.searchParams.get("step");
     if (step) fixture.searchParams.set("step", step);
-    const month = requested.searchParams.get("month");
-    if (month) fixture.searchParams.set("month", month);
+    for (const month of requested.searchParams.getAll("month")) {
+      fixture.searchParams.append("month", month);
+    }
     const status = requested.searchParams.get("status");
     if (status) fixture.searchParams.set("status", status);
 
@@ -556,6 +557,95 @@ test.describe("B12A.1 deterministic resume month", () => {
 
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
     await page.reload();
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+});
+
+
+test.describe("B12A.2 exact-month wizard navigation", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
+  test("preserves the selected month through step links, Next, refresh, Back, Forward, and copied URLs", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await routeProductionSetupToFixture(page, "complete");
+
+    const monthUrl = `${productionBase}?step=month&month=2026-08`;
+    const expensesUrl = `${productionBase}?step=expenses&month=2026-08`;
+    await page.goto(monthUrl);
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
+
+    const expensesStep = page.getByRole("link").filter({ hasText: "أين يذهب المال؟" });
+    await expect(expensesStep).toHaveAttribute("href", expensesUrl);
+    await expensesStep.click();
+    await expect(page).toHaveURL(expensesUrl);
+
+    await page.reload();
+    await expect(page).toHaveURL(expensesUrl);
+    await expect(page.getByRole("link", { name: "التالي" })).toHaveAttribute("href", monthUrl);
+    await page.getByRole("link", { name: "التالي" }).click();
+    await expect(page).toHaveURL(monthUrl);
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
+
+    await page.goBack();
+    await expect(page).toHaveURL(expensesUrl);
+    await page.goForward();
+    await expect(page).toHaveURL(monthUrl);
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("never propagates malformed or duplicated month context into wizard links", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await routeProductionSetupToFixture(page, "complete");
+
+    await page.goto(`${productionBase}?step=expenses&month=2026-08&month=2026-09`);
+    const monthStep = page.getByRole("link").filter({ hasText: "أول شهر حقيقي" });
+    await expect(monthStep).toHaveAttribute("href", `${productionBase}?step=month`);
+    await expect(page.getByRole("link", { name: "التالي" })).toHaveAttribute(
+      "href",
+      `${productionBase}?step=month`,
+    );
+
+    await page.goto(`${productionBase}?step=expenses&month=not-a-month`);
+    await expect(page.getByRole("link").filter({ hasText: "أول شهر حقيقي" })).toHaveAttribute(
+      "href",
+      `${productionBase}?step=month`,
+    );
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("a pending URL-sync frame cannot overwrite a user month edit before submit", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await routeProductionSetupToFixture(page, "month-empty");
+    await page.goto(`${fixturePath}?case=month-empty&step=month&month=2026-09`);
+
+    await page.evaluate(() => {
+      window.dispatchEvent(new Event("pageshow"));
+      const input = document.querySelector<HTMLInputElement>("#first-month-selection");
+      if (!input) throw new Error("Month input missing");
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set;
+      if (!setter) throw new Error("Month value setter missing");
+      setter.call(input, "2026-08");
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+    await page.evaluate(
+      () =>
+        new Promise<void>((resolve) => {
+          requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+        }),
+    );
+
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
+    await page.getByRole("button", { name: "فتح الشهر" }).click();
+    await expect(page).toHaveURL(`${productionBase}?step=month&month=2026-08`);
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
     await expectStableRtl(page);
     expect(errors).toEqual([]);
