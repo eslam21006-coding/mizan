@@ -596,6 +596,16 @@ test.describe("B12A.2 exact-month wizard navigation", () => {
     await page.goForward();
     await expect(page).toHaveURL(monthUrl);
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
+
+    const completionUrl = `${productionBase}?month=2026-08`;
+    const finish = page.getByRole("link", { name: "إنهاء الإعداد" });
+    await expect(finish).toHaveAttribute("href", completionUrl);
+    await finish.click();
+    await expect(page).toHaveURL(completionUrl);
+    await expect(page.getByRole("link", { name: "مراجعة أول شهر" })).toHaveAttribute(
+      "href",
+      monthUrl,
+    );
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });
