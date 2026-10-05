@@ -4,6 +4,7 @@ import { BusinessSetupShell } from "@/app/(app)/businesses/[businessId]/setup/bu
 import {
   buildBusinessSetupHref,
   nextBusinessSetupStep,
+  parseBusinessSetupMonthContext,
   parseBusinessSetupStep,
   previousBusinessSetupStep,
   resolveBusinessSetupResumeStep,
@@ -401,6 +402,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
       ? query.case
       : "empty";
   const parsedStep = parseBusinessSetupStep(query.step);
+  const navigationMonthKey = parseBusinessSetupMonthContext(query.month);
 
   const readiness =
     fixtureCase === "load-error"
@@ -497,6 +499,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
         expenseStatus={null}
         latestSavedMonthKey={persistedMonths.savedMonthKeys[0] ?? null}
         firstMonth={firstMonth}
+        navigationMonthKey={fixtureCase === "load-error" ? null : navigationMonthKey}
         monthSaved={parseFirstMonthPostSaveStatus(query.status) !== null}
         postSaveStatus={parseFirstMonthPostSaveStatus(query.status)}
         firstMonthSaveSeed={fixtureCase === "month-error" ? {
@@ -514,12 +517,18 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
         } : undefined}
         invalidMonth={query.status === "invalid-month"}
         backHref={
-          previousStep ? buildBusinessSetupHref(businessId, previousStep) : null
+          previousStep
+            ? buildBusinessSetupHref(businessId, previousStep, {
+                monthKey: navigationMonthKey,
+              })
+            : null
         }
         nextHref={
           nextEnabled
             ? nextStep
-              ? buildBusinessSetupHref(businessId, nextStep)
+              ? buildBusinessSetupHref(businessId, nextStep, {
+                  monthKey: navigationMonthKey,
+                })
               : buildBusinessSetupHref(businessId)
             : null
         }
