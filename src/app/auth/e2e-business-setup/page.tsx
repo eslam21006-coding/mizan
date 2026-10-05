@@ -534,7 +534,9 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
               ? buildBusinessSetupHref(businessId, nextStep, {
                   monthKey: navigationMonthKey,
                 })
-              : buildBusinessSetupHref(businessId)
+              : buildBusinessSetupHref(businessId, undefined, {
+                  monthKey: navigationMonthKey,
+                })
             : null
         }
         nextLabel={currentStep === "month" ? "إنهاء الإعداد" : "التالي"}
