@@ -509,6 +509,46 @@ test.describe("B09 first-month wizard shell", () => {
 });
 
 
+test.describe("B12A.1 deterministic resume month", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
+  test("resumes the latest saved incomplete month and keeps it after refresh", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-partial&step=month`);
+
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-09");
+    await expect(
+      page.getByText("التغييرات التي لم تحفظها لا تُستعاد تلقائيًا.", { exact: false }),
+    ).toBeVisible();
+
+    await page.reload();
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-09");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("uses the business current month when no incomplete saved month exists", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-empty&step=month`);
+
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-10");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("keeps an explicit valid month instead of replacing it with the resume month", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-partial&step=month&month=2026-08`);
+
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
+    await page.reload();
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+});
+
+
 test.describe("B10 first-month save UX", () => {
   test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
 
