@@ -149,7 +149,9 @@ export default async function BusinessSetupPage({
   const nextHref = nextEnabled
     ? nextStep
       ? buildBusinessSetupHref(businessId, nextStep, { monthKey: navigationMonthKey })
-      : buildBusinessSetupHref(businessId)
+      : buildBusinessSetupHref(businessId, undefined, {
+          monthKey: navigationMonthKey,
+        })
     : null;
 
   return (
