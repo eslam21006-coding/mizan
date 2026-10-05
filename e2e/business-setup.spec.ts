@@ -441,6 +441,7 @@ test.describe("B09 first-month wizard shell", () => {
       `/businesses/${businessId}/setup?step=month&month=2026-08`,
     );
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
+    await expect(page.getByText("هذا الشهر غير محفوظ بعد", { exact: true })).toBeVisible();
     await page.reload();
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
     await page.goBack();
@@ -532,6 +533,17 @@ test.describe("B12A.1 deterministic resume month", () => {
     await page.goto(`${fixturePath}?case=month-empty&step=month`);
 
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-10");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("complete saved history falls back to current month without fabricating a saved current month", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-saved&step=month`);
+
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-10");
+    await expect(page.getByText("هذا الشهر غير محفوظ بعد", { exact: true })).toBeVisible();
+    await expect(page.getByText("شهر تاريخي محفوظ — عرض فقط", { exact: true })).toHaveCount(0);
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });
