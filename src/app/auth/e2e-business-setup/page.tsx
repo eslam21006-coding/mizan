@@ -264,19 +264,15 @@ const CASES: Record<
 function fixtureFirstMonth(
   fixtureCase: FixtureCase,
   monthKey: string,
+  persistedMonths: FirstMonthResumeMonths,
 ): FirstMonthSetupResult {
   if (fixtureCase === "month-load-error") {
     return { kind: "load_error", selectedMonthKey: monthKey, currentMonthKey: "2026-10" };
   }
 
-  const populated =
-    fixtureCase === "month-partial" ||
-    fixtureCase === "month-resume-partial" ||
-    fixtureCase === "month-saved" ||
-    fixtureCase === "month-complete" ||
-    fixtureCase === "month-setup-pending";
-  const historical = fixtureCase === "month-saved";
-  const complete = historical || fixtureCase === "month-complete" || fixtureCase === "month-setup-pending";
+  const populated = persistedMonths.savedMonthKeys.includes(monthKey);
+  const complete = persistedMonths.completedMonthKeys.includes(monthKey);
+  const historical = populated && monthKey < "2026-10";
   return {
     kind: "loaded",
     selectedMonthKey: monthKey,
@@ -349,8 +345,15 @@ function fixtureFirstMonth(
   };
 }
 
-function fixturePersistedMonths(fixtureCase: FixtureCase): FirstMonthResumeMonths {
+function fixturePersistedMonths(
+  fixtureCase: FixtureCase,
+  requestedMonth: string | undefined,
+): FirstMonthResumeMonths {
   switch (fixtureCase) {
+    case "month-partial":
+      return requestedMonth
+        ? { savedMonthKeys: [requestedMonth], completedMonthKeys: [] }
+        : { savedMonthKeys: [], completedMonthKeys: [] };
     case "month-resume-partial":
       return { savedMonthKeys: ["2026-09"], completedMonthKeys: [] };
     case "month-saved":
@@ -428,7 +431,10 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     fixtureCase !== "month-load-error" &&
     currentStep !== null &&
     readiness.stepComplete[currentStep];
-  const persistedMonths = fixturePersistedMonths(fixtureCase);
+  const persistedMonths = fixturePersistedMonths(
+    fixtureCase,
+    typeof query.month === "string" ? query.month : undefined,
+  );
   const monthSelection = resolveResumableFirstMonthSelection(
     query.month,
     "Africa/Cairo",
@@ -437,7 +443,9 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
   );
   const selectedMonthKey = monthSelection.monthKey;
   const firstMonth =
-    currentStep === "month" ? fixtureFirstMonth(fixtureCase, selectedMonthKey) : null;
+    currentStep === "month"
+      ? fixtureFirstMonth(fixtureCase, selectedMonthKey, persistedMonths)
+      : null;
   const canManage =
     fixtureCase === "load-error" ? true : (CASES[fixtureCase].canManage ?? true);
 
