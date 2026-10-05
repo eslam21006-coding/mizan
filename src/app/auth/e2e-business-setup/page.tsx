@@ -368,7 +368,12 @@ function fixturePersistedMonths(
 }
 
 type SetupFixturePageProps = {
-  searchParams: Promise<{ case?: string; step?: string; month?: string; status?: string }>;
+  searchParams: Promise<{
+    case?: string | string[];
+    step?: string | string[];
+    month?: string | string[];
+    status?: string | string[];
+  }>;
 };
 
 /** CI-only fixture that renders the production B04 setup shell from deterministic readiness facts. */
