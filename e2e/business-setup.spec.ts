@@ -514,7 +514,7 @@ test.describe("B12A.1 deterministic resume month", () => {
 
   test("resumes the latest saved incomplete month and keeps it after refresh", async ({ page }) => {
     const errors = captureBrowserErrors(page);
-    await page.goto(`${fixturePath}?case=month-partial&step=month`);
+    await page.goto(`${fixturePath}?case=month-resume-partial&step=month`);
 
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-09");
     await expect(
