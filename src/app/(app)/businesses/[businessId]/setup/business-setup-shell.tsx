@@ -45,6 +45,7 @@ type BusinessSetupShellProps = {
   expenseStatus: string | null;
   latestSavedMonthKey: string | null;
   firstMonth: FirstMonthSetupResult | null;
+  navigationMonthKey: string | null;
   monthSaved?: boolean;
   postSaveStatus?: FirstMonthPostSaveStatus | null;
   firstMonthSaveSeed?: FirstMonthSaveState;
@@ -75,6 +76,7 @@ export function BusinessSetupShell({
   expenseStatus,
   latestSavedMonthKey,
   firstMonth,
+  navigationMonthKey,
   monthSaved = false,
   postSaveStatus = null,
   firstMonthSaveSeed,
@@ -176,7 +178,9 @@ export function BusinessSetupShell({
                 ) : (
                   <Link
                     className={styles.stepLink}
-                    href={buildBusinessSetupHref(businessId, step)}
+                    href={buildBusinessSetupHref(businessId, step, {
+                      monthKey: navigationMonthKey,
+                    })}
                     aria-current={isCurrent ? "step" : undefined}
                   >
                     {content}
@@ -203,7 +207,9 @@ export function BusinessSetupShell({
               </Link>
               <Link
                 className={styles.secondaryAction}
-                href={buildBusinessSetupHref(businessId, "month")}
+                href={buildBusinessSetupHref(businessId, "month", {
+                  monthKey: navigationMonthKey,
+                })}
               >
                 مراجعة أول شهر
               </Link>
