@@ -14,7 +14,9 @@ import type {
   ExpenseCategoryCounts,
   SetupExpenseItem,
 } from "@/lib/business/expenses";
-import type { SetupRevenueSource } from "@/lib/business/setup-loader";
+import type { LoadedBusinessSetup, SetupRevenueSource } from "@/lib/business/setup-loader";
+import { resolvePayoffMonthGate } from "@/lib/business/setup-payoff-result";
+import { resolveSetupMonthPrimaryAction } from "@/lib/business/setup-month-action";
 import type { FirstMonthSetupResult } from "@/lib/business/first-month-setup";
 import { parseFirstMonthPostSaveStatus } from "@/lib/business/first-month-post-save";
 import {
@@ -45,6 +47,7 @@ type FixtureCase =
   | "month-empty"
   | "month-partial"
   | "month-resume-partial"
+  | "month-other-complete"
   | "month-saved"
   | "month-complete"
   | "month-setup-pending"
@@ -229,6 +232,11 @@ const CASES: Record<
     reviewedAt: "2026-09-30T12:00:00.000Z",
     validMonthCount: 0,
   },
+  "month-other-complete": {
+    revenueSourceCount: 2,
+    reviewedAt: "2026-09-30T12:00:00.000Z",
+    validMonthCount: 1,
+  },
   "month-saved": {
     revenueSourceCount: 2,
     reviewedAt: "2026-09-30T12:00:00.000Z",
@@ -357,6 +365,8 @@ function fixturePersistedMonths(
         : { savedMonthKeys: [], completedMonthKeys: [] };
     case "month-resume-partial":
       return { savedMonthKeys: ["2026-09"], completedMonthKeys: [] };
+    case "month-other-complete":
+      return { savedMonthKeys: ["2026-09"], completedMonthKeys: ["2026-09"] };
     case "month-saved":
       return { savedMonthKeys: ["2026-09"], completedMonthKeys: ["2026-09"] };
     case "month-complete":
@@ -397,6 +407,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     query.case === "month-empty" ||
     query.case === "month-partial" ||
     query.case === "month-resume-partial" ||
+    query.case === "month-other-complete" ||
     query.case === "month-saved" ||
     query.case === "month-complete" ||
     query.case === "month-setup-pending" ||
@@ -433,11 +444,6 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
         : resumeStep;
   const previousStep = currentStep ? previousBusinessSetupStep(currentStep) : null;
   const nextStep = currentStep ? nextBusinessSetupStep(currentStep) : null;
-  const nextEnabled =
-    fixtureCase !== "load-error" &&
-    fixtureCase !== "month-load-error" &&
-    currentStep !== null &&
-    readiness.stepComplete[currentStep];
   const persistedMonths = fixturePersistedMonths(
     fixtureCase,
     typeof query.month === "string" ? query.month : undefined,
@@ -455,6 +461,66 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
       : null;
   const canManage =
     fixtureCase === "load-error" ? true : (CASES[fixtureCase].canManage ?? true);
+  const payoffAssessment = {
+    ...persistedMonths,
+    validMonthCount: persistedMonths.completedMonthKeys.length,
+    latestSavedMonthKey: persistedMonths.savedMonthKeys[0] ?? null,
+    latestCompleteMonthKey: persistedMonths.completedMonthKeys[0] ?? null,
+  };
+  const payoffSetup =
+    fixtureCase === "load-error"
+      ? null
+      : ({
+          kind: "loaded",
+          business: {
+            id: businessId,
+            name: "أكاديمية ميزان",
+            baseCurrency: "USD",
+            timezone: "Africa/Cairo",
+          },
+          canManage,
+          revenueSources: CASES[fixtureCase].revenueSources ?? [],
+          revenueSourceCount: CASES[fixtureCase].revenueSourceCount,
+          expenseItems: CASES[fixtureCase].expenseItems ?? [],
+          activeExpenseCategoryCounts:
+            CASES[fixtureCase].activeExpenseCategoryCounts ?? {
+              acquisition: 0,
+              fulfillment: 0,
+              overhead: 0,
+              financial: 0,
+            },
+          latestSavedMonthKey: payoffAssessment.latestSavedMonthKey,
+          persistedMonths: payoffAssessment,
+          readiness,
+        } satisfies LoadedBusinessSetup);
+  const payoffGate =
+    currentStep === "month" && payoffSetup
+      ? resolvePayoffMonthGate(
+          payoffSetup,
+          selectedMonthKey,
+          new Date("2026-10-05T08:00:00.000Z"),
+        )
+      : null;
+  const monthAction =
+    currentStep === "month"
+      ? resolveSetupMonthPrimaryAction({
+          businessId,
+          monthKey: selectedMonthKey,
+          gateKind: payoffGate?.kind ?? null,
+          selectedMonthLoaded: firstMonth?.kind === "loaded",
+          selectedMonthComplete:
+            firstMonth?.kind === "loaded" &&
+            firstMonth.hasSavedPeriod &&
+            firstMonth.completeness?.complete === true,
+          resumeStep,
+        })
+      : null;
+  const nextEnabled =
+    currentStep === "month"
+      ? monthAction?.enabled === true
+      : fixtureCase !== "load-error" &&
+        currentStep !== null &&
+        readiness.stepComplete[currentStep];
 
   return (
     <AppShell {...fixtureShellProps}>
@@ -529,17 +595,15 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
             : null
         }
         nextHref={
-          nextEnabled
-            ? nextStep
+          currentStep === "month"
+            ? (monthAction?.href ?? null)
+            : nextEnabled && nextStep
               ? buildBusinessSetupHref(businessId, nextStep, {
                   monthKey: navigationMonthKey,
                 })
-              : buildBusinessSetupHref(businessId, undefined, {
-                  monthKey: navigationMonthKey,
-                })
-            : null
+              : null
         }
-        nextLabel={currentStep === "month" ? "إنهاء الإعداد" : "التالي"}
+        nextLabel={currentStep === "month" ? (monthAction?.label ?? "إنهاء الإعداد") : "التالي"}
         nextEnabled={nextEnabled}
         loadError={fixtureCase === "load-error"}
       />
