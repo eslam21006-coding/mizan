@@ -47,6 +47,7 @@ type FixtureCase =
   | "month-empty"
   | "month-partial"
   | "month-resume-partial"
+  | "month-other-complete"
   | "month-saved"
   | "month-complete"
   | "month-setup-pending"
@@ -231,6 +232,11 @@ const CASES: Record<
     reviewedAt: "2026-09-30T12:00:00.000Z",
     validMonthCount: 0,
   },
+  "month-other-complete": {
+    revenueSourceCount: 2,
+    reviewedAt: "2026-09-30T12:00:00.000Z",
+    validMonthCount: 1,
+  },
   "month-saved": {
     revenueSourceCount: 2,
     reviewedAt: "2026-09-30T12:00:00.000Z",
@@ -359,6 +365,8 @@ function fixturePersistedMonths(
         : { savedMonthKeys: [], completedMonthKeys: [] };
     case "month-resume-partial":
       return { savedMonthKeys: ["2026-09"], completedMonthKeys: [] };
+    case "month-other-complete":
+      return { savedMonthKeys: ["2026-09"], completedMonthKeys: ["2026-09"] };
     case "month-saved":
       return { savedMonthKeys: ["2026-09"], completedMonthKeys: ["2026-09"] };
     case "month-complete":
@@ -399,6 +407,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     query.case === "month-empty" ||
     query.case === "month-partial" ||
     query.case === "month-resume-partial" ||
+    query.case === "month-other-complete" ||
     query.case === "month-saved" ||
     query.case === "month-complete" ||
     query.case === "month-setup-pending" ||
