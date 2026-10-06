@@ -478,7 +478,7 @@ test.describe("B09 first-month wizard shell", () => {
     await expect(preview.getByText("رسوم بوابة قديمة — تاريخ محفوظ", { exact: true }).first()).toBeVisible();
     await expect(preview.locator("input")).toHaveCount(0);
     await expect(page.getByRole("link", { name: "إنهاء الإعداد" }))
-      .toHaveAttribute("href", `/businesses/${businessId}/setup?month=2026-09`);
+      .toHaveAttribute("href", `/businesses/${businessId}/setup/result?month=2026-09`);
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });
@@ -597,15 +597,6 @@ test.describe("B12A.2 exact-month wizard navigation", () => {
     await expect(page).toHaveURL(monthUrl);
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
 
-    const completionUrl = `${productionBase}?month=2026-08`;
-    const finish = page.getByRole("link", { name: "إنهاء الإعداد" });
-    await expect(finish).toHaveAttribute("href", completionUrl);
-    await finish.click();
-    await expect(page).toHaveURL(completionUrl);
-    await expect(page.getByRole("link", { name: "مراجعة أول شهر" })).toHaveAttribute(
-      "href",
-      monthUrl,
-    );
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });
@@ -657,6 +648,68 @@ test.describe("B12A.2 exact-month wizard navigation", () => {
     await page.getByRole("button", { name: "فتح الشهر" }).click();
     await expect(page).toHaveURL(`${productionBase}?step=month&month=2026-08`);
     await expect(page.locator("#first-month-selection")).toHaveValue("2026-08");
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+});
+
+
+test.describe("B12A.3 exact-month Finish", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
+  test("global setup readiness from another month does not enable Finish for an unsaved selected month", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-other-complete&step=month&month=2026-10`);
+
+    await expect(page.locator("#first-month-selection")).toHaveValue("2026-10");
+    await expect(page.getByText("هذا الشهر غير محفوظ بعد", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
+    await expect(page.getByText("يوجد شهر محفوظ آخر:", { exact: false })).toBeVisible();
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("complete selected month and complete setup enable exact-month payoff only", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`${fixturePath}?case=month-complete&step=month&month=2026-10`);
+
+    await expect(page.getByRole("link", { name: "إنهاء الإعداد" })).toHaveAttribute(
+      "href",
+      `/businesses/${businessId}/setup/result?month=2026-10`,
+    );
+    await expect(page.getByRole("link", { name: "أكمل الإعداد" })).toHaveCount(0);
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("complete selected month with another setup gap routes to the first missing step, not payoff", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-setup-pending&step=month&month=2026-10`);
+
+    await expect(page.getByRole("link", { name: "أكمل الإعداد" })).toHaveAttribute(
+      "href",
+      `/businesses/${businessId}/setup?step=expenses&month=2026-10`,
+    );
+    await expect(page.getByRole("link", { name: "إنهاء الإعداد" })).toHaveCount(0);
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("selected-month read failure keeps Finish disabled and shows the existing fail-closed explanation", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+    await page.goto(`${fixturePath}?case=month-load-error&step=month&month=2026-10`);
+
+    await expect(
+      page.getByRole("alert").filter({ hasText: "تعذر تحميل بيانات هذا الشهر كاملة" }),
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "إنهاء الإعداد" })).toBeDisabled();
     await expectStableRtl(page);
     expect(errors).toEqual([]);
   });
