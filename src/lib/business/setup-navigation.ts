@@ -1,3 +1,4 @@
+import { parseMonthKey } from "./monthly.ts";
 import type {
   CoreSetupReadiness,
   CoreSetupRequirement,
@@ -10,6 +11,10 @@ export type ParsedBusinessSetupStep =
   | { kind: "missing" }
   | { kind: "invalid" }
   | { kind: "valid"; step: BusinessSetupStep };
+
+export type BusinessSetupHrefOptions = {
+  monthKey?: string | null;
+};
 
 const REQUIREMENT_TO_STEP: Readonly<Record<CoreSetupRequirement, BusinessSetupStep>> = {
   business_identity: "business",
@@ -30,13 +35,27 @@ export function parseBusinessSetupStep(
   return { kind: "invalid" };
 }
 
-/** Builds one canonical business-scoped setup URL. */
+/** Returns one canonical month context only when the URL supplied exactly one valid month. */
+export function parseBusinessSetupMonthContext(
+  value: string | string[] | undefined,
+): string | null {
+  if (value === undefined || Array.isArray(value)) return null;
+  return parseMonthKey(value)?.monthKey ?? null;
+}
+
+/** Builds one canonical business-scoped setup URL and carries only validated month context. */
 export function buildBusinessSetupHref(
   businessId: string,
   step?: BusinessSetupStep,
+  options: BusinessSetupHrefOptions = {},
 ): string {
   const base = `/businesses/${encodeURIComponent(businessId)}/setup`;
-  return step ? `${base}?step=${step}` : base;
+  const params = new URLSearchParams();
+  if (step) params.set("step", step);
+  const monthKey = options.monthKey ? parseMonthKey(options.monthKey)?.monthKey : null;
+  if (monthKey) params.set("month", monthKey);
+  const query = params.toString();
+  return query ? `${base}?${query}` : base;
 }
 
 /** Maps one Core Setup requirement to its wizard step. */

@@ -4,6 +4,7 @@ import { BusinessSetupShell } from "@/app/(app)/businesses/[businessId]/setup/bu
 import {
   buildBusinessSetupHref,
   nextBusinessSetupStep,
+  parseBusinessSetupMonthContext,
   parseBusinessSetupStep,
   previousBusinessSetupStep,
   resolveBusinessSetupResumeStep,
@@ -367,7 +368,12 @@ function fixturePersistedMonths(
 }
 
 type SetupFixturePageProps = {
-  searchParams: Promise<{ case?: string; step?: string; month?: string; status?: string }>;
+  searchParams: Promise<{
+    case?: string | string[];
+    step?: string | string[];
+    month?: string | string[];
+    status?: string | string[];
+  }>;
 };
 
 /** CI-only fixture that renders the production B04 setup shell from deterministic readiness facts. */
@@ -401,6 +407,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
       ? query.case
       : "empty";
   const parsedStep = parseBusinessSetupStep(query.step);
+  const navigationMonthKey = parseBusinessSetupMonthContext(query.month);
 
   const readiness =
     fixtureCase === "load-error"
@@ -497,6 +504,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
         expenseStatus={null}
         latestSavedMonthKey={persistedMonths.savedMonthKeys[0] ?? null}
         firstMonth={firstMonth}
+        navigationMonthKey={fixtureCase === "load-error" ? null : navigationMonthKey}
         monthSaved={parseFirstMonthPostSaveStatus(query.status) !== null}
         postSaveStatus={parseFirstMonthPostSaveStatus(query.status)}
         firstMonthSaveSeed={fixtureCase === "month-error" ? {
@@ -514,13 +522,21 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
         } : undefined}
         invalidMonth={query.status === "invalid-month"}
         backHref={
-          previousStep ? buildBusinessSetupHref(businessId, previousStep) : null
+          previousStep
+            ? buildBusinessSetupHref(businessId, previousStep, {
+                monthKey: navigationMonthKey,
+              })
+            : null
         }
         nextHref={
           nextEnabled
             ? nextStep
-              ? buildBusinessSetupHref(businessId, nextStep)
-              : buildBusinessSetupHref(businessId)
+              ? buildBusinessSetupHref(businessId, nextStep, {
+                  monthKey: navigationMonthKey,
+                })
+              : buildBusinessSetupHref(businessId, undefined, {
+                  monthKey: navigationMonthKey,
+                })
             : null
         }
         nextLabel={currentStep === "month" ? "إنهاء الإعداد" : "التالي"}
