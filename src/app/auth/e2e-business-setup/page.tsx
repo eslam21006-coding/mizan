@@ -462,7 +462,8 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
   const canManage =
     fixtureCase === "load-error" ? true : (CASES[fixtureCase].canManage ?? true);
   const payoffAssessment = {
-    ...persistedMonths,
+    savedMonthKeys: [...persistedMonths.savedMonthKeys],
+    completedMonthKeys: [...persistedMonths.completedMonthKeys],
     validMonthCount: persistedMonths.completedMonthKeys.length,
     latestSavedMonthKey: persistedMonths.savedMonthKeys[0] ?? null,
     latestCompleteMonthKey: persistedMonths.completedMonthKeys[0] ?? null,
