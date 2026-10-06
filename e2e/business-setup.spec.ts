@@ -626,6 +626,10 @@ test.describe("B12A.2 exact-month wizard navigation", () => {
     const errors = captureBrowserErrors(page);
     await routeProductionSetupToFixture(page, "month-empty");
     await page.goto(`${fixturePath}?case=month-empty&step=month&month=2026-09`);
+    await page.waitForFunction(() => {
+      const input = document.querySelector<HTMLInputElement>("#first-month-selection");
+      return Boolean(input && Object.keys(input).some((key) => key.startsWith("__reactProps$")));
+    });
 
     await page.evaluate(() => {
       window.dispatchEvent(new Event("pageshow"));
