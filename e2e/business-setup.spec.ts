@@ -780,7 +780,7 @@ test.describe("B10 first-month save UX", () => {
     )).toBeVisible();
     await expect(page.getByText("4 من 4 خطوات مكتملة", { exact: true })).toBeVisible();
     await expect(page.getByRole("link", { name: "إنهاء الإعداد" }))
-      .toHaveAttribute("href", `/businesses/${businessId}/setup?month=2026-10`);
+      .toHaveAttribute("href", `/businesses/${businessId}/setup/result?month=2026-10`);
     await expect(page.getByLabel("إدخال أول شهر").getByLabel("بوابة الدفع — النسبة %")).toHaveValue("3");
     await expectStableRtl(page);
     expect(errors).toEqual([]);
