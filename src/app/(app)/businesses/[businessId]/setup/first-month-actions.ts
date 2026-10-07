@@ -105,12 +105,18 @@ export async function saveFirstMonthSetup(
 ): Promise<FirstMonthSaveState> {
   let result: Awaited<ReturnType<typeof persistMonthlyActuals>>;
   try {
-    result = await persistMonthlyActuals(formData, { setupDraft: true });
+    result = await persistMonthlyActuals(formData, {
+      setupDraft: true,
+      recoverUncertainWrite: true,
+    });
   } catch (error) {
     unstable_rethrow(error);
     return recoverUnknownSave(previous, formData);
   }
   if (!result.ok) {
+    if (result.code === "save-uncertain") {
+      return recoverUnknownSave(previous, formData);
+    }
     return {
       attempt: previous.attempt + 1,
       status: "error",
