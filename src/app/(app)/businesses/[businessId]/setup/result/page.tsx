@@ -48,6 +48,7 @@ const messages: Record<PayoffBlockReason, { title: string; detail: string }> = {
   },
 };
 
+/** Formats one canonical YYYY-MM month key for the Arabic payoff heading. */
 function arabicMonth(monthKey: string) {
   return new Intl.DateTimeFormat("ar-EG", {
     year: "numeric", month: "long", timeZone: "UTC",
