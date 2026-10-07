@@ -132,17 +132,143 @@ function startPsqlSession(databaseUrl, commands) {
   };
 }
 
-/** Starts an interactive holder session whose transaction is released only after the waiter is proven blocked. */
-function startHeldPsqlSession(databaseUrl, commands) {
-  const child = spawn(
-    "psql",
-    ["--no-psqlrc", "--set", "ON_ERROR_STOP=1", "--dbname", databaseUrl],
-    {
-      cwd: repositoryRoot,
-      env: psqlEnvironment(),
-      stdio: ["pipe", "pipe", "pipe"],
-    },
+/** Creates a test-only release gate used to keep a holder transaction open without a timer. */
+function createReleaseGate(databaseUrl) {
+  const gate = `b12-replay-${randomUUID()}`;
+  const result = runPsqlSync(
+    databaseUrl,
+    `create table if not exists public.b12_replay_release_gates (
+  gate text primary key,
+  released boolean not null default false
+);
+insert into public.b12_replay_release_gates (gate, released)
+values ('${gate}', false);`,
   );
+  assertSuccess(result, `create release gate ${gate}`);
+  return gate;
+}
+
+/** Builds a server-side polling block that keeps the holder transaction open until explicitly released. */
+function releaseGateWaitSql(gate) {
+  return `do $release$
+begin
+  while not exists (
+    select 1
+    from public.b12_replay_release_gates
+    where gate = '${gate}'
+      and released
+  ) loop
+    perform pg_catalog.pg_sleep(0.05);
+  end loop;
+end
+$releaseimport assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { spawn, spawnSync } from "node:child_process";
+import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
+const targetOverrideParameters = Object.freeze([
+  "host",
+  "hostaddr",
+  "port",
+  "dbname",
+  "service",
+  "servicefile",
+]);
+const targetEnvironmentVariables = Object.freeze([
+  "PGHOST",
+  "PGHOSTADDR",
+  "PGPORT",
+  "PGDATABASE",
+  "PGSERVICE",
+  "PGSERVICEFILE",
+]);
+
+/** Refuses to run destructive replay verification against anything except the disposable local test database. */
+export function validateReplayDatabaseUrl(databaseUrl) {
+  if (!databaseUrl) {
+    throw new Error(
+      "RLS_TEST_DATABASE_URL is required. Point it only at a disposable local database whose name ends in _test.",
+    );
+  }
+
+  const parsed = new URL(databaseUrl);
+  const databaseName = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
+  const override = targetOverrideParameters.find((parameter) =>
+    parsed.searchParams.has(parameter),
+  );
+
+  if (override) {
+    throw new Error(
+      `Refusing replay database URL with connection target override parameter: ${override}.`,
+    );
+  }
+  if (parsed.hostname !== "127.0.0.1") {
+    throw new Error("Replay verification requires the literal loopback address 127.0.0.1.");
+  }
+  if (parsed.port !== "5432") {
+    throw new Error("Replay verification requires PostgreSQL test port 5432.");
+  }
+  if (!databaseName.endsWith("_test")) {
+    throw new Error("Replay verification requires a database name ending in _test.");
+  }
+}
+
+/** Builds a sanitized child-process environment that cannot redirect PostgreSQL connections. */
+function psqlEnvironment() {
+  const env = { ...process.env, PGCONNECT_TIMEOUT: "5" };
+  for (const variable of targetEnvironmentVariables) delete env[variable];
+  return env;
+}
+
+/** Builds fail-fast psql arguments for one synchronous SQL command. */
+function psqlArgs(databaseUrl, sql) {
+  return [
+    "--no-psqlrc",
+    "--set",
+    "ON_ERROR_STOP=1",
+    "--dbname",
+    databaseUrl,
+    "--tuples-only",
+    "--no-align",
+    "--command",
+    sql,
+  ];
+}
+
+/** Executes one SQL command synchronously against the validated disposable database. */
+function runPsqlSync(databaseUrl, sql) {
+  const result = spawnSync("psql", psqlArgs(databaseUrl, sql), {
+    cwd: repositoryRoot,
+    env: psqlEnvironment(),
+    encoding: "utf8",
+    maxBuffer: 1024 * 1024,
+  });
+  if (result.error) throw result.error;
+  return {
+    status: result.status ?? 1,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+  };
+}
+
+/** Starts an asynchronous psql session for waiter-side concurrency assertions. */
+function startPsqlSession(databaseUrl, commands) {
+  const args = [
+    "--no-psqlrc",
+    "--set",
+    "ON_ERROR_STOP=1",
+    "--dbname",
+    databaseUrl,
+  ];
+  for (const command of commands) args.push("--command", command);
+
+  const child = spawn("psql", args, {
+    cwd: repositoryRoot,
+    env: psqlEnvironment(),
+    stdio: ["ignore", "pipe", "pipe"],
+  });
   let stdout = "";
   let stderr = "";
   child.stdout.setEncoding("utf8");
@@ -161,8 +287,6 @@ function startHeldPsqlSession(databaseUrl, commands) {
     });
   });
 
-  child.stdin.write(`${commands.join("\n")}\n`);
-
   return {
     child,
     exit,
@@ -171,9 +295,18 @@ function startHeldPsqlSession(databaseUrl, commands) {
   };
 }
 
-/** Commits and closes a held psql transaction after its competing waiter is observably blocked. */
-function releaseHeldSession(session) {
-  session.child.stdin.end("commit;\n\\q\n");
+;
+}
+
+/** Releases a holder only after the competing session has been observed blocked on persistence. */
+function releaseGate(databaseUrl, gate) {
+  const result = runPsqlSync(
+    databaseUrl,
+    `update public.b12_replay_release_gates
+set released = true
+where gate = '${gate}';`,
+  );
+  assertSuccess(result, `release gate ${gate}`);
 }
 
 /** Pauses briefly while polling deterministic database concurrency state. */
@@ -532,13 +665,16 @@ values ('${businessId}', 'Replay Course', 'front_end', '${revenueSequentialReque
     1,
   );
 
-  const revenueHolder = startHeldPsqlSession(databaseUrl, [
-    "begin;",
-    `set role authenticated;`,
-    `set request.jwt.claims = '${claimsValue(ownerId)}';`,
+  const revenueReleaseGate = createReleaseGate(databaseUrl);
+  const revenueHolder = startPsqlSession(databaseUrl, [
+    "begin",
+    ...authenticatedSessionCommands(ownerId),
     `insert into public.revenue_streams (business_id, name, stream_type, creation_request_id)
-values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}');`,
+values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}')`,
     "\\echo B12_REVENUE_INSERT_HELD",
+    "reset role",
+    releaseGateWaitSql(revenueReleaseGate),
+    "commit",
   ]);
   await waitForMarker(revenueHolder, "B12_REVENUE_INSERT_HELD");
 
@@ -550,7 +686,7 @@ values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConc
 values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}')`,
   ]);
   await waitForDatabaseLock(databaseUrl, revenueWaiterName);
-  releaseHeldSession(revenueHolder);
+  releaseGate(databaseUrl, revenueReleaseGate);
   await requireSuccessfulSession(revenueHolder, "concurrent revenue holder");
   await requireRejectedSession(
     revenueWaiter,
@@ -601,16 +737,19 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     1,
   );
 
-  const expenseHolder = startHeldPsqlSession(databaseUrl, [
-    "begin;",
-    `set role authenticated;`,
-    `set request.jwt.claims = '${claimsValue(ownerId)}';`,
+  const expenseReleaseGate = createReleaseGate(databaseUrl);
+  const expenseHolder = startPsqlSession(databaseUrl, [
+    "begin",
+    ...authenticatedSessionCommands(ownerId),
     `insert into public.expense_items (
   business_id, name, category, cost_behavior, creation_request_id
 ) values (
   '${businessId}', 'Rent', 'overhead', 'fixed_monthly', '${expenseConcurrentRequest}'
-);`,
+)`,
     "\\echo B12_EXPENSE_INSERT_HELD",
+    "reset role",
+    releaseGateWaitSql(expenseReleaseGate),
+    "commit",
   ]);
   await waitForMarker(expenseHolder, "B12_EXPENSE_INSERT_HELD");
 
@@ -625,7 +764,7 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
 )`,
   ]);
   await waitForDatabaseLock(databaseUrl, expenseWaiterName);
-  releaseHeldSession(expenseHolder);
+  releaseGate(databaseUrl, expenseReleaseGate);
   await requireSuccessfulSession(expenseHolder, "concurrent expense holder");
   await requireRejectedSession(
     expenseWaiter,
@@ -748,10 +887,14 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     .replace(/^begin;\n/, "")
     .replace(/\ncommit;$/, "");
 
-  const monthlyHolder = startHeldPsqlSession(databaseUrl, [
-    "begin;",
+  const monthlyReleaseGate = createReleaseGate(databaseUrl);
+  const monthlyHolder = startPsqlSession(databaseUrl, [
+    "begin",
     concurrentMonthStatement,
     "\\echo B12_MONTHLY_SAVE_HELD",
+    "reset role",
+    releaseGateWaitSql(monthlyReleaseGate),
+    "commit",
   ]);
   await waitForMarker(monthlyHolder, "B12_MONTHLY_SAVE_HELD");
 
@@ -763,7 +906,7 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     "commit",
   ]);
   await waitForDatabaseLock(databaseUrl, monthlyWaiterName, "advisory");
-  releaseHeldSession(monthlyHolder);
+  releaseGate(databaseUrl, monthlyReleaseGate);
   await requireSuccessfulSession(monthlyHolder, "concurrent monthly holder");
   await requireSuccessfulSession(monthlyWaiter, "concurrent monthly replay");
   verifyKnownMonth(
