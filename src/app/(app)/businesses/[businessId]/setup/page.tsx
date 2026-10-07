@@ -92,7 +92,7 @@ export default async function BusinessSetupPage({
       );
     }
     if (parsedStep.kind === "invalid") {
-      redirect(buildBusinessSetupHref(businessId));
+      redirect(buildBusinessSetupHref(businessId, undefined, { monthKey: navigationMonthKey }));
     }
 
     return (
