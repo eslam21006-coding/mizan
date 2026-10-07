@@ -87,28 +87,107 @@ function runPsqlSync(databaseUrl, sql) {
   };
 }
 
-function runPsqlAsync(databaseUrl, sql) {
-  return new Promise((resolvePromise, reject) => {
-    const child = spawn("psql", psqlArgs(databaseUrl, sql), {
-      cwd: repositoryRoot,
-      env: psqlEnvironment(),
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-    let stdout = "";
-    let stderr = "";
-    child.stdout.setEncoding("utf8");
-    child.stderr.setEncoding("utf8");
-    child.stdout.on("data", (chunk) => {
-      stdout += chunk;
-    });
-    child.stderr.on("data", (chunk) => {
-      stderr += chunk;
-    });
-    child.on("error", reject);
-    child.on("close", (code) => {
-      resolvePromise({ status: code ?? 1, stdout, stderr });
+function startPsqlSession(databaseUrl, commands) {
+  const args = [
+    "--no-psqlrc",
+    "--set",
+    "ON_ERROR_STOP=1",
+    "--dbname",
+    databaseUrl,
+  ];
+  for (const command of commands) args.push("--command", command);
+
+  const child = spawn("psql", args, {
+    cwd: repositoryRoot,
+    env: psqlEnvironment(),
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  let stdout = "";
+  let stderr = "";
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk) => {
+    stdout += chunk;
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+
+  const exit = new Promise((resolvePromise, reject) => {
+    child.once("error", reject);
+    child.once("close", (code, signal) => {
+      resolvePromise({ code, signal });
     });
   });
+
+  return {
+    child,
+    exit,
+    stdout: () => stdout,
+    stderr: () => stderr,
+  };
+}
+
+function sleep(milliseconds) {
+  return new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds));
+}
+
+async function waitForMarker(session, marker, timeoutMs = 5_000) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (session.stdout().includes(marker)) return;
+    if (session.child.exitCode !== null || session.child.signalCode !== null) {
+      throw new Error(
+        `Session exited before marker ${marker}. stdout=${session.stdout()} stderr=${session.stderr()}`,
+      );
+    }
+    await sleep(25);
+  }
+  throw new Error(`Timed out waiting for marker ${marker}. stdout=${session.stdout()}`);
+}
+
+async function waitForDatabaseLock(
+  databaseUrl,
+  applicationName,
+  waitEvent = null,
+  timeoutMs = 5_000,
+) {
+  const escapedApplicationName = applicationName.replaceAll("'", "''");
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const eventClause = waitEvent
+      ? ` and wait_event = '${waitEvent.replaceAll("'", "''")}'`
+      : "";
+    const result = runPsqlSync(
+      databaseUrl,
+      `select count(*) from pg_catalog.pg_stat_activity where application_name = '${escapedApplicationName}' and wait_event_type = 'Lock'${eventClause};`,
+    );
+    assertSuccess(result, `inspect lock state for ${applicationName}`);
+    if (Number(result.stdout.trim()) > 0) return;
+    await sleep(50);
+  }
+  throw new Error(
+    `Timed out waiting for ${applicationName} to block on ${waitEvent ?? "a database lock"}.`,
+  );
+}
+
+async function requireSuccessfulSession(session, label) {
+  const result = await session.exit;
+  assert.equal(
+    result.code,
+    0,
+    `${label} failed with code ${result.code ?? "null"} signal ${result.signal ?? "none"}. stdout=${session.stdout()} stderr=${session.stderr()}`,
+  );
+}
+
+async function requireRejectedSession(session, label, pattern) {
+  const result = await session.exit;
+  assert.notEqual(
+    result.code,
+    0,
+    `${label} unexpectedly succeeded. stdout=${session.stdout()}`,
+  );
+  assert.match(session.stderr(), pattern);
 }
 
 function assertSuccess(result, label) {
@@ -128,17 +207,27 @@ function assertRejected(result, label, pattern) {
   assert.match(result.stderr, pattern);
 }
 
-function authenticatedSql(userId, sql) {
-  const claims = JSON.stringify({
+function claimsValue(userId) {
+  return JSON.stringify({
     sub: userId,
     role: "authenticated",
     app_metadata: { role: "mentee" },
   }).replaceAll("'", "''");
+}
+
+function authenticatedSql(userId, sql) {
   return `begin;
 set local role authenticated;
-set local request.jwt.claims = '${claims}';
+set local request.jwt.claims = '${claimsValue(userId)}';
 ${sql}
 commit;`;
+}
+
+function authenticatedSessionCommands(userId) {
+  return [
+    "set role authenticated",
+    `set request.jwt.claims = '${claimsValue(userId)}'`,
+  ];
 }
 
 function quoteJson(value) {
@@ -171,7 +260,6 @@ function monthlySaveSql({
   monthStart,
   revenueStreamId,
   expenses,
-  delaySeconds = 0,
 }) {
   const revenuePayload = [
     {
@@ -185,10 +273,9 @@ function monthlySaveSql({
     display_value: value,
     customer_count_basis: null,
   }));
-  const delay = delaySeconds > 0 ? `select pg_sleep(${delaySeconds});\n` : "";
   return authenticatedSql(
     ownerId,
-    `${delay}select public.save_monthly_actuals(
+    `select public.save_monthly_actuals(
   '${businessId}',
   '${monthStart}',
   10,
