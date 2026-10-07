@@ -9,6 +9,7 @@ import {
 } from "@/lib/business/monthly";
 import { parseResourceId } from "@/lib/business/revenue-streams";
 import { parseMonthlyExpenseInput } from "@/lib/business/monthly-expense-input";
+import { isUncertainMonthlyWriteFailure } from "@/lib/business/monthly-write-outcome";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 export type MonthlySaveErrorCode =
@@ -17,7 +18,8 @@ export type MonthlySaveErrorCode =
   | "invalid-customers"
   | "blank-month"
   | "historical-required"
-  | "save-failed";
+  | "save-failed"
+  | "save-uncertain";
 
 export type MonthlySaveResult =
   | { ok: true; businessId: string; monthKey: string }
@@ -32,6 +34,8 @@ export type MonthlySaveResult =
 type MonthlySaveOptions = {
   /** Only the new Setup flow supports omitting an entirely blank new per-customer row. */
   setupDraft?: boolean;
+  /** Setup can independently re-read an exact month when transport loss makes write outcome unknowable. */
+  recoverUncertainWrite?: boolean;
 };
 
 function uniqueResourceIds(values: FormDataEntryValue[]) {
@@ -186,7 +190,7 @@ export async function persistMonthlyActuals(
     month: "أدخل قيمة مالية أو عدد عملاء مؤكدًا قبل حفظ المسودة.",
   });
 
-  const { error } = await supabase.rpc("save_monthly_actuals", {
+  const { error, status } = await supabase.rpc("save_monthly_actuals", {
     target_business_id: businessId,
     target_month_start: month.monthStart,
     target_new_customers: newCustomers.value,
@@ -200,6 +204,12 @@ export async function persistMonthlyActuals(
   if (error) {
     if (error.message.includes("explicit historical correction workflow")) {
       return fail("historical-required");
+    }
+    if (
+      options.recoverUncertainWrite &&
+      isUncertainMonthlyWriteFailure({ status, code: error.code })
+    ) {
+      return fail("save-uncertain");
     }
     return fail("save-failed");
   }
