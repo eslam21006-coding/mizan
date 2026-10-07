@@ -90,7 +90,7 @@ function runPsqlSync(databaseUrl, sql) {
   };
 }
 
-/** Starts an asynchronous psql session for waiter-side concurrency assertions. */
+/** Starts one multi-command psql session so transaction overlap can be observed directly. */
 function startPsqlSession(databaseUrl, commands) {
   const args = [
     "--no-psqlrc",
@@ -130,183 +130,6 @@ function startPsqlSession(databaseUrl, commands) {
     stdout: () => stdout,
     stderr: () => stderr,
   };
-}
-
-/** Creates a test-only release gate used to keep a holder transaction open without a timer. */
-function createReleaseGate(databaseUrl) {
-  const gate = `b12-replay-${randomUUID()}`;
-  const result = runPsqlSync(
-    databaseUrl,
-    `create table if not exists public.b12_replay_release_gates (
-  gate text primary key,
-  released boolean not null default false
-);
-insert into public.b12_replay_release_gates (gate, released)
-values ('${gate}', false);`,
-  );
-  assertSuccess(result, `create release gate ${gate}`);
-  return gate;
-}
-
-/** Builds a server-side polling block that keeps the holder transaction open until explicitly released. */
-function releaseGateWaitSql(gate) {
-  return `do $release$
-begin
-  while not exists (
-    select 1
-    from public.b12_replay_release_gates
-    where gate = '${gate}'
-      and released
-  ) loop
-    perform pg_catalog.pg_sleep(0.05);
-  end loop;
-end
-$releaseimport assert from "node:assert/strict";
-import { randomUUID } from "node:crypto";
-import { spawn, spawnSync } from "node:child_process";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
-const repositoryRoot = fileURLToPath(new URL("../../", import.meta.url));
-const targetOverrideParameters = Object.freeze([
-  "host",
-  "hostaddr",
-  "port",
-  "dbname",
-  "service",
-  "servicefile",
-]);
-const targetEnvironmentVariables = Object.freeze([
-  "PGHOST",
-  "PGHOSTADDR",
-  "PGPORT",
-  "PGDATABASE",
-  "PGSERVICE",
-  "PGSERVICEFILE",
-]);
-
-/** Refuses to run destructive replay verification against anything except the disposable local test database. */
-export function validateReplayDatabaseUrl(databaseUrl) {
-  if (!databaseUrl) {
-    throw new Error(
-      "RLS_TEST_DATABASE_URL is required. Point it only at a disposable local database whose name ends in _test.",
-    );
-  }
-
-  const parsed = new URL(databaseUrl);
-  const databaseName = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
-  const override = targetOverrideParameters.find((parameter) =>
-    parsed.searchParams.has(parameter),
-  );
-
-  if (override) {
-    throw new Error(
-      `Refusing replay database URL with connection target override parameter: ${override}.`,
-    );
-  }
-  if (parsed.hostname !== "127.0.0.1") {
-    throw new Error("Replay verification requires the literal loopback address 127.0.0.1.");
-  }
-  if (parsed.port !== "5432") {
-    throw new Error("Replay verification requires PostgreSQL test port 5432.");
-  }
-  if (!databaseName.endsWith("_test")) {
-    throw new Error("Replay verification requires a database name ending in _test.");
-  }
-}
-
-/** Builds a sanitized child-process environment that cannot redirect PostgreSQL connections. */
-function psqlEnvironment() {
-  const env = { ...process.env, PGCONNECT_TIMEOUT: "5" };
-  for (const variable of targetEnvironmentVariables) delete env[variable];
-  return env;
-}
-
-/** Builds fail-fast psql arguments for one synchronous SQL command. */
-function psqlArgs(databaseUrl, sql) {
-  return [
-    "--no-psqlrc",
-    "--set",
-    "ON_ERROR_STOP=1",
-    "--dbname",
-    databaseUrl,
-    "--tuples-only",
-    "--no-align",
-    "--command",
-    sql,
-  ];
-}
-
-/** Executes one SQL command synchronously against the validated disposable database. */
-function runPsqlSync(databaseUrl, sql) {
-  const result = spawnSync("psql", psqlArgs(databaseUrl, sql), {
-    cwd: repositoryRoot,
-    env: psqlEnvironment(),
-    encoding: "utf8",
-    maxBuffer: 1024 * 1024,
-  });
-  if (result.error) throw result.error;
-  return {
-    status: result.status ?? 1,
-    stdout: result.stdout ?? "",
-    stderr: result.stderr ?? "",
-  };
-}
-
-/** Starts an asynchronous psql session for waiter-side concurrency assertions. */
-function startPsqlSession(databaseUrl, commands) {
-  const args = [
-    "--no-psqlrc",
-    "--set",
-    "ON_ERROR_STOP=1",
-    "--dbname",
-    databaseUrl,
-  ];
-  for (const command of commands) args.push("--command", command);
-
-  const child = spawn("psql", args, {
-    cwd: repositoryRoot,
-    env: psqlEnvironment(),
-    stdio: ["ignore", "pipe", "pipe"],
-  });
-  let stdout = "";
-  let stderr = "";
-  child.stdout.setEncoding("utf8");
-  child.stderr.setEncoding("utf8");
-  child.stdout.on("data", (chunk) => {
-    stdout += chunk;
-  });
-  child.stderr.on("data", (chunk) => {
-    stderr += chunk;
-  });
-
-  const exit = new Promise((resolvePromise, reject) => {
-    child.once("error", reject);
-    child.once("close", (code, signal) => {
-      resolvePromise({ code, signal });
-    });
-  });
-
-  return {
-    child,
-    exit,
-    stdout: () => stdout,
-    stderr: () => stderr,
-  };
-}
-
-;
-}
-
-/** Releases a holder only after the competing session has been observed blocked on persistence. */
-function releaseGate(databaseUrl, gate) {
-  const result = runPsqlSync(
-    databaseUrl,
-    `update public.b12_replay_release_gates
-set released = true
-where gate = '${gate}';`,
-  );
-  assertSuccess(result, `release gate ${gate}`);
 }
 
 /** Pauses briefly while polling deterministic database concurrency state. */
@@ -314,7 +137,7 @@ function sleep(milliseconds) {
   return new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds));
 }
 
-/** Waits until a holder session confirms it reached the protected persistence boundary. */
+/** Waits until the holder confirms it completed its write while keeping the transaction open. */
 async function waitForMarker(session, marker, timeoutMs = 5_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -329,7 +152,7 @@ async function waitForMarker(session, marker, timeoutMs = 5_000) {
   throw new Error(`Timed out waiting for marker ${marker}. stdout=${session.stdout()}`);
 }
 
-/** Waits until a named database session is observably blocked on the expected lock. */
+/** Proves a named waiter is blocked on a database lock before the holder transaction can finish. */
 async function waitForDatabaseLock(
   databaseUrl,
   applicationName,
@@ -338,24 +161,29 @@ async function waitForDatabaseLock(
 ) {
   const escapedApplicationName = applicationName.replaceAll("'", "''");
   const deadline = Date.now() + timeoutMs;
+
   while (Date.now() < deadline) {
     const eventClause = waitEvent
       ? ` and wait_event = '${waitEvent.replaceAll("'", "''")}'`
       : "";
     const result = runPsqlSync(
       databaseUrl,
-      `select count(*) from pg_catalog.pg_stat_activity where application_name = '${escapedApplicationName}' and wait_event_type = 'Lock'${eventClause};`,
+      `select count(*)
+from pg_catalog.pg_stat_activity
+where application_name = '${escapedApplicationName}'
+  and wait_event_type = 'Lock'${eventClause};`,
     );
     assertSuccess(result, `inspect lock state for ${applicationName}`);
     if (Number(result.stdout.trim()) > 0) return;
     await sleep(50);
   }
+
   throw new Error(
     `Timed out waiting for ${applicationName} to block on ${waitEvent ?? "a database lock"}.`,
   );
 }
 
-/** Awaits a spawned psql session and fails with captured output unless it succeeds. */
+/** Awaits a spawned session and requires a successful exit. */
 async function requireSuccessfulSession(session, label) {
   const result = await session.exit;
   assert.equal(
@@ -365,7 +193,7 @@ async function requireSuccessfulSession(session, label) {
   );
 }
 
-/** Awaits a spawned psql session and requires rejection matching the expected database error. */
+/** Awaits a spawned session and requires a database rejection matching the expected reason. */
 async function requireRejectedSession(session, label, pattern) {
   const result = await session.exit;
   assert.notEqual(
@@ -413,11 +241,11 @@ ${sql}
 commit;`;
 }
 
-/** Returns session-level authentication commands for multi-command concurrency sessions. */
-function authenticatedSessionCommands(userId) {
+/** Returns local authenticated-session commands for a transaction-spanning concurrency case. */
+function authenticatedLocalCommands(userId) {
   return [
-    "set role authenticated",
-    `set request.jwt.claims = '${claimsValue(userId)}'`,
+    "set local role authenticated",
+    `set local request.jwt.claims = '${claimsValue(userId)}'`,
   ];
 }
 
@@ -448,9 +276,8 @@ function idForRequest(databaseUrl, table, businessId, requestId) {
   return id;
 }
 
-/** Builds the canonical known-number Monthly save used for identical replay checks. */
-function monthlySaveSql({
-  ownerId,
+/** Builds the one SQL statement used for the known-number Monthly replay case. */
+function monthlySaveStatement({
   businessId,
   monthStart,
   revenueStreamId,
@@ -468,9 +295,8 @@ function monthlySaveSql({
     display_value: value,
     customer_count_basis: null,
   }));
-  return authenticatedSql(
-    ownerId,
-    `select public.save_monthly_actuals(
+
+  return `select public.save_monthly_actuals(
   '${businessId}',
   '${monthStart}',
   10,
@@ -480,8 +306,12 @@ function monthlySaveSql({
   null,
   ${quoteJson(revenuePayload)},
   ${quoteJson(expensePayload)}
-);`,
-  );
+)`;
+}
+
+/** Builds an authenticated transaction around the known-number Monthly replay statement. */
+function monthlySaveSql(input) {
+  return authenticatedSql(input.ownerId, `${monthlySaveStatement(input)};`);
 }
 
 /** Verifies row cardinality, every persisted component, and derived known-number invariants. */
@@ -508,17 +338,25 @@ function verifyKnownMonth(
   end if;`,
     )
     .join("\n");
+
   const sql = `do $verify$
 declare
   period_id uuid;
+  new_customer_count integer;
+  paying_customer_count integer;
+  gross_cash numeric;
+  refund_amount numeric;
   net_cash numeric;
+  acquisition_cost numeric;
+  fulfillment_cost numeric;
+  overhead_cost numeric;
+  financial_cost numeric;
   total_costs numeric;
   real_net_profit numeric;
   ultimate_cac numeric;
-  customer_count integer;
 begin
-  select id, new_customers
-  into period_id, customer_count
+  select id, new_customers, total_paying_customers
+  into period_id, new_customer_count, paying_customer_count
   from public.monthly_periods
   where business_id = '${businessId}'
     and month_start = '${monthStart}';
@@ -552,19 +390,20 @@ begin
     raise exception 'B12B.1 replay duplicated monthly expense rows';
   end if;
 
-  if customer_count <> 10 then
-    raise exception 'B12B.1 new customer count changed after replay: %', customer_count;
+  if new_customer_count <> 10 or paying_customer_count <> 10 then
+    raise exception 'B12B.1 customer counts changed after replay: %/%',
+      new_customer_count, paying_customer_count;
   end if;
 
-  if not exists (
-    select 1
-    from public.monthly_revenue_entries
-    where monthly_period_id = period_id
-      and revenue_stream_id = '${revenueStreamId}'
-      and gross_cash_collected = 10000
-      and refunds = 1000
-  ) then
-    raise exception 'B12B.1 gross cash or refunds changed after replay';
+  select gross_cash_collected, refunds
+  into gross_cash, refund_amount
+  from public.monthly_revenue_entries
+  where monthly_period_id = period_id
+    and revenue_stream_id = '${revenueStreamId}';
+
+  if gross_cash <> 10000 or refund_amount <> 1000 then
+    raise exception 'B12B.1 gross cash/refunds changed after replay: %/%',
+      gross_cash, refund_amount;
   end if;
 
 ${expenseChecks}
@@ -574,16 +413,33 @@ ${expenseChecks}
   from public.monthly_revenue_entries
   where monthly_period_id = period_id;
 
-  select coalesce(sum(input_value), 0)
-  into total_costs
+  select
+    coalesce(sum(input_value) filter (where category_snapshot = 'acquisition'), 0),
+    coalesce(sum(input_value) filter (where category_snapshot = 'fulfillment'), 0),
+    coalesce(sum(input_value) filter (where category_snapshot = 'overhead'), 0),
+    coalesce(sum(input_value) filter (where category_snapshot = 'financial'), 0)
+  into acquisition_cost, fulfillment_cost, overhead_cost, financial_cost
   from public.monthly_expense_entries
   where monthly_period_id = period_id;
 
+  total_costs := acquisition_cost + fulfillment_cost + overhead_cost + financial_cost;
   real_net_profit := net_cash - total_costs;
-  ultimate_cac := total_costs / nullif(customer_count, 0);
+  ultimate_cac := total_costs / nullif(new_customer_count, 0);
 
   if net_cash <> 9000 then
     raise exception 'B12B.1 Net Cash changed after replay: %', net_cash;
+  end if;
+  if acquisition_cost <> 2000 then
+    raise exception 'B12B.1 acquisition cost changed after replay: %', acquisition_cost;
+  end if;
+  if fulfillment_cost <> 1000 then
+    raise exception 'B12B.1 fulfillment cost changed after replay: %', fulfillment_cost;
+  end if;
+  if overhead_cost <> 500 then
+    raise exception 'B12B.1 overhead cost changed after replay: %', overhead_cost;
+  end if;
+  if financial_cost <> 500 then
+    raise exception 'B12B.1 financial cost changed after replay: %', financial_cost;
   end if;
   if total_costs <> 4000 then
     raise exception 'B12B.1 total costs changed after replay: %', total_costs;
@@ -596,6 +452,7 @@ ${expenseChecks}
   end if;
 end
 $verify$;`;
+
   assertSuccess(runPsqlSync(databaseUrl, sql), `verify known month ${monthStart}`);
 }
 
@@ -665,15 +522,13 @@ values ('${businessId}', 'Replay Course', 'front_end', '${revenueSequentialReque
     1,
   );
 
-  const revenueReleaseGate = createReleaseGate(databaseUrl);
   const revenueHolder = startPsqlSession(databaseUrl, [
     "begin",
-    ...authenticatedSessionCommands(ownerId),
+    ...authenticatedLocalCommands(ownerId),
     `insert into public.revenue_streams (business_id, name, stream_type, creation_request_id)
 values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}')`,
     "\\echo B12_REVENUE_INSERT_HELD",
-    "reset role",
-    releaseGateWaitSql(revenueReleaseGate),
+    "select pg_sleep(3)",
     "commit",
   ]);
   await waitForMarker(revenueHolder, "B12_REVENUE_INSERT_HELD");
@@ -681,12 +536,13 @@ values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConc
   const revenueWaiterName = `b12_revenue_waiter_${randomUUID()}`;
   const revenueWaiter = startPsqlSession(databaseUrl, [
     `set application_name = '${revenueWaiterName}'`,
-    ...authenticatedSessionCommands(ownerId),
+    "begin",
+    ...authenticatedLocalCommands(ownerId),
     `insert into public.revenue_streams (business_id, name, stream_type, creation_request_id)
 values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}')`,
+    "commit",
   ]);
   await waitForDatabaseLock(databaseUrl, revenueWaiterName);
-  releaseGate(databaseUrl, revenueReleaseGate);
   await requireSuccessfulSession(revenueHolder, "concurrent revenue holder");
   await requireRejectedSession(
     revenueWaiter,
@@ -737,18 +593,16 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     1,
   );
 
-  const expenseReleaseGate = createReleaseGate(databaseUrl);
   const expenseHolder = startPsqlSession(databaseUrl, [
     "begin",
-    ...authenticatedSessionCommands(ownerId),
+    ...authenticatedLocalCommands(ownerId),
     `insert into public.expense_items (
   business_id, name, category, cost_behavior, creation_request_id
 ) values (
   '${businessId}', 'Rent', 'overhead', 'fixed_monthly', '${expenseConcurrentRequest}'
 )`,
     "\\echo B12_EXPENSE_INSERT_HELD",
-    "reset role",
-    releaseGateWaitSql(expenseReleaseGate),
+    "select pg_sleep(3)",
     "commit",
   ]);
   await waitForMarker(expenseHolder, "B12_EXPENSE_INSERT_HELD");
@@ -756,15 +610,16 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
   const expenseWaiterName = `b12_expense_waiter_${randomUUID()}`;
   const expenseWaiter = startPsqlSession(databaseUrl, [
     `set application_name = '${expenseWaiterName}'`,
-    ...authenticatedSessionCommands(ownerId),
+    "begin",
+    ...authenticatedLocalCommands(ownerId),
     `insert into public.expense_items (
   business_id, name, category, cost_behavior, creation_request_id
 ) values (
   '${businessId}', 'Rent', 'overhead', 'fixed_monthly', '${expenseConcurrentRequest}'
 )`,
+    "commit",
   ]);
   await waitForDatabaseLock(databaseUrl, expenseWaiterName);
-  releaseGate(databaseUrl, expenseReleaseGate);
   await requireSuccessfulSession(expenseHolder, "concurrent expense holder");
   await requireRejectedSession(
     expenseWaiter,
@@ -877,23 +732,19 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     expenses,
   );
 
-  const concurrentMonthStatement = monthlySaveSql({
-    ownerId,
+  const monthlyStatement = monthlySaveStatement({
     businessId,
     monthStart: "2099-11-01",
     revenueStreamId,
     expenses,
-  })
-    .replace(/^begin;\n/, "")
-    .replace(/\ncommit;$/, "");
+  });
 
-  const monthlyReleaseGate = createReleaseGate(databaseUrl);
   const monthlyHolder = startPsqlSession(databaseUrl, [
     "begin",
-    concurrentMonthStatement,
+    ...authenticatedLocalCommands(ownerId),
+    monthlyStatement,
     "\\echo B12_MONTHLY_SAVE_HELD",
-    "reset role",
-    releaseGateWaitSql(monthlyReleaseGate),
+    "select pg_sleep(3)",
     "commit",
   ]);
   await waitForMarker(monthlyHolder, "B12_MONTHLY_SAVE_HELD");
@@ -902,11 +753,11 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
   const monthlyWaiter = startPsqlSession(databaseUrl, [
     `set application_name = '${monthlyWaiterName}'`,
     "begin",
-    concurrentMonthStatement,
+    ...authenticatedLocalCommands(ownerId),
+    monthlyStatement,
     "commit",
   ]);
   await waitForDatabaseLock(databaseUrl, monthlyWaiterName, "advisory");
-  releaseGate(databaseUrl, monthlyReleaseGate);
   await requireSuccessfulSession(monthlyHolder, "concurrent monthly holder");
   await requireSuccessfulSession(monthlyWaiter, "concurrent monthly replay");
   verifyKnownMonth(
@@ -951,7 +802,7 @@ values ('${businessId}', 'Unauthorized Revenue', 'front_end', '${outsiderRevenue
   );
 
   console.log(
-    "B12B.1 replay safety passed: creation IDs and identical monthly saves are sequentially and concurrently idempotent with unchanged known-number totals.",
+    "B12B.1 replay safety passed: creation IDs and identical monthly saves are sequentially and concurrently idempotent with unchanged component-level and derived known-number totals.",
   );
 }
 
