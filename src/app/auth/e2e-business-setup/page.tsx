@@ -354,6 +354,7 @@ function fixtureFirstMonth(
   };
 }
 
+/** Returns deterministic persisted-month facts for each browser fixture case. */
 function fixturePersistedMonths(
   fixtureCase: FixtureCase,
   requestedMonth: string | undefined,
