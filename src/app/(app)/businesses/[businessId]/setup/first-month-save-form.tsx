@@ -16,6 +16,7 @@ const initialState: FirstMonthSaveState = {
   code: null,
   fieldErrors: {},
   draft: {},
+  recovery: null,
 };
 
 type Props = {
@@ -26,12 +27,21 @@ type Props = {
   seedState?: FirstMonthSaveState;
 };
 
+const RECOVERY_MESSAGES = {
+  persisted:
+    "تعذر تأكيد نتيجة محاولة الحفظ الأخيرة. أعد ميزان قراءة هذا الشهر ووجد بيانات محفوظة حاليًا. قد تكون من حفظ سابق أو من المحاولة الأخيرة؛ القيم الظاهرة أدناه هي آخر ما أرسلته وليست تأكيدًا لما تم حفظه.",
+  "not-persisted":
+    "تعذر تأكيد نتيجة محاولة الحفظ الأخيرة. بعد إعادة قراءة هذا الشهر لم نجد شهرًا محفوظًا حاليًا. احتفظنا بالقيم التي أدخلتها لتراجعها وتحاول الحفظ مرة أخرى.",
+  unavailable:
+    "تعذر تأكيد نتيجة محاولة الحفظ الأخيرة، وتعذر أيضًا التحقق من الحالة المحفوظة الآن. لم يفترض ميزان نجاح الحفظ أو فشله، واحتفظ بالقيم التي أدخلتها للمراجعة.",
+} as const;
+
 const ERROR_MESSAGES: Readonly<Record<string, string>> = {
   "invalid-month": "الشهر المحدد غير صحيح.",
   "invalid-input": "راجع الحقول المحددة ثم حاول الحفظ مرة أخرى.",
   "invalid-customers": "راجع أعداد العملاء ثم حاول الحفظ.",
   "blank-month": "أدخل أرقامًا فعلية أو صفرًا مؤكدًا قبل الحفظ.",
-  "save-failed": "تعذر حفظ الشهر. لم يتم تأكيد أي تغييرات جديدة؛ يمكنك المحاولة مرة أخرى.",
+  "save-failed": "تعذر حفظ الشهر. لم نؤكد حفظ أي تغييرات جديدة؛ يمكنك المحاولة مرة أخرى.",
   "historical-required": "هذا الشهر محفوظ كتاريخ سابق؛ استخدم مسار التصحيح التاريخي بدلًا من الحفظ العادي.",
 };
 
@@ -76,7 +86,11 @@ export function FirstMonthSaveForm({ businessId, monthKey, currency, firstMonth,
       <input type="hidden" name="month" value={monthKey} />
       {state.status === "error" && (
         <div role="alert" className={styles.saveError}>
-          <strong>{ERROR_MESSAGES[state.code ?? ""] ?? "تعذر حفظ الشهر. راجع البيانات وحاول مرة أخرى."}</strong>
+          <strong>
+            {state.code === "save-uncertain"
+              ? RECOVERY_MESSAGES[state.recovery ?? "unavailable"]
+              : ERROR_MESSAGES[state.code ?? ""] ?? "تعذر حفظ الشهر. راجع البيانات وحاول مرة أخرى."}
+          </strong>
           {Object.keys(state.fieldErrors).length > 0 && (
             <ul>
               {Object.entries(state.fieldErrors).map(([field, message]) => (

@@ -970,3 +970,90 @@ test.describe("B06 live Money-In handoff", () => {
     expect(errors).toEqual([]);
   });
 });
+
+
+test.describe("B12B.2 pending and truthful recovery", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
+  test("double activation produces one in-flight form action and announces pending state", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    let postCount = 0;
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === "/auth/e2e-stable-submit"
+      ) {
+        postCount += 1;
+      }
+    });
+
+    await page.goto("/auth/e2e-stable-submit");
+    const button = page.getByRole("button", { name: "حفظ" });
+    await button.dblclick({ delay: 10 });
+
+    await expect(button).toBeDisabled();
+    await expect(page.getByRole("status")).toHaveText("جارٍ الحفظ…");
+    await expect(button).toBeEnabled({ timeout: 5_000 });
+    expect(postCount).toBe(1);
+    expect(errors).toEqual([]);
+  });
+
+  test("uncertain save messages describe only the exact re-read persisted state and retain draft values", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+
+    await page.goto(
+      `${fixturePath}?case=month-partial&step=month&month=2026-10&recovery=persisted`,
+    );
+    await expect(
+      page.getByRole("alert").filter({ hasText: "قد تكون من حفظ سابق أو من المحاولة الأخيرة" }),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("إدخال أول شهر").getByLabel("الإيراد المحصل — الكورس الأساسي"),
+    ).toHaveValue("7777");
+    await expectStableRtl(page);
+
+    await page.goto(
+      `${fixturePath}?case=month-empty&step=month&month=2026-10&recovery=not-persisted`,
+    );
+    await expect(
+      page.getByRole("alert").filter({ hasText: "لم نجد شهرًا محفوظًا حاليًا" }),
+    ).toBeVisible();
+    await expect(
+      page.getByLabel("إدخال أول شهر").getByLabel("الإيراد المحصل — الكورس الأساسي"),
+    ).toHaveValue("7777");
+    await expectStableRtl(page);
+
+    await page.goto(
+      `${fixturePath}?case=month-empty&step=month&month=2026-10&recovery=unavailable`,
+    );
+    await expect(
+      page.getByRole("alert").filter({ hasText: "لم يفترض ميزان نجاح الحفظ أو فشله" }),
+    ).toBeVisible();
+    await expectStableRtl(page);
+    expect(errors).toEqual([]);
+  });
+
+  test("refreshing a successful GET state does not resubmit the save action", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    let posts = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST") posts += 1;
+    });
+
+    await page.goto(
+      `${fixturePath}?case=month-complete&step=month&month=2026-10&status=saved`,
+    );
+    await expect(
+      page.getByText("تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة.", { exact: true }),
+    ).toBeVisible();
+    await page.reload();
+    await expect(
+      page.getByText("تم حفظ الشهر بنجاح، وأصبحت بياناته مكتملة.", { exact: true }),
+    ).toBeVisible();
+    expect(posts).toBe(0);
+    expect(errors).toEqual([]);
+  });
+});

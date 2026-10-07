@@ -222,7 +222,10 @@ const loader = await readFile(new URL("../../src/lib/business/setup-loader.ts", 
 
 test("B10 keeps exactly one save RPC path and derives canonical readiness from data", () => {
   assert.match(actions, /persistMonthlyActuals\(formData\)/);
-  assert.match(setupAction, /persistMonthlyActuals\(formData, \{ setupDraft: true \}\)/);
+  assert.match(
+    setupAction,
+    /persistMonthlyActuals\(formData, \{[\s\S]*setupDraft: true,[\s\S]*recoverUncertainWrite: true,[\s\S]*\}\)/,
+  );
   assert.match(service, /await requireAuthContext\(\)/);
   assert.match(service, /\.rpc\("save_monthly_actuals"/);
   assert.doesNotMatch(setupAction, /\.rpc\(/);
