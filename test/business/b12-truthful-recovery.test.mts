@@ -2,9 +2,16 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { resolveFirstMonthSaveRecovery } from "../../src/lib/business/first-month-save-recovery.ts";
+import { isUncertainMonthlyWriteFailure } from "../../src/lib/business/monthly-write-outcome.ts";
 
 const businessId = "00000000-0000-4000-8000-000000000152";
 const monthKey = "2026-10";
+
+test("B12B.2 classifies only transport-loss RPC results as uncertain", () => {
+  assert.equal(isUncertainMonthlyWriteFailure({ status: 0, code: "" }), true);
+  assert.equal(isUncertainMonthlyWriteFailure({ status: 400, code: "22023" }), false);
+  assert.equal(isUncertainMonthlyWriteFailure({ status: 500, code: "P0001" }), false);
+});
 
 test("B12B.2 uncertain recovery reports only independently re-read persisted state", () => {
   const setup = { kind: "loaded" as const, business: { id: businessId } };
@@ -86,21 +93,47 @@ test("B12B.2 setup action separates confirmed failures from thrown unknown outco
     "utf8",
   );
 
-  const write = action.indexOf("await persistMonthlyActuals(formData, { setupDraft: true })");
-  const writeCatch = action.indexOf("} catch (error) {", write);
+  const write = action.indexOf("await persistMonthlyActuals(formData, {");
+  const uncertainOption = action.indexOf("recoverUncertainWrite: true", write);
+  const writeCatch = action.indexOf("} catch (error) {", uncertainOption);
   const rethrow = action.indexOf("unstable_rethrow(error)", writeCatch);
-  const recovery = action.indexOf("return recoverUnknownSave(previous, formData)", rethrow);
-  const confirmed = action.indexOf("if (!result.ok)", recovery);
+  const thrownRecovery = action.indexOf("return recoverUnknownSave(previous, formData)", rethrow);
+  const confirmed = action.indexOf("if (!result.ok)", thrownRecovery);
+  const structuredUnknown = action.indexOf('result.code === "save-uncertain"', confirmed);
+  const structuredRecovery = action.indexOf(
+    "return recoverUnknownSave(previous, formData)",
+    structuredUnknown,
+  );
 
   assert.ok(
-    write >= 0 && writeCatch > write && rethrow > writeCatch && recovery > rethrow && confirmed > recovery,
-    "Thrown persistence outcomes must be rethrown for Next navigation first, then truthfully recovered; structured failures stay separate.",
+    write >= 0 &&
+      uncertainOption > write &&
+      writeCatch > uncertainOption &&
+      rethrow > writeCatch &&
+      thrownRecovery > rethrow &&
+      confirmed > thrownRecovery &&
+      structuredUnknown > confirmed &&
+      structuredRecovery > structuredUnknown,
+    "Thrown and status-zero persistence outcomes must recover truthfully; structured confirmed failures stay separate.",
   );
   assert.match(action, /loadBusinessSetup\(identity\.businessId\)/);
   assert.match(action, /loadFirstMonthSetup\(\s*identity\.businessId,\s*identity\.monthKey,/);
   assert.match(action, /code: "save-uncertain"/);
   assert.match(action, /draft: preserveDraft\(formData\)/);
   assert.match(action, /recovery: null/);
+});
+
+test("B12B.2 shared Monthly save preserves ordinary behavior while exposing Setup-only uncertainty", async () => {
+  const service = await readFile(
+    new URL("../../src/lib/business/monthly-save-service.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.match(service, /const \{ error, status \} = await supabase\.rpc\("save_monthly_actuals"/);
+  assert.match(service, /options\.recoverUncertainWrite/);
+  assert.match(service, /isUncertainMonthlyWriteFailure\(\{ status, code: error\.code \}\)/);
+  assert.match(service, /return fail\("save-uncertain"\)/);
+  assert.match(service, /return fail\("save-failed"\)/);
 });
 
 test("B12B.2 recovery copy does not claim the latest uncertain attempt succeeded", async () => {
