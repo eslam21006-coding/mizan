@@ -132,47 +132,37 @@ function startPsqlSession(databaseUrl, commands) {
   };
 }
 
-/** Creates one committed test-only release gate shared by separate PostgreSQL sessions. */
-function createReleaseGate(databaseUrl) {
+/** Starts a gatekeeper session that holds one advisory lock until explicitly terminated. */
+async function createReleaseGate(databaseUrl) {
   const gate = `b12-replay-${randomUUID()}`;
-  const result = runPsqlSync(
-    databaseUrl,
-    `create table if not exists public.b12_replay_release_gates (
-  gate text primary key,
-  released boolean not null default false
-);
-insert into public.b12_replay_release_gates (gate, released)
-values ('${gate}', false);`,
-  );
-  assertSuccess(result, `create release gate ${gate}`);
-  return gate;
+  const marker = `B12_RELEASE_GATE_HELD_${randomUUID()}`;
+  const gateExpression =
+    `pg_catalog.hashtextextended('${gate.replaceAll("'", "''")}', 0)`;
+  const session = startPsqlSession(databaseUrl, [
+    `select pg_catalog.pg_advisory_lock(${gateExpression})`,
+    `\\echo ${marker}`,
+    "select pg_catalog.pg_sleep(30)",
+  ]);
+  try {
+    await waitForMarker(session, marker);
+  } catch (error) {
+    await terminateSession(session);
+    throw error;
+  }
+  return { gate, session };
 }
 
-/** Builds a holder-side polling block that keeps its transaction open until the runner releases it. */
+/** Builds the holder-side advisory lock that keeps its write transaction open until released. */
 function releaseGateWaitSql(gate) {
-  return `do $release$
-begin
-  while not exists (
-    select 1
-    from public.b12_replay_release_gates
-    where gate = '${gate}'
-      and released
-  ) loop
-    perform pg_catalog.pg_sleep(0.05);
-  end loop;
-end
-$release$;`;
+  const escapedGate = gate.replaceAll("'", "''");
+  return `select pg_catalog.pg_advisory_lock(
+  pg_catalog.hashtextextended('${escapedGate}', 0)
+)`;
 }
 
-/** Releases a holder only after its competing session has been observed blocked. */
-function releaseGate(databaseUrl, gate) {
-  const result = runPsqlSync(
-    databaseUrl,
-    `update public.b12_replay_release_gates
-set released = true
-where gate = '${gate}';`,
-  );
-  assertSuccess(result, `release gate ${gate}`);
+/** Terminates the gatekeeper session, atomically releasing its session-level advisory lock. */
+async function releaseGate(gatekeeper) {
+  await terminateSession(gatekeeper.session);
 }
 
 /** Terminates one spawned session if it is still alive, then waits for process cleanup. */
@@ -183,10 +173,10 @@ async function terminateSession(session) {
   await session.exit;
 }
 
-/** Observes a waiter blocked at the persistence boundary and always releases or cleans up the holder. */
+/** Observes a waiter blocked at persistence, then always releases or cleans up every session. */
 async function observeBlockedWaiterAndRelease({
   databaseUrl,
-  gate,
+  gatekeeper,
   holder,
   waiter,
   applicationName,
@@ -197,7 +187,7 @@ async function observeBlockedWaiterAndRelease({
     await waitForDatabaseLock(databaseUrl, applicationName, waitEvent);
     observed = true;
   } finally {
-    releaseGate(databaseUrl, gate);
+    await releaseGate(gatekeeper);
     if (!observed) {
       await Promise.all([terminateSession(holder), terminateSession(waiter)]);
     }
@@ -594,7 +584,7 @@ values ('${businessId}', 'Replay Course', 'front_end', '${revenueSequentialReque
     1,
   );
 
-  const revenueReleaseGate = createReleaseGate(databaseUrl);
+  const revenueReleaseGate = await createReleaseGate(databaseUrl);
   const revenueHolder = startPsqlSession(databaseUrl, [
     "begin",
     ...authenticatedLocalCommands(ownerId),
@@ -602,7 +592,7 @@ values ('${businessId}', 'Replay Course', 'front_end', '${revenueSequentialReque
 values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}')`,
     "\\echo B12_REVENUE_INSERT_HELD",
     "reset role",
-    releaseGateWaitSql(revenueReleaseGate),
+    releaseGateWaitSql(revenueReleaseGate.gate),
     "commit",
   ]);
   await waitForMarker(revenueHolder, "B12_REVENUE_INSERT_HELD");
@@ -618,7 +608,7 @@ values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConc
   ]);
   await observeBlockedWaiterAndRelease({
     databaseUrl,
-    gate: revenueReleaseGate,
+    gatekeeper: revenueReleaseGate,
     holder: revenueHolder,
     waiter: revenueWaiter,
     applicationName: revenueWaiterName,
@@ -673,7 +663,7 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     1,
   );
 
-  const expenseReleaseGate = createReleaseGate(databaseUrl);
+  const expenseReleaseGate = await createReleaseGate(databaseUrl);
   const expenseHolder = startPsqlSession(databaseUrl, [
     "begin",
     ...authenticatedLocalCommands(ownerId),
@@ -684,7 +674,7 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
 )`,
     "\\echo B12_EXPENSE_INSERT_HELD",
     "reset role",
-    releaseGateWaitSql(expenseReleaseGate),
+    releaseGateWaitSql(expenseReleaseGate.gate),
     "commit",
   ]);
   await waitForMarker(expenseHolder, "B12_EXPENSE_INSERT_HELD");
@@ -703,7 +693,7 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
   ]);
   await observeBlockedWaiterAndRelease({
     databaseUrl,
-    gate: expenseReleaseGate,
+    gatekeeper: expenseReleaseGate,
     holder: expenseHolder,
     waiter: expenseWaiter,
     applicationName: expenseWaiterName,
@@ -827,14 +817,14 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     expenses,
   });
 
-  const monthlyReleaseGate = createReleaseGate(databaseUrl);
+  const monthlyReleaseGate = await createReleaseGate(databaseUrl);
   const monthlyHolder = startPsqlSession(databaseUrl, [
     "begin",
     ...authenticatedLocalCommands(ownerId),
     monthlyStatement,
     "\\echo B12_MONTHLY_SAVE_HELD",
     "reset role",
-    releaseGateWaitSql(monthlyReleaseGate),
+    releaseGateWaitSql(monthlyReleaseGate.gate),
     "commit",
   ]);
   await waitForMarker(monthlyHolder, "B12_MONTHLY_SAVE_HELD");
@@ -849,7 +839,7 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
   ]);
   await observeBlockedWaiterAndRelease({
     databaseUrl,
-    gate: monthlyReleaseGate,
+    gatekeeper: monthlyReleaseGate,
     holder: monthlyHolder,
     waiter: monthlyWaiter,
     applicationName: monthlyWaiterName,
