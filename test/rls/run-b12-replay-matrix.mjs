@@ -289,7 +289,29 @@ function monthlySaveSql({
   );
 }
 
-function verifyKnownMonth(databaseUrl, businessId, monthStart) {
+function verifyKnownMonth(
+  databaseUrl,
+  businessId,
+  monthStart,
+  revenueStreamId,
+  expenses,
+) {
+  const expenseChecks = expenses
+    .map(
+      ({ id, value, category }) => `
+  if not exists (
+    select 1
+    from public.monthly_expense_entries
+    where monthly_period_id = period_id
+      and expense_item_id = '${id}'
+      and category_snapshot = '${category}'
+      and cost_behavior_snapshot = 'fixed_monthly'
+      and input_value = ${value}
+  ) then
+    raise exception 'B12B.1 persisted ${category} expense changed after replay';
+  end if;`,
+    )
+    .join("\n");
   const sql = `do $verify$
 declare
   period_id uuid;
@@ -333,6 +355,23 @@ begin
   ) <> 4 then
     raise exception 'B12B.1 replay duplicated monthly expense rows';
   end if;
+
+  if customer_count <> 10 then
+    raise exception 'B12B.1 new customer count changed after replay: %', customer_count;
+  end if;
+
+  if not exists (
+    select 1
+    from public.monthly_revenue_entries
+    where monthly_period_id = period_id
+      and revenue_stream_id = '${revenueStreamId}'
+      and gross_cash_collected = 10000
+      and refunds = 1000
+  ) then
+    raise exception 'B12B.1 gross cash or refunds changed after replay';
+  end if;
+
+${expenseChecks}
 
   select coalesce(sum(gross_cash_collected - refunds), 0)
   into net_cash
@@ -430,28 +469,29 @@ values ('${businessId}', 'Replay Course', 'front_end', '${revenueSequentialReque
     1,
   );
 
-  const concurrentRevenueInsert = authenticatedSql(
-    ownerId,
-    `select pg_sleep(0.35);
-insert into public.revenue_streams (business_id, name, stream_type, creation_request_id)
-values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}');`,
-  );
-  const concurrentRevenue = await Promise.all([
-    runPsqlAsync(databaseUrl, concurrentRevenueInsert),
-    runPsqlAsync(databaseUrl, concurrentRevenueInsert),
+  const revenueHolder = startPsqlSession(databaseUrl, [
+    "begin",
+    ...authenticatedSessionCommands(ownerId),
+    `insert into public.revenue_streams (business_id, name, stream_type, creation_request_id)
+values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}')`,
+    "\\echo B12_REVENUE_INSERT_HELD",
+    "select pg_sleep(3)",
+    "commit",
   ]);
-  assert.equal(
-    concurrentRevenue.filter((result) => result.status === 0).length,
-    1,
-    "Exactly one concurrent revenue creation must win.",
-  );
-  assert.equal(
-    concurrentRevenue.filter((result) => result.status !== 0).length,
-    1,
-    "Exactly one concurrent revenue replay must be rejected by the unique constraint.",
-  );
-  assert.match(
-    concurrentRevenue.find((result) => result.status !== 0)?.stderr ?? "",
+  await waitForMarker(revenueHolder, "B12_REVENUE_INSERT_HELD");
+
+  const revenueWaiterName = `b12_revenue_waiter_${randomUUID()}`;
+  const revenueWaiter = startPsqlSession(databaseUrl, [
+    `set application_name = '${revenueWaiterName}'`,
+    ...authenticatedSessionCommands(ownerId),
+    `insert into public.revenue_streams (business_id, name, stream_type, creation_request_id)
+values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}')`,
+  ]);
+  await waitForDatabaseLock(databaseUrl, revenueWaiterName);
+  await requireSuccessfulSession(revenueHolder, "concurrent revenue holder");
+  await requireRejectedSession(
+    revenueWaiter,
+    "concurrent revenue replay",
     /revenue_streams_business_creation_request_unique/i,
   );
   assert.equal(
@@ -498,31 +538,35 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     1,
   );
 
-  const concurrentExpenseInsert = authenticatedSql(
-    ownerId,
-    `select pg_sleep(0.35);
-insert into public.expense_items (
+  const expenseHolder = startPsqlSession(databaseUrl, [
+    "begin",
+    ...authenticatedSessionCommands(ownerId),
+    `insert into public.expense_items (
   business_id, name, category, cost_behavior, creation_request_id
 ) values (
   '${businessId}', 'Rent', 'overhead', 'fixed_monthly', '${expenseConcurrentRequest}'
-);`,
-  );
-  const concurrentExpense = await Promise.all([
-    runPsqlAsync(databaseUrl, concurrentExpenseInsert),
-    runPsqlAsync(databaseUrl, concurrentExpenseInsert),
+)`,
+    "\\echo B12_EXPENSE_INSERT_HELD",
+    "select pg_sleep(3)",
+    "commit",
   ]);
-  assert.equal(
-    concurrentExpense.filter((result) => result.status === 0).length,
-    1,
-    "Exactly one concurrent expense creation must win.",
-  );
-  assert.equal(
-    concurrentExpense.filter((result) => result.status !== 0).length,
-    1,
-    "Exactly one concurrent expense replay must be rejected by the unique constraint.",
-  );
-  assert.match(
-    concurrentExpense.find((result) => result.status !== 0)?.stderr ?? "",
+  await waitForMarker(expenseHolder, "B12_EXPENSE_INSERT_HELD");
+
+  const expenseWaiterName = `b12_expense_waiter_${randomUUID()}`;
+  const expenseWaiter = startPsqlSession(databaseUrl, [
+    `set application_name = '${expenseWaiterName}'`,
+    ...authenticatedSessionCommands(ownerId),
+    `insert into public.expense_items (
+  business_id, name, category, cost_behavior, creation_request_id
+) values (
+  '${businessId}', 'Rent', 'overhead', 'fixed_monthly', '${expenseConcurrentRequest}'
+)`,
+  ]);
+  await waitForDatabaseLock(databaseUrl, expenseWaiterName);
+  await requireSuccessfulSession(expenseHolder, "concurrent expense holder");
+  await requireRejectedSession(
+    expenseWaiter,
+    "concurrent expense replay",
     /expense_items_business_creation_request_unique/i,
   );
   assert.equal(
@@ -574,6 +618,7 @@ insert into public.expense_items (
         expenseSequentialRequest,
       ),
       value: "2000",
+      category: "acquisition",
     },
     {
       id: idForRequest(
@@ -583,6 +628,7 @@ insert into public.expense_items (
         expenseDistinctRequest,
       ),
       value: "1000",
+      category: "fulfillment",
     },
     {
       id: idForRequest(
@@ -592,6 +638,7 @@ insert into public.expense_items (
         expenseConcurrentRequest,
       ),
       value: "500",
+      category: "overhead",
     },
     {
       id: idForRequest(
@@ -601,6 +648,7 @@ insert into public.expense_items (
         expenseFinancialRequest,
       ),
       value: "500",
+      category: "financial",
     },
   ];
 
@@ -619,24 +667,48 @@ insert into public.expense_items (
     runPsqlSync(databaseUrl, sequentialMonthSql),
     "replayed sequential monthly save",
   );
-  verifyKnownMonth(databaseUrl, businessId, "2099-10-01");
+  verifyKnownMonth(
+    databaseUrl,
+    businessId,
+    "2099-10-01",
+    revenueStreamId,
+    expenses,
+  );
 
-  const concurrentMonthSql = monthlySaveSql({
+  const concurrentMonthStatement = monthlySaveSql({
     ownerId,
     businessId,
     monthStart: "2099-11-01",
     revenueStreamId,
     expenses,
-    delaySeconds: 0.35,
-  });
-  const concurrentMonthly = await Promise.all([
-    runPsqlAsync(databaseUrl, concurrentMonthSql),
-    runPsqlAsync(databaseUrl, concurrentMonthSql),
+  })
+    .replace(/^begin;\n/, "")
+    .replace(/\ncommit;$/, "");
+
+  const monthlyHolder = startPsqlSession(databaseUrl, [
+    "begin",
+    concurrentMonthStatement,
+    "\\echo B12_MONTHLY_SAVE_HELD",
+    "select pg_sleep(3)",
+    "commit",
   ]);
-  for (const [index, result] of concurrentMonthly.entries()) {
-    assertSuccess(result, `concurrent monthly save ${index + 1}`);
-  }
-  verifyKnownMonth(databaseUrl, businessId, "2099-11-01");
+  await waitForMarker(monthlyHolder, "B12_MONTHLY_SAVE_HELD");
+
+  const monthlyWaiterName = `b12_monthly_waiter_${randomUUID()}`;
+  const monthlyWaiter = startPsqlSession(databaseUrl, [
+    `set application_name = '${monthlyWaiterName}'`,
+    concurrentMonthStatement,
+  ]);
+  await waitForDatabaseLock(databaseUrl, monthlyWaiterName, "advisory");
+  await requireSuccessfulSession(monthlyHolder, "concurrent monthly holder");
+  await requireSuccessfulSession(monthlyWaiter, "concurrent monthly replay");
+  verifyKnownMonth(
+    databaseUrl,
+    businessId,
+    "2099-11-01",
+    revenueStreamId,
+    expenses,
+  );
 
   const outsiderRevenueRequest = randomUUID();
   assertRejected(
