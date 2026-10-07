@@ -26,8 +26,8 @@ test("B12B.1 database replay matrix is wired into the real RLS test command", ()
   assert.match(runnerSource, /revenue_streams_business_creation_request_unique/);
   assert.match(runnerSource, /expense_items_business_creation_request_unique/);
   assert.match(runnerSource, /public\.save_monthly_actuals/);
-  assert.match(runnerSource, /gross_cash_collected = 10000/);
-  assert.match(runnerSource, /refunds = 1000/);
+  assert.match(runnerSource, /gross_cash <> 10000/);
+  assert.match(runnerSource, /refund_amount <> 1000/);
   assert.match(runnerSource, /category_snapshot = '\$\{category\}'/);
   assert.match(runnerSource, /net_cash <> 9000/);
   assert.match(runnerSource, /acquisition_cost <> 2000/);
