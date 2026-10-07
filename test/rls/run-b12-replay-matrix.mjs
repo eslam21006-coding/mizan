@@ -697,7 +697,9 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
   const monthlyWaiterName = `b12_monthly_waiter_${randomUUID()}`;
   const monthlyWaiter = startPsqlSession(databaseUrl, [
     `set application_name = '${monthlyWaiterName}'`,
+    "begin",
     concurrentMonthStatement,
+    "commit",
   ]);
   await waitForDatabaseLock(databaseUrl, monthlyWaiterName, "advisory");
   await requireSuccessfulSession(monthlyHolder, "concurrent monthly holder");
