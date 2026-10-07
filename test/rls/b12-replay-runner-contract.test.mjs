@@ -16,7 +16,8 @@ test("B12B.1 database replay matrix is wired into the real RLS test command", ()
   assert.match(runnerSource, /waitForDatabaseLock/);
   assert.match(runnerSource, /createReleaseGate/);
   assert.match(runnerSource, /releaseGateWaitSql/);
-  assert.match(runnerSource, /releaseGate\(databaseUrl/);
+  assert.match(runnerSource, /releaseGate\(gatekeeper\)/);
+  assert.match(runnerSource, /pg_catalog\.pg_advisory_lock/);
   assert.match(runnerSource, /observeBlockedWaiterAndRelease/);
   assert.match(runnerSource, /waitEvent: "advisory"/);
   assert.match(runnerSource, /finally \{/);
