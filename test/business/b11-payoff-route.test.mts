@@ -189,6 +189,18 @@ test("B11.2 legitimate zero denominator metrics stay unavailable without blockin
   }
 });
 
+test("B12A.3 setup-incomplete payoff fallback preserves the exact month for canonical resume", () => {
+  const route = readFileSync("src/app/(app)/businesses/[businessId]/setup/result/page.tsx", "utf8");
+  assert.match(
+    route,
+    /const setupResumeHref = result\.monthKey[\s\S]*\?month=\$\{encodeURIComponent\(result\.monthKey\)\}/,
+  );
+  assert.match(
+    route,
+    /result\.kind === "setup_incomplete"[\s\S]*\? setupResumeHref/,
+  );
+});
+
 test("B11.2 real server adapter authenticates first and always reads canonical data under RLS", () => {
   const route = readFileSync("src/app/(app)/businesses/[businessId]/setup/result/page.tsx", "utf8");
   const server = readFileSync("src/lib/business/setup-payoff-server.ts", "utf8");
