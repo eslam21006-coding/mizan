@@ -19,6 +19,7 @@ import { resolvePayoffMonthGate } from "@/lib/business/setup-payoff-result";
 import { resolveSetupMonthPrimaryAction } from "@/lib/business/setup-month-action";
 import type { FirstMonthSetupResult } from "@/lib/business/first-month-setup";
 import { parseFirstMonthPostSaveStatus } from "@/lib/business/first-month-post-save";
+import type { FirstMonthSaveState } from "@/app/(app)/businesses/[businessId]/setup/first-month-actions";
 import {
   resolveResumableFirstMonthSelection,
   type FirstMonthResumeMonths,
@@ -530,7 +531,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
     query.recovery === "unavailable"
       ? query.recovery
       : null;
-  const firstMonthSaveSeed = requestedRecovery
+  const firstMonthSaveSeed: FirstMonthSaveState | undefined = requestedRecovery
     ? {
         attempt: 1,
         status: "error" as const,
