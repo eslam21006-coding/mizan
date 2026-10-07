@@ -52,12 +52,14 @@ export function validateReplayDatabaseUrl(databaseUrl) {
   }
 }
 
+/** Builds a sanitized child-process environment that cannot redirect PostgreSQL connections. */
 function psqlEnvironment() {
   const env = { ...process.env, PGCONNECT_TIMEOUT: "5" };
   for (const variable of targetEnvironmentVariables) delete env[variable];
   return env;
 }
 
+/** Builds fail-fast psql arguments for one synchronous SQL command. */
 function psqlArgs(databaseUrl, sql) {
   return [
     "--no-psqlrc",
@@ -72,6 +74,7 @@ function psqlArgs(databaseUrl, sql) {
   ];
 }
 
+/** Executes one SQL command synchronously against the validated disposable database. */
 function runPsqlSync(databaseUrl, sql) {
   const result = spawnSync("psql", psqlArgs(databaseUrl, sql), {
     cwd: repositoryRoot,
@@ -87,6 +90,7 @@ function runPsqlSync(databaseUrl, sql) {
   };
 }
 
+/** Starts an asynchronous psql session for waiter-side concurrency assertions. */
 function startPsqlSession(databaseUrl, commands) {
   const args = [
     "--no-psqlrc",
@@ -128,10 +132,56 @@ function startPsqlSession(databaseUrl, commands) {
   };
 }
 
+/** Starts an interactive holder session whose transaction is released only after the waiter is proven blocked. */
+function startHeldPsqlSession(databaseUrl, commands) {
+  const child = spawn(
+    "psql",
+    ["--no-psqlrc", "--set", "ON_ERROR_STOP=1", "--dbname", databaseUrl],
+    {
+      cwd: repositoryRoot,
+      env: psqlEnvironment(),
+      stdio: ["pipe", "pipe", "pipe"],
+    },
+  );
+  let stdout = "";
+  let stderr = "";
+  child.stdout.setEncoding("utf8");
+  child.stderr.setEncoding("utf8");
+  child.stdout.on("data", (chunk) => {
+    stdout += chunk;
+  });
+  child.stderr.on("data", (chunk) => {
+    stderr += chunk;
+  });
+
+  const exit = new Promise((resolvePromise, reject) => {
+    child.once("error", reject);
+    child.once("close", (code, signal) => {
+      resolvePromise({ code, signal });
+    });
+  });
+
+  child.stdin.write(`${commands.join("\n")}\n`);
+
+  return {
+    child,
+    exit,
+    stdout: () => stdout,
+    stderr: () => stderr,
+  };
+}
+
+/** Commits and closes a held psql transaction after its competing waiter is observably blocked. */
+function releaseHeldSession(session) {
+  session.child.stdin.end("commit;\n\\q\n");
+}
+
+/** Pauses briefly while polling deterministic database concurrency state. */
 function sleep(milliseconds) {
   return new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds));
 }
 
+/** Waits until a holder session confirms it reached the protected persistence boundary. */
 async function waitForMarker(session, marker, timeoutMs = 5_000) {
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
@@ -146,6 +196,7 @@ async function waitForMarker(session, marker, timeoutMs = 5_000) {
   throw new Error(`Timed out waiting for marker ${marker}. stdout=${session.stdout()}`);
 }
 
+/** Waits until a named database session is observably blocked on the expected lock. */
 async function waitForDatabaseLock(
   databaseUrl,
   applicationName,
@@ -171,6 +222,7 @@ async function waitForDatabaseLock(
   );
 }
 
+/** Awaits a spawned psql session and fails with captured output unless it succeeds. */
 async function requireSuccessfulSession(session, label) {
   const result = await session.exit;
   assert.equal(
@@ -180,6 +232,7 @@ async function requireSuccessfulSession(session, label) {
   );
 }
 
+/** Awaits a spawned psql session and requires rejection matching the expected database error. */
 async function requireRejectedSession(session, label, pattern) {
   const result = await session.exit;
   assert.notEqual(
@@ -190,6 +243,7 @@ async function requireRejectedSession(session, label, pattern) {
   assert.match(session.stderr(), pattern);
 }
 
+/** Asserts success for a synchronous psql command and includes diagnostics on failure. */
 function assertSuccess(result, label) {
   assert.equal(
     result.status,
@@ -198,6 +252,7 @@ function assertSuccess(result, label) {
   );
 }
 
+/** Asserts a synchronous psql command was rejected for the expected reason. */
 function assertRejected(result, label, pattern) {
   assert.notEqual(
     result.status,
@@ -207,6 +262,7 @@ function assertRejected(result, label, pattern) {
   assert.match(result.stderr, pattern);
 }
 
+/** Serializes deterministic authenticated mentee claims for an RLS test session. */
 function claimsValue(userId) {
   return JSON.stringify({
     sub: userId,
@@ -215,6 +271,7 @@ function claimsValue(userId) {
   }).replaceAll("'", "''");
 }
 
+/** Wraps SQL in one authenticated transaction for sequential replay and authorization checks. */
 function authenticatedSql(userId, sql) {
   return `begin;
 set local role authenticated;
@@ -223,6 +280,7 @@ ${sql}
 commit;`;
 }
 
+/** Returns session-level authentication commands for multi-command concurrency sessions. */
 function authenticatedSessionCommands(userId) {
   return [
     "set role authenticated",
@@ -230,10 +288,12 @@ function authenticatedSessionCommands(userId) {
   ];
 }
 
+/** Quotes a JSON value as a safe SQL jsonb literal for generated test fixtures. */
 function quoteJson(value) {
   return `'${JSON.stringify(value).replaceAll("'", "''")}'::jsonb`;
 }
 
+/** Counts rows persisted for one business/request identity after replay attempts. */
 function countForRequest(databaseUrl, table, businessId, requestId) {
   const result = runPsqlSync(
     databaseUrl,
@@ -243,6 +303,7 @@ function countForRequest(databaseUrl, table, businessId, requestId) {
   return Number(result.stdout.trim());
 }
 
+/** Resolves the single persisted entity ID associated with one creation request. */
 function idForRequest(databaseUrl, table, businessId, requestId) {
   const result = runPsqlSync(
     databaseUrl,
@@ -254,6 +315,7 @@ function idForRequest(databaseUrl, table, businessId, requestId) {
   return id;
 }
 
+/** Builds the canonical known-number Monthly save used for identical replay checks. */
 function monthlySaveSql({
   ownerId,
   businessId,
@@ -289,6 +351,7 @@ function monthlySaveSql({
   );
 }
 
+/** Verifies row cardinality, every persisted component, and derived known-number invariants. */
 function verifyKnownMonth(
   databaseUrl,
   businessId,
@@ -469,14 +532,13 @@ values ('${businessId}', 'Replay Course', 'front_end', '${revenueSequentialReque
     1,
   );
 
-  const revenueHolder = startPsqlSession(databaseUrl, [
-    "begin",
-    ...authenticatedSessionCommands(ownerId),
+  const revenueHolder = startHeldPsqlSession(databaseUrl, [
+    "begin;",
+    `set role authenticated;`,
+    `set request.jwt.claims = '${claimsValue(ownerId)}';`,
     `insert into public.revenue_streams (business_id, name, stream_type, creation_request_id)
-values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}')`,
+values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}');`,
     "\\echo B12_REVENUE_INSERT_HELD",
-    "select pg_sleep(3)",
-    "commit",
   ]);
   await waitForMarker(revenueHolder, "B12_REVENUE_INSERT_HELD");
 
@@ -488,6 +550,7 @@ values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConc
 values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}')`,
   ]);
   await waitForDatabaseLock(databaseUrl, revenueWaiterName);
+  releaseHeldSession(revenueHolder);
   await requireSuccessfulSession(revenueHolder, "concurrent revenue holder");
   await requireRejectedSession(
     revenueWaiter,
@@ -538,17 +601,16 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     1,
   );
 
-  const expenseHolder = startPsqlSession(databaseUrl, [
-    "begin",
-    ...authenticatedSessionCommands(ownerId),
+  const expenseHolder = startHeldPsqlSession(databaseUrl, [
+    "begin;",
+    `set role authenticated;`,
+    `set request.jwt.claims = '${claimsValue(ownerId)}';`,
     `insert into public.expense_items (
   business_id, name, category, cost_behavior, creation_request_id
 ) values (
   '${businessId}', 'Rent', 'overhead', 'fixed_monthly', '${expenseConcurrentRequest}'
-)`,
+);`,
     "\\echo B12_EXPENSE_INSERT_HELD",
-    "select pg_sleep(3)",
-    "commit",
   ]);
   await waitForMarker(expenseHolder, "B12_EXPENSE_INSERT_HELD");
 
@@ -563,6 +625,7 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
 )`,
   ]);
   await waitForDatabaseLock(databaseUrl, expenseWaiterName);
+  releaseHeldSession(expenseHolder);
   await requireSuccessfulSession(expenseHolder, "concurrent expense holder");
   await requireRejectedSession(
     expenseWaiter,
@@ -685,12 +748,10 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     .replace(/^begin;\n/, "")
     .replace(/\ncommit;$/, "");
 
-  const monthlyHolder = startPsqlSession(databaseUrl, [
-    "begin",
+  const monthlyHolder = startHeldPsqlSession(databaseUrl, [
+    "begin;",
     concurrentMonthStatement,
     "\\echo B12_MONTHLY_SAVE_HELD",
-    "select pg_sleep(3)",
-    "commit",
   ]);
   await waitForMarker(monthlyHolder, "B12_MONTHLY_SAVE_HELD");
 
@@ -702,6 +763,7 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     "commit",
   ]);
   await waitForDatabaseLock(databaseUrl, monthlyWaiterName, "advisory");
+  releaseHeldSession(monthlyHolder);
   await requireSuccessfulSession(monthlyHolder, "concurrent monthly holder");
   await requireSuccessfulSession(monthlyWaiter, "concurrent monthly replay");
   verifyKnownMonth(
