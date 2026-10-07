@@ -1,0 +1,61 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+import { validateReplayDatabaseUrl } from "./run-b12-replay-matrix.mjs";
+
+const packageJson = JSON.parse(
+  await readFile(new URL("../../package.json", import.meta.url), "utf8"),
+);
+const runnerSource = await readFile(
+  new URL("./run-b12-replay-matrix.mjs", import.meta.url),
+  "utf8",
+);
+
+test("B12B.1 database replay matrix is wired into the real RLS test command", () => {
+  assert.match(packageJson.scripts["test:rls"], /run-b12-replay-matrix\.mjs/);
+  assert.match(runnerSource, /waitForDatabaseLock/);
+  assert.match(runnerSource, /createReleaseGate/);
+  assert.match(runnerSource, /releaseGateWaitSql/);
+  assert.match(runnerSource, /releaseGate\(gatekeeper\)/);
+  assert.match(runnerSource, /pg_catalog\.pg_advisory_lock/);
+  assert.match(runnerSource, /set application_name =/);
+  assert.match(runnerSource, /pg_catalog\.pg_terminate_backend/);
+  assert.match(runnerSource, /observeBlockedWaiterAndRelease/);
+  assert.match(runnerSource, /waitEvent: "advisory"/);
+  assert.match(runnerSource, /finally \{/);
+  assert.match(runnerSource, /terminateSession\(holder\)/);
+  assert.match(runnerSource, /terminateSession\(waiter\)/);
+  assert.doesNotMatch(runnerSource, /pg_sleep\(3\)/);
+  assert.match(runnerSource, /revenue_streams_business_creation_request_unique/);
+  assert.match(runnerSource, /expense_items_business_creation_request_unique/);
+  assert.match(runnerSource, /public\.save_monthly_actuals/);
+  assert.match(runnerSource, /gross_cash <> 10000/);
+  assert.match(runnerSource, /refund_amount <> 1000/);
+  assert.match(runnerSource, /category_snapshot = '\$\{category\}'/);
+  assert.match(runnerSource, /net_cash <> 9000/);
+  assert.match(runnerSource, /acquisition_cost <> 2000/);
+  assert.match(runnerSource, /fulfillment_cost <> 1000/);
+  assert.match(runnerSource, /overhead_cost <> 500/);
+  assert.match(runnerSource, /financial_cost <> 500/);
+  assert.match(runnerSource, /total_costs <> 4000/);
+  assert.match(runnerSource, /real_net_profit <> 5000/);
+  assert.match(runnerSource, /ultimate_cac <> 400/);
+});
+
+test("B12B.1 replay matrix refuses non-disposable or redirected database targets", () => {
+  assert.doesNotThrow(() =>
+    validateReplayDatabaseUrl(
+      "postgresql://postgres:postgres@127.0.0.1:5432/mizan_test",
+    ),
+  );
+
+  for (const url of [
+    "postgresql://postgres:postgres@localhost:5432/mizan_test",
+    "postgresql://postgres:postgres@127.0.0.1:6543/mizan_test",
+    "postgresql://postgres:postgres@127.0.0.1:5432/production",
+    "postgresql://postgres:postgres@127.0.0.1:5432/mizan_test?host=example.com",
+    "postgresql://postgres:postgres@127.0.0.1:5432/mizan_test?service=production",
+  ]) {
+    assert.throws(() => validateReplayDatabaseUrl(url));
+  }
+});
