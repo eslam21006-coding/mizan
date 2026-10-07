@@ -3,8 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { redirect, unstable_rethrow } from "next/navigation";
 import { persistMonthlyActuals } from "@/lib/business/monthly-save-service";
+import { parseMonthKey } from "@/lib/business/monthly";
+import { parseResourceId } from "@/lib/business/revenue-streams";
+import { loadBusinessSetup } from "@/lib/business/setup-loader";
+import { loadFirstMonthSetup } from "@/lib/business/first-month-setup";
 import { loadAuthenticatedSetupPayoff } from "@/lib/business/setup-payoff-server";
 import { resolveFirstMonthPostSaveDestination } from "@/lib/business/first-month-post-save";
+import {
+  resolveFirstMonthSaveRecovery,
+  type FirstMonthSaveRecovery,
+} from "@/lib/business/first-month-save-recovery";
 
 export type FirstMonthSaveState = {
   attempt: number;
@@ -12,6 +20,7 @@ export type FirstMonthSaveState = {
   code: string | null;
   fieldErrors: Record<string, string>;
   draft: Record<string, string>;
+  recovery: FirstMonthSaveRecovery | null;
 };
 
 /** Only retain primitive, business-form fields; never put unsaved financial data in a URL. */
@@ -34,12 +43,73 @@ function preserveDraft(formData: FormData): Record<string, string> {
   return result;
 }
 
+/** Reads exactly one submitted business/month identity without trusting duplicate hidden fields. */
+function submittedSaveIdentity(formData: FormData) {
+  const businessIds = formData.getAll("business_id");
+  const months = formData.getAll("month");
+  const businessId =
+    businessIds.length === 1 ? parseResourceId(businessIds[0]) : null;
+  const month = months.length === 1 ? parseMonthKey(months[0]) : null;
+  return businessId && month
+    ? { businessId, monthKey: month.monthKey }
+    : null;
+}
+
+/**
+ * An exception from the persistence call has an unknown write outcome. Re-read
+ * the exact authorized business/month before describing the current database state.
+ */
+async function recoverUnknownSave(
+  previous: FirstMonthSaveState,
+  formData: FormData,
+): Promise<FirstMonthSaveState> {
+  const identity = submittedSaveIdentity(formData);
+  let recovery: FirstMonthSaveRecovery = "unavailable";
+
+  if (identity) {
+    try {
+      const setup = await loadBusinessSetup(identity.businessId);
+      const month =
+        setup.kind === "loaded"
+          ? await loadFirstMonthSetup(
+              identity.businessId,
+              identity.monthKey,
+              setup.business.timezone,
+            )
+          : null;
+      recovery = resolveFirstMonthSaveRecovery(
+        identity.businessId,
+        identity.monthKey,
+        setup,
+        month,
+      );
+    } catch (error) {
+      unstable_rethrow(error);
+    }
+  }
+
+  return {
+    attempt: previous.attempt + 1,
+    status: "error",
+    code: "save-uncertain",
+    fieldErrors: {},
+    draft: preserveDraft(formData),
+    recovery,
+  };
+}
+
 /** Setup's stateful adapter shares Monthly validation and atomic persistence. */
 export async function saveFirstMonthSetup(
   previous: FirstMonthSaveState,
   formData: FormData,
 ): Promise<FirstMonthSaveState> {
-  const result = await persistMonthlyActuals(formData, { setupDraft: true });
+  let result: Awaited<ReturnType<typeof persistMonthlyActuals>>;
+  try {
+    result = await persistMonthlyActuals(formData, { setupDraft: true });
+  } catch (error) {
+    unstable_rethrow(error);
+    return recoverUnknownSave(previous, formData);
+  }
   if (!result.ok) {
     return {
       attempt: previous.attempt + 1,
@@ -47,6 +117,7 @@ export async function saveFirstMonthSetup(
       code: result.code,
       fieldErrors: result.fieldErrors,
       draft: preserveDraft(formData),
+      recovery: null,
     };
   }
 
