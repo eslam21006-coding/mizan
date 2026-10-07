@@ -384,6 +384,7 @@ type SetupFixturePageProps = {
     step?: string | string[];
     month?: string | string[];
     status?: string | string[];
+    recovery?: string | string[];
   }>;
 };
 
@@ -523,6 +524,41 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
       : fixtureCase !== "load-error" &&
         currentStep !== null &&
         readiness.stepComplete[currentStep];
+  const requestedRecovery =
+    query.recovery === "persisted" ||
+    query.recovery === "not-persisted" ||
+    query.recovery === "unavailable"
+      ? query.recovery
+      : null;
+  const firstMonthSaveSeed = requestedRecovery
+    ? {
+        attempt: 1,
+        status: "error" as const,
+        code: "save-uncertain",
+        fieldErrors: {},
+        draft: {
+          "gross_a1111111-1111-4111-8111-111111111111": "7777",
+          "refund_a1111111-1111-4111-8111-111111111111": "0",
+        },
+        recovery: requestedRecovery,
+      }
+    : fixtureCase === "month-error"
+      ? {
+          attempt: 1,
+          status: "error" as const,
+          code: "invalid-input",
+          fieldErrors: {
+            "expense_basis_b2222222-2222-4222-8222-222222222222":
+              "اختر أساس عدد العملاء لهذا المصروف.",
+          },
+          draft: {
+            "gross_a1111111-1111-4111-8111-111111111111": "5000",
+            "expense_value_b2222222-2222-4222-8222-222222222222": "20",
+            "expense_basis_b2222222-2222-4222-8222-222222222222": "",
+          },
+          recovery: null,
+        }
+      : undefined;
 
   return (
     <AppShell {...fixtureShellProps}>
@@ -575,19 +611,7 @@ export default async function SetupFixturePage({ searchParams }: SetupFixturePag
         navigationMonthKey={fixtureCase === "load-error" ? null : navigationMonthKey}
         monthSaved={parseFirstMonthPostSaveStatus(query.status) !== null}
         postSaveStatus={parseFirstMonthPostSaveStatus(query.status)}
-        firstMonthSaveSeed={fixtureCase === "month-error" ? {
-          attempt: 1,
-          status: "error",
-          code: "invalid-input",
-          fieldErrors: {
-            "expense_basis_b2222222-2222-4222-8222-222222222222": "اختر أساس عدد العملاء لهذا المصروف.",
-          },
-          draft: {
-            "gross_a1111111-1111-4111-8111-111111111111": "5000",
-            "expense_value_b2222222-2222-4222-8222-222222222222": "20",
-            "expense_basis_b2222222-2222-4222-8222-222222222222": "",
-          },
-        } : undefined}
+        firstMonthSaveSeed={firstMonthSaveSeed}
         invalidMonth={query.status === "invalid-month"}
         backHref={
           previousStep
