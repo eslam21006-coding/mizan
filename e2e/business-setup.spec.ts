@@ -973,6 +973,8 @@ test.describe("B06 live Money-In handoff", () => {
 
 
 test.describe("B12B.2 pending and truthful recovery", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
   test("double activation produces one in-flight form action and announces pending state", async ({ page }) => {
     const errors = captureBrowserErrors(page);
     let postCount = 0;
