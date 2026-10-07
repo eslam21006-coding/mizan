@@ -136,20 +136,23 @@ function startPsqlSession(databaseUrl, commands) {
 async function createReleaseGate(databaseUrl) {
   const gate = `b12-replay-${randomUUID()}`;
   const marker = `B12_RELEASE_GATE_HELD_${randomUUID()}`;
+  const applicationName = `b12_gatekeeper_${randomUUID()}`;
   const gateExpression =
     `pg_catalog.hashtextextended('${gate.replaceAll("'", "''")}', 0)`;
   const session = startPsqlSession(databaseUrl, [
+    `set application_name = '${applicationName}'`,
     `select pg_catalog.pg_advisory_lock(${gateExpression})`,
     `\\echo ${marker}`,
     "select pg_catalog.pg_sleep(30)",
   ]);
+  const gatekeeper = { gate, session, databaseUrl, applicationName };
   try {
     await waitForMarker(session, marker);
   } catch (error) {
-    await terminateSession(session);
+    await releaseGate(gatekeeper);
     throw error;
   }
-  return { gate, session };
+  return gatekeeper;
 }
 
 /** Builds the holder-side advisory lock that keeps its write transaction open until released. */
@@ -160,8 +163,16 @@ function releaseGateWaitSql(gate) {
 )`;
 }
 
-/** Terminates the gatekeeper session, atomically releasing its session-level advisory lock. */
+/** Terminates the gatekeeper backend server-side, releasing its advisory lock immediately. */
 async function releaseGate(gatekeeper) {
+  const escapedApplicationName = gatekeeper.applicationName.replaceAll("'", "''");
+  const result = runPsqlSync(
+    gatekeeper.databaseUrl,
+    `select pg_catalog.pg_terminate_backend(pid)
+from pg_catalog.pg_stat_activity
+where application_name = '${escapedApplicationName}';`,
+  );
+  assertSuccess(result, `release replay gate ${gatekeeper.applicationName}`);
   await terminateSession(gatekeeper.session);
 }
 
