@@ -17,10 +17,11 @@ test("B12B.1 database replay matrix is wired into the real RLS test command", ()
   assert.match(runnerSource, /createReleaseGate/);
   assert.match(runnerSource, /releaseGateWaitSql/);
   assert.match(runnerSource, /releaseGate\(databaseUrl/);
-  assert.match(
-    runnerSource,
-    /waitForDatabaseLock\(databaseUrl, monthlyWaiterName, "advisory"\)/,
-  );
+  assert.match(runnerSource, /observeBlockedWaiterAndRelease/);
+  assert.match(runnerSource, /waitEvent: "advisory"/);
+  assert.match(runnerSource, /finally \{/);
+  assert.match(runnerSource, /terminateSession\(holder\)/);
+  assert.match(runnerSource, /terminateSession\(waiter\)/);
   assert.doesNotMatch(runnerSource, /pg_sleep\(3\)/);
   assert.match(runnerSource, /revenue_streams_business_creation_request_unique/);
   assert.match(runnerSource, /expense_items_business_creation_request_unique/);
@@ -29,6 +30,10 @@ test("B12B.1 database replay matrix is wired into the real RLS test command", ()
   assert.match(runnerSource, /refunds = 1000/);
   assert.match(runnerSource, /category_snapshot = '\$\{category\}'/);
   assert.match(runnerSource, /net_cash <> 9000/);
+  assert.match(runnerSource, /acquisition_cost <> 2000/);
+  assert.match(runnerSource, /fulfillment_cost <> 1000/);
+  assert.match(runnerSource, /overhead_cost <> 500/);
+  assert.match(runnerSource, /financial_cost <> 500/);
   assert.match(runnerSource, /total_costs <> 4000/);
   assert.match(runnerSource, /real_net_profit <> 5000/);
   assert.match(runnerSource, /ultimate_cac <> 400/);
