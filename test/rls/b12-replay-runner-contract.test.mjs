@@ -14,8 +14,9 @@ const runnerSource = await readFile(
 test("B12B.1 database replay matrix is wired into the real RLS test command", () => {
   assert.match(packageJson.scripts["test:rls"], /run-b12-replay-matrix\.mjs/);
   assert.match(runnerSource, /waitForDatabaseLock/);
-  assert.match(runnerSource, /startHeldPsqlSession/);
-  assert.match(runnerSource, /releaseHeldSession/);
+  assert.match(runnerSource, /createReleaseGate/);
+  assert.match(runnerSource, /releaseGateWaitSql/);
+  assert.match(runnerSource, /releaseGate\(databaseUrl/);
   assert.match(
     runnerSource,
     /waitForDatabaseLock\(databaseUrl, monthlyWaiterName, "advisory"\)/,
