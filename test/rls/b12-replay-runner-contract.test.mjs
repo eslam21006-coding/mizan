@@ -14,10 +14,13 @@ const runnerSource = await readFile(
 test("B12B.1 database replay matrix is wired into the real RLS test command", () => {
   assert.match(packageJson.scripts["test:rls"], /run-b12-replay-matrix\.mjs/);
   assert.match(runnerSource, /waitForDatabaseLock/);
+  assert.match(runnerSource, /startHeldPsqlSession/);
+  assert.match(runnerSource, /releaseHeldSession/);
   assert.match(
     runnerSource,
     /waitForDatabaseLock\(databaseUrl, monthlyWaiterName, "advisory"\)/,
   );
+  assert.doesNotMatch(runnerSource, /pg_sleep\(3\)/);
   assert.match(runnerSource, /revenue_streams_business_creation_request_unique/);
   assert.match(runnerSource, /expense_items_business_creation_request_unique/);
   assert.match(runnerSource, /public\.save_monthly_actuals/);
