@@ -69,6 +69,9 @@ export default async function SetupPayoffPage({ params, searchParams }: Props) {
   const business = result.business;
   const businessHref = business ? `/businesses/${encodeURIComponent(businessId)}` : "/businesses";
   const setupHref = business ? `${businessHref}/setup` : "/businesses";
+  const setupResumeHref = result.monthKey
+    ? `${setupHref}?month=${encodeURIComponent(result.monthKey)}`
+    : setupHref;
   const stepMonthHref = result.monthKey
     ? `${setupHref}?step=month&month=${encodeURIComponent(result.monthKey)}`
     : `${setupHref}?step=month`;
@@ -89,7 +92,7 @@ export default async function SetupPayoffPage({ params, searchParams }: Props) {
       : result.kind === "calculation_error"
         ? monthlyHref
         : result.kind === "setup_incomplete"
-          ? setupHref
+          ? setupResumeHref
           : result.kind === "month_incomplete"
             ? reviewHref
             : stepMonthHref;
