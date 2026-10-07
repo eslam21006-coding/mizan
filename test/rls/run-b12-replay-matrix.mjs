@@ -132,6 +132,78 @@ function startPsqlSession(databaseUrl, commands) {
   };
 }
 
+/** Creates one committed test-only release gate shared by separate PostgreSQL sessions. */
+function createReleaseGate(databaseUrl) {
+  const gate = `b12-replay-${randomUUID()}`;
+  const result = runPsqlSync(
+    databaseUrl,
+    `create table if not exists public.b12_replay_release_gates (
+  gate text primary key,
+  released boolean not null default false
+);
+insert into public.b12_replay_release_gates (gate, released)
+values ('${gate}', false);`,
+  );
+  assertSuccess(result, `create release gate ${gate}`);
+  return gate;
+}
+
+/** Builds a holder-side polling block that keeps its transaction open until the runner releases it. */
+function releaseGateWaitSql(gate) {
+  return `do $release$
+begin
+  while not exists (
+    select 1
+    from public.b12_replay_release_gates
+    where gate = '${gate}'
+      and released
+  ) loop
+    perform pg_catalog.pg_sleep(0.05);
+  end loop;
+end
+$release$;`;
+}
+
+/** Releases a holder only after its competing session has been observed blocked. */
+function releaseGate(databaseUrl, gate) {
+  const result = runPsqlSync(
+    databaseUrl,
+    `update public.b12_replay_release_gates
+set released = true
+where gate = '${gate}';`,
+  );
+  assertSuccess(result, `release gate ${gate}`);
+}
+
+/** Terminates one spawned session if it is still alive, then waits for process cleanup. */
+async function terminateSession(session) {
+  if (session.child.exitCode === null && session.child.signalCode === null) {
+    session.child.kill("SIGTERM");
+  }
+  await session.exit;
+}
+
+/** Observes a waiter blocked at the persistence boundary and always releases or cleans up the holder. */
+async function observeBlockedWaiterAndRelease({
+  databaseUrl,
+  gate,
+  holder,
+  waiter,
+  applicationName,
+  waitEvent = null,
+}) {
+  let observed = false;
+  try {
+    await waitForDatabaseLock(databaseUrl, applicationName, waitEvent);
+    observed = true;
+  } finally {
+    releaseGate(databaseUrl, gate);
+    if (!observed) {
+      await Promise.all([terminateSession(holder), terminateSession(waiter)]);
+    }
+  }
+}
+
 /** Pauses briefly while polling deterministic database concurrency state. */
 function sleep(milliseconds) {
   return new Promise((resolvePromise) => setTimeout(resolvePromise, milliseconds));
@@ -522,13 +594,15 @@ values ('${businessId}', 'Replay Course', 'front_end', '${revenueSequentialReque
     1,
   );
 
+  const revenueReleaseGate = createReleaseGate(databaseUrl);
   const revenueHolder = startPsqlSession(databaseUrl, [
     "begin",
     ...authenticatedLocalCommands(ownerId),
     `insert into public.revenue_streams (business_id, name, stream_type, creation_request_id)
 values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}')`,
     "\\echo B12_REVENUE_INSERT_HELD",
-    "select pg_sleep(3)",
+    "reset role",
+    releaseGateWaitSql(revenueReleaseGate),
     "commit",
   ]);
   await waitForMarker(revenueHolder, "B12_REVENUE_INSERT_HELD");
@@ -542,7 +616,13 @@ values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConc
 values ('${businessId}', 'Concurrent Replay Course', 'front_end', '${revenueConcurrentRequest}')`,
     "commit",
   ]);
-  await waitForDatabaseLock(databaseUrl, revenueWaiterName);
+  await observeBlockedWaiterAndRelease({
+    databaseUrl,
+    gate: revenueReleaseGate,
+    holder: revenueHolder,
+    waiter: revenueWaiter,
+    applicationName: revenueWaiterName,
+  });
   await requireSuccessfulSession(revenueHolder, "concurrent revenue holder");
   await requireRejectedSession(
     revenueWaiter,
@@ -593,6 +673,7 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     1,
   );
 
+  const expenseReleaseGate = createReleaseGate(databaseUrl);
   const expenseHolder = startPsqlSession(databaseUrl, [
     "begin",
     ...authenticatedLocalCommands(ownerId),
@@ -602,7 +683,8 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
   '${businessId}', 'Rent', 'overhead', 'fixed_monthly', '${expenseConcurrentRequest}'
 )`,
     "\\echo B12_EXPENSE_INSERT_HELD",
-    "select pg_sleep(3)",
+    "reset role",
+    releaseGateWaitSql(expenseReleaseGate),
     "commit",
   ]);
   await waitForMarker(expenseHolder, "B12_EXPENSE_INSERT_HELD");
@@ -619,7 +701,13 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
 )`,
     "commit",
   ]);
-  await waitForDatabaseLock(databaseUrl, expenseWaiterName);
+  await observeBlockedWaiterAndRelease({
+    databaseUrl,
+    gate: expenseReleaseGate,
+    holder: expenseHolder,
+    waiter: expenseWaiter,
+    applicationName: expenseWaiterName,
+  });
   await requireSuccessfulSession(expenseHolder, "concurrent expense holder");
   await requireRejectedSession(
     expenseWaiter,
@@ -739,12 +827,14 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     expenses,
   });
 
+  const monthlyReleaseGate = createReleaseGate(databaseUrl);
   const monthlyHolder = startPsqlSession(databaseUrl, [
     "begin",
     ...authenticatedLocalCommands(ownerId),
     monthlyStatement,
     "\\echo B12_MONTHLY_SAVE_HELD",
-    "select pg_sleep(3)",
+    "reset role",
+    releaseGateWaitSql(monthlyReleaseGate),
     "commit",
   ]);
   await waitForMarker(monthlyHolder, "B12_MONTHLY_SAVE_HELD");
@@ -757,7 +847,14 @@ values ('${businessId}', 'Intentional New Revenue', 'backend', '${revenueDistinc
     monthlyStatement,
     "commit",
   ]);
-  await waitForDatabaseLock(databaseUrl, monthlyWaiterName, "advisory");
+  await observeBlockedWaiterAndRelease({
+    databaseUrl,
+    gate: monthlyReleaseGate,
+    holder: monthlyHolder,
+    waiter: monthlyWaiter,
+    applicationName: monthlyWaiterName,
+    waitEvent: "advisory",
+  });
   await requireSuccessfulSession(monthlyHolder, "concurrent monthly holder");
   await requireSuccessfulSession(monthlyWaiter, "concurrent monthly replay");
   verifyKnownMonth(
