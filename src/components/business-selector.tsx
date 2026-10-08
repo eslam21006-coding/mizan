@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import type { MizanRole } from "@/lib/auth/role";
+import { AppNavigation } from "./app-navigation";
 import {
   manageBusinessesHref,
   resolveBusinessSwitchHref,
@@ -12,20 +14,27 @@ import styles from "./app-shell.module.css";
 
 type BusinessSelectorProps = {
   businesses: readonly ShellBusiness[];
+  selectedBusinessId: string | null;
+  pathname: string;
+  search: string;
+  onNavigate?: () => void;
+};
+
+type BusinessContextNavigationProps = {
+  role: MizanRole;
+  businesses: readonly ShellBusiness[];
   onNavigate?: () => void;
 };
 
 /** Renders the persistent shell business selector without introducing new persisted state. */
-export function BusinessSelector({ businesses, onNavigate }: BusinessSelectorProps) {
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+export function BusinessSelector({
+  businesses,
+  selectedBusinessId,
+  pathname,
+  search,
+  onNavigate,
+}: BusinessSelectorProps) {
   const router = useRouter();
-  const search = searchParams.toString();
-  const selectedBusinessId = resolveShellBusinessId({
-    pathname,
-    search,
-    businesses,
-  });
 
   /** Switches business while preserving only route-safe context from B14A. */
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -73,5 +82,39 @@ export function BusinessSelector({ businesses, onNavigate }: BusinessSelectorPro
         إدارة البزنسات
       </Link>
     </section>
+  );
+}
+
+
+/** Resolves URL business context once and shares it across selector and navigation. */
+export function BusinessContextNavigation({
+  role,
+  businesses,
+  onNavigate,
+}: BusinessContextNavigationProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const search = searchParams.toString();
+  const selectedBusinessId = resolveShellBusinessId({
+    pathname,
+    search,
+    businesses,
+  });
+
+  return (
+    <>
+      <BusinessSelector
+        businesses={businesses}
+        selectedBusinessId={selectedBusinessId}
+        pathname={pathname}
+        search={search}
+        onNavigate={onNavigate}
+      />
+      <AppNavigation
+        role={role}
+        businessId={selectedBusinessId}
+        onNavigate={onNavigate}
+      />
+    </>
   );
 }
