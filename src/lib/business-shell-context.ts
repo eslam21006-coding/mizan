@@ -60,10 +60,12 @@ export function resolveShellBusinessId({
   return businesses[0]?.id ?? null;
 }
 
+/** Builds the encoded base pathname for one business-scoped module. */
 function businessPath(businessId: string) {
   return `/businesses/${encodeURIComponent(businessId)}`;
 }
 
+/** Copies only explicitly portable query keys into a new business context. */
 function preservedSearch(
   search: string,
   businessId: string | null,
