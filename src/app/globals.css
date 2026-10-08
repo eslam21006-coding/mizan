@@ -150,8 +150,42 @@ a {
 .app-navigation {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 0;
   padding: 10px 14px;
+}
+
+.app-navigation-section {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.app-navigation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-navigation-list-item {
+  margin: 0;
+  padding: 0;
+}
+
+.app-navigation-secondary,
+.app-navigation-admin {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.nav-section-label {
+  padding: 0 13px 6px;
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 800;
 }
 
 .nav-item {

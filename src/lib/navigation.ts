@@ -123,9 +123,8 @@ export function isNavigationItemActive(item: NavigationItem, pathname: string) {
 }
 
 /**
- * Legacy flat navigation retained until B13B switches AppNavigation to the
- * simplified grouped model. Keeping it here prevents B13A from exposing a
- * half-converted production navigation between sequential sub-batches.
+ * Legacy flat navigation data is retained for compatibility with older callers.
+ * AppNavigation renders the simplified grouped model from B13B onward.
  */
 export const menteeNavigation: NavigationItem[] = [
   { label: "الرئيسية", href: "/", icon: "home" },
@@ -145,7 +144,7 @@ const adminNavigation: NavigationItem[] = [
   { label: "الدعوات", href: "/admin/invites", icon: "customers" },
 ];
 
-/** Returns the legacy flat navigation retained until B13B switches the rendered shell. */
+/** Returns the retained legacy flat navigation for compatibility with older callers. */
 export function getNavigation(role: MizanRole) {
   return role === "admin" ? [...menteeNavigation, ...adminNavigation] : menteeNavigation;
 }

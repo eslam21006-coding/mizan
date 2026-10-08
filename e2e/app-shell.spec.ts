@@ -47,13 +47,11 @@ test.describe("authenticated application shell", () => {
 
     await page.screenshot({ path: "test-results/screenshots/home-desktop.png", fullPage: true });
 
-    await page.getByRole("link", { name: "الأرقام الشهرية" }).click();
+    const numbersLink = page.locator(".desktop-sidebar").getByRole("link", { name: "الأرقام" });
+    await numbersLink.click();
     await expect(page).toHaveURL(/\/monthly$/);
     await expect(page.getByRole("heading", { name: "الأرقام الشهرية", level: 1 })).toBeVisible();
-    await expect(page.getByRole("link", { name: "الأرقام الشهرية" })).toHaveAttribute(
-      "aria-current",
-      "page",
-    );
+    await expect(numbersLink).toHaveAttribute("aria-current", "page");
     expect(errors).toEqual([]);
   });
 
@@ -103,7 +101,7 @@ test.describe("authenticated application shell", () => {
 
     await page.screenshot({ path: "test-results/screenshots/home-mobile-drawer.png", fullPage: true });
 
-    await page.getByRole("link", { name: "العملاء و LTV" }).click();
+    await drawer.getByRole("link", { name: "العملاء" }).click();
     await expect(page).toHaveURL(/\/customers$/);
     await expect(page.getByRole("heading", { name: "العملاء و LTV", level: 1 })).toBeVisible();
     await expect(page.locator(".mobile-drawer-layer")).not.toHaveClass(/mobile-drawer-layer-open/);

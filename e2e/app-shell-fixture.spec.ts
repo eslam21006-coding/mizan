@@ -33,10 +33,79 @@ test.describe("CI-only application shell fixture", () => {
       "admin.fixture@example.test",
     );
 
+    const navigation = page
+      .locator(".desktop-sidebar")
+      .getByRole("navigation", { name: "التنقل الرئيسي" });
+    const primaryGroup = navigation.getByRole("list", { name: "الأقسام الرئيسية" });
+    const secondaryGroup = navigation.getByRole("list", { name: "روابط إضافية" });
+    const adminGroup = navigation.getByRole("list", { name: "الإدارة" });
+
+    await expect(primaryGroup.getByRole("link")).toHaveText([
+      "الرئيسية",
+      "الأرقام",
+      "العملاء",
+      "المبيعات",
+      "التخطيط",
+    ]);
+    await expect(secondaryGroup.getByRole("link")).toHaveText(["أهم الملاحظات", "الإعدادات"]);
+    await expect(navigation.getByText("الإدارة", { exact: true })).toBeVisible();
+    await expect(adminGroup.getByRole("link")).toHaveText(["المتدربون", "الدعوات"]);
+
+    for (const legacyLabel of [
+      "البزنس",
+      "الأرقام الشهرية",
+      "العملاء وقيمة العميل",
+      "الفانلز",
+      "المحاكي",
+      "خطة الوصول للهدف",
+      "التحليلات",
+    ]) {
+      await expect(navigation.getByText(legacyLabel, { exact: true })).toHaveCount(0);
+    }
+
     await page.screenshot({
       path: "test-results/screenshots/app-shell-fixture-desktop.png",
       fullPage: true,
     });
+    expect(errors).toEqual([]);
+  });
+
+  test("keeps simplified active states aligned with top-level and business-scoped routes", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(fixturePath);
+
+    const navigation = page
+      .locator(".desktop-sidebar")
+      .getByRole("navigation", { name: "التنقل الرئيسي" });
+    const links = {
+      numbers: navigation.getByRole("link", { name: "الأرقام" }),
+      customers: navigation.getByRole("link", { name: "العملاء" }),
+      sales: navigation.getByRole("link", { name: "المبيعات" }),
+      planning: navigation.getByRole("link", { name: "التخطيط" }),
+      settings: navigation.getByRole("link", { name: "الإعدادات" }),
+    };
+
+    const states = [
+      ["/businesses/acme/monthly/correction", links.numbers],
+      ["/businesses/acme/customers/review", links.customers],
+      ["/businesses/acme/liquidation", links.sales],
+      ["/simulator", links.planning],
+      ["/businesses/acme/settings/delete", links.settings],
+    ] as const;
+
+    for (const [pathname, activeLink] of states) {
+      await page.evaluate((nextPathname) => {
+        window.history.pushState({}, "", nextPathname);
+      }, pathname);
+      await expect(activeLink).toHaveAttribute("aria-current", "page");
+    }
+
+    await page.goBack();
+    await expect(links.planning).toHaveAttribute("aria-current", "page");
+    await expect(links.settings).not.toHaveAttribute("aria-current", "page");
     expect(errors).toEqual([]);
   });
 
