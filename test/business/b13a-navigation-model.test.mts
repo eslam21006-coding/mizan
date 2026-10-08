@@ -78,6 +78,8 @@ test("B13A resolves simplified navigation route families deterministically", () 
     ["/simulator/scenario", "التخطيط"],
     ["/insights", "أهم الملاحظات"],
     ["/settings", "الإعدادات"],
+    [`/businesses/${businessId}/settings`, "الإعدادات"],
+    [`/businesses/${businessId}/settings/delete`, "الإعدادات"],
     ["/admin/mentees", "المتدربون"],
     ["/admin/mentees/123", "المتدربون"],
     ["/admin/invites", "الدعوات"],
