@@ -3,7 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { MizanRole } from "@/lib/auth/role";
-import { getNavigation } from "@/lib/navigation";
+import {
+  getSimplifiedNavigation,
+  isNavigationItemActive,
+  type NavigationItem,
+} from "@/lib/navigation";
 import { NavIcon } from "./nav-icon";
 
 type AppNavigationProps = {
@@ -11,16 +15,32 @@ type AppNavigationProps = {
   onNavigate?: () => void;
 };
 
-export function AppNavigation({ role, onNavigate }: AppNavigationProps) {
-  const pathname = usePathname();
+type NavigationGroupProps = {
+  items: readonly NavigationItem[];
+  label: string;
+  className: string;
+  pathname: string;
+  onNavigate?: () => void;
+  visibleLabel?: string;
+};
+
+function NavigationGroup({
+  items,
+  label,
+  className,
+  pathname,
+  onNavigate,
+  visibleLabel,
+}: NavigationGroupProps) {
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
-    <nav className="app-navigation" aria-label="التنقل الرئيسي">
-      {getNavigation(role).map((item) => {
-        const isActive =
-          item.href === "/"
-            ? pathname === "/"
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+    <div className={`app-navigation-section ${className}`} role="group" aria-label={label}>
+      {visibleLabel ? <span className="nav-section-label">{visibleLabel}</span> : null}
+      {items.map((item) => {
+        const isActive = isNavigationItemActive(item, pathname);
 
         return (
           <Link
@@ -37,6 +57,38 @@ export function AppNavigation({ role, onNavigate }: AppNavigationProps) {
           </Link>
         );
       })}
+    </div>
+  );
+}
+
+export function AppNavigation({ role, onNavigate }: AppNavigationProps) {
+  const pathname = usePathname();
+  const navigation = getSimplifiedNavigation(role);
+
+  return (
+    <nav className="app-navigation" aria-label="التنقل الرئيسي">
+      <NavigationGroup
+        items={navigation.primary}
+        label="الأقسام الرئيسية"
+        className="app-navigation-primary"
+        pathname={pathname}
+        onNavigate={onNavigate}
+      />
+      <NavigationGroup
+        items={navigation.secondary}
+        label="روابط إضافية"
+        className="app-navigation-secondary"
+        pathname={pathname}
+        onNavigate={onNavigate}
+      />
+      <NavigationGroup
+        items={navigation.admin}
+        label="الإدارة"
+        className="app-navigation-admin"
+        pathname={pathname}
+        onNavigate={onNavigate}
+        visibleLabel="الإدارة"
+      />
     </nav>
   );
 }
