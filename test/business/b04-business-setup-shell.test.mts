@@ -230,7 +230,7 @@ test("B04 production setup route remains read-only while later wizard steps may 
   );
   assert.match(setupPageSource, /parseBusinessSetupStep\(query\.step\)/);
   assert.match(setupPageSource, /resolveBusinessSetupResumeStep/);
-  assert.match(setupPageSource, /redirect\(buildBusinessSetupHref/);
+  assert.match(setupPageSource, /resolveBusinessSetupCanonicalRedirect/);
 });
 
 test("B04 shell is focused and does not reuse full business workspace navigation", () => {
