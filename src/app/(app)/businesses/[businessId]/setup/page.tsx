@@ -14,6 +14,7 @@ import {
   parseBusinessSetupMonthContext,
   parseBusinessSetupStep,
   previousBusinessSetupStep,
+  resolveBusinessSetupCanonicalRedirect,
   resolveBusinessSetupResumeStep,
 } from "@/lib/business/setup-navigation";
 import { BusinessSetupShell } from "./business-setup-shell";
@@ -86,14 +87,13 @@ export default async function BusinessSetupPage({
   const resumeStep = resolveBusinessSetupResumeStep(loadResult.readiness.coreSetup);
 
   if (parsedStep.kind !== "valid") {
-    if (resumeStep) {
-      redirect(
-        buildBusinessSetupHref(businessId, resumeStep, { monthKey: navigationMonthKey }),
-      );
-    }
-    if (parsedStep.kind === "invalid") {
-      redirect(buildBusinessSetupHref(businessId, undefined, { monthKey: navigationMonthKey }));
-    }
+    const canonicalRedirect = resolveBusinessSetupCanonicalRedirect({
+      businessId,
+      parsedStep,
+      resumeStep,
+      monthKey: navigationMonthKey,
+    });
+    if (canonicalRedirect) redirect(canonicalRedirect);
 
     return (
       <BusinessSetupShell
