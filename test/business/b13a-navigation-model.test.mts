@@ -53,16 +53,23 @@ test("B13A resolves simplified navigation route families deterministically", () 
   const activeLabelFor = (pathname: string) =>
     items.find((item) => isNavigationItemActive(item, pathname))?.label ?? null;
 
+  const businessId = "11111111-2222-4333-8444-555555555555";
   const cases: Array<[string, string | null]> = [
     ["/", "الرئيسية"],
     ["/monthly", "الأرقام"],
     ["/monthly/history", "الأرقام"],
     ["/analytics", "الأرقام"],
     ["/analytics/range", "الأرقام"],
+    [`/businesses/${businessId}/monthly`, "الأرقام"],
+    [`/businesses/${businessId}/monthly/history`, "الأرقام"],
     ["/customers", "العملاء"],
     ["/customers/import", "العملاء"],
+    [`/businesses/${businessId}/customers`, "العملاء"],
+    [`/businesses/${businessId}/customers/import`, "العملاء"],
     ["/funnels", "المبيعات"],
     ["/funnels/abc", "المبيعات"],
+    [`/businesses/${businessId}/funnels`, "المبيعات"],
+    [`/businesses/${businessId}/funnels/abc`, "المبيعات"],
     ["/target-plan", "التخطيط"],
     ["/target-plan/result", "التخطيط"],
     ["/simulator", "التخطيط"],
@@ -73,6 +80,8 @@ test("B13A resolves simplified navigation route families deterministically", () 
     ["/admin/mentees/123", "المتدربون"],
     ["/admin/invites", "الدعوات"],
     ["/businesses", null],
+    [`/businesses/${businessId}`, null],
+    [`/businesses/${businessId}/settings`, null],
   ];
 
   for (const [pathname, expected] of cases) {
@@ -91,6 +100,19 @@ test("B13A root matching does not activate Overview for unrelated paths", () => 
   assert.equal(isNavigationItemActive(overview, "/"), true);
   assert.equal(isNavigationItemActive(overview, "/monthly"), false);
   assert.equal(isNavigationItemActive(overview, "/anything"), false);
+});
+
+test("B13A business-scoped matching requires the expected route shape", () => {
+  const numbers = getSimplifiedNavigation("mentee").primary.find(
+    (item) => item.label === "الأرقام",
+  );
+  assert.ok(numbers);
+
+  assert.equal(isNavigationItemActive(numbers, "/businesses/acme/monthly"), true);
+  assert.equal(isNavigationItemActive(numbers, "/businesses/acme/monthly/history"), true);
+  assert.equal(isNavigationItemActive(numbers, "/businesses/monthly"), false);
+  assert.equal(isNavigationItemActive(numbers, "/businesses/acme/settings"), false);
+  assert.equal(isNavigationItemActive(numbers, "/other/acme/monthly"), false);
 });
 
 test("B13A simplified primary navigation excludes legacy module labels", () => {
