@@ -226,7 +226,7 @@
   font-size: 0.86rem;
 }
 
-.secondaryMetrics .metricCard {
+.secondarySection .secondaryMetrics .metricCard {
   gap: 7px;
   padding: 14px;
   border-color: #edf0ee;
@@ -234,15 +234,15 @@
   box-shadow: none;
 }
 
-.secondaryMetrics .metricCard > span {
+.secondarySection .secondaryMetrics .metricCard > span {
   font-size: 0.75rem;
 }
 
-.secondaryMetrics .metricCard strong {
+.secondarySection .secondaryMetrics .metricCard strong {
   font-size: clamp(1.05rem, 1.5vw, 1.35rem);
 }
 
-.secondaryMetrics .metricCard p {
+.secondarySection .secondaryMetrics .metricCard p {
   color: #7a857f;
   font-size: 0.76rem;
 }
