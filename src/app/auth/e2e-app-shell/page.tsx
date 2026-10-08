@@ -20,13 +20,25 @@ const fixtureShellProps = {
   ],
 };
 
-export default function AppShellE2eFixturePage() {
+type AppShellE2eFixturePageProps = {
+  searchParams: Promise<{ businessesError?: string }>;
+};
+
+/** Renders deterministic shell states for browser verification only. */
+export default async function AppShellE2eFixturePage({
+  searchParams,
+}: AppShellE2eFixturePageProps) {
   if (process.env.MIZAN_E2E_UI_FIXTURE !== "true") {
     notFound();
   }
 
+  const query = await searchParams;
+
   return (
-    <AppShell {...fixtureShellProps}>
+    <AppShell
+      {...fixtureShellProps}
+      businessesLoadFailed={query.businessesError === "1"}
+    >
       <section className="page-stack" aria-label="محتوى اختبار واجهة ميزان">
         <div>
           <span className="eyebrow">اختبار الواجهة</span>
