@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import type { MizanRole } from "@/lib/auth/role";
 import {
   resolveBusinessAwareNavigationHref,
-  resolveShellBusinessId,
-  type ShellBusiness,
 } from "@/lib/business-shell-context";
 import {
   getSimplifiedNavigation,
@@ -17,7 +15,7 @@ import { NavIcon } from "./nav-icon";
 
 type AppNavigationProps = {
   role: MizanRole;
-  businesses: readonly ShellBusiness[];
+  businessId: string | null;
   onNavigate?: () => void;
 };
 
@@ -76,15 +74,9 @@ function NavigationGroup({
 }
 
 /** Renders the role-aware simplified navigation used by desktop and mobile shells. */
-export function AppNavigation({ role, businesses, onNavigate }: AppNavigationProps) {
+export function AppNavigation({ role, businessId, onNavigate }: AppNavigationProps) {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const navigation = getSimplifiedNavigation(role);
-  const businessId = resolveShellBusinessId({
-    pathname,
-    search: searchParams.toString(),
-    businesses,
-  });
 
   return (
     <nav className="app-navigation" aria-label="التنقل الرئيسي">
