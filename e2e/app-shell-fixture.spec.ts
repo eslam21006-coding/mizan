@@ -33,6 +33,36 @@ test.describe("CI-only application shell fixture", () => {
       "admin.fixture@example.test",
     );
 
+    const navigation = page
+      .locator(".desktop-sidebar")
+      .getByRole("navigation", { name: "التنقل الرئيسي" });
+    const primaryGroup = navigation.getByRole("group", { name: "الأقسام الرئيسية" });
+    const secondaryGroup = navigation.getByRole("group", { name: "روابط إضافية" });
+    const adminGroup = navigation.getByRole("group", { name: "الإدارة" });
+
+    await expect(primaryGroup.getByRole("link")).toHaveText([
+      "الرئيسية",
+      "الأرقام",
+      "العملاء",
+      "المبيعات",
+      "التخطيط",
+    ]);
+    await expect(secondaryGroup.getByRole("link")).toHaveText(["أهم الملاحظات", "الإعدادات"]);
+    await expect(adminGroup.getByText("الإدارة", { exact: true })).toBeVisible();
+    await expect(adminGroup.getByRole("link")).toHaveText(["المتدربون", "الدعوات"]);
+
+    for (const legacyLabel of [
+      "البزنس",
+      "الأرقام الشهرية",
+      "العملاء وقيمة العميل",
+      "الفانلز",
+      "المحاكي",
+      "خطة الوصول للهدف",
+      "التحليلات",
+    ]) {
+      await expect(navigation.getByText(legacyLabel, { exact: true })).toHaveCount(0);
+    }
+
     await page.screenshot({
       path: "test-results/screenshots/app-shell-fixture-desktop.png",
       fullPage: true,
