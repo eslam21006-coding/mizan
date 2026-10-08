@@ -24,6 +24,7 @@ type NavigationGroupProps = {
   visibleLabel?: string;
 };
 
+/** Renders one semantic navigation list with shared active-state behavior. */
 function NavigationGroup({
   items,
   label,
@@ -37,30 +38,34 @@ function NavigationGroup({
   }
 
   return (
-    <div className={`app-navigation-section ${className}`} role="group" aria-label={label}>
+    <div className={`app-navigation-section ${className}`}>
       {visibleLabel ? <span className="nav-section-label">{visibleLabel}</span> : null}
-      {items.map((item) => {
-        const isActive = isNavigationItemActive(item, pathname);
+      <ul className="app-navigation-list" aria-label={label}>
+        {items.map((item) => {
+          const isActive = isNavigationItemActive(item, pathname);
 
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={isActive ? "nav-item nav-item-active" : "nav-item"}
-            aria-current={isActive ? "page" : undefined}
-            onClick={onNavigate}
-          >
-            <span className="nav-icon">
-              <NavIcon name={item.icon} />
-            </span>
-            <span>{item.label}</span>
-          </Link>
-        );
-      })}
+          return (
+            <li key={item.href} className="app-navigation-list-item">
+              <Link
+                href={item.href}
+                className={isActive ? "nav-item nav-item-active" : "nav-item"}
+                aria-current={isActive ? "page" : undefined}
+                onClick={onNavigate}
+              >
+                <span className="nav-icon">
+                  <NavIcon name={item.icon} />
+                </span>
+                <span>{item.label}</span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
 
+/** Renders the role-aware simplified navigation used by desktop and mobile shells. */
 export function AppNavigation({ role, onNavigate }: AppNavigationProps) {
   const pathname = usePathname();
   const navigation = getSimplifiedNavigation(role);
