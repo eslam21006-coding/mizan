@@ -1057,3 +1057,81 @@ test.describe("B12B.2 pending and truthful recovery", () => {
     expect(errors).toEqual([]);
   });
 });
+
+
+test.describe("B12C.2 final wizard browser resilience", () => {
+  test.skip(!fixtureEnabled, "Requires MIZAN_E2E_UI_FIXTURE=true");
+
+  const cases = [
+    {
+      name: "business",
+      url: `${fixturePath}?case=complete&step=business`,
+      currentLabel: "عن البزنس",
+    },
+    {
+      name: "revenue",
+      url: `${fixturePath}?case=multiple&step=revenue`,
+      currentLabel: "كيف يدخل المال؟",
+    },
+    {
+      name: "expenses",
+      url: `${fixturePath}?case=expenses-mixed&step=expenses`,
+      currentLabel: "أين يذهب المال؟",
+    },
+    {
+      name: "month",
+      url: `${fixturePath}?case=month-complete&step=month&month=2026-10`,
+      currentLabel: "أول شهر حقيقي",
+    },
+  ] as const;
+
+  for (const scenario of cases) {
+    test(`${scenario.name} step stays RTL, console-clean, and overflow-free at 390px`, async ({
+      page,
+    }) => {
+      const errors = captureBrowserErrors(page);
+      await page.setViewportSize({ width: 390, height: 844 });
+      await page.goto(scenario.url);
+
+      await expect(
+        page.getByRole("link").filter({ hasText: scenario.currentLabel }),
+      ).toHaveAttribute("aria-current", "step");
+      await expectStableRtl(page);
+      expect(errors).toEqual([]);
+    });
+  }
+
+  test("all four steps remain stable while navigating the wizard at 390px", async ({ page }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await routeProductionSetupToFixture(page, "complete");
+
+    const steps = [
+      { key: "business", label: "عن البزنس" },
+      { key: "revenue", label: "كيف يدخل المال؟" },
+      { key: "expenses", label: "أين يذهب المال؟" },
+      { key: "month", label: "أول شهر حقيقي" },
+    ] as const;
+
+    await page.goto(`${productionBase}?step=business&month=2026-10`);
+    await expect(page.getByRole("link").filter({ hasText: steps[0].label })).toHaveAttribute(
+      "aria-current",
+      "step",
+    );
+    await expectStableRtl(page);
+
+    for (const step of steps.slice(1)) {
+      await page.getByRole("link").filter({ hasText: step.label }).click();
+      await expect.poll(() => new URL(page.url()).pathname + new URL(page.url()).search).toBe(
+        `${productionBase}?step=${step.key}&month=2026-10`,
+      );
+      await expect(page.getByRole("link").filter({ hasText: step.label })).toHaveAttribute(
+        "aria-current",
+        "step",
+      );
+      await expectStableRtl(page);
+    }
+
+    expect(errors).toEqual([]);
+  });
+});
