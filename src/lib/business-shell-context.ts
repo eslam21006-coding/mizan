@@ -177,9 +177,21 @@ export function resolveBusinessSwitchHref({
   return `/?business=${encodeURIComponent(targetBusinessId)}`;
 }
 
-/** Makes the B13 navigation destination business-aware when a business is selected. */
+const BUSINESS_AWARE_NAVIGATION_HREFS = new Set([
+  "/",
+  "/monthly",
+  "/customers",
+  "/funnels",
+  "/target-plan",
+  "/simulator",
+  "/insights",
+  "/analytics",
+  "/settings",
+]);
+
+/** Makes only normal product navigation destinations business-aware. */
 export function resolveBusinessAwareNavigationHref(href: string, businessId: string | null) {
-  if (!businessId) {
+  if (!businessId || !BUSINESS_AWARE_NAVIGATION_HREFS.has(href)) {
     return href;
   }
 
