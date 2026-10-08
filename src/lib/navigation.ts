@@ -81,6 +81,7 @@ export const simplifiedAdminNavigation: readonly NavigationItem[] = [
   },
 ];
 
+/** Returns the simplified navigation groups visible to the supplied application role. */
 export function getSimplifiedNavigation(role: MizanRole): NavigationModel {
   return {
     primary: simplifiedPrimaryNavigation,
@@ -89,17 +90,20 @@ export function getSimplifiedNavigation(role: MizanRole): NavigationModel {
   };
 }
 
+/** Matches a top-level route exactly or through one of its nested descendants. */
 function routeMatchesPathname(route: string, pathname: string) {
   return route === "/"
     ? pathname === "/"
     : pathname === route || pathname.startsWith(`${route}/`);
 }
 
+/** Matches /businesses/:businessId/:segment and any descendants of that module route. */
 function businessScopedSegmentMatchesPathname(segment: string, pathname: string) {
   const parts = pathname.split("/").filter(Boolean);
   return parts.length >= 3 && parts[0] === "businesses" && parts[2] === segment;
 }
 
+/** Resolves whether a navigation item owns the current top-level or business-scoped pathname. */
 export function isNavigationItemActive(item: NavigationItem, pathname: string) {
   const activeRoutes = item.activeRoutes ?? [item.href];
 
@@ -135,6 +139,7 @@ const adminNavigation: NavigationItem[] = [
   { label: "الدعوات", href: "/admin/invites", icon: "customers" },
 ];
 
+/** Returns the legacy flat navigation retained until B13B switches the rendered shell. */
 export function getNavigation(role: MizanRole) {
   return role === "admin" ? [...menteeNavigation, ...adminNavigation] : menteeNavigation;
 }
