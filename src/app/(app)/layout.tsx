@@ -8,7 +8,7 @@ export default async function ApplicationLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   const auth = await requireAuthContext();
   const supabase = await createSupabaseServerClient();
-  const { data: businessesData } = await supabase
+  const { data: businessesData, error: businessesError } = await supabase
     .from("businesses")
     .select("id,name,base_currency,timezone")
     .order("created_at", { ascending: false });
@@ -21,7 +21,12 @@ export default async function ApplicationLayout({
   }));
 
   return (
-    <AppShell role={auth.role} email={auth.email} businesses={businesses}>
+    <AppShell
+      role={auth.role}
+      email={auth.email}
+      businesses={businesses}
+      businessesLoadFailed={Boolean(businessesError)}
+    >
       {children}
     </AppShell>
   );
