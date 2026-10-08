@@ -70,6 +70,8 @@ test("B13A resolves simplified navigation route families deterministically", () 
     ["/funnels/abc", "المبيعات"],
     [`/businesses/${businessId}/funnels`, "المبيعات"],
     [`/businesses/${businessId}/funnels/abc`, "المبيعات"],
+    [`/businesses/${businessId}/liquidation`, "المبيعات"],
+    [`/businesses/${businessId}/liquidation/details`, "المبيعات"],
     ["/target-plan", "التخطيط"],
     ["/target-plan/result", "التخطيط"],
     ["/simulator", "التخطيط"],
@@ -103,16 +105,20 @@ test("B13A root matching does not activate Overview for unrelated paths", () => 
 });
 
 test("B13A business-scoped matching requires the expected route shape", () => {
-  const numbers = getSimplifiedNavigation("mentee").primary.find(
-    (item) => item.label === "الأرقام",
-  );
+  const navigation = getSimplifiedNavigation("mentee").primary;
+  const numbers = navigation.find((item) => item.label === "الأرقام");
+  const sales = navigation.find((item) => item.label === "المبيعات");
   assert.ok(numbers);
+  assert.ok(sales);
 
   assert.equal(isNavigationItemActive(numbers, "/businesses/acme/monthly"), true);
   assert.equal(isNavigationItemActive(numbers, "/businesses/acme/monthly/history"), true);
   assert.equal(isNavigationItemActive(numbers, "/businesses/monthly"), false);
   assert.equal(isNavigationItemActive(numbers, "/businesses/acme/settings"), false);
   assert.equal(isNavigationItemActive(numbers, "/other/acme/monthly"), false);
+  assert.equal(isNavigationItemActive(sales, "/businesses/acme/liquidation"), true);
+  assert.equal(isNavigationItemActive(sales, "/businesses/acme/liquidation/details"), true);
+  assert.equal(isNavigationItemActive(sales, "/businesses/liquidation"), false);
 });
 
 test("B13A simplified primary navigation excludes legacy module labels", () => {
