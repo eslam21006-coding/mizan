@@ -83,7 +83,8 @@ test("B13A resolves simplified navigation route families deterministically", () 
     ["/admin/invites", "الدعوات"],
     ["/businesses", null],
     [`/businesses/${businessId}`, null],
-    [`/businesses/${businessId}/settings`, null],
+    [`/businesses/${businessId}/settings`, "الإعدادات"],
+    [`/businesses/${businessId}/settings/delete`, "الإعدادات"],
   ];
 
   for (const [pathname, expected] of cases) {
@@ -108,8 +109,12 @@ test("B13A business-scoped matching requires the expected route shape", () => {
   const navigation = getSimplifiedNavigation("mentee").primary;
   const numbers = navigation.find((item) => item.label === "الأرقام");
   const sales = navigation.find((item) => item.label === "المبيعات");
+  const settings = getSimplifiedNavigation("mentee").secondary.find(
+    (item) => item.label === "الإعدادات",
+  );
   assert.ok(numbers);
   assert.ok(sales);
+  assert.ok(settings);
 
   assert.equal(isNavigationItemActive(numbers, "/businesses/acme/monthly"), true);
   assert.equal(isNavigationItemActive(numbers, "/businesses/acme/monthly/history"), true);
@@ -119,6 +124,9 @@ test("B13A business-scoped matching requires the expected route shape", () => {
   assert.equal(isNavigationItemActive(sales, "/businesses/acme/liquidation"), true);
   assert.equal(isNavigationItemActive(sales, "/businesses/acme/liquidation/details"), true);
   assert.equal(isNavigationItemActive(sales, "/businesses/liquidation"), false);
+  assert.equal(isNavigationItemActive(settings, "/businesses/acme/settings"), true);
+  assert.equal(isNavigationItemActive(settings, "/businesses/acme/settings/delete"), true);
+  assert.equal(isNavigationItemActive(settings, "/businesses/settings"), false);
 });
 
 test("B13A simplified primary navigation excludes legacy module labels", () => {
