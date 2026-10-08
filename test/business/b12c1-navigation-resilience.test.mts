@@ -5,6 +5,7 @@ import {
   buildBusinessSetupHref,
   parseBusinessSetupMonthContext,
   parseBusinessSetupStep,
+  resolveBusinessSetupCanonicalRedirect,
 } from "../../src/lib/business/setup-navigation.ts";
 
 test("B12C.1 copied setup URLs remain deterministic for every wizard step", () => {
@@ -34,15 +35,36 @@ test("B12C.1 setup hrefs preserve only valid month context", () => {
   assert.equal(parseBusinessSetupMonthContext(["2026-08", "2026-09"]), null);
 });
 
-const setupPageSource = await readFile(
-  new URL("../../src/app/(app)/businesses/[businessId]/setup/page.tsx", import.meta.url),
-  "utf8",
-);
-
 test("B12C.1 invalid setup steps canonicalize without dropping valid month context", () => {
-  assert.match(
-    setupPageSource,
-    /parsedStep\.kind === "invalid"[\s\S]*buildBusinessSetupHref\(businessId, undefined, \{ monthKey: navigationMonthKey \}\)/,
+  assert.equal(
+    resolveBusinessSetupCanonicalRedirect({
+      businessId: "123e4567-e89b-42d3-a456-426614174000",
+      parsedStep: { kind: "invalid" },
+      resumeStep: null,
+      monthKey: "2026-09",
+    }),
+    "/businesses/123e4567-e89b-42d3-a456-426614174000/setup?month=2026-09",
+  );
+});
+
+test("B12C.1 missing steps still resume deterministically with month context", () => {
+  assert.equal(
+    resolveBusinessSetupCanonicalRedirect({
+      businessId: "123e4567-e89b-42d3-a456-426614174000",
+      parsedStep: { kind: "missing" },
+      resumeStep: "expenses",
+      monthKey: "2026-09",
+    }),
+    "/businesses/123e4567-e89b-42d3-a456-426614174000/setup?step=expenses&month=2026-09",
+  );
+  assert.equal(
+    resolveBusinessSetupCanonicalRedirect({
+      businessId: "123e4567-e89b-42d3-a456-426614174000",
+      parsedStep: { kind: "valid", step: "expenses" },
+      resumeStep: "month",
+      monthKey: "2026-09",
+    }),
+    null,
   );
 });
 
