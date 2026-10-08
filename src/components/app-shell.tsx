@@ -42,6 +42,7 @@ function AccountPanel({ role, email }: { role: MizanRole; email: string | null }
   );
 }
 
+/** Renders the shared desktop/mobile shell with persistent business context. */
 export function AppShell({ children, role, email, businesses }: AppShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const drawerId = useId();
