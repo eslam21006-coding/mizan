@@ -58,6 +58,14 @@ test.describe("CI-only application shell fixture", () => {
     await expect(secondaryGroup.getByRole("link")).toHaveText(["أهم الملاحظات", "الإعدادات"]);
     await expect(navigation.getByText("الإدارة", { exact: true })).toBeVisible();
     await expect(adminGroup.getByRole("link")).toHaveText(["المتدربون", "الدعوات"]);
+    await expect(adminGroup.getByRole("link", { name: "المتدربون" })).toHaveAttribute(
+      "href",
+      "/admin/mentees",
+    );
+    await expect(adminGroup.getByRole("link", { name: "الدعوات" })).toHaveAttribute(
+      "href",
+      "/admin/invites",
+    );
     await expect(primaryGroup.getByRole("link", { name: "الرئيسية" })).toHaveAttribute(
       "href",
       "/?business=business-one",
