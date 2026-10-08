@@ -27,6 +27,7 @@ export function BusinessSelector({ businesses, onNavigate }: BusinessSelectorPro
     businesses,
   });
 
+  /** Switches business while preserving only route-safe context from B14A. */
   const handleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     const targetBusinessId = event.target.value;
     if (!targetBusinessId || targetBusinessId === selectedBusinessId) {
