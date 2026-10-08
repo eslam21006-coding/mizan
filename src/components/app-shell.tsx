@@ -13,6 +13,7 @@ type AppShellProps = {
   role: MizanRole;
   email: string | null;
   businesses?: readonly ShellBusiness[];
+  businessesLoadFailed?: boolean;
 };
 
 const focusableSelector = [
@@ -43,7 +44,13 @@ function AccountPanel({ role, email }: { role: MizanRole; email: string | null }
 }
 
 /** Renders the shared desktop/mobile shell with persistent business context. */
-export function AppShell({ children, role, email, businesses }: AppShellProps) {
+export function AppShell({
+  children,
+  role,
+  email,
+  businesses,
+  businessesLoadFailed = false,
+}: AppShellProps) {
   const shellBusinesses = businesses ?? [];
   const hasBusinessContext = businesses !== undefined;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -141,7 +148,11 @@ export function AppShell({ children, role, email, businesses }: AppShellProps) {
         </div>
         {hasBusinessContext ? (
           <Suspense fallback={<AppNavigation role={role} businessId={null} />}>
-            <BusinessContextNavigation role={role} businesses={shellBusinesses} />
+            <BusinessContextNavigation
+              role={role}
+              businesses={shellBusinesses}
+              businessesLoadFailed={businessesLoadFailed}
+            />
           </Suspense>
         ) : (
           <AppNavigation role={role} businessId={null} />
@@ -218,6 +229,7 @@ export function AppShell({ children, role, email, businesses }: AppShellProps) {
               <BusinessContextNavigation
                 role={role}
                 businesses={shellBusinesses}
+                businessesLoadFailed={businessesLoadFailed}
                 onNavigate={() => setIsMenuOpen(false)}
               />
             </Suspense>
