@@ -16,6 +16,13 @@ export type BusinessSetupHrefOptions = {
   monthKey?: string | null;
 };
 
+export type BusinessSetupCanonicalRedirectInput = {
+  businessId: string;
+  parsedStep: ParsedBusinessSetupStep;
+  resumeStep: BusinessSetupStep | null;
+  monthKey: string | null;
+};
+
 const REQUIREMENT_TO_STEP: Readonly<Record<CoreSetupRequirement, BusinessSetupStep>> = {
   business_identity: "business",
   revenue_setup: "revenue",
@@ -56,6 +63,21 @@ export function buildBusinessSetupHref(
   if (monthKey) params.set("month", monthKey);
   const query = params.toString();
   return query ? `${base}?${query}` : base;
+}
+
+/** Resolves the canonical setup redirect for missing or invalid step state, preserving valid month context. */
+export function resolveBusinessSetupCanonicalRedirect({
+  businessId,
+  parsedStep,
+  resumeStep,
+  monthKey,
+}: BusinessSetupCanonicalRedirectInput): string | null {
+  if (parsedStep.kind === "valid") return null;
+  if (resumeStep) return buildBusinessSetupHref(businessId, resumeStep, { monthKey });
+  if (parsedStep.kind === "invalid") {
+    return buildBusinessSetupHref(businessId, undefined, { monthKey });
+  }
+  return null;
 }
 
 /** Maps one Core Setup requirement to its wizard step. */
