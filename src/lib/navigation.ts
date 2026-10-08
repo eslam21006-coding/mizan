@@ -63,7 +63,13 @@ export const simplifiedSecondaryNavigation: readonly NavigationItem[] = [
     icon: "analytics",
     activeRoutes: ["/insights"],
   },
-  { label: "الإعدادات", href: "/settings", icon: "settings", activeRoutes: ["/settings"] },
+  {
+    label: "الإعدادات",
+    href: "/settings",
+    icon: "settings",
+    activeRoutes: ["/settings"],
+    businessScopedSegments: ["settings"],
+  },
 ];
 
 export const simplifiedAdminNavigation: readonly NavigationItem[] = [
