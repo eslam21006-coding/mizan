@@ -16,6 +16,7 @@ export type NavigationItem = {
   href: string;
   icon: NavigationIcon;
   activeRoutes?: readonly string[];
+  businessScopedSegments?: readonly string[];
 };
 
 export type NavigationModel = {
@@ -31,14 +32,22 @@ export const simplifiedPrimaryNavigation: readonly NavigationItem[] = [
     href: "/monthly",
     icon: "calendar",
     activeRoutes: ["/monthly", "/analytics"],
+    businessScopedSegments: ["monthly"],
   },
   {
     label: "العملاء",
     href: "/customers",
     icon: "customers",
     activeRoutes: ["/customers"],
+    businessScopedSegments: ["customers"],
   },
-  { label: "المبيعات", href: "/funnels", icon: "funnel", activeRoutes: ["/funnels"] },
+  {
+    label: "المبيعات",
+    href: "/funnels",
+    icon: "funnel",
+    activeRoutes: ["/funnels"],
+    businessScopedSegments: ["funnels"],
+  },
   {
     label: "التخطيط",
     href: "/target-plan",
@@ -86,9 +95,21 @@ function routeMatchesPathname(route: string, pathname: string) {
     : pathname === route || pathname.startsWith(`${route}/`);
 }
 
+function businessScopedSegmentMatchesPathname(segment: string, pathname: string) {
+  const parts = pathname.split("/").filter(Boolean);
+  return parts.length >= 3 && parts[0] === "businesses" && parts[2] === segment;
+}
+
 export function isNavigationItemActive(item: NavigationItem, pathname: string) {
   const activeRoutes = item.activeRoutes ?? [item.href];
-  return activeRoutes.some((route) => routeMatchesPathname(route, pathname));
+
+  return (
+    activeRoutes.some((route) => routeMatchesPathname(route, pathname)) ||
+    (item.businessScopedSegments?.some((segment) =>
+      businessScopedSegmentMatchesPathname(segment, pathname),
+    ) ??
+      false)
+  );
 }
 
 /**
