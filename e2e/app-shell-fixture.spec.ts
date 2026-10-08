@@ -33,6 +33,14 @@ test.describe("CI-only application shell fixture", () => {
       "admin.fixture@example.test",
     );
 
+    const desktopSidebar = page.locator(".desktop-sidebar");
+    const businessSelector = desktopSidebar.getByRole("combobox", { name: "البزنس الحالي" });
+    await expect(businessSelector).toHaveValue("business-one");
+    await expect(desktopSidebar.getByRole("link", { name: "إدارة البزنسات" })).toHaveAttribute(
+      "href",
+      "/businesses",
+    );
+
     const navigation = page
       .locator(".desktop-sidebar")
       .getByRole("navigation", { name: "التنقل الرئيسي" });
@@ -50,6 +58,34 @@ test.describe("CI-only application shell fixture", () => {
     await expect(secondaryGroup.getByRole("link")).toHaveText(["أهم الملاحظات", "الإعدادات"]);
     await expect(navigation.getByText("الإدارة", { exact: true })).toBeVisible();
     await expect(adminGroup.getByRole("link")).toHaveText(["المتدربون", "الدعوات"]);
+    await expect(primaryGroup.getByRole("link", { name: "الرئيسية" })).toHaveAttribute(
+      "href",
+      "/?business=business-one",
+    );
+    await expect(primaryGroup.getByRole("link", { name: "الأرقام" })).toHaveAttribute(
+      "href",
+      "/businesses/business-one/monthly",
+    );
+    await expect(primaryGroup.getByRole("link", { name: "العملاء" })).toHaveAttribute(
+      "href",
+      "/businesses/business-one/customers",
+    );
+    await expect(primaryGroup.getByRole("link", { name: "المبيعات" })).toHaveAttribute(
+      "href",
+      "/businesses/business-one/funnels",
+    );
+    await expect(primaryGroup.getByRole("link", { name: "التخطيط" })).toHaveAttribute(
+      "href",
+      "/target-plan?business=business-one",
+    );
+    await expect(secondaryGroup.getByRole("link", { name: "أهم الملاحظات" })).toHaveAttribute(
+      "href",
+      "/insights?business=business-one",
+    );
+    await expect(secondaryGroup.getByRole("link", { name: "الإعدادات" })).toHaveAttribute(
+      "href",
+      "/businesses/business-one/settings",
+    );
 
     for (const legacyLabel of [
       "البزنس",
@@ -67,6 +103,45 @@ test.describe("CI-only application shell fixture", () => {
       path: "test-results/screenshots/app-shell-fixture-desktop.png",
       fullPage: true,
     });
+    expect(errors).toEqual([]);
+  });
+
+  test("updates selector state and navigation destinations when URL business context changes", async ({
+    page,
+  }) => {
+    const errors = captureBrowserErrors(page);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.goto(fixturePath);
+
+    const sidebar = page.locator(".desktop-sidebar");
+    const selector = sidebar.getByRole("combobox", { name: "البزنس الحالي" });
+    const navigation = sidebar.getByRole("navigation", { name: "التنقل الرئيسي" });
+
+    await page.evaluate(() => {
+      window.history.pushState({}, "", "/?business=business-two");
+    });
+
+    await expect(selector).toHaveValue("business-two");
+    await expect(navigation.getByRole("link", { name: "الرئيسية" })).toHaveAttribute(
+      "href",
+      "/?business=business-two",
+    );
+    await expect(navigation.getByRole("link", { name: "الأرقام" })).toHaveAttribute(
+      "href",
+      "/businesses/business-two/monthly",
+    );
+    await expect(navigation.getByRole("link", { name: "العملاء" })).toHaveAttribute(
+      "href",
+      "/businesses/business-two/customers",
+    );
+    await expect(navigation.getByRole("link", { name: "المبيعات" })).toHaveAttribute(
+      "href",
+      "/businesses/business-two/funnels",
+    );
+    await expect(navigation.getByRole("link", { name: "التخطيط" })).toHaveAttribute(
+      "href",
+      "/target-plan?business=business-two",
+    );
     expect(errors).toEqual([]);
   });
 
@@ -143,8 +218,14 @@ test.describe("CI-only application shell fixture", () => {
     const drawer = page.locator(".mobile-drawer");
     const closeButton = drawer.getByRole("button", { name: "إغلاق القائمة" });
     const signOutButton = drawer.getByRole("button", { name: "تسجيل الخروج" });
+    const businessSelector = drawer.getByRole("combobox", { name: "البزنس الحالي" });
 
     await expect(drawer).toBeVisible();
+    await expect(businessSelector).toHaveValue("business-one");
+    await expect(drawer.getByRole("link", { name: "إدارة البزنسات" })).toHaveAttribute(
+      "href",
+      "/businesses",
+    );
     await expect(drawer).toHaveCSS("overflow-y", "auto");
     await page.waitForTimeout(300);
 
