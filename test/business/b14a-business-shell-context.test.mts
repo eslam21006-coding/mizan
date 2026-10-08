@@ -182,5 +182,13 @@ test("makes simplified navigation business-aware without changing no-business fa
     "/businesses/business%2F02/settings",
   );
   assert.equal(resolveBusinessAwareNavigationHref("/monthly", null), "/monthly");
+  assert.equal(
+    resolveBusinessAwareNavigationHref("/admin/mentees", "business/02"),
+    "/admin/mentees",
+  );
+  assert.equal(
+    resolveBusinessAwareNavigationHref("/admin/invites", "business/02"),
+    "/admin/invites",
+  );
   assert.equal(manageBusinessesHref(), "/businesses");
 });
