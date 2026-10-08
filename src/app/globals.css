@@ -160,6 +160,20 @@ a {
   gap: 5px;
 }
 
+.app-navigation-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.app-navigation-list-item {
+  margin: 0;
+  padding: 0;
+}
+
 .app-navigation-secondary,
 .app-navigation-admin {
   margin-top: 12px;
