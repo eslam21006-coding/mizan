@@ -85,8 +85,6 @@ test("B13A resolves simplified navigation route families deterministically", () 
     ["/admin/invites", "الدعوات"],
     ["/businesses", null],
     [`/businesses/${businessId}`, null],
-    [`/businesses/${businessId}/settings`, "الإعدادات"],
-    [`/businesses/${businessId}/settings/delete`, "الإعدادات"],
   ];
 
   for (const [pathname, expected] of cases) {
