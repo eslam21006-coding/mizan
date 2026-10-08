@@ -1,8 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import type { MizanRole } from "@/lib/auth/role";
+import {
+  resolveBusinessAwareNavigationHref,
+  resolveShellBusinessId,
+  type ShellBusiness,
+} from "@/lib/business-shell-context";
 import {
   getSimplifiedNavigation,
   isNavigationItemActive,
@@ -12,6 +17,7 @@ import { NavIcon } from "./nav-icon";
 
 type AppNavigationProps = {
   role: MizanRole;
+  businesses: readonly ShellBusiness[];
   onNavigate?: () => void;
 };
 
@@ -20,6 +26,7 @@ type NavigationGroupProps = {
   label: string;
   className: string;
   pathname: string;
+  businessId: string | null;
   onNavigate?: () => void;
   visibleLabel?: string;
 };
@@ -30,6 +37,7 @@ function NavigationGroup({
   label,
   className,
   pathname,
+  businessId,
   onNavigate,
   visibleLabel,
 }: NavigationGroupProps) {
@@ -44,10 +52,12 @@ function NavigationGroup({
         {items.map((item) => {
           const isActive = isNavigationItemActive(item, pathname);
 
+          const href = resolveBusinessAwareNavigationHref(item.href, businessId);
+
           return (
             <li key={item.href} className="app-navigation-list-item">
               <Link
-                href={item.href}
+                href={href}
                 className={isActive ? "nav-item nav-item-active" : "nav-item"}
                 aria-current={isActive ? "page" : undefined}
                 onClick={onNavigate}
@@ -66,9 +76,15 @@ function NavigationGroup({
 }
 
 /** Renders the role-aware simplified navigation used by desktop and mobile shells. */
-export function AppNavigation({ role, onNavigate }: AppNavigationProps) {
+export function AppNavigation({ role, businesses, onNavigate }: AppNavigationProps) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const navigation = getSimplifiedNavigation(role);
+  const businessId = resolveShellBusinessId({
+    pathname,
+    search: searchParams.toString(),
+    businesses,
+  });
 
   return (
     <nav className="app-navigation" aria-label="التنقل الرئيسي">
@@ -77,6 +93,7 @@ export function AppNavigation({ role, onNavigate }: AppNavigationProps) {
         label="الأقسام الرئيسية"
         className="app-navigation-primary"
         pathname={pathname}
+        businessId={businessId}
         onNavigate={onNavigate}
       />
       <NavigationGroup
@@ -84,6 +101,7 @@ export function AppNavigation({ role, onNavigate }: AppNavigationProps) {
         label="روابط إضافية"
         className="app-navigation-secondary"
         pathname={pathname}
+        businessId={businessId}
         onNavigate={onNavigate}
       />
       <NavigationGroup
@@ -91,6 +109,7 @@ export function AppNavigation({ role, onNavigate }: AppNavigationProps) {
         label="الإدارة"
         className="app-navigation-admin"
         pathname={pathname}
+        businessId={businessId}
         onNavigate={onNavigate}
         visibleLabel="الإدارة"
       />
