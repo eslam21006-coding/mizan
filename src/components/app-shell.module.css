@@ -3,6 +3,65 @@
   overscroll-behavior: contain;
 }
 
+.businessSelector {
+  display: grid;
+  gap: 8px;
+  margin: 0 14px 8px;
+  padding: 12px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.businessSelectorField {
+  display: grid;
+  gap: 6px;
+}
+
+.businessSelectorField > span,
+.businessSelectorEmpty {
+  color: var(--text-faint);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.businessSelectorField select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+.businessSelectorField select:focus-visible,
+.manageBusinessesLink:focus-visible {
+  outline: 3px solid var(--brand-ring);
+  outline-offset: 2px;
+}
+
+.manageBusinessesLink {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 10px;
+  color: var(--text-soft);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.manageBusinessesLink:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
 .accountPanel {
   display: grid;
   gap: 10px;
@@ -86,6 +145,10 @@
   :global(.drawer-header),
   :global(.mobile-drawer .app-navigation) {
     flex: 0 0 auto;
+  }
+
+  .businessSelector {
+    margin-top: 14px;
   }
 
   .mobileAccountPanel {
