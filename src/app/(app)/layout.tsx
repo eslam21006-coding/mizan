@@ -2,6 +2,7 @@ import { AppShell } from "@/components/app-shell";
 import { requireAuthContext } from "@/lib/auth/context";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
+/** Loads RLS-visible businesses once and provides persistent business context to the app shell. */
 export default async function ApplicationLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
