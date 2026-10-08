@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { Suspense, useEffect, useId, useRef, useState } from "react";
 import type { MizanRole } from "@/lib/auth/role";
 import type { ShellBusiness } from "@/lib/business-shell-context";
 import { AppNavigation } from "./app-navigation";
-import { BusinessSelector } from "./business-selector";
+import { BusinessContextNavigation } from "./business-selector";
 import styles from "./app-shell.module.css";
 import { Brand } from "./brand";
 
@@ -139,8 +139,13 @@ export function AppShell({ children, role, email, businesses }: AppShellProps) {
         <div className="sidebar-header">
           <Brand />
         </div>
-        {hasBusinessContext ? <BusinessSelector businesses={shellBusinesses} /> : null}
-        <AppNavigation role={role} businesses={shellBusinesses} />
+        {hasBusinessContext ? (
+          <Suspense fallback={<AppNavigation role={role} businessId={null} />}>
+            <BusinessContextNavigation role={role} businesses={shellBusinesses} />
+          </Suspense>
+        ) : (
+          <AppNavigation role={role} businessId={null} />
+        )}
         <div className="sidebar-footer">
           <AccountPanel role={role} email={email} />
         </div>
@@ -201,16 +206,28 @@ export function AppShell({ children, role, email, businesses }: AppShellProps) {
             </button>
           </div>
           {hasBusinessContext ? (
-            <BusinessSelector
-              businesses={shellBusinesses}
+            <Suspense
+              fallback={
+                <AppNavigation
+                  role={role}
+                  businessId={null}
+                  onNavigate={() => setIsMenuOpen(false)}
+                />
+              }
+            >
+              <BusinessContextNavigation
+                role={role}
+                businesses={shellBusinesses}
+                onNavigate={() => setIsMenuOpen(false)}
+              />
+            </Suspense>
+          ) : (
+            <AppNavigation
+              role={role}
+              businessId={null}
               onNavigate={() => setIsMenuOpen(false)}
             />
-          ) : null}
-          <AppNavigation
-            role={role}
-            businesses={shellBusinesses}
-            onNavigate={() => setIsMenuOpen(false)}
-          />
+          )}
           <div className={styles.mobileAccountPanel}>
             <AccountPanel role={role} email={email} />
           </div>
