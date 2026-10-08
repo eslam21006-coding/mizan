@@ -17,12 +17,14 @@ type BusinessSelectorProps = {
   selectedBusinessId: string | null;
   pathname: string;
   search: string;
+  loadFailed?: boolean;
   onNavigate?: () => void;
 };
 
 type BusinessContextNavigationProps = {
   role: MizanRole;
   businesses: readonly ShellBusiness[];
+  businessesLoadFailed?: boolean;
   onNavigate?: () => void;
 };
 
@@ -32,6 +34,7 @@ export function BusinessSelector({
   selectedBusinessId,
   pathname,
   search,
+  loadFailed = false,
   onNavigate,
 }: BusinessSelectorProps) {
   const router = useRouter();
@@ -55,7 +58,11 @@ export function BusinessSelector({
 
   return (
     <section className={styles.businessSelector} aria-label="اختيار البزنس">
-      {businesses.length > 0 ? (
+      {loadFailed ? (
+        <div className={styles.businessSelectorEmpty} role="status">
+          تعذر تحميل البزنسات
+        </div>
+      ) : businesses.length > 0 ? (
         <label className={styles.businessSelectorField}>
           <span>البزنس الحالي</span>
           <select
@@ -90,16 +97,19 @@ export function BusinessSelector({
 export function BusinessContextNavigation({
   role,
   businesses,
+  businessesLoadFailed = false,
   onNavigate,
 }: BusinessContextNavigationProps) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const search = searchParams.toString();
-  const selectedBusinessId = resolveShellBusinessId({
-    pathname,
-    search,
-    businesses,
-  });
+  const selectedBusinessId = businessesLoadFailed
+    ? null
+    : resolveShellBusinessId({
+        pathname,
+        search,
+        businesses,
+      });
 
   return (
     <>
@@ -108,6 +118,7 @@ export function BusinessContextNavigation({
         selectedBusinessId={selectedBusinessId}
         pathname={pathname}
         search={search}
+        loadFailed={businessesLoadFailed}
         onNavigate={onNavigate}
       />
       <AppNavigation
