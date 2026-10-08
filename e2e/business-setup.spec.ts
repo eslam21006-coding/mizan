@@ -1106,13 +1106,25 @@ test.describe("B12C.2 final wizard browser resilience", () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await routeProductionSetupToFixture(page, "complete");
 
-    for (const step of [
+    const steps = [
       { key: "business", label: "عن البزنس" },
       { key: "revenue", label: "كيف يدخل المال؟" },
       { key: "expenses", label: "أين يذهب المال؟" },
       { key: "month", label: "أول شهر حقيقي" },
-    ] as const) {
-      await page.goto(`${productionBase}?step=${step.key}&month=2026-10`);
+    ] as const;
+
+    await page.goto(`${productionBase}?step=business&month=2026-10`);
+    await expect(page.getByRole("link").filter({ hasText: steps[0].label })).toHaveAttribute(
+      "aria-current",
+      "step",
+    );
+    await expectStableRtl(page);
+
+    for (const step of steps.slice(1)) {
+      await page.getByRole("link").filter({ hasText: step.label }).click();
+      await expect.poll(() => new URL(page.url()).pathname + new URL(page.url()).search).toBe(
+        `${productionBase}?step=${step.key}&month=2026-10`,
+      );
       await expect(page.getByRole("link").filter({ hasText: step.label })).toHaveAttribute(
         "aria-current",
         "step",
