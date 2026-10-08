@@ -36,9 +36,9 @@ test.describe("CI-only application shell fixture", () => {
     const navigation = page
       .locator(".desktop-sidebar")
       .getByRole("navigation", { name: "التنقل الرئيسي" });
-    const primaryGroup = navigation.getByRole("group", { name: "الأقسام الرئيسية" });
-    const secondaryGroup = navigation.getByRole("group", { name: "روابط إضافية" });
-    const adminGroup = navigation.getByRole("group", { name: "الإدارة" });
+    const primaryGroup = navigation.getByRole("list", { name: "الأقسام الرئيسية" });
+    const secondaryGroup = navigation.getByRole("list", { name: "روابط إضافية" });
+    const adminGroup = navigation.getByRole("list", { name: "الإدارة" });
 
     await expect(primaryGroup.getByRole("link")).toHaveText([
       "الرئيسية",
@@ -48,7 +48,7 @@ test.describe("CI-only application shell fixture", () => {
       "التخطيط",
     ]);
     await expect(secondaryGroup.getByRole("link")).toHaveText(["أهم الملاحظات", "الإعدادات"]);
-    await expect(adminGroup.getByText("الإدارة", { exact: true })).toBeVisible();
+    await expect(navigation.getByText("الإدارة", { exact: true })).toBeVisible();
     await expect(adminGroup.getByRole("link")).toHaveText(["المتدربون", "الدعوات"]);
 
     for (const legacyLabel of [
