@@ -12,7 +12,7 @@ type AppShellProps = {
   children: React.ReactNode;
   role: MizanRole;
   email: string | null;
-  businesses: readonly ShellBusiness[];
+  businesses?: readonly ShellBusiness[];
 };
 
 const focusableSelector = [
@@ -44,6 +44,8 @@ function AccountPanel({ role, email }: { role: MizanRole; email: string | null }
 
 /** Renders the shared desktop/mobile shell with persistent business context. */
 export function AppShell({ children, role, email, businesses }: AppShellProps) {
+  const shellBusinesses = businesses ?? [];
+  const hasBusinessContext = businesses !== undefined;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const drawerId = useId();
   const drawerRef = useRef<HTMLElement>(null);
@@ -137,8 +139,8 @@ export function AppShell({ children, role, email, businesses }: AppShellProps) {
         <div className="sidebar-header">
           <Brand />
         </div>
-        <BusinessSelector businesses={businesses} />
-        <AppNavigation role={role} businesses={businesses} />
+        {hasBusinessContext ? <BusinessSelector businesses={shellBusinesses} /> : null}
+        <AppNavigation role={role} businesses={shellBusinesses} />
         <div className="sidebar-footer">
           <AccountPanel role={role} email={email} />
         </div>
@@ -198,10 +200,15 @@ export function AppShell({ children, role, email, businesses }: AppShellProps) {
               ×
             </button>
           </div>
-          <BusinessSelector businesses={businesses} onNavigate={() => setIsMenuOpen(false)} />
+          {hasBusinessContext ? (
+            <BusinessSelector
+              businesses={shellBusinesses}
+              onNavigate={() => setIsMenuOpen(false)}
+            />
+          ) : null}
           <AppNavigation
             role={role}
-            businesses={businesses}
+            businesses={shellBusinesses}
             onNavigate={() => setIsMenuOpen(false)}
           />
           <div className={styles.mobileAccountPanel}>
