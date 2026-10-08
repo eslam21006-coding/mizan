@@ -4,6 +4,20 @@ import { AppShell } from "@/components/app-shell";
 const fixtureShellProps = {
   role: "admin" as const,
   email: "admin.fixture@example.test",
+  businesses: [
+    {
+      id: "business-one",
+      name: "أكاديمية ألف",
+      baseCurrency: "EGP",
+      timezone: "Africa/Cairo",
+    },
+    {
+      id: "business-two",
+      name: "أكاديمية باء",
+      baseCurrency: "SAR",
+      timezone: "Asia/Riyadh",
+    },
+  ],
 };
 
 export default function AppShellE2eFixturePage() {
