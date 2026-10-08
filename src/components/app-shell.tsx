@@ -2,7 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import type { MizanRole } from "@/lib/auth/role";
+import type { ShellBusiness } from "@/lib/business-shell-context";
 import { AppNavigation } from "./app-navigation";
+import { BusinessSelector } from "./business-selector";
 import styles from "./app-shell.module.css";
 import { Brand } from "./brand";
 
@@ -10,6 +12,7 @@ type AppShellProps = {
   children: React.ReactNode;
   role: MizanRole;
   email: string | null;
+  businesses: readonly ShellBusiness[];
 };
 
 const focusableSelector = [
@@ -39,7 +42,7 @@ function AccountPanel({ role, email }: { role: MizanRole; email: string | null }
   );
 }
 
-export function AppShell({ children, role, email }: AppShellProps) {
+export function AppShell({ children, role, email, businesses }: AppShellProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const drawerId = useId();
   const drawerRef = useRef<HTMLElement>(null);
@@ -133,7 +136,8 @@ export function AppShell({ children, role, email }: AppShellProps) {
         <div className="sidebar-header">
           <Brand />
         </div>
-        <AppNavigation role={role} />
+        <BusinessSelector businesses={businesses} />
+        <AppNavigation role={role} businesses={businesses} />
         <div className="sidebar-footer">
           <AccountPanel role={role} email={email} />
         </div>
@@ -193,7 +197,12 @@ export function AppShell({ children, role, email }: AppShellProps) {
               ×
             </button>
           </div>
-          <AppNavigation role={role} onNavigate={() => setIsMenuOpen(false)} />
+          <BusinessSelector businesses={businesses} onNavigate={() => setIsMenuOpen(false)} />
+          <AppNavigation
+            role={role}
+            businesses={businesses}
+            onNavigate={() => setIsMenuOpen(false)}
+          />
           <div className={styles.mobileAccountPanel}>
             <AccountPanel role={role} email={email} />
           </div>
