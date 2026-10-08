@@ -46,7 +46,7 @@ export const simplifiedPrimaryNavigation: readonly NavigationItem[] = [
     href: "/funnels",
     icon: "funnel",
     activeRoutes: ["/funnels"],
-    businessScopedSegments: ["funnels"],
+    businessScopedSegments: ["funnels", "liquidation"],
   },
   {
     label: "التخطيط",
