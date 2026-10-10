@@ -12,6 +12,7 @@ import {
   resolveSalesReadiness,
 } from "../../src/lib/business/readiness.ts";
 
+/** Returns a canonical fully ready Core state for focused B16 presentation tests. */
 function readyCore() {
   return resolveCoreSetupReadiness({
     loadState: "loaded",
@@ -22,6 +23,7 @@ function readyCore() {
   });
 }
 
+/** Builds a fresh all-ready four-domain input for each B16 unit test. */
 function baseInput() {
   return {
     businessId: "00000000-0000-4000-8000-000000000016",
@@ -187,6 +189,26 @@ test("B16 load errors fail closed and never masquerade as known zero data", () =
   assert.equal(model.rows.find((row) => row.key === "sales")?.value, "لم تتم إضافة طريقة بيع");
   assert.equal(model.action, null);
   assert.equal(model.state, "unavailable");
+});
+
+test("B16 suppresses an earlier CTA when any later readiness domain is unavailable", () => {
+  const input = baseInput();
+  input.core = resolveCoreSetupReadiness({
+    loadState: "loaded",
+    businessIdentityReady: true,
+    revenueSourceCount: 0,
+    expenseSetup: "not_reviewed",
+    validMonthCount: 0,
+  });
+  input.sales = resolveSalesReadiness({
+    loadState: "load_error",
+    funnelCount: null,
+    monthlyDataReady: null,
+  });
+
+  const model = buildOverviewReadinessModel(input);
+  assert.equal(model.state, "unavailable");
+  assert.equal(model.action, null);
 });
 
 test("B16 sales monthly readiness requires actual entered values, not period existence", () => {
