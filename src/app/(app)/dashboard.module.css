@@ -288,7 +288,8 @@
 }
 
 .readinessAction > span,
-.readinessComplete {
+.readinessComplete,
+.readinessUnavailable {
   color: #68756e;
   font-size: 0.82rem;
   font-weight: 700;
@@ -308,11 +309,19 @@
   text-decoration: none;
 }
 
-.readinessComplete {
+.readinessComplete,
+.readinessUnavailable {
   margin: 0;
   border-top: 1px solid #edf0ee;
   padding-top: 12px;
+}
+
+.readinessComplete {
   color: #17643d;
+}
+
+.readinessUnavailable {
+  color: #8a3d2f;
 }
 
 .secondaryMetrics {
