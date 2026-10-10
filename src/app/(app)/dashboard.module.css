@@ -200,6 +200,130 @@
   line-height: 1.75;
 }
 
+.readinessSection {
+  display: grid;
+  gap: 14px;
+  border: 1px solid #e4e9e6;
+  border-radius: 18px;
+  background: #fff;
+  padding: 18px 20px;
+}
+
+.readinessHeading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.readinessHeading > div {
+  display: grid;
+  gap: 4px;
+}
+
+.readinessHeading h2 {
+  margin: 0;
+  color: #17261e;
+  font-size: 1.08rem;
+}
+
+.readinessHeading p {
+  margin: 0;
+  max-width: 560px;
+  color: #758079;
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+.readinessGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.readinessGrid > div {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+  border: 1px solid #edf0ee;
+  border-radius: 13px;
+  background: #fbfcfb;
+  padding: 12px 14px;
+}
+
+.readinessGrid dt {
+  color: #758079;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.readinessGrid dd {
+  margin: 0;
+  color: #314239;
+  font-size: 0.9rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.readinessGrid dd[data-tone="ready"] {
+  color: #17643d;
+}
+
+.readinessGrid dd[data-tone="attention"] {
+  color: #8a5a20;
+}
+
+.readinessGrid dd[data-tone="unknown"] {
+  color: #8a3d2f;
+}
+
+.readinessAction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border-top: 1px solid #edf0ee;
+  padding-top: 12px;
+}
+
+.readinessAction > span,
+.readinessComplete,
+.readinessUnavailable {
+  color: #68756e;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.readinessAction a {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dfe6e2;
+  border-radius: 11px;
+  background: #f8faf9;
+  padding: 0 14px;
+  color: #25352c;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.readinessComplete,
+.readinessUnavailable {
+  margin: 0;
+  border-top: 1px solid #edf0ee;
+  padding-top: 12px;
+}
+
+.readinessComplete {
+  color: #17643d;
+}
+
+.readinessUnavailable {
+  color: #8a3d2f;
+}
+
 .secondaryMetrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -367,8 +491,15 @@
   }
 
   .controls,
-  .twoColumnGrid {
+  .twoColumnGrid,
+  .readinessGrid {
     grid-template-columns: 1fr;
+  }
+
+  .readinessHeading,
+  .readinessAction {
+    align-items: stretch;
+    flex-direction: column;
   }
 
   .periodBadge {
@@ -392,6 +523,14 @@
   }
 
   .headerActions {
+    width: 100%;
+  }
+
+  .readinessSection {
+    padding: 16px;
+  }
+
+  .readinessAction a {
     width: 100%;
   }
 

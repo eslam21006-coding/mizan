@@ -13,6 +13,8 @@ import type {
   ExactRatio,
 } from "@/lib/business/calculations";
 import { loadDashboardMonth } from "@/lib/business/dashboard-month";
+import { buildOverviewReadinessModel, type OverviewReadinessModel } from "@/lib/business/overview-readiness";
+import { loadOverviewReadiness } from "@/lib/business/overview-readiness-server";
 import { createCoreMetricAudits, type MetricAudit } from "@/lib/business/metric-audit";
 import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -47,23 +49,27 @@ const percentFormatter = new Intl.NumberFormat("ar-EG", {
   maximumFractionDigits: 1,
 });
 
+/** Formats an exact decimal string for Arabic Overview display without changing stored values. */
 function formattedDecimal(value: string) {
   const number = Number(value);
   return Number.isFinite(number) ? numberFormatter.format(number) : value;
 }
 
+/** Formats an available money metric or its canonical unavailable reason for Overview. */
 function formattedMoney(metric: CalculatedMetric<string>, currency: string) {
   return metric.available
     ? { value: `${formattedDecimal(metric.value)} ${currency}`, unavailable: false as const }
     : { value: UNAVAILABLE_LABELS[metric.reason], unavailable: true as const };
 }
 
+/** Formats an available count metric or its canonical unavailable reason for Overview. */
 function formattedCount(metric: CalculatedMetric<number>) {
   return metric.available
     ? { value: numberFormatter.format(metric.value), unavailable: false as const }
     : { value: UNAVAILABLE_LABELS[metric.reason], unavailable: true as const };
 }
 
+/** Converts an exact ratio to a finite display number when safe for presentation. */
 function ratioNumber(ratio: ExactRatio) {
   const numerator = Number(ratio.numerator);
   const denominator = Number(ratio.denominator);
@@ -71,6 +77,7 @@ function ratioNumber(ratio: ExactRatio) {
   return numerator / denominator;
 }
 
+/** Formats exact ratio metrics as either percentages or money without changing calculation semantics. */
 function formattedRatio(
   metric: CalculatedMetric<ExactRatio>,
   kind: "percent" | "money",
@@ -97,6 +104,7 @@ function formattedRatio(
   };
 }
 
+/** Formats an exact ratio as a multiple for MER display. */
 function formattedMultiple(metric: CalculatedMetric<ExactRatio>) {
   if (!metric.available) {
     return { value: UNAVAILABLE_LABELS[metric.reason], unavailable: true as const };
@@ -182,6 +190,50 @@ function DetailMetric({
   );
 }
 
+/** Renders B16's compact four-domain data readiness summary with at most one next action. */
+function DataReadinessSection({
+  model,
+  suppressAction = false,
+}: {
+  model: OverviewReadinessModel;
+  suppressAction?: boolean;
+}) {
+  return (
+    <section className={styles.readinessSection} aria-labelledby="overview-readiness-title">
+      <div className={styles.readinessHeading}>
+        <div>
+          <span className={styles.eyebrow}>جاهزية البيانات</span>
+          <h2 id="overview-readiness-title">بياناتك</h2>
+        </div>
+        <p>ملخص سريع لما أصبح متاحًا للتحليل وما يحتاج خطوة إضافية.</p>
+      </div>
+      <dl className={styles.readinessGrid}>
+        {model.rows.map((row) => (
+          <div key={row.key}>
+            <dt>{row.label}</dt>
+            <dd data-tone={row.tone}>{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {model.action && !suppressAction ? (
+        <div className={styles.readinessAction}>
+          <span>الخطوة التالية</span>
+          <Link href={model.action.href}>{model.action.label}</Link>
+        </div>
+      ) : model.state === "unavailable" ? (
+        <p className={styles.readinessUnavailable}>تعذر التحقق من بعض البيانات الآن.</p>
+      ) : model.state === "read_only" ? (
+        <p className={styles.readinessUnavailable}>
+          هذا البزنس متاح لك للعرض فقط. تحديث البيانات يحتاج مالك البزنس أو مديرًا.
+        </p>
+      ) : suppressAction && model.state === "action_required" ? null : (
+        <p className={styles.readinessComplete}>بياناتك الأساسية جاهزة للتحليل.</p>
+      )}
+    </section>
+  );
+}
+
+/** Renders the no-saved-month Overview state with the existing monthly-entry action. */
 function EmptyDashboard({ business, monthKey }: { business: BusinessRow; monthKey: string }) {
   return (
     <section className={styles.emptyState}>
@@ -208,12 +260,14 @@ function DashboardMetrics({
   currency,
   businessId,
   monthKey,
+  readinessModel,
 }: {
   result: CoreCalculationResult;
   calculationInput: CoreCalculationInput;
   currency: string;
   businessId: string;
   monthKey: string;
+  readinessModel: OverviewReadinessModel;
 }) {
   const audits = createCoreMetricAudits(result, calculationInput);
   const margin = formattedRatio(result.realNetProfitMargin, "percent", currency);
@@ -293,6 +347,8 @@ function DashboardMetrics({
           monthKey={monthKey}
         />
       </section>
+
+      <DataReadinessSection model={readinessModel} />
 
       <section
         className={`${styles.sectionCard} ${styles.secondarySection}`}
@@ -531,6 +587,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   const selectedBusiness =
     businesses.find((business) => business.id === query.business) ?? businesses[0];
+  const canManage = auth.role === "admin" || selectedBusiness.owner_user_id === auth.userId;
 
   let adminViewingMenteeUserId: string | null = null;
   if (auth.role === "admin" && selectedBusiness.owner_user_id !== auth.userId) {
@@ -555,12 +612,20 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     throw new Error("Could not resolve a valid dashboard month.");
   }
 
-  const dashboardMonth = await loadDashboardMonth(
-    supabase,
-    selectedBusiness.id,
-    selectedMonth.monthStart,
-  );
+  const [dashboardMonth, readiness] = await Promise.all([
+    loadDashboardMonth(supabase, selectedBusiness.id, selectedMonth.monthStart),
+    loadOverviewReadiness(selectedBusiness.id, selectedMonth.monthStart),
+  ]);
   const { periodExists, result, calculationInput, dataLoadError, calculationError } = dashboardMonth;
+  const readinessModel = buildOverviewReadinessModel({
+    businessId: selectedBusiness.id,
+    monthKey: selectedMonth.monthKey,
+    core: readiness.core,
+    history: readiness.history,
+    customers: readiness.customers,
+    sales: readiness.sales,
+    canManage,
+  });
 
   const monthLabel = new Intl.DateTimeFormat("ar-EG", {
     month: "long",
@@ -647,7 +712,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       )}
 
       {!dataLoadError && !calculationError && !periodExists && (
-        <EmptyDashboard business={selectedBusiness} monthKey={selectedMonth.monthKey} />
+        <>
+          <EmptyDashboard business={selectedBusiness} monthKey={selectedMonth.monthKey} />
+          <DataReadinessSection model={readinessModel} suppressAction />
+        </>
       )}
 
       {!dataLoadError && !calculationError && result && calculationInput && (
@@ -657,6 +725,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           currency={selectedBusiness.base_currency}
           businessId={selectedBusiness.id}
           monthKey={selectedMonth.monthKey}
+          readinessModel={readinessModel}
         />
       )}
     </div>

@@ -1,0 +1,315 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+import {
+  buildOverviewReadinessModel,
+  effectiveOverviewFunnelCount,
+  hasMeaningfulFunnelMonthlyData,
+  resolveOverviewReadinessAction,
+} from "../../src/lib/business/overview-readiness.ts";
+import {
+  resolveCoreSetupReadiness,
+  resolveCustomerReadiness,
+  resolveHistoryReadiness,
+  resolveSalesReadiness,
+} from "../../src/lib/business/readiness.ts";
+
+/** Returns a canonical fully ready Core state for focused B16 presentation tests. */
+function readyCore() {
+  return resolveCoreSetupReadiness({
+    loadState: "loaded",
+    businessIdentityReady: true,
+    revenueSourceCount: 1,
+    expenseSetup: "reviewed",
+    validMonthCount: 3,
+  });
+}
+
+/** Builds a fresh all-ready four-domain input for each B16 unit test. */
+function baseInput() {
+  return {
+    businessId: "00000000-0000-4000-8000-000000000016",
+    monthKey: "2026-10",
+    core: readyCore(),
+    history: resolveHistoryReadiness({ loadState: "loaded", validMonthCount: 3 }),
+    customers: resolveCustomerReadiness({
+      loadState: "loaded",
+      transactionCount: 10,
+      reviewIssueCount: 0,
+      analysisReady: true,
+    }),
+    sales: resolveSalesReadiness({
+      loadState: "loaded",
+      funnelCount: 1,
+      monthlyDataReady: true,
+    }),
+    canManage: true,
+  };
+}
+
+test("B16 maps exactly four compact readiness domains in canonical order", () => {
+  const model = buildOverviewReadinessModel(baseInput());
+
+  assert.deepEqual(
+    model.rows.map((row) => [row.key, row.label, row.value]),
+    [
+      ["core", "الأساسيات", "مكتملة"],
+      ["history", "التاريخ", "3 أشهر أو أكثر"],
+      ["customers", "العملاء", "جاهزة"],
+      ["sales", "المبيعات", "البيانات جاهزة"],
+    ],
+  );
+  assert.equal(model.action, null);
+  assert.equal(model.state, "ready");
+});
+
+test("B16 prioritizes incomplete Core before optional Customers or Sales", () => {
+  const input = baseInput();
+  input.core = resolveCoreSetupReadiness({
+    loadState: "loaded",
+    businessIdentityReady: true,
+    revenueSourceCount: 0,
+    expenseSetup: "not_reviewed",
+    validMonthCount: 0,
+  });
+  input.customers = resolveCustomerReadiness({
+    loadState: "loaded",
+    transactionCount: 0,
+    reviewIssueCount: 0,
+    analysisReady: false,
+  });
+  input.sales = resolveSalesReadiness({
+    loadState: "loaded",
+    funnelCount: 0,
+    monthlyDataReady: false,
+  });
+
+  assert.deepEqual(resolveOverviewReadinessAction(input), {
+    domain: "core",
+    label: "أضف مصادر الإيراد",
+    href: "/businesses/00000000-0000-4000-8000-000000000016/setup?step=revenue",
+  });
+});
+
+test("B16 routes first valid month to the existing monthly-entry workflow", () => {
+  const input = baseInput();
+  input.core = resolveCoreSetupReadiness({
+    loadState: "loaded",
+    businessIdentityReady: true,
+    revenueSourceCount: 1,
+    expenseSetup: "reviewed",
+    validMonthCount: 0,
+  });
+
+  assert.deepEqual(resolveOverviewReadinessAction(input), {
+    domain: "core",
+    label: "أدخل أول شهر",
+    href: "/businesses/00000000-0000-4000-8000-000000000016/monthly?month=2026-10",
+  });
+});
+
+test("B16 progresses from customer import to review before optional Sales", () => {
+  const noTransactions = baseInput();
+  noTransactions.customers = resolveCustomerReadiness({
+    loadState: "loaded",
+    transactionCount: 0,
+    reviewIssueCount: 0,
+    analysisReady: false,
+  });
+  noTransactions.sales = resolveSalesReadiness({
+    loadState: "loaded",
+    funnelCount: 0,
+    monthlyDataReady: false,
+  });
+
+  assert.deepEqual(resolveOverviewReadinessAction(noTransactions), {
+    domain: "customers",
+    label: "أضف بيانات العملاء",
+    href: "/businesses/00000000-0000-4000-8000-000000000016/customers/import",
+  });
+
+  const needsReview = baseInput();
+  needsReview.customers = resolveCustomerReadiness({
+    loadState: "loaded",
+    transactionCount: 5,
+    reviewIssueCount: 2,
+    analysisReady: false,
+  });
+
+  assert.deepEqual(resolveOverviewReadinessAction(needsReview), {
+    domain: "customers",
+    label: "راجع بيانات العملاء",
+    href: "/businesses/00000000-0000-4000-8000-000000000016/customers/review",
+  });
+});
+
+test("B16 keeps Sales optional while offering it only after higher-priority data is ready", () => {
+  const noFunnel = baseInput();
+  noFunnel.sales = resolveSalesReadiness({
+    loadState: "loaded",
+    funnelCount: 0,
+    monthlyDataReady: false,
+  });
+
+  const model = buildOverviewReadinessModel(noFunnel);
+  assert.equal(model.rows.find((row) => row.key === "core")?.value, "مكتملة");
+  assert.equal(model.rows.find((row) => row.key === "sales")?.value, "لم تتم إضافة طريقة بيع");
+  assert.deepEqual(model.action, {
+    domain: "sales",
+    label: "أضف طريقة البيع",
+    href: "/businesses/00000000-0000-4000-8000-000000000016/funnels",
+  });
+
+  const configured = baseInput();
+  configured.sales = resolveSalesReadiness({
+    loadState: "loaded",
+    funnelCount: 1,
+    monthlyDataReady: false,
+  });
+  assert.deepEqual(resolveOverviewReadinessAction(configured), {
+    domain: "sales",
+    label: "أدخل أرقام المبيعات",
+    href: "/businesses/00000000-0000-4000-8000-000000000016/funnels/monthly?month=2026-10",
+  });
+});
+
+test("B16 load errors fail closed and never masquerade as known zero data", () => {
+  const input = baseInput();
+  input.customers = resolveCustomerReadiness({
+    loadState: "load_error",
+    transactionCount: null,
+    reviewIssueCount: null,
+    analysisReady: null,
+  });
+  input.sales = resolveSalesReadiness({
+    loadState: "loaded",
+    funnelCount: 0,
+    monthlyDataReady: false,
+  });
+
+  const model = buildOverviewReadinessModel(input);
+  assert.equal(model.rows.find((row) => row.key === "customers")?.value, "تعذر التحقق");
+  assert.equal(model.rows.find((row) => row.key === "sales")?.value, "لم تتم إضافة طريقة بيع");
+  assert.equal(model.action, null);
+  assert.equal(model.state, "unavailable");
+});
+
+test("B16 suppresses an earlier CTA when any later readiness domain is unavailable", () => {
+  const input = baseInput();
+  input.core = resolveCoreSetupReadiness({
+    loadState: "loaded",
+    businessIdentityReady: true,
+    revenueSourceCount: 0,
+    expenseSetup: "not_reviewed",
+    validMonthCount: 0,
+  });
+  input.sales = resolveSalesReadiness({
+    loadState: "load_error",
+    funnelCount: null,
+    monthlyDataReady: null,
+  });
+
+  const model = buildOverviewReadinessModel(input);
+  assert.equal(model.state, "unavailable");
+  assert.equal(model.action, null);
+});
+
+test("B16 sales monthly readiness requires actual entered values, not period existence", () => {
+  const blankEntry = {
+    ad_spend: null,
+    leads: null,
+    booked_calls: null,
+    showed_calls: null,
+    qualified_calls: null,
+    sales: null,
+    new_customers: null,
+    cash_collected: null,
+    attributed_revenue: null,
+  };
+  assert.equal(hasMeaningfulFunnelMonthlyData([blankEntry]), false);
+
+  assert.equal(
+    hasMeaningfulFunnelMonthlyData([{ ...blankEntry, sales: 0 }]),
+    true,
+    "explicit zero is a confirmed monthly value",
+  );
+  assert.equal(
+    hasMeaningfulFunnelMonthlyData([{ ...blankEntry, cash_collected: "1250.00" }]),
+    true,
+  );
+});
+
+test("B16 counts business-level ad spend as entered Sales monthly data", () => {
+  const blankEntry = {
+    funnel_id: "funnel-1",
+    ad_spend: null,
+    leads: null,
+    booked_calls: null,
+    showed_calls: null,
+    qualified_calls: null,
+    sales: null,
+    new_customers: null,
+    cash_collected: null,
+    attributed_revenue: null,
+  };
+
+  assert.equal(hasMeaningfulFunnelMonthlyData([blankEntry], "0"), true);
+  assert.equal(hasMeaningfulFunnelMonthlyData([blankEntry], "1500.00"), true);
+});
+
+test("B16 preserves selected-month historical funnels after later deactivation", () => {
+  const historicalEntries = [
+    {
+      funnel_id: "historical-funnel",
+      ad_spend: null,
+      leads: null,
+      booked_calls: null,
+      showed_calls: null,
+      qualified_calls: null,
+      sales: 3,
+      new_customers: null,
+      cash_collected: null,
+      attributed_revenue: null,
+    },
+  ];
+
+  assert.equal(effectiveOverviewFunnelCount(0, historicalEntries), 1);
+  assert.equal(effectiveOverviewFunnelCount(2, historicalEntries), 2);
+});
+
+test("B16 suppresses mutation-oriented readiness actions for read-only viewers", () => {
+  const input = baseInput();
+  input.core = resolveCoreSetupReadiness({
+    loadState: "loaded",
+    businessIdentityReady: true,
+    revenueSourceCount: 0,
+    expenseSetup: "not_reviewed",
+    validMonthCount: 0,
+  });
+  input.canManage = false;
+
+  const model = buildOverviewReadinessModel(input);
+  assert.equal(model.action, null);
+  assert.equal(model.state, "read_only");
+  assert.equal(model.rows.find((row) => row.key === "core")?.value, "تحتاج إكمال");
+});
+
+test("B16 server loader does not depend on the full setup-editor history loader", async () => {
+  const source = await readFile(
+    new URL("../../src/lib/business/overview-readiness-server.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(source, /loadBusinessSetup/);
+  assert.match(source, /OVERVIEW_HISTORY_BATCH_SIZE\s*=\s*12/);
+  assert.match(source, /OVERVIEW_HISTORY_READY_CAP\s*=\s*3/);
+  assert.match(source, /while \(validMonthCount < OVERVIEW_HISTORY_READY_CAP\)/);
+});
+
+test("B16 readiness presentation is deterministic and does not mutate canonical input", () => {
+  const input = baseInput();
+  const before = structuredClone(input);
+
+  assert.deepEqual(buildOverviewReadinessModel(input), buildOverviewReadinessModel(input));
+  assert.deepEqual(input, before);
+});
