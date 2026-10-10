@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   buildOverviewReadinessModel,
@@ -291,6 +292,18 @@ test("B16 suppresses mutation-oriented readiness actions for read-only viewers",
   assert.equal(model.action, null);
   assert.equal(model.state, "read_only");
   assert.equal(model.rows.find((row) => row.key === "core")?.value, "تحتاج إكمال");
+});
+
+test("B16 server loader does not depend on the full setup-editor history loader", async () => {
+  const source = await readFile(
+    new URL("../../src/lib/business/overview-readiness-server.ts", import.meta.url),
+    "utf8",
+  );
+
+  assert.doesNotMatch(source, /loadBusinessSetup/);
+  assert.match(source, /OVERVIEW_HISTORY_BATCH_SIZE\s*=\s*12/);
+  assert.match(source, /OVERVIEW_HISTORY_READY_CAP\s*=\s*3/);
+  assert.match(source, /while \(validMonthCount < OVERVIEW_HISTORY_READY_CAP\)/);
 });
 
 test("B16 readiness presentation is deterministic and does not mutate canonical input", () => {
