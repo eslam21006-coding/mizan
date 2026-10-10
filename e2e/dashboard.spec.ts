@@ -258,6 +258,29 @@ test.describe("Task 11 dashboard, Task 12 comparison, and Task 13 historical ana
       "Ultimate CAC",
     ]);
 
+    const readinessSection = page.getByRole("region", { name: "بياناتك" });
+    await expect(readinessSection.getByRole("heading", { name: "بياناتك", level: 2 })).toBeVisible();
+    await expect(readinessSection.locator("dt")).toHaveText([
+      "الأساسيات",
+      "التاريخ",
+      "العملاء",
+      "المبيعات",
+    ]);
+    await expect(readinessSection.locator("dd")).toHaveText([
+      "مكتملة",
+      "3 أشهر أو أكثر",
+      "لا توجد معاملات",
+      "لم تتم إضافة طريقة بيع",
+    ]);
+    await expect(readinessSection.getByText("الخطوة التالية", { exact: true })).toBeVisible();
+    const readinessActions = readinessSection.getByRole("link");
+    await expect(readinessActions).toHaveCount(1);
+    await expect(readinessActions.first()).toHaveText("أضف بيانات العملاء");
+    await expect(readinessActions.first()).toHaveAttribute(
+      "href",
+      `/businesses/${businessId}/customers/import`,
+    );
+
     const secondaryMetrics = page.locator('section[aria-label="المؤشرات المالية الإضافية"]');
     await expect(secondaryMetrics.getByRole("heading", { name: "مؤشرات مساندة", level: 2 })).toBeVisible();
     await expect(secondaryMetrics).toContainText("Acquisition CAC");
