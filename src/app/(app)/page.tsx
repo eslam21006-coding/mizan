@@ -49,23 +49,27 @@ const percentFormatter = new Intl.NumberFormat("ar-EG", {
   maximumFractionDigits: 1,
 });
 
+/** Formats an exact decimal string for Arabic Overview display without changing stored values. */
 function formattedDecimal(value: string) {
   const number = Number(value);
   return Number.isFinite(number) ? numberFormatter.format(number) : value;
 }
 
+/** Formats an available money metric or its canonical unavailable reason for Overview. */
 function formattedMoney(metric: CalculatedMetric<string>, currency: string) {
   return metric.available
     ? { value: `${formattedDecimal(metric.value)} ${currency}`, unavailable: false as const }
     : { value: UNAVAILABLE_LABELS[metric.reason], unavailable: true as const };
 }
 
+/** Formats an available count metric or its canonical unavailable reason for Overview. */
 function formattedCount(metric: CalculatedMetric<number>) {
   return metric.available
     ? { value: numberFormatter.format(metric.value), unavailable: false as const }
     : { value: UNAVAILABLE_LABELS[metric.reason], unavailable: true as const };
 }
 
+/** Converts an exact ratio to a finite display number when safe for presentation. */
 function ratioNumber(ratio: ExactRatio) {
   const numerator = Number(ratio.numerator);
   const denominator = Number(ratio.denominator);
@@ -73,6 +77,7 @@ function ratioNumber(ratio: ExactRatio) {
   return numerator / denominator;
 }
 
+/** Formats exact ratio metrics as either percentages or money without changing calculation semantics. */
 function formattedRatio(
   metric: CalculatedMetric<ExactRatio>,
   kind: "percent" | "money",
@@ -99,6 +104,7 @@ function formattedRatio(
   };
 }
 
+/** Formats an exact ratio as a multiple for MER display. */
 function formattedMultiple(metric: CalculatedMetric<ExactRatio>) {
   if (!metric.available) {
     return { value: UNAVAILABLE_LABELS[metric.reason], unavailable: true as const };
@@ -217,6 +223,7 @@ function DataReadinessSection({ model }: { model: OverviewReadinessModel }) {
   );
 }
 
+/** Renders the no-saved-month Overview state with the existing monthly-entry action. */
 function EmptyDashboard({ business, monthKey }: { business: BusinessRow; monthKey: string }) {
   return (
     <section className={styles.emptyState}>
