@@ -29,7 +29,7 @@ export type LoadedBusinessSetup = {
     name: string;
     baseCurrency: string;
     timezone: string;
-    expenseSetupReviewedAt: string | null;
+    expenseSetupReviewedAt?: string | null;
   };
   canManage: boolean;
   revenueSources: SetupRevenueSource[];
