@@ -209,6 +209,7 @@ export function buildOverviewReadinessModel(input: {
 
 
 export type OverviewFunnelMonthlyData = {
+  funnel_id?: string;
   ad_spend: string | number | null;
   leads: number | null;
   booked_calls: number | null;
@@ -223,18 +224,38 @@ export type OverviewFunnelMonthlyData = {
 /** Treats explicit zeroes as entered data while rejecting funnel rows containing only null/blank fields. */
 export function hasMeaningfulFunnelMonthlyData(
   entries: readonly OverviewFunnelMonthlyData[],
+  businessAdSpend: string | number | null = null,
 ) {
-  return entries.some((entry) =>
-    [
-      entry.ad_spend,
-      entry.leads,
-      entry.booked_calls,
-      entry.showed_calls,
-      entry.qualified_calls,
-      entry.sales,
-      entry.new_customers,
-      entry.cash_collected,
-      entry.attributed_revenue,
-    ].some((value) => value !== null && value !== undefined && String(value).trim() !== ""),
+  const entered = (value: unknown) =>
+    value !== null && value !== undefined && String(value).trim() !== "";
+
+  return (
+    entered(businessAdSpend) ||
+    entries.some((entry) =>
+      [
+        entry.ad_spend,
+        entry.leads,
+        entry.booked_calls,
+        entry.showed_calls,
+        entry.qualified_calls,
+        entry.sales,
+        entry.new_customers,
+        entry.cash_collected,
+        entry.attributed_revenue,
+      ].some(entered),
+    )
   );
+}
+
+/** Preserves selected-month historical funnel configuration after a funnel is later deactivated. */
+export function effectiveOverviewFunnelCount(
+  activeFunnelCount: number,
+  entries: readonly OverviewFunnelMonthlyData[],
+) {
+  const historicalFunnelIds = new Set(
+    entries
+      .map((entry) => entry.funnel_id)
+      .filter((funnelId): funnelId is string => Boolean(funnelId)),
+  );
+  return Math.max(activeFunnelCount, historicalFunnelIds.size);
 }
