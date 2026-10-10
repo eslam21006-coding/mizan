@@ -26,11 +26,38 @@ export type LoadedOverviewReadiness = {
   sales: SalesReadiness;
 };
 
+/** Returns a fail-closed B16 model when readiness data cannot be loaded safely. */
+function unavailableOverviewReadiness(): LoadedOverviewReadiness {
+  return {
+    core: resolveBusinessSetupCompatibility({
+      loadState: "load_error",
+      mode: "legacy",
+      revenueSourceCount: null,
+      expenseSetupReviewedAt: null,
+      configuredExpenseItemCount: null,
+      validMonthCount: null,
+    }).coreSetup,
+    history: resolveHistoryReadiness({ loadState: "load_error", validMonthCount: null }),
+    customers: resolveCustomerReadiness({
+      loadState: "load_error",
+      transactionCount: null,
+      reviewIssueCount: null,
+      analysisReady: null,
+    }),
+    sales: resolveSalesReadiness({
+      loadState: "load_error",
+      funnelCount: null,
+      monthlyDataReady: null,
+    }),
+  };
+}
+
 /** Loads the four B16 Overview readiness domains from existing authoritative RLS-scoped data. */
 export async function loadOverviewReadiness(
   businessId: string,
   monthStart: string,
 ): Promise<LoadedOverviewReadiness> {
+  try {
   const [setup, supabase] = await Promise.all([
     loadBusinessSetup(businessId).catch(() => null),
     createSupabaseServerClient(),
@@ -128,5 +155,8 @@ export async function loadOverviewReadiness(
         ),
   });
 
-  return { core, history, customers, sales };
+    return { core, history, customers, sales };
+  } catch {
+    return unavailableOverviewReadiness();
+  }
 }
