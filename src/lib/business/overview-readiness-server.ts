@@ -27,7 +27,7 @@ export async function loadOverviewReadiness(
   monthStart: string,
 ): Promise<LoadedOverviewReadiness> {
   const [setup, supabase] = await Promise.all([
-    loadBusinessSetup(businessId),
+    loadBusinessSetup(businessId).catch(() => null),
     createSupabaseServerClient(),
   ]);
 
@@ -68,7 +68,7 @@ export async function loadOverviewReadiness(
   let core: CoreSetupReadiness;
   let history: HistoryReadiness;
 
-  if (setup.kind !== "loaded") {
+  if (!setup || setup.kind !== "loaded") {
     core = resolveBusinessSetupCompatibility({
       loadState: "load_error",
       mode: "legacy",
