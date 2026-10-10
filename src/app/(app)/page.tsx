@@ -577,6 +577,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   const selectedBusiness =
     businesses.find((business) => business.id === query.business) ?? businesses[0];
+  const canManage = auth.role === "admin" || selectedBusiness.owner_user_id === auth.userId;
 
   let adminViewingMenteeUserId: string | null = null;
   if (auth.role === "admin" && selectedBusiness.owner_user_id !== auth.userId) {
@@ -613,6 +614,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     history: readiness.history,
     customers: readiness.customers,
     sales: readiness.sales,
+    canManage,
   });
 
   const monthLabel = new Intl.DateTimeFormat("ar-EG", {
