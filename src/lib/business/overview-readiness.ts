@@ -24,10 +24,12 @@ export type OverviewReadinessModel = {
   state: "ready" | "action_required" | "unavailable";
 };
 
+/** Encodes a business identifier for safe use in B16 action URLs. */
 function encodedBusinessId(businessId: string) {
   return encodeURIComponent(businessId);
 }
 
+/** Maps canonical Core readiness into compact founder-facing Arabic status copy. */
 function coreLabel(core: CoreSetupReadiness) {
   if (core.loadState === "load_error") {
     return { value: "تعذر التحقق", tone: "unknown" as const };
@@ -37,6 +39,7 @@ function coreLabel(core: CoreSetupReadiness) {
     : { value: "تحتاج إكمال", tone: "attention" as const };
 }
 
+/** Maps canonical History readiness into compact founder-facing Arabic status copy. */
 function historyLabel(history: HistoryReadiness) {
   if (history.loadState === "load_error") {
     return { value: "تعذر التحقق", tone: "unknown" as const };
@@ -53,6 +56,7 @@ function historyLabel(history: HistoryReadiness) {
   }
 }
 
+/** Maps canonical Customer readiness into compact founder-facing Arabic status copy. */
 function customerLabel(customers: CustomerReadiness) {
   if (customers.loadState === "load_error") {
     return { value: "تعذر التحقق", tone: "unknown" as const };
@@ -69,6 +73,7 @@ function customerLabel(customers: CustomerReadiness) {
   }
 }
 
+/** Maps canonical optional Sales readiness into compact founder-facing Arabic status copy. */
 function salesLabel(sales: SalesReadiness) {
   if (sales.loadState === "load_error") {
     return { value: "تعذر التحقق", tone: "unknown" as const };
@@ -193,7 +198,7 @@ export function buildOverviewReadinessModel(input: {
     input.history.loadState === "load_error" ||
     input.customers.loadState === "load_error" ||
     input.sales.loadState === "load_error";
-  const action = resolveOverviewReadinessAction(input);
+  const action = unavailable ? null : resolveOverviewReadinessAction(input);
 
   return {
     rows,
