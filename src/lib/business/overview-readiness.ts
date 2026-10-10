@@ -21,7 +21,7 @@ export type OverviewReadinessAction = {
 export type OverviewReadinessModel = {
   rows: readonly OverviewReadinessRow[];
   action: OverviewReadinessAction;
-  state: "ready" | "action_required" | "unavailable";
+  state: "ready" | "action_required" | "read_only" | "unavailable";
 };
 
 /** Encodes a business identifier for safe use in B16 action URLs. */
@@ -185,6 +185,7 @@ export function buildOverviewReadinessModel(input: {
   history: HistoryReadiness;
   customers: CustomerReadiness;
   sales: SalesReadiness;
+  canManage: boolean;
 }): OverviewReadinessModel {
   const rows: OverviewReadinessRow[] = [
     { key: "core", label: "الأساسيات", ...coreLabel(input.core) },
@@ -198,12 +199,19 @@ export function buildOverviewReadinessModel(input: {
     input.history.loadState === "load_error" ||
     input.customers.loadState === "load_error" ||
     input.sales.loadState === "load_error";
-  const action = unavailable ? null : resolveOverviewReadinessAction(input);
+  const nextAction = unavailable ? null : resolveOverviewReadinessAction(input);
+  const action = input.canManage ? nextAction : null;
 
   return {
     rows,
     action,
-    state: unavailable ? "unavailable" : action ? "action_required" : "ready",
+    state: unavailable
+      ? "unavailable"
+      : !input.canManage && nextAction
+        ? "read_only"
+        : action
+          ? "action_required"
+          : "ready",
   };
 }
 
