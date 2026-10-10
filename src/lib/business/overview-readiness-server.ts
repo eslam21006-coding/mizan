@@ -2,7 +2,8 @@ import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseCustomerHistoryOverviewSummary } from "./customer-history-overview.ts";
-import { loadFunnelMonth, type FunnelMonthlyEntrySnapshot } from "./funnel-month.ts";
+import { loadFunnelMonth } from "./funnel-month.ts";
+import { hasMeaningfulFunnelMonthlyData } from "./overview-readiness.ts";
 import {
   resolveCustomerReadiness,
   resolveHistoryReadiness,
@@ -21,25 +22,6 @@ export type LoadedOverviewReadiness = {
   customers: CustomerReadiness;
   sales: SalesReadiness;
 };
-
-/** Treats explicit zeroes as entered data while rejecting a funnel month containing only null/blank fields. */
-export function hasMeaningfulFunnelMonthlyData(
-  entries: readonly FunnelMonthlyEntrySnapshot[],
-) {
-  return entries.some((entry) =>
-    [
-      entry.ad_spend,
-      entry.leads,
-      entry.booked_calls,
-      entry.showed_calls,
-      entry.qualified_calls,
-      entry.sales,
-      entry.new_customers,
-      entry.cash_collected,
-      entry.attributed_revenue,
-    ].some((value) => value !== null && value !== undefined && String(value).trim() !== ""),
-  );
-}
 
 /** Loads the four B16 Overview readiness domains from existing authoritative RLS-scoped data. */
 export async function loadOverviewReadiness(
