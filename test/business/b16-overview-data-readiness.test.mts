@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildOverviewReadinessModel,
+  effectiveOverviewFunnelCount,
   hasMeaningfulFunnelMonthlyData,
   resolveOverviewReadinessAction,
 } from "../../src/lib/business/overview-readiness.ts";
@@ -234,6 +235,44 @@ test("B16 sales monthly readiness requires actual entered values, not period exi
     hasMeaningfulFunnelMonthlyData([{ ...blankEntry, cash_collected: "1250.00" }]),
     true,
   );
+});
+
+test("B16 counts business-level ad spend as entered Sales monthly data", () => {
+  const blankEntry = {
+    funnel_id: "funnel-1",
+    ad_spend: null,
+    leads: null,
+    booked_calls: null,
+    showed_calls: null,
+    qualified_calls: null,
+    sales: null,
+    new_customers: null,
+    cash_collected: null,
+    attributed_revenue: null,
+  };
+
+  assert.equal(hasMeaningfulFunnelMonthlyData([blankEntry], "0"), true);
+  assert.equal(hasMeaningfulFunnelMonthlyData([blankEntry], "1500.00"), true);
+});
+
+test("B16 preserves selected-month historical funnels after later deactivation", () => {
+  const historicalEntries = [
+    {
+      funnel_id: "historical-funnel",
+      ad_spend: null,
+      leads: null,
+      booked_calls: null,
+      showed_calls: null,
+      qualified_calls: null,
+      sales: 3,
+      new_customers: null,
+      cash_collected: null,
+      attributed_revenue: null,
+    },
+  ];
+
+  assert.equal(effectiveOverviewFunnelCount(0, historicalEntries), 1);
+  assert.equal(effectiveOverviewFunnelCount(2, historicalEntries), 2);
 });
 
 test("B16 readiness presentation is deterministic and does not mutate canonical input", () => {
