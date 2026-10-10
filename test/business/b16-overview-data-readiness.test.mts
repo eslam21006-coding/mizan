@@ -42,6 +42,7 @@ function baseInput() {
       funnelCount: 1,
       monthlyDataReady: true,
     }),
+    canManage: true,
   };
 }
 
@@ -273,6 +274,23 @@ test("B16 preserves selected-month historical funnels after later deactivation",
 
   assert.equal(effectiveOverviewFunnelCount(0, historicalEntries), 1);
   assert.equal(effectiveOverviewFunnelCount(2, historicalEntries), 2);
+});
+
+test("B16 suppresses mutation-oriented readiness actions for read-only viewers", () => {
+  const input = baseInput();
+  input.core = resolveCoreSetupReadiness({
+    loadState: "loaded",
+    businessIdentityReady: true,
+    revenueSourceCount: 0,
+    expenseSetup: "not_reviewed",
+    validMonthCount: 0,
+  });
+  input.canManage = false;
+
+  const model = buildOverviewReadinessModel(input);
+  assert.equal(model.action, null);
+  assert.equal(model.state, "read_only");
+  assert.equal(model.rows.find((row) => row.key === "core")?.value, "تحتاج إكمال");
 });
 
 test("B16 readiness presentation is deterministic and does not mutate canonical input", () => {
