@@ -20,6 +20,7 @@ type MonthlyFixture = {
   processorPercent: string;
 };
 
+/** Authenticates the live dashboard E2E fixture through the configured supported path. */
 async function login(page: import("@playwright/test").Page) {
   if (liveInviteTokenHash) {
     await page.goto(
@@ -38,10 +39,12 @@ async function login(page: import("@playwright/test").Page) {
   await expect(page).toHaveURL(/\/$/);
 }
 
+/** Waits until a newly created setup row is persisted and visible in the fixture UI. */
 async function waitForSetupRow(page: import("@playwright/test").Page, name: string) {
   await expect(page.locator(`article input[name="name"][value="${name}"]`)).toBeVisible();
 }
 
+/** Saves one complete monthly fixture so Overview and historical metrics use authoritative data. */
 async function saveMonth(
   page: import("@playwright/test").Page,
   fixture: MonthlyFixture,
