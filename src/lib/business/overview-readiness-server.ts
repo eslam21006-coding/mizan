@@ -121,18 +121,19 @@ export async function loadOverviewReadiness(
     });
   }
 
-  const customerLoadError = Boolean(
-    transactionCountResult.error ||
-      reviewExceptionsResult.error ||
-      missingPeriodsResult.error ||
-      customerSummaryResult.error,
-  );
   const transactionCount = transactionCountResult.count ?? 0;
   const reviewIssueCount =
     (reviewExceptionsResult.data?.length ?? 0) + (missingPeriodsResult.data?.length ?? 0);
   const customerSummary = customerSummaryResult.error
     ? null
     : parseCustomerHistoryOverviewSummary(customerSummaryResult.data);
+  const customerLoadError = Boolean(
+    transactionCountResult.error ||
+      reviewExceptionsResult.error ||
+      missingPeriodsResult.error ||
+      customerSummaryResult.error ||
+      (transactionCount > 0 && customerSummary === null),
+  );
   const customers = resolveCustomerReadiness({
     loadState: customerLoadError ? "load_error" : "loaded",
     transactionCount: customerLoadError ? null : transactionCount,
