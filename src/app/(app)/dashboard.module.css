@@ -206,8 +206,45 @@
   gap: 12px;
 }
 
-.secondaryMetrics .metricCard {
-  background: #fafcfb;
+.secondarySection {
+  border-color: #edf0ee;
+  background: #fbfcfb;
+}
+
+.secondarySection .sectionHeading {
+  margin-bottom: 14px;
+}
+
+.secondarySection .sectionHeading h2 {
+  color: #33443a;
+  font-size: 1rem;
+}
+
+.secondarySection .sectionHeading p {
+  max-width: 620px;
+  color: #7a857f;
+  font-size: 0.86rem;
+}
+
+.secondarySection .secondaryMetrics .metricCard {
+  gap: 7px;
+  padding: 14px;
+  border-color: #edf0ee;
+  background: #fff;
+  box-shadow: none;
+}
+
+.secondarySection .secondaryMetrics .metricCard > span {
+  font-size: 0.75rem;
+}
+
+.secondarySection .secondaryMetrics .metricCard strong {
+  font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+}
+
+.secondarySection .secondaryMetrics .metricCard p {
+  color: #7a857f;
+  font-size: 0.76rem;
 }
 
 .twoColumnGrid {

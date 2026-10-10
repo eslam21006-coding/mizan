@@ -250,6 +250,41 @@ test.describe("Task 11 dashboard, Task 12 comparison, and Task 13 historical ana
     await expect(ultimateCacCard).toContainText("٣٧٧٫٢٥ EGP");
     await expect(netCashCard).toContainText("١٣٬٥٠٠ EGP");
 
+    const coreMetrics = page.locator('section[aria-label="المؤشرات المالية الأساسية"]');
+    await expect(coreMetrics.locator("article > span")).toHaveText([
+      "صافي الكاش المحصل",
+      "صافي الربح الحقيقي",
+      "هامش صافي الربح الحقيقي",
+      "Ultimate CAC",
+    ]);
+
+    const secondaryMetrics = page.locator('section[aria-label="المؤشرات المالية الإضافية"]');
+    await expect(secondaryMetrics.getByRole("heading", { name: "مؤشرات مساندة", level: 2 })).toBeVisible();
+    await expect(secondaryMetrics).toContainText("Acquisition CAC");
+    await expect(secondaryMetrics).toContainText("Media CAC");
+    await expect(secondaryMetrics).toContainText("MER");
+    await expect(secondaryMetrics).toContainText("هامش المساهمة");
+
+    const featuredValueSize = await coreMetrics
+      .locator("article strong")
+      .first()
+      .evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+    const secondaryValueSize = await secondaryMetrics
+      .locator("article strong")
+      .first()
+      .evaluate((element) => Number.parseFloat(getComputedStyle(element).fontSize));
+    expect(featuredValueSize).toBeGreaterThan(secondaryValueSize);
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+        ),
+      )
+      .toBe(true);
+    await page.setViewportSize({ width: 1440, height: 1000 });
+
     await page.goto(`/analytics?business=${encodeURIComponent(businessId)}&month=2026-04`);
     await expect(page.getByRole("heading", { name: "التحليلات المالية", level: 1 })).toBeVisible();
     await expect(
@@ -321,15 +356,6 @@ test.describe("Task 11 dashboard, Task 12 comparison, and Task 13 historical ana
         exact: false,
       }),
     ).toBeVisible();
-
-    await page.setViewportSize({ width: 390, height: 844 });
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
-        ),
-      )
-      .toBe(true);
 
     expect(browserErrors).toEqual([]);
   });

@@ -250,11 +250,11 @@ function DashboardMetrics({
       <section className={styles.primaryMetrics} aria-label="المؤشرات المالية الأساسية">
         <MetricCard
           featured
-          label="هامش صافي الربح الحقيقي"
-          value={margin.value}
-          unavailable={margin.unavailable}
-          note="صافي الربح الحقيقي ÷ صافي الكاش المحصل"
-          audit={audits.realNetProfitMargin}
+          label="صافي الكاش المحصل"
+          value={netCash.value}
+          unavailable={netCash.unavailable}
+          note="الإيراد المحصل فعليًا بعد المرتجعات"
+          audit={audits.netCashCollected}
           currency={currency}
           businessId={businessId}
           monthKey={monthKey}
@@ -272,6 +272,17 @@ function DashboardMetrics({
         />
         <MetricCard
           featured
+          label="هامش صافي الربح الحقيقي"
+          value={margin.value}
+          unavailable={margin.unavailable}
+          note="صافي الربح الحقيقي ÷ صافي الكاش المحصل"
+          audit={audits.realNetProfitMargin}
+          currency={currency}
+          businessId={businessId}
+          monthKey={monthKey}
+        />
+        <MetricCard
+          featured
           label="Ultimate CAC"
           value={ultimateCac.value}
           unavailable={ultimateCac.unavailable}
@@ -281,26 +292,18 @@ function DashboardMetrics({
           businessId={businessId}
           monthKey={monthKey}
         />
-        <MetricCard
-          featured
-          label="صافي الكاش المحصل"
-          value={netCash.value}
-          unavailable={netCash.unavailable}
-          note="الإيراد المحصل فعليًا بعد المرتجعات"
-          audit={audits.netCashCollected}
-          currency={currency}
-          businessId={businessId}
-          monthKey={monthKey}
-        />
       </section>
 
-      <section className={styles.sectionCard}>
+      <section
+        className={`${styles.sectionCard} ${styles.secondarySection}`}
+        aria-label="المؤشرات المالية الإضافية"
+      >
         <div className={styles.sectionHeading}>
           <div>
-            <span className={styles.eyebrow}>اقتصاديات الشهر</span>
-            <h2>الربحية والتكلفة</h2>
+            <span className={styles.eyebrow}>تفاصيل إضافية</span>
+            <h2>مؤشرات مساندة</h2>
           </div>
-          <p>كل القيم هنا ناتجة مباشرة من محرك الحساب المركزي ويمكن فتح تفاصيل مصدر كل رقم.</p>
+          <p>مؤشرات مفيدة للتشخيص بعد قراءة الأرقام الأربعة الأساسية.</p>
         </div>
         <div className={styles.secondaryMetrics}>
           <MetricCard
