@@ -3,7 +3,10 @@ import "server-only";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseCustomerHistoryOverviewSummary } from "./customer-history-overview.ts";
 import { loadFunnelMonth } from "./funnel-month.ts";
-import { hasMeaningfulFunnelMonthlyData } from "./overview-readiness.ts";
+import {
+  effectiveOverviewFunnelCount,
+  hasMeaningfulFunnelMonthlyData,
+} from "./overview-readiness.ts";
 import {
   resolveCustomerReadiness,
   resolveHistoryReadiness,
@@ -111,12 +114,18 @@ export async function loadOverviewReadiness(
   });
 
   const salesLoadError = Boolean(funnelCountResult.error || funnelMonth.dataLoadError);
+  const activeFunnelCount = funnelCountResult.count ?? 0;
   const sales = resolveSalesReadiness({
     loadState: salesLoadError ? "load_error" : "loaded",
-    funnelCount: salesLoadError ? null : (funnelCountResult.count ?? 0),
+    funnelCount: salesLoadError
+      ? null
+      : effectiveOverviewFunnelCount(activeFunnelCount, funnelMonth.entries),
     monthlyDataReady: salesLoadError
       ? null
-      : hasMeaningfulFunnelMonthlyData(funnelMonth.entries),
+      : hasMeaningfulFunnelMonthlyData(
+          funnelMonth.entries,
+          funnelMonth.period?.business_ad_spend ?? null,
+        ),
   });
 
   return { core, history, customers, sales };
