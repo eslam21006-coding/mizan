@@ -13,6 +13,8 @@ import type {
   ExactRatio,
 } from "@/lib/business/calculations";
 import { loadDashboardMonth } from "@/lib/business/dashboard-month";
+import { buildOverviewReadinessModel, type OverviewReadinessModel } from "@/lib/business/overview-readiness";
+import { loadOverviewReadiness } from "@/lib/business/overview-readiness-server";
 import { createCoreMetricAudits, type MetricAudit } from "@/lib/business/metric-audit";
 import { currentMonthKeyForTimeZone, parseMonthKey } from "@/lib/business/monthly";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -182,6 +184,37 @@ function DetailMetric({
   );
 }
 
+/** Renders B16's compact four-domain data readiness summary with at most one next action. */
+function DataReadinessSection({ model }: { model: OverviewReadinessModel }) {
+  return (
+    <section className={styles.readinessSection} aria-labelledby="overview-readiness-title">
+      <div className={styles.readinessHeading}>
+        <div>
+          <span className={styles.eyebrow}>جاهزية البيانات</span>
+          <h2 id="overview-readiness-title">بياناتك</h2>
+        </div>
+        <p>ملخص سريع لما أصبح متاحًا للتحليل وما يحتاج خطوة إضافية.</p>
+      </div>
+      <dl className={styles.readinessGrid}>
+        {model.rows.map((row) => (
+          <div key={row.key}>
+            <dt>{row.label}</dt>
+            <dd data-tone={row.tone}>{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+      {model.action ? (
+        <div className={styles.readinessAction}>
+          <span>الخطوة التالية</span>
+          <Link href={model.action.href}>{model.action.label}</Link>
+        </div>
+      ) : (
+        <p className={styles.readinessComplete}>بياناتك الأساسية جاهزة للتحليل.</p>
+      )}
+    </section>
+  );
+}
+
 function EmptyDashboard({ business, monthKey }: { business: BusinessRow; monthKey: string }) {
   return (
     <section className={styles.emptyState}>
@@ -208,12 +241,14 @@ function DashboardMetrics({
   currency,
   businessId,
   monthKey,
+  readinessModel,
 }: {
   result: CoreCalculationResult;
   calculationInput: CoreCalculationInput;
   currency: string;
   businessId: string;
   monthKey: string;
+  readinessModel: OverviewReadinessModel;
 }) {
   const audits = createCoreMetricAudits(result, calculationInput);
   const margin = formattedRatio(result.realNetProfitMargin, "percent", currency);
@@ -293,6 +328,8 @@ function DashboardMetrics({
           monthKey={monthKey}
         />
       </section>
+
+      <DataReadinessSection model={readinessModel} />
 
       <section
         className={`${styles.sectionCard} ${styles.secondarySection}`}
@@ -555,12 +592,19 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     throw new Error("Could not resolve a valid dashboard month.");
   }
 
-  const dashboardMonth = await loadDashboardMonth(
-    supabase,
-    selectedBusiness.id,
-    selectedMonth.monthStart,
-  );
+  const [dashboardMonth, readiness] = await Promise.all([
+    loadDashboardMonth(supabase, selectedBusiness.id, selectedMonth.monthStart),
+    loadOverviewReadiness(selectedBusiness.id, selectedMonth.monthStart),
+  ]);
   const { periodExists, result, calculationInput, dataLoadError, calculationError } = dashboardMonth;
+  const readinessModel = buildOverviewReadinessModel({
+    businessId: selectedBusiness.id,
+    monthKey: selectedMonth.monthKey,
+    core: readiness.core,
+    history: readiness.history,
+    customers: readiness.customers,
+    sales: readiness.sales,
+  });
 
   const monthLabel = new Intl.DateTimeFormat("ar-EG", {
     month: "long",
@@ -647,7 +691,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       )}
 
       {!dataLoadError && !calculationError && !periodExists && (
-        <EmptyDashboard business={selectedBusiness} monthKey={selectedMonth.monthKey} />
+        <>
+          <EmptyDashboard business={selectedBusiness} monthKey={selectedMonth.monthKey} />
+          <DataReadinessSection model={readinessModel} />
+        </>
       )}
 
       {!dataLoadError && !calculationError && result && calculationInput && (
@@ -657,6 +704,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
           currency={selectedBusiness.base_currency}
           businessId={selectedBusiness.id}
           monthKey={selectedMonth.monthKey}
+          readinessModel={readinessModel}
         />
       )}
     </div>
