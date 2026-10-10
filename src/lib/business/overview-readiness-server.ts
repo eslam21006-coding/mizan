@@ -83,7 +83,7 @@ export async function loadOverviewReadiness(
       loadState: "loaded",
       mode: "legacy",
       revenueSourceCount: setup.revenueSourceCount,
-      expenseSetupReviewedAt: setup.business.expenseSetupReviewedAt,
+      expenseSetupReviewedAt: setup.business.expenseSetupReviewedAt ?? null,
       configuredExpenseItemCount: setup.expenseItems.length,
       validMonthCount: setup.persistedMonths.validMonthCount,
     });
