@@ -21,6 +21,7 @@ export type OverviewReadinessAction = {
 export type OverviewReadinessModel = {
   rows: readonly OverviewReadinessRow[];
   action: OverviewReadinessAction;
+  state: "ready" | "action_required" | "unavailable";
 };
 
 function encodedBusinessId(businessId: string) {
@@ -187,8 +188,16 @@ export function buildOverviewReadinessModel(input: {
     { key: "sales", label: "المبيعات", ...salesLabel(input.sales) },
   ];
 
+  const unavailable =
+    input.core.loadState === "load_error" ||
+    input.history.loadState === "load_error" ||
+    input.customers.loadState === "load_error" ||
+    input.sales.loadState === "load_error";
+  const action = resolveOverviewReadinessAction(input);
+
   return {
     rows,
-    action: resolveOverviewReadinessAction(input),
+    action,
+    state: unavailable ? "unavailable" : action ? "action_required" : "ready",
   };
 }
