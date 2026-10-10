@@ -208,6 +208,8 @@ function DataReadinessSection({ model }: { model: OverviewReadinessModel }) {
           <span>الخطوة التالية</span>
           <Link href={model.action.href}>{model.action.label}</Link>
         </div>
+      ) : model.state === "unavailable" ? (
+        <p className={styles.readinessUnavailable}>تعذر التحقق من بعض البيانات الآن.</p>
       ) : (
         <p className={styles.readinessComplete}>بياناتك الأساسية جاهزة للتحليل.</p>
       )}
