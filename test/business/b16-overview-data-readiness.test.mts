@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildOverviewReadinessModel,
+  hasMeaningfulFunnelMonthlyData,
   resolveOverviewReadinessAction,
 } from "../../src/lib/business/overview-readiness.ts";
 import {
@@ -54,6 +55,7 @@ test("B16 maps exactly four compact readiness domains in canonical order", () =>
     ],
   );
   assert.equal(model.action, null);
+  assert.equal(model.state, "ready");
 });
 
 test("B16 prioritizes incomplete Core before optional Customers or Sales", () => {
@@ -184,6 +186,32 @@ test("B16 load errors fail closed and never masquerade as known zero data", () =
   assert.equal(model.rows.find((row) => row.key === "customers")?.value, "تعذر التحقق");
   assert.equal(model.rows.find((row) => row.key === "sales")?.value, "لم تتم إضافة طريقة بيع");
   assert.equal(model.action, null);
+  assert.equal(model.state, "unavailable");
+});
+
+test("B16 sales monthly readiness requires actual entered values, not period existence", () => {
+  const blankEntry = {
+    ad_spend: null,
+    leads: null,
+    booked_calls: null,
+    showed_calls: null,
+    qualified_calls: null,
+    sales: null,
+    new_customers: null,
+    cash_collected: null,
+    attributed_revenue: null,
+  };
+  assert.equal(hasMeaningfulFunnelMonthlyData([blankEntry]), false);
+
+  assert.equal(
+    hasMeaningfulFunnelMonthlyData([{ ...blankEntry, sales: 0 }]),
+    true,
+    "explicit zero is a confirmed monthly value",
+  );
+  assert.equal(
+    hasMeaningfulFunnelMonthlyData([{ ...blankEntry, cash_collected: "1250.00" }]),
+    true,
+  );
 });
 
 test("B16 readiness presentation is deterministic and does not mutate canonical input", () => {
