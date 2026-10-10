@@ -191,7 +191,13 @@ function DetailMetric({
 }
 
 /** Renders B16's compact four-domain data readiness summary with at most one next action. */
-function DataReadinessSection({ model }: { model: OverviewReadinessModel }) {
+function DataReadinessSection({
+  model,
+  suppressAction = false,
+}: {
+  model: OverviewReadinessModel;
+  suppressAction?: boolean;
+}) {
   return (
     <section className={styles.readinessSection} aria-labelledby="overview-readiness-title">
       <div className={styles.readinessHeading}>
@@ -209,14 +215,18 @@ function DataReadinessSection({ model }: { model: OverviewReadinessModel }) {
           </div>
         ))}
       </dl>
-      {model.action ? (
+      {model.action && !suppressAction ? (
         <div className={styles.readinessAction}>
           <span>الخطوة التالية</span>
           <Link href={model.action.href}>{model.action.label}</Link>
         </div>
       ) : model.state === "unavailable" ? (
         <p className={styles.readinessUnavailable}>تعذر التحقق من بعض البيانات الآن.</p>
-      ) : (
+      ) : model.state === "read_only" ? (
+        <p className={styles.readinessUnavailable}>
+          هذا البزنس متاح لك للعرض فقط. تحديث البيانات يحتاج مالك البزنس أو مديرًا.
+        </p>
+      ) : suppressAction && model.state === "action_required" ? null : (
         <p className={styles.readinessComplete}>بياناتك الأساسية جاهزة للتحليل.</p>
       )}
     </section>
@@ -704,7 +714,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       {!dataLoadError && !calculationError && !periodExists && (
         <>
           <EmptyDashboard business={selectedBusiness} monthKey={selectedMonth.monthKey} />
-          <DataReadinessSection model={readinessModel} />
+          <DataReadinessSection model={readinessModel} suppressAction />
         </>
       )}
 
