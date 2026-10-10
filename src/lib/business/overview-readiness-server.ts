@@ -2,6 +2,7 @@ import "server-only";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { parseCustomerHistoryOverviewSummary } from "./customer-history-overview.ts";
+import { loadFunnelMonth, type FunnelMonthlyEntrySnapshot } from "./funnel-month.ts";
 import {
   resolveCustomerReadiness,
   resolveHistoryReadiness,
@@ -21,6 +22,25 @@ export type LoadedOverviewReadiness = {
   sales: SalesReadiness;
 };
 
+/** Treats explicit zeroes as entered data while rejecting a funnel month containing only null/blank fields. */
+export function hasMeaningfulFunnelMonthlyData(
+  entries: readonly FunnelMonthlyEntrySnapshot[],
+) {
+  return entries.some((entry) =>
+    [
+      entry.ad_spend,
+      entry.leads,
+      entry.booked_calls,
+      entry.showed_calls,
+      entry.qualified_calls,
+      entry.sales,
+      entry.new_customers,
+      entry.cash_collected,
+      entry.attributed_revenue,
+    ].some((value) => value !== null && value !== undefined && String(value).trim() !== ""),
+  );
+}
+
 /** Loads the four B16 Overview readiness domains from existing authoritative RLS-scoped data. */
 export async function loadOverviewReadiness(
   businessId: string,
@@ -31,7 +51,7 @@ export async function loadOverviewReadiness(
     createSupabaseServerClient(),
   ]);
 
-  const [transactionCountResult, reviewExceptionsResult, missingPeriodsResult, customerSummaryResult, funnelCountResult, funnelMonthResult] =
+  const [transactionCountResult, reviewExceptionsResult, missingPeriodsResult, customerSummaryResult, funnelCountResult, funnelMonth] =
     await Promise.all([
       supabase
         .from("customer_transactions")
@@ -57,12 +77,7 @@ export async function loadOverviewReadiness(
         .select("id", { count: "exact", head: true })
         .eq("business_id", businessId)
         .eq("is_active", true),
-      supabase
-        .from("funnel_monthly_periods")
-        .select("id")
-        .eq("business_id", businessId)
-        .eq("month_start", monthStart)
-        .maybeSingle(),
+      loadFunnelMonth(supabase, businessId, monthStart),
     ]);
 
   let core: CoreSetupReadiness;
@@ -113,11 +128,13 @@ export async function loadOverviewReadiness(
     analysisReady: customerLoadError ? null : customerSummary !== null,
   });
 
-  const salesLoadError = Boolean(funnelCountResult.error || funnelMonthResult.error);
+  const salesLoadError = Boolean(funnelCountResult.error || funnelMonth.dataLoadError);
   const sales = resolveSalesReadiness({
     loadState: salesLoadError ? "load_error" : "loaded",
     funnelCount: salesLoadError ? null : (funnelCountResult.count ?? 0),
-    monthlyDataReady: salesLoadError ? null : Boolean(funnelMonthResult.data),
+    monthlyDataReady: salesLoadError
+      ? null
+      : hasMeaningfulFunnelMonthlyData(funnelMonth.entries),
   });
 
   return { core, history, customers, sales };
