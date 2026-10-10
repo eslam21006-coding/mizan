@@ -201,3 +201,35 @@ export function buildOverviewReadinessModel(input: {
     state: unavailable ? "unavailable" : action ? "action_required" : "ready",
   };
 }
+
+
+export type OverviewFunnelMonthlyData = {
+  ad_spend: string | number | null;
+  leads: number | null;
+  booked_calls: number | null;
+  showed_calls: number | null;
+  qualified_calls: number | null;
+  sales: number | null;
+  new_customers: number | null;
+  cash_collected: string | number | null;
+  attributed_revenue: string | number | null;
+};
+
+/** Treats explicit zeroes as entered data while rejecting funnel rows containing only null/blank fields. */
+export function hasMeaningfulFunnelMonthlyData(
+  entries: readonly OverviewFunnelMonthlyData[],
+) {
+  return entries.some((entry) =>
+    [
+      entry.ad_spend,
+      entry.leads,
+      entry.booked_calls,
+      entry.showed_calls,
+      entry.qualified_calls,
+      entry.sales,
+      entry.new_customers,
+      entry.cash_collected,
+      entry.attributed_revenue,
+    ].some((value) => value !== null && value !== undefined && String(value).trim() !== ""),
+  );
+}
