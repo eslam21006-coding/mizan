@@ -29,6 +29,7 @@ export type LoadedBusinessSetup = {
     name: string;
     baseCurrency: string;
     timezone: string;
+    expenseSetupReviewedAt: string | null;
   };
   canManage: boolean;
   revenueSources: SetupRevenueSource[];
@@ -81,6 +82,7 @@ export async function loadBusinessSetup(
     name: business.name,
     baseCurrency: business.base_currency,
     timezone: business.timezone,
+    expenseSetupReviewedAt: business.expense_setup_reviewed_at,
   };
   const canManage = auth.role === "admin" || business.owner_user_id === auth.userId;
 
